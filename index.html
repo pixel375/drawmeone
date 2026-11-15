@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" data-design="noir" data-mode="dark" data-layout="masonry">
+<html lang="en" data-site="studio" data-design="noir" data-mode="dark" data-layout="masonry">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -18,13 +18,13 @@
     try {
       const pref = JSON.parse(localStorage.getItem("dmo-preview-settings") || "{}");
       for (const [key, allowed] of Object.entries({
-        design:["noir","canvas","editorial"],mode:["dark","light"],layout:["masonry","mosaic","rows"]
+        site:["studio","archive","journal","cinema"],design:["noir","canvas","editorial","aurora","ember"],mode:["dark","light"],layout:["masonry","mosaic","rows"]
       })) if (allowed.includes(pref[key])) document.documentElement.dataset[key] = pref[key];
     } catch (_) {}
   </script>
-  <link rel="stylesheet" href="./styles.css?v=3">
-  <script defer src="./studio.js?v=3"></script>
-  <script defer src="./gallery.js?v=3"></script>
+  <link rel="stylesheet" href="./styles.css?v=4">
+  <script defer src="./studio.js?v=4"></script>
+  <script defer src="./gallery.js?v=4"></script>
 </head>
 <body>
   <a class="skip-link" href="#portfolio">Skip to portfolio</a>
@@ -57,14 +57,14 @@
         <div class="hero-visual" aria-label="Website layout preview with sample photography, not the artist's artwork">
           <div class="hero-halo" aria-hidden="true"></div>
           <div class="hero-photo hero-photo-primary">
-            <img src="https://picsum.photos/seed/dmo-gallery-hero-a/900/1200" alt="" fetchpriority="high" decoding="async">
+            <img src="./assets/demo/art-01.svg" alt="" fetchpriority="high" decoding="async">
           </div>
           <div class="hero-photo hero-photo-secondary">
-            <img src="https://picsum.photos/seed/dmo-gallery-hero-b/600/750" alt="" decoding="async">
+            <img src="./assets/demo/art-04.svg" alt="" decoding="async">
           </div>
           <span class="hero-corner hero-corner-top" aria-hidden="true">✴</span>
           <span class="hero-corner hero-corner-bottom" aria-hidden="true">↗</span>
-          <span class="hero-demo-note">LAYOUT SAMPLE IMAGES</span>
+          <span class="hero-demo-note">TEMPORARY DESIGN SAMPLES</span>
         </div>
         <span class="hero-side-label" aria-hidden="true">A LITTLE BIT OF MAGIC, MADE FOR YOU</span>
       </section>
@@ -77,9 +77,13 @@
         </div>
         <div id="gallery-demo-notice" class="gallery-demo-notice" role="status" hidden>
           <span class="notice-icon" aria-hidden="true">✳</span>
-          <span><strong>Design preview</strong> — these are temporary sample photographs, not drawings by the artist. They'll disappear when real artwork is uploaded.</span>
+          <span><strong>Design preview</strong> — these are locally hosted design samples, not drawings by the artist. They'll disappear when real artwork is uploaded.</span>
         </div>
         <div id="portfolio-gallery" class="portfolio-gallery" aria-label="Gallery images"></div>
+        <div class="gallery-more" id="gallery-more" hidden>
+          <button type="button" class="gallery-more-button" id="gallery-more-button" aria-controls="portfolio-gallery">Load more images <span id="gallery-remaining" aria-hidden="true">↓</span></button>
+          <p id="gallery-progress" role="status" aria-live="polite"></p>
+        </div>
         <div id="portfolio-empty" class="portfolio-empty" role="status" hidden>Original drawings will appear here soon.</div>
         <div id="portfolio-error" class="portfolio-error" role="status" hidden>Gallery images are unavailable at the moment. Please check back soon.</div>
         <div class="gallery-endmark"><span aria-hidden="true">✳</span> MORE TO COME</div>
@@ -112,7 +116,7 @@
     <footer class="footer">
       <a class="wordmark" href="#top">drawmeone<span>.</span></a>
       <span>Made for the love of making things.</span>
-      <span>Website preview · v0.3</span>
+      <span>Website preview · v0.4</span>
     </footer>
   </div>
 
@@ -122,15 +126,26 @@
       <button type="button" id="lab-collapse" class="lab-collapse" aria-expanded="true" aria-controls="lab-controls">Minimize <span aria-hidden="true">⌄</span></button>
     </div>
     <div class="lab-controls" id="lab-controls">
-      <div class="lab-group">
-        <span class="lab-label">THEME</span>
-        <div class="lab-button-group" role="group" aria-label="Visual design">
-          <button type="button" data-design-choice="noir">Noir</button>
-          <button type="button" data-design-choice="canvas">Canvas</button>
-          <button type="button" data-design-choice="editorial">Editorial</button>
+      <div class="lab-group lab-site-group">
+        <span class="lab-label">WEBSITE STYLE <small>changes the entire layout</small></span>
+        <div class="lab-button-group" role="group" aria-label="Whole website layout style">
+          <button type="button" data-site-choice="studio">Studio</button>
+          <button type="button" data-site-choice="archive">Sidebar</button>
+          <button type="button" data-site-choice="journal">Journal</button>
+          <button type="button" data-site-choice="cinema">Immersive</button>
         </div>
       </div>
-      <div class="lab-group">
+      <div class="lab-group lab-theme-group">
+        <span class="lab-label">COLOR THEME</span>
+        <div class="lab-button-group" role="group" aria-label="Color design theme">
+          <button type="button" data-design-choice="noir">Noir</button>
+          <button type="button" data-design-choice="canvas">Ocean</button>
+          <button type="button" data-design-choice="editorial">Paper</button>
+          <button type="button" data-design-choice="aurora">Aurora</button>
+          <button type="button" data-design-choice="ember">Ember</button>
+        </div>
+      </div>
+      <div class="lab-group lab-layout-group">
         <span class="lab-label">GALLERY</span>
         <div class="lab-button-group" role="group" aria-label="Gallery layout">
           <button type="button" data-layout-choice="masonry">Masonry</button>

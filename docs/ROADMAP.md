@@ -123,3 +123,18 @@ Implemented and deployed through the existing main-branch GitHub-to-Hostinger fl
 - [ ] Before launch: replace all demo content with approved artist drawings and ensure accurate OG image, image metadata, crawlability, FAQ, and privacy/legal policies.
 
 Testing note: browser validation of the live Hostinger site may be restricted by automated-access 403 responses even when the user sees the site. GitHub branch commit success does not independently prove deployment completion.
+
+## v0.4 — 2026-11-15, first-pass design feedback and delivery
+
+**Reported feedback:** external dummy image URLs fail to load; masonry/mosaic should initially show only about 4-5 rows, then progressive reveal; add two more color themes; provide 3-4 genuinely distinct complete website layouts.
+
+**Implementation:**
+- [x] Replace all external Picsum image dependencies (including hero) with **24 local, original SVG demonstration graphics** stored under `assets/demo/`. They are visually labeled as demos, NOT the sister's art. Safe no-external-image fallback remains.
+- [x] Render 12 images initially on desktop (approx. four rows at three columns), 8 on mobile (approx. four rows at two columns). **Load more images** progressively reveals 12/8 more. A full-width fade/crop is deliberately avoided: it would cut drawings in half.
+- [x] Exempt horizontal Scroll gallery from progressive cutoff. Provide visible count and accessible button status.
+- [x] Five independent color themes: Noir, Ocean (formerly Canvas), Paper (formerly Editorial), Aurora, Ember, all with dark/light palettes.
+- [x] Four **structural** site layouts: Studio split, Sidebar gallery-first sticky desktop navigation, Journal magazine cover and three-column steps, Immersive full-viewport cover.
+- [x] Store website style + theme + layout + dark/light in local browser storage. Choosing a whole-site style selects an appropriate default gallery format, but gallery layout can then be adjusted independently.
+- [ ] Verify live deployment, JS gallery rendering, responsive behaviour and toggles in browser.
+- [ ] Collect user's favourite combinations before removing design lab from public launch.
+- [ ] Get approved real artwork; samples must stay temporary and unindexed.

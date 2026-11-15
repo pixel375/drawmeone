@@ -34,6 +34,7 @@ Do not upload private reference images or confidential commission messages into 
 
 ## Design preview and automatic demo fallback
 
-The site currently presents **10 placeholder photos from Picsum** when `data/portfolio.json` has no valid entries. They are marked on screen as **Design preview** and are **not** presented as drawings from the artist. Once the first genuine approved work is added to `data/portfolio.json`, all placeholder photos disappear automatically. The demo manifest is in `data/demo-portfolio.json` and can be removed at launch.
+The site currently presents **24 sample vector graphics stored locally at `assets/demo/`** when `data/portfolio.json` has no valid entries. They are marked on screen as **Design preview** and are **not** presented as drawings from the artist. Once the first genuine approved work is added to `data/portfolio.json`, all placeholder photos disappear automatically. The demo manifest is in `data/demo-portfolio.json` and can be removed at launch.
 
 The future admin dashboard will accept one-step bulk uploads and will create manifest/database entries automatically. Manual GitHub entries above are only an interim development path, not the planned experience for the artist.
+\nThe v0.4 demonstration collection has **no external photo dependencies**: all SVG files are served directly from the same Hostinger domain. This avoids blocked third-party photo domains and broken image requests. The examples are illustrative mock images for layout testing, not genuine commission work.\n
