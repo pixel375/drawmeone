@@ -1,0 +1,54 @@
+{
+  "works": [
+    {
+      "src": "https://picsum.photos/seed/dmo-photo-01/860/1160",
+      "width": 860,
+      "height": 1160
+    },
+    {
+      "src": "https://picsum.photos/seed/dmo-photo-02/970/720",
+      "width": 970,
+      "height": 720
+    },
+    {
+      "src": "https://picsum.photos/seed/dmo-photo-03/810/1120",
+      "width": 810,
+      "height": 1120
+    },
+    {
+      "src": "https://picsum.photos/seed/dmo-photo-04/850/1180",
+      "width": 850,
+      "height": 1180
+    },
+    {
+      "src": "https://picsum.photos/seed/dmo-photo-05/960/710",
+      "width": 960,
+      "height": 710
+    },
+    {
+      "src": "https://picsum.photos/seed/dmo-photo-06/800/1020",
+      "width": 800,
+      "height": 1020
+    },
+    {
+      "src": "https://picsum.photos/seed/dmo-photo-07/900/1150",
+      "width": 900,
+      "height": 1150
+    },
+    {
+      "src": "https://picsum.photos/seed/dmo-photo-08/1010/780",
+      "width": 1010,
+      "height": 780
+    },
+    {
+      "src": "https://picsum.photos/seed/dmo-photo-09/870/1190",
+      "width": 870,
+      "height": 1190
+    },
+    {
+      "src": "https://picsum.photos/seed/dmo-photo-10/960/760",
+      "width": 960,
+      "height": 760
+    }
+  ]
+}

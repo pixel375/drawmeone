@@ -1,173 +1,161 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-design="noir" data-mode="dark" data-layout="masonry">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#fff9f2">
-  <meta name="description" content="Draw Me One — a little home for custom drawing commissions. Our new site is coming soon.">
+  <meta name="theme-color" content="#0c0c10">
+  <meta name="description" content="Draw Me One — original drawings and custom art commissions. Explore the portfolio and discover what's coming next.">
+  <meta name="robots" content="noindex,follow">
   <meta property="og:type" content="website">
-  <meta property="og:title" content="Draw Me One — Art with a personal touch">
-  <meta property="og:description" content="Something lovely is taking shape. A new home for custom drawing commissions is coming soon.">
+  <meta property="og:title" content="Draw Me One — Custom Art, Your Way">
+  <meta property="og:description" content="An independent artist's future home for custom drawings. Preview the studio website.">
   <meta property="og:url" content="https://drawmeone.com/">
-  <title>Draw Me One — Custom Drawing Commissions | Coming Soon</title>
   <link rel="canonical" href="https://drawmeone.com/">
   <link rel="icon" type="image/svg+xml" href="./favicon.svg">
-  <link rel="stylesheet" href="./styles.css">
-  <script defer src="./gallery.js"></script>
+  <title>Draw Me One | Modern Drawing Commission Studio</title>
+  <script>
+    // Avoid a bright flash while the visitor's last chosen mode is restored.
+    try {
+      const pref = JSON.parse(localStorage.getItem("dmo-preview-settings") || "{}");
+      for (const [key, allowed] of Object.entries({
+        design:["noir","canvas","editorial"],mode:["dark","light"],layout:["masonry","mosaic","rows"]
+      })) if (allowed.includes(pref[key])) document.documentElement.dataset[key] = pref[key];
+    } catch (_) {}
+  </script>
+  <link rel="stylesheet" href="./styles.css?v=3">
+  <script defer src="./studio.js?v=3"></script>
+  <script defer src="./gallery.js?v=3"></script>
 </head>
-<body id="top">
-  <a class="skip-link" href="#main">Skip to content</a>
-  <div class="page-shell">
-    <header class="site-header" aria-label="Main navigation">
-      <a href="#top" class="brand" aria-label="Draw Me One home">
-        <span class="brand-symbol" aria-hidden="true">✳</span>
-        <span>draw<span class="brand-accent">me</span>one<span class="brand-dot">.</span></span>
-      </a>
-      <nav class="nav-links" aria-label="Site">
+<body>
+  <a class="skip-link" href="#portfolio">Skip to portfolio</a>
+  <div class="site-shell">
+    <header class="site-header" id="top">
+      <a class="wordmark" href="#top" aria-label="Draw Me One home">drawmeone<span>.</span></a>
+      <nav class="nav-links" aria-label="Main navigation">
         <a href="#portfolio">Portfolio</a>
-        <a href="#about">About</a>
-        <a href="#coming">Commissions</a>
+        <a href="#process">The process</a>
+        <a href="#contact">Contact</a>
       </nav>
-      <span class="header-pill"><span class="status-dot"></span> Studio in progress</span>
+      <div class="header-actions">
+        <span class="header-state"><span class="live-dot" aria-hidden="true"></span> Building the studio</span>
+        <button class="mode-shortcut" id="header-mode" type="button" aria-label="Switch to light mode" title="Toggle light and dark appearance"><span aria-hidden="true" id="header-mode-icon">☀</span></button>
+      </div>
     </header>
 
-    <main id="main">
-      <section class="hero" aria-labelledby="hero-title">
+    <main>
+      <section class="hero" aria-labelledby="hero-heading">
         <div class="hero-copy">
-          <div class="eyebrow"><span aria-hidden="true">✦</span> A NEW LITTLE ART CORNER</div>
-          <h1 id="hero-title">Your idea.<br><em>Our canvas.</em><span class="title-spark" aria-hidden="true">✳</span></h1>
-          <p class="hero-lead">A home for drawings made just for you is on its way. We're getting everything ready to share artwork, commission details, and all the good stuff.</p>
-          <div class="hero-actions">
-            <a class="primary-link" href="#coming">See what's coming <span aria-hidden="true">↗</span></a>
-            <span class="tiny-note">A little magic is in the making <span aria-hidden="true">♡</span></span>
+          <p class="eyebrow"><span class="eyebrow-line"></span> THE ART OF SOMETHING PERSONAL</p>
+          <h1 id="hero-heading">Made to be<br><em>one of a kind.</em></h1>
+          <p class="hero-description">Ideas, personalities, little moments — turned into something you can keep. Welcome to a new home for custom drawing commissions.</p>
+          <div class="hero-buttons">
+            <a href="#portfolio" class="primary-button">Explore the gallery <span aria-hidden="true">↗</span></a>
+            <a href="#process" class="text-button">How it works <span aria-hidden="true">↗</span></a>
           </div>
+          <p class="hero-footnote">Independent art studio <span aria-hidden="true">✳</span> Coming soon</p>
         </div>
-
-        <div class="hero-art" aria-label="Decorative illustration">
-          <div class="art-glow" aria-hidden="true"></div>
-          <span class="orbit-star orbit-star-one" aria-hidden="true">✳</span>
-          <span class="orbit-star orbit-star-two" aria-hidden="true">✧</span>
-          <div class="illustration-sheet">
-            <svg class="flower-drawing" viewBox="0 0 410 470" role="img" aria-labelledby="art-title art-desc">
-              <title id="art-title">A cheerful hand-drawn flower</title>
-              <desc id="art-desc">A decorative illustration created for this website preview, with a playful flower, leaves and sketchy stars. This is not a portfolio sample.</desc>
-              <path d="M75 72 Q90 50 106 67 M297 66 Q322 61 337 83" fill="none" stroke="#a68cdd" stroke-width="4" stroke-linecap="round"/>
-              <path d="M200 294 C210 333 194 360 209 414" fill="none" stroke="#396a51" stroke-width="8" stroke-linecap="round"/>
-              <path d="M204 359 C166 323 133 341 134 366 C156 390 185 387 204 371Z" fill="#a5cb92" stroke="#396a51" stroke-width="5" stroke-linejoin="round"/>
-              <path d="M206 390 C237 353 270 359 275 378 C264 405 241 411 208 405Z" fill="#c1dea5" stroke="#396a51" stroke-width="5" stroke-linejoin="round"/>
-              <g stroke="#67426c" stroke-width="5" stroke-linejoin="round">
-                <ellipse cx="206" cy="162" rx="37" ry="83" fill="#f8bed0" transform="rotate(-5 206 240)"/>
-                <ellipse cx="206" cy="162" rx="37" ry="83" fill="#ffdc8a" transform="rotate(55 206 240)"/>
-                <ellipse cx="206" cy="162" rx="37" ry="83" fill="#cbb8ee" transform="rotate(115 206 240)"/>
-                <ellipse cx="206" cy="162" rx="37" ry="83" fill="#f8bed0" transform="rotate(175 206 240)"/>
-                <ellipse cx="206" cy="162" rx="37" ry="83" fill="#ffdc8a" transform="rotate(235 206 240)"/>
-                <ellipse cx="206" cy="162" rx="37" ry="83" fill="#cbb8ee" transform="rotate(295 206 240)"/>
-                <circle cx="206" cy="240" r="48" fill="#fff2bc"/>
-              </g>
-              <g fill="#443444">
-                <ellipse cx="191" cy="234" rx="4" ry="6"/>
-                <ellipse cx="221" cy="234" rx="4" ry="6"/>
-              </g>
-              <path d="M195 251 Q206 261 217 251" fill="none" stroke="#443444" stroke-width="4" stroke-linecap="round"/>
-              <g stroke="#e38a92" stroke-width="5" stroke-linecap="round">
-                <path d="M68 222 V244 M57 233 H79"/>
-                <path d="M335 281 V303 M324 292 H346"/>
-              </g>
-              <path d="M329 140 Q336 126 351 135 Q365 148 345 165 Q329 152 329 140Z" fill="#f4a1aa" stroke="#67426c" stroke-width="3" />
-              <path d="M93 402 Q116 410 135 397" fill="none" stroke="#67426c" stroke-width="4" stroke-linecap="round"/>
-            </svg>
-            <div class="sheet-caption"><span>just a little doodle</span><span aria-hidden="true">✴</span></div>
+        <div class="hero-visual" aria-label="Website layout preview with sample photography, not the artist's artwork">
+          <div class="hero-halo" aria-hidden="true"></div>
+          <div class="hero-photo hero-photo-primary">
+            <img src="https://picsum.photos/seed/dmo-gallery-hero-a/900/1200" alt="" fetchpriority="high" decoding="async">
           </div>
-          <div class="sticker" aria-hidden="true"><span>made with</span><strong>♡</strong><span>imagination</span></div>
-          <div class="paper-note" aria-hidden="true">Your next favourite<br>drawing goes here! <span>↗</span></div>
+          <div class="hero-photo hero-photo-secondary">
+            <img src="https://picsum.photos/seed/dmo-gallery-hero-b/600/750" alt="" decoding="async">
+          </div>
+          <span class="hero-corner hero-corner-top" aria-hidden="true">✴</span>
+          <span class="hero-corner hero-corner-bottom" aria-hidden="true">↗</span>
+          <span class="hero-demo-note">LAYOUT SAMPLE IMAGES</span>
+        </div>
+        <span class="hero-side-label" aria-hidden="true">A LITTLE BIT OF MAGIC, MADE FOR YOU</span>
+      </section>
+
+      <section class="portfolio-section" id="portfolio" aria-labelledby="portfolio-title">
+        <div class="section-topline"><span>01 / SELECTED WORK</span><span class="portfolio-year">THE PORTFOLIO</span></div>
+        <div class="portfolio-intro">
+          <h2 id="portfolio-title">Every piece<br><em>has a story.</em></h2>
+          <p>Explore the work. Find your inspiration. A gallery of the artist's own drawings will live here when it's ready.</p>
+        </div>
+        <div id="gallery-demo-notice" class="gallery-demo-notice" role="status" hidden>
+          <span class="notice-icon" aria-hidden="true">✳</span>
+          <span><strong>Design preview</strong> — these are temporary sample photographs, not drawings by the artist. They'll disappear when real artwork is uploaded.</span>
+        </div>
+        <div id="portfolio-gallery" class="portfolio-gallery" aria-label="Gallery images"></div>
+        <div id="portfolio-empty" class="portfolio-empty" role="status" hidden>Original drawings will appear here soon.</div>
+        <div id="portfolio-error" class="portfolio-error" role="status" hidden>Gallery images are unavailable at the moment. Please check back soon.</div>
+        <div class="gallery-endmark"><span aria-hidden="true">✳</span> MORE TO COME</div>
+      </section>
+
+      <section class="experience-section" id="process" aria-labelledby="process-title">
+        <div class="section-topline"><span>02 / THE EXPERIENCE</span><span>PERSONAL, FROM START TO FINISH</span></div>
+        <div class="experience-inner">
+          <div class="experience-lead">
+            <p class="eyebrow"><span class="eyebrow-line"></span> COMING TO DRAW ME ONE</p>
+            <h2 id="process-title">A drawing<br>that's <em>yours.</em></h2>
+            <p>Custom artwork is personal. The future request process will make it simple to share your idea and work out the details directly with the artist.</p>
+          </div>
+          <div class="experience-steps">
+            <article class="step"><span class="step-number">01</span><div><h3>Tell the story.</h3><p>Send an idea, describe the feeling, and include any reference photos you'd like.</p></div><span class="step-arrow" aria-hidden="true">↗</span></article>
+            <article class="step"><span class="step-number">02</span><div><h3>Make it yours.</h3><p>Discuss the scope, price, and timeline before anything is confirmed.</p></div><span class="step-arrow" aria-hidden="true">↗</span></article>
+            <article class="step"><span class="step-number">03</span><div><h3>Watch it come to life.</h3><p>Once commissions open, your custom drawing takes shape.</p></div><span class="step-arrow" aria-hidden="true">↗</span></article>
+          </div>
         </div>
       </section>
 
-      <div class="ribbon" aria-hidden="true">
-        <span>✳ dreamed up with care</span><span>✳ made for your imagination</span><span>✳ drawn from the heart</span>
-      </div>
-
-      <section class="portfolio section-wrap" id="portfolio" aria-labelledby="portfolio-title">
-        <div class="portfolio-heading">
-          <div>
-            <p class="section-kicker">THE ARTWORK</p>
-            <h2 id="portfolio-title">A gallery of <em>originals.</em></h2>
-          </div>
-          <p class="portfolio-intro">A collection of drawings, made with care. The first pieces will appear here soon.</p>
-        </div>
-        <div id="portfolio-gallery" class="portfolio-gallery" aria-label="Original drawings by the artist"></div>
-        <div id="portfolio-empty" class="portfolio-empty" role="status">
-          <span aria-hidden="true" class="portfolio-empty-mark">✳</span>
-          <div>
-            <strong>The gallery is taking shape.</strong>
-            <p>Original artwork will be added here as soon as it's ready.</p>
-          </div>
-        </div>
-        <p id="portfolio-error" class="portfolio-error" role="status" hidden>Portfolio images couldn't load right now. Please check back soon.</p>
-      </section>
-
-      <section class="intro section-wrap" id="about" aria-labelledby="intro-title">
-        <div class="section-heading">
-          <p class="section-kicker">HELLO, HELLO!</p>
-          <h2 id="intro-title">A fresh canvas for <em>your ideas.</em></h2>
-        </div>
-        <p>Welcome to Draw Me One! We're building a cozy corner of the internet for custom art. This is our first website preview — the real artwork and commission information will be added as we go.</p>
-      </section>
-
-      <section class="coming section-wrap" id="coming" aria-labelledby="coming-title">
-        <div class="coming-heading">
-          <div>
-            <p class="section-kicker">ON THE DRAWING BOARD</p>
-            <h2 id="coming-title">Good things are <em>coming.</em></h2>
-          </div>
-          <div class="hand-arrow" aria-hidden="true">↘</div>
-        </div>
-        <div class="feature-grid">
-          <article class="feature feature-pink">
-            <span class="feature-index">01 /</span><span class="feature-icon" aria-hidden="true">✿</span>
-            <h3>Artwork</h3>
-            <p>A place to explore original drawings and get inspired.</p>
-            <span class="feature-status">COMING SOON</span>
-          </article>
-          <article class="feature feature-yellow">
-            <span class="feature-index">02 /</span><span class="feature-icon" aria-hidden="true">✎</span>
-            <h3>Commissions</h3>
-            <p>Information about the available styles, options, and pricing.</p>
-            <span class="feature-status">COMING SOON</span>
-          </article>
-          <article class="feature feature-lilac">
-            <span class="feature-index">03 /</span><span class="feature-icon" aria-hidden="true">♡</span>
-            <h3>Get in touch</h3>
-            <p>A simple way to share your idea when requests open.</p>
-            <span class="feature-status">COMING SOON</span>
-          </article>
-        </div>
-        <p class="preview-disclaimer">This is an early website preview. The artwork, offerings, and commission process are still being decided.</p>
-      </section>
-
-      <section class="signoff section-wrap" aria-labelledby="signoff-title">
-        <span class="signoff-spark" aria-hidden="true">✧</span>
-        <p class="section-kicker">MORE TO COME</p>
-        <h2 id="signoff-title">Let's make something <em>lovely.</em></h2>
-        <p>We're just getting started. Come back soon to see what we've been drawing up.</p>
-        <a href="#top" class="back-link">Back to the top <span aria-hidden="true">↑</span></a>
+      <section class="contact-section" id="contact" aria-labelledby="contact-title">
+        <div class="contact-deco" aria-hidden="true">✳</div>
+        <p class="eyebrow">SOMETHING GOOD IS ON THE WAY</p>
+        <h2 id="contact-title">Have an idea?<br><em>Hold onto it.</em></h2>
+        <p>We're preparing the commission request process and a way to get in touch. Soon, you'll be able to send your vision our way.</p>
+        <span class="contact-status">COMMISSION REQUESTS ARE NOT OPEN YET</span>
       </section>
     </main>
-
-    <footer class="site-footer">
-      <a href="#top" class="footer-brand">draw<span>me</span>one.</a>
-      <span>Made with a little bit of heart ♡</span>
-      <span>First look · v0.1</span>
+    <footer class="footer">
+      <a class="wordmark" href="#top">drawmeone<span>.</span></a>
+      <span>Made for the love of making things.</span>
+      <span>Website preview · v0.3</span>
     </footer>
   </div>
+
+  <aside class="design-lab" id="design-lab" aria-label="Live design preview controls">
+    <div class="lab-titlebar">
+      <div class="lab-title"><span class="lab-indicator"></span><strong>DESIGN LAB</strong><span class="lab-beta">LIVE PREVIEW</span></div>
+      <button type="button" id="lab-collapse" class="lab-collapse" aria-expanded="true" aria-controls="lab-controls">Minimize <span aria-hidden="true">⌄</span></button>
+    </div>
+    <div class="lab-controls" id="lab-controls">
+      <div class="lab-group">
+        <span class="lab-label">THEME</span>
+        <div class="lab-button-group" role="group" aria-label="Visual design">
+          <button type="button" data-design-choice="noir">Noir</button>
+          <button type="button" data-design-choice="canvas">Canvas</button>
+          <button type="button" data-design-choice="editorial">Editorial</button>
+        </div>
+      </div>
+      <div class="lab-group">
+        <span class="lab-label">GALLERY</span>
+        <div class="lab-button-group" role="group" aria-label="Gallery layout">
+          <button type="button" data-layout-choice="masonry">Masonry</button>
+          <button type="button" data-layout-choice="mosaic">Mosaic</button>
+          <button type="button" data-layout-choice="rows">Scroll</button>
+        </div>
+      </div>
+      <div class="lab-group lab-mode-group">
+        <span class="lab-label">MODE</span>
+        <div class="lab-button-group" role="group" aria-label="Color mode">
+          <button type="button" data-mode-choice="dark" aria-label="Dark mode">☾</button>
+          <button type="button" data-mode-choice="light" aria-label="Light mode">☀</button>
+        </div>
+      </div>
+    </div>
+  </aside>
+
   <dialog class="portfolio-lightbox" id="portfolio-lightbox" aria-label="Artwork viewer">
     <div class="lightbox-inner">
-      <button type="button" class="lightbox-close" data-gallery-close aria-label="Close artwork viewer">×</button>
-      <div class="lightbox-stage"><img id="lightbox-image" alt="" src="data:," decoding="async"></div>
-      <div class="lightbox-controls">
-        <button type="button" data-gallery-prev aria-label="Previous drawing">←</button>
+      <button type="button" class="lightbox-close" data-gallery-close aria-label="Close viewer">×</button>
+      <div class="lightbox-stage"><img id="lightbox-image" alt="" decoding="async"></div>
+      <div class="lightbox-bottom">
+        <button type="button" data-gallery-prev aria-label="Previous image">←</button>
         <span id="lightbox-counter" aria-live="polite"></span>
-        <button type="button" data-gallery-next aria-label="Next drawing">→</button>
+        <button type="button" data-gallery-next aria-label="Next image">→</button>
       </div>
     </div>
   </dialog>

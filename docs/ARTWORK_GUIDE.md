@@ -31,3 +31,9 @@ Do not upload private reference images or confidential commission messages into 
 - Titles, captions, descriptions, tags, and categories are optional. If needed, sensible descriptions for accessibility/SEO can be proposed from the image or an internal automatic classifier, but publishing must not require typing or accepting them.
 - Reorder, hide, feature, or delete artwork later; publish dates and image URLs are managed automatically.
 - Maintain artist/client consent for portfolio publishing. Private uploads for commission references are separate from the public gallery.
+
+## Design preview and automatic demo fallback
+
+The site currently presents **10 placeholder photos from Picsum** when `data/portfolio.json` has no valid entries. They are marked on screen as **Design preview** and are **not** presented as drawings from the artist. Once the first genuine approved work is added to `data/portfolio.json`, all placeholder photos disappear automatically. The demo manifest is in `data/demo-portfolio.json` and can be removed at launch.
+
+The future admin dashboard will accept one-step bulk uploads and will create manifest/database entries automatically. Manual GitHub entries above are only an interim development path, not the planned experience for the artist.

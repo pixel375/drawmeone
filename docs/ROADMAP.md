@@ -109,3 +109,17 @@ Four proposed modern/mobile-first styles:
 4. **Immersive Canvas**: dark neutral (#101012), almost edge-to-edge images, small floating controls, cinematic transitions, accessible lightbox.
 
 Implement responsive behaviour primarily for mobile screens; desktop effects are optional progressive enhancements. Theme control: a small floating or header moon/sun button which may reveal options on desktop hover/focus but must work on click/tap/keyboard. Persist explicit selection, provide dark and light palettes, avoid page flash on reload, honor reduced motion and adequate contrast. Should initially prefer dark or follow device preference as decided with the artist.
+
+## Build history — 2026-11-14, v0.3 interactive preview
+
+Implemented and deployed through the existing main-branch GitHub-to-Hostinger flow:
+- [x] Three interactive design directions: Minimal Noir, Immersive Canvas, Dark Editorial.
+- [x] Three independent layouts: Masonry (intrinsic heights), Mosaic (contain art within grid cells), Scroll (horizontal snap gallery).
+- [x] Dark/light theme switcher accessible by touch, keyboard and pointer, remembers settings in browser.
+- [x] 10 **explicitly labeled demo photographs** served by Picsum; wholly separate from artist-only `data/portfolio.json` and hidden automatically when authentic artwork is uploaded. Fallback SVG for image loads.
+- [x] Mobile responsiveness and keyboard/swipe navigation in lightbox.
+- [x] Homepage temporary `noindex` flag during placeholder-photo preview; must be **removed when the site is ready to launch with actual artist artwork**.
+- [ ] Get feedback on which theme/layout combinations work best across desktop and mobile; then refine typography, color, proportions, and image treatment.
+- [ ] Before launch: replace all demo content with approved artist drawings and ensure accurate OG image, image metadata, crawlability, FAQ, and privacy/legal policies.
+
+Testing note: browser validation of the live Hostinger site may be restricted by automated-access 403 responses even when the user sees the site. GitHub branch commit success does not independently prove deployment completion.
