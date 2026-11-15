@@ -9,12 +9,13 @@ Draw Me One is an artist-led website that converts admiration for original drawi
 - Domain: https://drawmeone.com
 - Hosting: Hostinger shared hosting, deployed from GitHub `pixel375/drawmeone` (main).
 - Gallery must contain **only drawings created by the artist**.
-- **No text, descriptions, watermarks, or other content placed on the portfolio images**. Artistic examples have no visual overlays.
+- Artwork bulk upload should require **no image title, description, caption, tags, or other typing**; the artist should be able to select many files and publish with one action. Public site text (headlines, commission details, CTAs, policy information) is welcomed and encouraged. The public gallery should remain image-forward with minimal visual clutter.
 - Artist must eventually be able to upload/manage art without GitHub access through an authenticated dashboard and database.
 - Site sells custom drawing commissions, not generic print-on-demand by default.
 - Visitors need a way to submit commission requests and pay; exact provider/checkout flow undecided.
 - Contact methods to evaluate include email, Discord and alternatives.
 - Strong visual polish, differentiated brand, mobile accessibility, excellent search discoverability.
+- Current visual preference (pending final direction): **modern, mobile-first, dark-first**; light mode available with a user-controlled switcher, potentially a hover-expanded floating control on desktop, with tap/click equivalence on mobile.
 
 ## Design principles
 1. **Art first:** immersive but lightweight asymmetrical gallery; native image aspect ratios; no overlays. Any descriptive details are hidden in accessible HTML / alt metadata and optional standalone detail pages, not baked into the visible artwork.
@@ -35,7 +36,7 @@ IMPORTANT: request != accepted order; payment must not occur before a confirmed 
 - [x] First static landing page and Hostinger Git deployment.
 - [x] Add gallery component that renders image-only art from a validated manifest, with responsive masonry layout and accessible modal viewer.
 - [x] Create artwork content guidelines for later upload.
-- [ ] Receive and publish at least 6-12 **approved real drawings** in optimized variants.
+- [ ] Receive and publish at least 6-12 **approved real drawings** in optimized variants (no manual title or descriptions needed).
 - [ ] Replace generic decorative hero doodle with commissioned/approved art or artist-provided branding.
 - [ ] Evaluate gallery on real mobile devices, images with varied portrait/landscape ratios and keyboard input.
 - [ ] Eventually move public gallery rendering to server-rendered PHP HTML for crawlability once database goes live.
@@ -58,7 +59,7 @@ IMPORTANT: request != accepted order; payment must not occur before a confirmed 
 - [ ] Backend: PHP (supported on Hostinger shared hosting), MySQL/MariaDB with PDO; no persistent Node server dependency.
 - [ ] Admin: hashed password credentials, MFA if compatible, HTTPS, secure sessions, CSRF protection, rate limits, login alerts, backup/recovery.
 - [ ] Media: validate extension + actual image MIME, dimension/size limits, re-encode and strip metadata, safe non-executable public image folder, originals stored privately, generated thumbnails.
-- [ ] Admin actions: drag-drop multiple uploads, descriptive alt metadata, reorder, categorize, draft/publish, edit/remove, audit actions.
+- [ ] Admin actions: **zero-metadata-required bulk drag/drop** (automatic filenames/dimensions/previews/optimized variants), one-click publish, progress/errors/retries, optional editable alt text/tags, reorder, draft/publish, edit/remove, audit actions.
 - [ ] Commission inbox and statuses; restricted private reference storage; payment status tracking.
 - [ ] DB migrations, secure local configuration outside public web root, backup/restore drills.
 - [ ] Admin endpoints blocked from crawling/indexing; auth must enforce real access control.
@@ -83,7 +84,7 @@ IMPORTANT: request != accepted order; payment must not occur before a confirmed 
 - Customer reviews only when real, permissioned and attributable.
 
 ## Choices pending artist/user input
-- Artist/studio display name and desired palette/style, brand assets.
+- Final design choice among modern dark-first directions (e.g. Minimal Noir, Neon Atelier, Editorial Dark, Immersive Canvas); finalize typography, accents, dark/light palettes, brand assets.
 - First sample images and permissions to publish.
 - Art medium, categories, licensing, pricing/currency, revision policy, delivery format, turnaround and capacity.
 - Contact endpoints (dedicated business email recommended as primary; Discord secondary).
@@ -96,3 +97,15 @@ Start as simple static HTML/CSS/JS without downtime. Switch public pages to prog
 
 ## Release rules
 Do not represent commissions as open, embed third-party payment SDKs, show a fabricated price, expose a real contact method, collect personal information, or publish unapproved portfolio images without approval. Deploy incremental safe iterations to main after review and verification. Document migration steps before changing the live static entry point.
+
+## Design-selection note — 2026-11-14
+
+The original pastel/hand-drawn landing page is a *temporary proof of concept*, not an approved final visual direction. **Do not restyle the live site to a new theme until a concept is chosen.**
+
+Four proposed modern/mobile-first styles:
+1. **Minimal Noir**: charcoal (#111317), clean ivory text, restrained electric-violet accent; big artwork, tight minimal UI, lots of negative space.
+2. **Neon Atelier**: near-black (#090b11), controlled indigo/cyan/coral glow only on controls; crisp glass-like navigation; balanced motion, never distract from art.
+3. **Editorial Dark**: ink (#16161a), gallery-white type, soft sepia accents, bold editorial typography and full-bleed images, magazine-like composition.
+4. **Immersive Canvas**: dark neutral (#101012), almost edge-to-edge images, small floating controls, cinematic transitions, accessible lightbox.
+
+Implement responsive behaviour primarily for mobile screens; desktop effects are optional progressive enhancements. Theme control: a small floating or header moon/sun button which may reveal options on desktop hover/focus but must work on click/tap/keyboard. Persist explicit selection, provide dark and light palettes, avoid page flash on reload, honor reduced motion and adequate contrast. Should initially prefer dark or follow device preference as decided with the artist.
