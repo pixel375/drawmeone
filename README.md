@@ -2,6 +2,12 @@
 
 **drawmeone.com** — an original-art portfolio and custom drawing commission website for an independent artist.
 
+
+## v0.7 — Logo picker and brand assets
+The floating **Design Lab → Brand logo** picker provides 10 artist-brand watermark designs plus the original typography choice. Each logo is supplied in **black and white transparent SVG** at `assets/branding/`, named `01-minimal-pencil-black.svg` through `10-creative-palette-white.svg`. The website uses white on dark mode and black on light mode, including on all four website layouts, and remembers the selected logo alongside the other local design settings. The original wordmark remains the default until a logo is deliberately chosen.
+
+For placing watermarks on artwork, use the same black/white variant as appropriate and adjust opacity in the artwork editor; these branding choices do **not** watermark or modify the original portfolio image files. The original high-resolution transparent PNG set is maintained outside this lightweight website repository.
+
 ## Current status
 - **v0.6 interactive art-studio preview**: four structurally distinct whole-site styles (Studio, Sidebar, Journal, Immersive), five independent color themes (Noir, Ocean, Paper, Aurora, Ember), three gallery layouts (Masonry, Mosaic, Horizontal Scroll), dark/light mode, remembered preferences, 24 self-hosted demonstration images, responsive design and lightbox. Demo visuals are clearly labelled as examples and automatically disappear once real approved artwork is added to `data/portfolio.json`.
 - Quote/request, payment, contact and admin tools are **not active yet**. We will not accept customer personal data or payments before an agreed secure implementation.
