@@ -1,0 +1,102 @@
+"use strict";
+// Artwork is configured in data/portfolio.json until the artist dashboard exists.
+// The gallery is intentionally image-only: descriptions live in alt text for
+// accessibility and indexing, never as visual overlays on the artwork.
+(() => {
+  const grid = document.getElementById("portfolio-gallery");
+  const empty = document.getElementById("portfolio-empty");
+  const error = document.getElementById("portfolio-error");
+  const dialog = document.getElementById("portfolio-lightbox");
+  const bigImage = document.getElementById("lightbox-image");
+  const counter = document.getElementById("lightbox-counter");
+  if (!grid || !empty || !error || !dialog || !bigImage || !counter) return;
+
+  let works = [];
+  let activeIndex = 0;
+  let lastTrigger = null;
+  const validFile = /^assets\/portfolio\/[a-z0-9][a-z0-9/_-]*\.(avif|webp|png|jpg|jpeg)$/i;
+
+  function safeWork(value) {
+    return value &&
+      typeof value.src === "string" && validFile.test(value.src) &&
+      typeof value.alt === "string" && value.alt.trim().length > 0 &&
+      value.alt.trim().length <= 260;
+  }
+
+  function showAt(index) {
+    if (!works.length) return;
+    activeIndex = (index + works.length) % works.length;
+    const item = works[activeIndex];
+    bigImage.src = item.src;
+    bigImage.alt = item.alt;
+    counter.textContent = (activeIndex + 1) + " / " + works.length;
+  }
+
+  function openAt(index, trigger) {
+    lastTrigger = trigger;
+    showAt(index);
+    if (typeof dialog.showModal === "function") {
+      dialog.showModal();
+      dialog.querySelector("[data-gallery-close]").focus();
+    } else {
+      window.open(works[index].src, "_blank", "noopener,noreferrer");
+    }
+  }
+
+  function close() {
+    dialog.close();
+  }
+
+  dialog.querySelector("[data-gallery-close]").addEventListener("click", close);
+  dialog.querySelector("[data-gallery-prev]").addEventListener("click", () => showAt(activeIndex - 1));
+  dialog.querySelector("[data-gallery-next]").addEventListener("click", () => showAt(activeIndex + 1));
+
+  dialog.addEventListener("click", (event) => {
+    if (event.target === dialog) close();
+  });
+  dialog.addEventListener("close", () => {
+    bigImage.removeAttribute("src");
+    if (lastTrigger && lastTrigger.isConnected) lastTrigger.focus();
+  });
+  dialog.addEventListener("keydown", (event) => {
+    if (event.key === "ArrowLeft") { event.preventDefault(); showAt(activeIndex - 1); }
+    if (event.key === "ArrowRight") { event.preventDefault(); showAt(activeIndex + 1); }
+  });
+
+  fetch("./data/portfolio.json", { cache: "no-cache" })
+    .then((response) => {
+      if (!response.ok) throw new Error("Portfolio manifest unavailable: " + response.status);
+      return response.json();
+    })
+    .then((data) => {
+      if (!data || !Array.isArray(data.works)) throw new Error("Invalid portfolio manifest");
+      works = data.works.filter(safeWork);
+      if (!works.length) return;
+
+      const frag = document.createDocumentFragment();
+      works.forEach((work, index) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "portfolio-image-button";
+        button.setAttribute("aria-label", "View drawing " + (index + 1) + " of " + works.length + ": " + work.alt);
+        const img = document.createElement("img");
+        img.src = work.src;
+        img.alt = work.alt;
+        img.decoding = "async";
+        img.loading = index < 3 ? "eager" : "lazy";
+        if (Number.isInteger(work.width) && work.width > 0) img.width = work.width;
+        if (Number.isInteger(work.height) && work.height > 0) img.height = work.height;
+        button.appendChild(img);
+        button.addEventListener("click", () => openAt(index, button));
+        frag.appendChild(button);
+      });
+      grid.appendChild(frag);
+      empty.hidden = true;
+      grid.classList.add("has-artwork");
+    })
+    .catch((cause) => {
+      console.warn("Draw Me One portfolio:", cause);
+      empty.hidden = true;
+      error.hidden = false;
+    });
+})();

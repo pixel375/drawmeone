@@ -1,17 +1,26 @@
 # Draw Me One
-A landing page for **drawmeone.com** — a future home for custom drawing commissions.
+
+**drawmeone.com** — an original-art portfolio and custom drawing commission website for an independent artist.
 
 ## Current status
-Early coming-soon preview (v0.1). The site intentionally does **not** claim commissions are open, collect customer data, display invented portfolio samples, or offer checkout. Service offerings, prices, artwork, and contact methods are provisional until confirmed by the artist.
+- **v0.2 foundation**: responsive landing page and image-only portfolio shell, gallery viewer, image manifest, SEO basics. The gallery intentionally has **no images until the artist supplies and approves originals**.
+- Quote/request, payment, contact and admin tools are **not active yet**. We will not accept customer personal data or payments before an agreed secure implementation.
 
-## Deployment
-This is a **plain static website** designed for Hostinger shared hosting. No Node.js, PHP, build tools, environment variables, or database required.
+**Read first:** [Development roadmap](docs/ROADMAP.md) · [How to add approved artwork](docs/ARTWORK_GUIDE.md)
 
-- Entry point: `index.html`
-- Styles: `styles.css`
-- Icon: `favicon.svg`
+## Current stack and hosting
+Static HTML/CSS/JS deployed from the root of GitHub `main` to Hostinger shared hosting. No Node runtime, backend, database, build step, secrets, or API tokens needed yet.
 
-Upload the repository root as the website's public directory (typically `public_html`) or use the existing Hostinger ↔ GitHub deployment connection to publish the `main` branch into that directory.
+- `index.html` — public landing page
+- `styles.css` — design and responsive styles
+- `gallery.js` — validated, accessible image gallery and full-screen viewer
+- `data/portfolio.json` — portfolio manifest; currently `{"works":[]}`
+- `assets/portfolio/` — artist-approved original work for public display
+- `robots.txt` and `sitemap.xml` — initial search discovery files
+- `docs/` — planning and publishing guides
 
-## Next
-Replace decorative placeholder art with approved portfolio samples, confirm types of commissions and pricing, and decide how customers will submit requests. Add a proper contact form only after its destination and privacy requirements are defined.
+### Future architecture
+Hostinger-supported PHP + MySQL/MariaDB with PDO, secure admin login, upload processing, server-side-rendered portfolio images, quote requests, and hosted payment checkout. Keep private commission references, authentication secrets, and full-res masters out of GitHub and the public webroot.
+
+## Release safety
+No unapproved artwork, prices, personal addresses/emails, fabricated testimonials, real customer contact forms or payment handling without the artist/project owner's sign-off.
