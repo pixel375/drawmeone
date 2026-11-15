@@ -51,12 +51,34 @@
     });
   }
   if (modeShortcut) modeShortcut.addEventListener("click",()=>choose("mode",root.dataset.mode === "dark" ? "light" : "dark"));
-  if (lab && collapse) {
-    collapse.addEventListener("click",()=>{
-      const collapsed = lab.classList.toggle("is-collapsed");
+  if(lab && collapse){
+    const mobile=window.matchMedia("(max-width:650px)");
+    function setCollapsed(collapsed){
+      lab.classList.toggle("is-collapsed",collapsed);
       collapse.setAttribute("aria-expanded",String(!collapsed));
-      collapse.innerHTML = collapsed ? 'Expand <span aria-hidden="true">⌃</span>' : 'Minimize <span aria-hidden="true">⌄</span>';
+      collapse.innerHTML=collapsed ? 'Expand <span aria-hidden="true">⌃</span>' : 'Minimize <span aria-hidden="true">⌄</span>';
+      try{sessionStorage.setItem("dmo-lab-collapsed",String(collapsed));}catch(_){}
+    }
+    let state=null;
+    try{state=sessionStorage.getItem("dmo-lab-collapsed");}catch(_){}
+    setCollapsed(state===null ? mobile.matches : state==="true");
+    collapse.addEventListener("click",()=>setCollapsed(!lab.classList.contains("is-collapsed")));
+    document.querySelectorAll(".lab-controls button").forEach(button=>{
+      button.addEventListener("click",()=>{if(mobile.matches)setCollapsed(true);});
     });
+  }
+  const bar=document.getElementById("page-progress");
+  if(bar){
+    let scheduled=false;
+    function tick(){
+      scheduled=false;
+      const size=Math.max(1,document.documentElement.scrollHeight-window.innerHeight);
+      bar.style.transform="scaleX("+Math.min(1,Math.max(0,window.scrollY/size))+")";
+    }
+    window.addEventListener("scroll",()=>{if(!scheduled){scheduled=true;requestAnimationFrame(tick);}}, {passive:true});
+    window.addEventListener("resize",tick,{passive:true});
+    document.addEventListener("dmo:site-change",()=>requestAnimationFrame(tick));
+    tick();
   }
   reflect();
 })();

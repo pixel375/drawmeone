@@ -25,12 +25,12 @@
   }
   studioGallery.insertBefore(feed,endMark);
   let active=null;
-  const image=(id,extra="")=>'<img src="./assets/demo/art-'+id+'.svg" alt="Temporary design illustration, not an example of the artist\'s work" '+extra+'>';
+  const image=(id,extra="")=>'<img data-showcase-image="'+(Number(id)-1)+'" src="./assets/demo/art-'+id+'.svg" alt="Temporary design illustration" '+extra+'>';
   const navigation=(className)=>`
     <nav class="${className}" aria-label="Main navigation">
       <a href="#portfolio">Work</a><a href="#process">The approach</a><a href="#contact">Enquiries</a>
     </nav>`;
-  const sample='<span class="concept-sample-note">DESIGN SAMPLE · NOT ARTIST WORK</span>';
+  const sample='<span class="concept-sample-note" data-demo-caption>DESIGN SAMPLE · NOT ARTIST WORK</span>';
   const status='<span class="concept-status"><span class="concept-status-dot"></span> COMMISSIONS COMING SOON</span>';
 
   function atelier() {
@@ -59,11 +59,11 @@
                 ${sample}
               </div>
             </div>
-            <div class="at-cover-foot"><span>INDIVIDUALLY CONSIDERED</span><span>ARTIST-LED</span><span>QUOTE-FIRST COMMISSIONS</span></div>
+            <div class="at-cover-foot"><span>MADE AROUND YOUR BRIEF</span><span>PERSONAL PROJECTS</span><span>REVIEW THE QUOTE FIRST</span></div>
           </section>
           <section class="at-gallery" id="portfolio" aria-labelledby="at-portfolio-title">
             <div class="at-section-label"><span>01 / THE PORTFOLIO</span><span>A COLLECTION IN PROGRESS</span></div>
-            <div class="at-section-heading"><h2 id="at-portfolio-title">The work <em>speaks.</em></h2><p>Good illustration needs no sales pitch on top of the image. Explore the full-frame gallery; original drawings will replace these design samples.</p></div>
+            <div class="at-section-heading"><h2 id="at-portfolio-title">The work <em>speaks.</em></h2><p>Good illustration needs no sales pitch over the work. Explore the full-frame collection as it takes shape.</p></div>
             <div class="concept-gallery-slot"></div>
           </section>
           <section class="at-method" id="process" aria-labelledby="at-method-title">
@@ -93,14 +93,14 @@
       <section class="ed-lead" aria-labelledby="ed-title">
         <div class="ed-lead-intro"><span class="ed-chapter">01 — AN INTRODUCTION</span><span class="ed-asterisk" aria-hidden="true">✳</span><h1 id="ed-title">Not just<br>a drawing.<br><em>A feeling.</em></h1><p>Made for the stories that couldn't belong to anyone else. A new place for thoughtful, one-of-a-kind drawing commissions.</p></div>
         <div class="ed-art-exhibition">
-          <figure class="ed-figure ed-figure-wide">${image("14",'fetchpriority="high"')}<figcaption>FIG. 01 — TEMPORARY VISUAL STUDY</figcaption></figure>
-          <figure class="ed-figure ed-figure-small">${image("21",'loading="lazy"')}<figcaption>FIG. 02 — DESIGN SAMPLE ONLY</figcaption></figure>
+          <figure class="ed-figure ed-figure-wide">${image("14",'fetchpriority="high"')}<figcaption data-demo-caption>FIG. 01 — TEMPORARY VISUAL STUDY</figcaption></figure>
+          <figure class="ed-figure ed-figure-small">${image("21",'loading="lazy"')}<figcaption data-demo-caption>FIG. 02 — DESIGN SAMPLE ONLY</figcaption></figure>
         </div>
-        <div class="ed-deck"><p><span>IN THIS EDITION</span> An introduction to the future commission studio and a first look at the gallery experience.</p><a href="#portfolio">VIEW THE COLLECTION <span aria-hidden="true">↗</span></a></div>
+        <div class="ed-deck"><p><span>IN THIS EDITION</span> A considered introduction to custom commissions — from first inspiration to an agreed brief.</p><a href="#portfolio">VIEW THE COLLECTION <span aria-hidden="true">↗</span></a></div>
       </section>
       <section class="ed-gallery" id="portfolio" aria-labelledby="ed-portfolio-title">
         <div class="ed-section-head"><span>CHAPTER 02 / THE SELECTED WORK</span><span>AN EXHIBITION IN PROGRESS</span></div>
-        <div class="ed-gallery-title"><h2 id="ed-portfolio-title"><em>The</em> collection<span>•</span></h2><p>A visual index. No captions across the artwork. Images shown here are temporary samples until the artist's portfolio is ready.</p></div>
+        <div class="ed-gallery-title"><h2 id="ed-portfolio-title"><em>The</em> collection<span>•</span></h2><p>A visual index with uninterrupted artwork, created for discovery and designed to grow.</p></div>
         <div class="concept-gallery-slot"></div>
       </section>
       <section class="ed-process" id="process" aria-labelledby="ed-process-title">
@@ -129,11 +129,11 @@
         <div class="sg-hero-content"><div class="sg-kicker"><span class="sg-kicker-line"></span> ART AS INDIVIDUAL AS YOU</div><h1 id="sg-title">Not made<br>for <em>everyone.</em><br>Made for <i>you.</i></h1>
         <p>Ideas become keepsakes. A carefully considered home for custom drawings made personal — and designed to be remembered.</p>
         <div class="sg-hero-actions"><a href="#portfolio">Experience the gallery <span aria-hidden="true">↗</span></a><a href="#process">The commission process <span aria-hidden="true">↓</span></a></div>
-        <span class="sg-proofline">ORIGINAL WORK COMING SOON <span>·</span> NO ORDERS TAKEN YET</span></div>
+        <span class="sg-proofline">A CLEAR BRIEF <span>·</span> A PERSONAL QUOTE <span>·</span> ORDERS NOT YET OPEN</span></div>
         <div class="sg-hero-bottom"><span>01 / DISCOVER</span><span>SCROLL TO EXPLORE ↓</span>${sample}</div>
       </section>
       <section class="sg-manifesto"><span>THE DIFFERENCE IS IN THE DETAILS.</span><h2>It starts with your story.<br><em>Then the art.</em></h2><p>Nothing mass-produced. No one-size-fits-all catalog. The commission process we're building starts with understanding what matters to you.</p><span class="sg-giant-mark" aria-hidden="true">✳</span></section>
-      <section class="sg-gallery" id="portfolio" aria-labelledby="sg-portfolio-title"><div class="sg-gallery-head"><span>02 / THE WORK</span><span>FROM THE STUDIO</span></div><div class="sg-gallery-title"><h2 id="sg-portfolio-title">A world in<br><em>every line.</em></h2><p>Explore the visual collection. Design samples are shown until original drawings are provided by the artist.</p></div><div class="concept-gallery-slot"></div></section>
+      <section class="sg-gallery" id="portfolio" aria-labelledby="sg-portfolio-title"><div class="sg-gallery-head"><span>02 / THE WORK</span><span>FROM THE STUDIO</span></div><div class="sg-gallery-title"><h2 id="sg-portfolio-title">A world in<br><em>every line.</em></h2><p>Explore a visual collection designed to let the images take centre stage.</p></div><div class="concept-gallery-slot"></div></section>
       <section class="sg-process" id="process" aria-labelledby="sg-process-title"><div class="sg-process-head"><span>03 / BEHIND EVERY COMMISSION</span><h2 id="sg-process-title">Confidence at<br><em>every step.</em></h2><p>We're designing a transparent request-to-delivery experience, with a confirmed quote and scope before checkout.</p></div>
         <div class="sg-steps"><article><span class="sg-step-no">01 / SHARE</span><div class="sg-step-icon" aria-hidden="true">↗</div><h3>The vision</h3><p>Tell us what the drawing should capture, and attach reference material.</p></article><article><span class="sg-step-no">02 / CONFIRM</span><div class="sg-step-icon" aria-hidden="true">◎</div><h3>The agreement</h3><p>Review the price, timing, scope, and next steps before any payment.</p></article><article><span class="sg-step-no">03 / CREATE</span><div class="sg-step-icon" aria-hidden="true">✳</div><h3>The artwork</h3><p>A personally commissioned piece, produced to the confirmed brief.</p></article></div>
       </section>

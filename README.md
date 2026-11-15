@@ -3,7 +3,7 @@
 **drawmeone.com** — an original-art portfolio and custom drawing commission website for an independent artist.
 
 ## Current status
-- **v0.4 live design lab**: four structurally distinct whole-site styles (Studio, Sidebar, Journal, Immersive), five independent color themes (Noir, Ocean, Paper, Aurora, Ember), three gallery layouts (Masonry, Mosaic, Horizontal Scroll), dark/light mode, remembered preferences, 24 self-hosted demonstration images, responsive design and lightbox. Demo visuals are clearly labelled as examples and automatically disappear once real approved artwork is added to `data/portfolio.json`.
+- **v0.6 interactive art-studio preview**: four structurally distinct whole-site styles (Studio, Sidebar, Journal, Immersive), five independent color themes (Noir, Ocean, Paper, Aurora, Ember), three gallery layouts (Masonry, Mosaic, Horizontal Scroll), dark/light mode, remembered preferences, 24 self-hosted demonstration images, responsive design and lightbox. Demo visuals are clearly labelled as examples and automatically disappear once real approved artwork is added to `data/portfolio.json`.
 - Quote/request, payment, contact and admin tools are **not active yet**. We will not accept customer personal data or payments before an agreed secure implementation.
 
 **Read first:** [Development roadmap](docs/ROADMAP.md) · [How to add approved artwork](docs/ARTWORK_GUIDE.md)
@@ -14,7 +14,10 @@ Static HTML/CSS/JS deployed from the root of GitHub `main` to Hostinger shared h
 - `index.html` — public landing page
 - `styles.css` — design and responsive styles
 - `gallery.js` — validated, accessible image gallery and full-screen viewer
-- `studio.js` — live theme, gallery layout and dark/light controls
+- `studio.js` — live theme, gallery layout, dark/light controls, mobile lab auto-collapse, and page-scroll progress
+- `concepts.js` — three independently templated Atelier, Edition, and Signature sites plus switching logic
+- `concepts.css` — structural design for the three alternative sites
+- `polish.css` — v0.6 refined typography, subtle interaction details, mobile controls and gallery-specific visual safeguards
 - `data/portfolio.json` — **real artist work only**, currently `{"works":[]}`
 - `data/demo-portfolio.json` — 24 locally hosted demonstration SVG artworks used only while the real portfolio is empty
 - `assets/demo/art-XX.svg` — locally stored demo visuals (zero external photo dependency)
@@ -90,3 +93,17 @@ Based on owner feedback that the alternate layouts looked like basic templates, 
 - [ ] Confirm automatic movement of the same gallery DOM works when switching styles repeatedly.
 - [ ] Test both desktop and mobile responsive behavior; check dark/light and all five themes.
 - [ ] Verify Hostinger deployed the latest main-branch commit and CSS/JS assets.
+
+## v0.6 — professional polish, performance and automatic art replacement
+
+- **Artist artwork automatically replaces every demo image**, including *hero covers and featured image compositions*, rather than only replacing the portfolio grid. In the preview, the sample artwork is clearly labeled as such. When actual entries appear in `data/portfolio.json`, the first images are used for the feature visuals, all sample labels disappear, and original artwork is shown uncropped and without colour filters. This avoids claiming any placeholder designs as authentic.
+- Existing **12/8-image Load more** behavior is kept. Rendering now appends new cards to the existing DOM rather than recreating loaded cards; switching gallery layout remains supported.
+- Typography: shifted Google Fonts loading from CSS `@import` to one HTML stylesheet, with preconnect hints for faster font delivery; local serif/system fallbacks remain.
+- Dedicated `polish.css` refines rhythm, typographic choices, navigation feedback, image treatment, dark/light contrast, and each unique design without reworking the original Studio.
+- The desktop design lab gets clear site-choice thumbnails/markers and succinct descriptions. On narrow screens, it starts minimized (or recalls a session preference), expands by tap and minimizes after a selection; it is designed not to obscure the artwork.
+- A three-pixel reading-progress line helps users navigate long image-led pages.
+- Reduced-motion handling, visible keyboard focus, lightbox touch actions and minimum touch target sizes retained.
+- SEO: site remains temporarily `noindex,follow` during this incomplete portfolio preview. The final real gallery should use server-rendered image markup from the admin database, no fabricated proof or client references, and accurate metadata.
+
+### Manual QA
+Verify Studio / Atelier / Edition / Signature; demo vs real images; dark/light; theme combinations; initial/load-more counts; viewport widths 390, 600, 800, 1365; keyboard and swipe lightbox; page speed; fallback offline fonts. Do **not** treat this static preview as a functioning commission-request application.

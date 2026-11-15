@@ -154,3 +154,19 @@ The owner judged the three alternate website styles too close to free WordPress 
 - [ ] Evaluate new layouts with actual artwork before selecting a final brand design.
 
 **Credibility policy:** Never claim demonstrated quality, ratings, customer feedback or established delivery timelines before verified artist work and genuine customer evidence are available. Use precise, forward-looking process explanations while commissions remain closed.
+
+## v0.6 — polish and product readiness (2026-11-15)
+
+- [x] Keep 4 distinct HTML site concepts and 5 colour themes; improve each with more intentional type, spatial rhythm, micro-interactions, and a visual identity.
+- [x] Eliminate CSS `@import` font delay; replace with one consolidated font link and preconnect in HTML.
+- [x] Add reading-progress indicator to long pages.
+- [x] Optimize load-more to append new images only; avoid reloading gallery on each reveal.
+- [x] Automatically replace demo imagery in all hero compositions (not just gallery) when real portfolio manifest has valid entries; hide sample labels. Keep real artwork colour-correct and avoid cropping in hero features.
+- [x] Improve design lab accessibility and screen-space usage on phones; persist collapse state per browser session.
+- [x] Add focus/hover treatments, additional reduced-motion support, and avoid images changing saturation when genuine art is displayed.
+- [ ] Run live browser QA for all style switches, light/dark, newly loaded assets and load-more.
+- [ ] Check real 390px phone viewport visually; cloud browser may not allow viewport resizing.
+- [ ] Replace abstract placeholder art with artist-authorized originals before launch and verify actual performance in PageSpeed Insights.
+- [ ] Build secure PHP+DB admin uploader and inquiry workflow with payment provider after approval.
+
+**Note:** Honest creative credibility requires verified art, real process details, approved pricing and actual client feedback. Do not invent any of them. In-preview status and `noindex` remain on.

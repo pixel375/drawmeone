@@ -1,0 +1,188 @@
+/* Draw Me One · v0.6
+   Visual refinement, accessibility, responsive behavior, and restrained motion.
+   Dark-first. No fake social proof or artwork overlays. */
+
+/* Navigation and progress — quiet details that make an image-heavy experience deliberate. */
+:root{--dmo-ease:cubic-bezier(.22,.72,.25,1)}
+::selection{background:var(--accent);color:var(--accent-ink)}
+.page-progress{position:fixed;left:0;right:0;top:0;height:3px;background:var(--accent);
+  transform:scaleX(0);transform-origin:left center;z-index:99;pointer-events:none}
+a,button{-webkit-tap-highlight-color:transparent}
+a:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:4px}
+.concept-page a,.concept-page button{transition:opacity .22s var(--dmo-ease),background-color .22s var(--dmo-ease),
+  color .22s var(--dmo-ease),border-color .22s var(--dmo-ease),transform .3s var(--dmo-ease)}
+.concept-page [id]{scroll-margin-top:95px}
+.concept-page :is(.at-nav,.ed-nav,.sg-menu) a{position:relative}
+.concept-page :is(.at-nav,.ed-nav,.sg-menu) a:hover{color:var(--accent);opacity:1}
+.concept-page :is(.at-nav,.ed-nav,.sg-menu) a:focus-visible{border-radius:2px}
+.concept-page :is(.at-primary,.sg-hero-actions a:first-child):hover{transform:translateY(-3px);opacity:1}
+.concept-page :is(.at-primary,.sg-hero-actions a:first-child):active{transform:translateY(0)}
+.concept-page .art-tile{outline-offset:4px}
+.concept-page .art-tile:focus-visible{outline:3px solid var(--accent)}
+:root[data-has-artwork="true"] .art-tile img{filter:none!important}
+:root[data-has-artwork="true"] .art-tile:hover img{filter:none!important;transform:none!important}
+:root[data-has-artwork="true"] :is(.hero-photo,.at-img-panel,.ed-figure,.sg-image-back,.sg-image-front) img{
+  object-fit:contain!important;filter:none!important
+}
+:root[data-has-artwork="true"] .ed-figure{background:var(--surface)}
+:root[data-has-artwork="true"] .sg-hero-overlay{background:linear-gradient(90deg,rgba(6,6,12,.93),rgba(6,6,12,.67) 60%,rgba(6,6,12,.24))}
+[data-demo-caption][hidden]{display:none!important}
+
+/* The design lab should feel like a small professional tool, not a banner ad. */
+.design-lab{box-shadow:0 10px 42px rgba(0,0,0,.26),0 2px 12px rgba(0,0,0,.09);
+  border-color:color-mix(in srgb,var(--hairline) 85%,var(--accent) 15%)}
+.lab-titlebar{padding:0 0 9px;border-bottom:1px solid var(--hairline);margin-bottom:11px}
+.lab-title strong{font-family:'Space Grotesk',sans-serif;font-size:11px;letter-spacing:.19em}
+.lab-indicator{box-shadow:0 0 0 4px color-mix(in srgb,var(--accent),transparent 88%)}
+.lab-beta{font-size:9px;padding:4px 7px;border:1px solid var(--hairline);border-radius:5px}
+.lab-label{font-size:9px;font-weight:800}
+.lab-site-description{font-size:10px;line-height:1.6;letter-spacing:.02em;color:var(--muted);margin:9px 2px 0;
+  border-top:1px solid var(--hairline);padding-top:8px;text-align:left}
+.lab-collapse{font-family:'Space Grotesk',sans-serif;font-weight:700}
+.design-lab.is-collapsed .lab-site-description{display:none}
+.design-lab.is-collapsed .lab-titlebar{border:0;padding:0}
+.design-lab .lab-button-group{background:color-mix(in srgb,var(--surface),var(--panel) 30%);gap:3px}
+.design-lab .lab-button-group button{transition:background-color .2s,color .2s,box-shadow .2s;min-height:35px}
+.design-lab .lab-button-group button[aria-pressed="true"]{
+  box-shadow:0 2px 12px color-mix(in srgb,var(--accent),transparent 83%)
+}
+.design-lab .lab-site-group button::before{
+  content:"";display:inline-block;margin-right:7px;vertical-align:middle;
+  width:11px;height:11px;border-radius:2px;border:1px solid currentColor;opacity:.7
+}
+.design-lab button[data-site-choice="studio"]::before{background:linear-gradient(90deg,currentColor 50%,transparent 50%)}
+.design-lab button[data-site-choice="archive"]::before{background:linear-gradient(90deg,currentColor 25%,transparent 25%)}
+.design-lab button[data-site-choice="journal"]::before{background:linear-gradient(0deg,currentColor 26%,transparent 26%);border-top-width:3px}
+.design-lab button[data-site-choice="cinema"]::before{background:currentColor;clip-path:polygon(0 0,100% 0,100% 100%,0 80%)}
+.design-lab .lab-theme-group button::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;
+  margin-right:5px;vertical-align:1px;border:1px solid color-mix(in srgb,currentColor,transparent 65%)}
+.design-lab button[data-design-choice="noir"]::before{background:#a58bfa}
+.design-lab button[data-design-choice="canvas"]::before{background:#69d3dd}
+.design-lab button[data-design-choice="editorial"]::before{background:#d8ba9e}
+.design-lab button[data-design-choice="aurora"]::before{background:#9ced7b}
+.design-lab button[data-design-choice="ember"]::before{background:#fa8e69}
+.design-lab .lab-mode-group button{font-weight:800}
+
+/* Gallery: no overlays on real images; reinforce cut-off with intentional spacing. */
+.portfolio-gallery{isolation:isolate}
+.art-tile{backface-visibility:hidden}
+.art-tile img{color:transparent}
+.gallery-more{position:relative;z-index:1}
+.gallery-more::before{content:"";width:min(100%,380px);height:1px;background:var(--hairline);margin:0 0 24px}
+.gallery-more-button{font-family:'Space Grotesk',sans-serif;letter-spacing:.025em}
+.gallery-more-button:hover{box-shadow:0 8px 20px color-mix(in srgb,var(--accent),transparent 91%)}
+.gallery-more p{font-variant-numeric:tabular-nums}
+.lightbox-inner{padding-top:max(14px,env(safe-area-inset-top));padding-bottom:max(16px,env(safe-area-inset-bottom))}
+.lightbox-bottom button,.lightbox-close{transition:background-color .2s,border-color .2s}
+.lightbox-bottom button:hover,.lightbox-close:hover{background:rgba(255,255,255,.19);border-color:#fff}
+.lightbox-stage{touch-action:pan-y}
+.portfolio-lightbox::backdrop{backdrop-filter:blur(7px)}
+
+/* STUDIO: stay familiar, but tighten rhythm, not a redesign. */
+:root[data-site="studio"] .hero{contain:layout}
+:root[data-site="studio"] .hero h1{letter-spacing:-.095em}
+:root[data-site="studio"] .portfolio-intro h2{letter-spacing:-.085em}
+:root[data-site="studio"] .hero-photo-primary{box-shadow:0 38px 105px rgba(0,0,0,.28)}
+:root[data-site="studio"] .site-header .wordmark{font-family:'Space Grotesk',Arial,sans-serif}
+:root[data-site="studio"] .step h3{font-family:'Space Grotesk',Arial,sans-serif}
+
+/* ATELIER: subtly engraved grid, gallery treatment and architectural details. */
+.concept-atelier .at-cover{background-image:
+  linear-gradient(to right,transparent calc(100% - 1px),var(--hairline) calc(100% - 1px)),
+  radial-gradient(ellipse 64% 75% at 93% 37%,var(--glow),transparent 75%);
+  background-size:25% 100%,100% 100%;background-repeat:repeat,no-repeat}
+.concept-atelier .at-statement h1{font-family:'Space Grotesk',Arial,sans-serif}
+.concept-atelier .at-issue{font-size:10px}
+.concept-atelier .at-img-main{outline:1px solid color-mix(in srgb,var(--accent),transparent 65%);outline-offset:9px}
+.concept-atelier .at-design-seal{box-shadow:0 10px 40px color-mix(in srgb,var(--accent),transparent 67%)}
+.concept-atelier .at-img-detail{filter:drop-shadow(0 8px 20px rgba(0,0,0,.09))}
+.concept-atelier .at-gallery{background:
+  radial-gradient(ellipse 56% 65% at 95% 5%,var(--glow),transparent 80%),var(--surface)}
+.concept-atelier .at-section-heading h2{line-height:1.02}
+.concept-atelier .at-method h2{max-width:800px}
+.concept-atelier .at-method-list h3{font-family:'Space Grotesk',Arial,sans-serif}
+.concept-atelier .at-contact{position:relative;isolation:isolate;overflow:hidden}
+.concept-atelier .at-contact::before{content:"D";position:absolute;font-size:clamp(350px,55vw,810px);
+  font-family:'Space Grotesk',Arial,sans-serif;font-weight:800;letter-spacing:-.2em;
+  right:4%;top:50%;transform:translateY(-50%);line-height:1;opacity:.055;pointer-events:none;z-index:-1}
+.concept-atelier .at-footer a{font-family:'Space Grotesk',Arial,sans-serif}
+
+/* EDITION: greater typographic personality and magazine rhythm. */
+.concept-edition .ed-mast>a{transition:letter-spacing .3s var(--dmo-ease)}
+.concept-edition .ed-mast>a:hover{opacity:1;letter-spacing:-.058em}
+.concept-edition .ed-header{border-bottom:4px double var(--ink)}
+.concept-edition .ed-lead{background:radial-gradient(circle at 92% 8%,var(--glow),transparent 30%)}
+.concept-edition .ed-asterisk{transform:rotate(-15deg);opacity:.88}
+.concept-edition .ed-figure img{border:1px solid var(--hairline)}
+.concept-edition .ed-figure-wide img{outline:1px solid var(--hairline);outline-offset:5px}
+.concept-edition .ed-deck{border-width:2px 0}
+.concept-edition .ed-gallery{background:var(--bg)}
+.concept-edition .ed-gallery-title{padding-bottom:70px}
+.concept-edition .ed-process-list h3{font-size:clamp(31px,3vw,43px)}
+.concept-edition .ed-lastpage{background:var(--surface)}
+.concept-edition .ed-lastpage::before{content:"✳";font-size:250px;color:var(--accent);
+  opacity:.05;position:absolute;left:-40px;top:-100px;pointer-events:none}
+.concept-edition .ed-lastpage>*{position:relative}
+.concept-edition .ed-footer{font-family:'Space Grotesk',Arial,sans-serif}
+
+/* SIGNATURE: immersive premium presentation, polished contrast and depth. */
+.concept-signature .sg-nav{box-shadow:0 16px 60px rgba(0,0,0,.23)}
+.concept-signature .sg-wordmark{letter-spacing:-.095em}
+.concept-signature .sg-hero{background:#090b0f}
+.concept-signature .sg-image-front{box-shadow:0 30px 120px rgba(0,0,0,.65)}
+.concept-signature .sg-kicker{font-family:'Space Grotesk',Arial,sans-serif}
+.concept-signature .sg-hero h1{max-width:1700px}
+.concept-signature .sg-hero h1 i{text-shadow:0 8px 38px rgba(0,0,0,.2)}
+.concept-signature .sg-manifesto{background:
+  radial-gradient(ellipse 60% 80% at 95% 0%,var(--glow),transparent 90%),var(--bg)}
+.concept-signature .sg-gallery{background:
+  linear-gradient(180deg,transparent 0%,color-mix(in srgb,var(--glow),transparent 70%) 100%),var(--surface)}
+.concept-signature .sg-steps article{position:relative;overflow:hidden;transition:transform .35s var(--dmo-ease),border-color .3s}
+.concept-signature .sg-steps article::after{content:"";position:absolute;right:-40px;bottom:-70px;width:190px;height:190px;
+  border:1px solid var(--hairline);border-radius:50%;pointer-events:none}
+.concept-signature .sg-steps article:hover{transform:translateY(-6px);border-color:var(--accent)}
+.concept-signature .sg-step-icon{font-family:'Space Grotesk',Arial,sans-serif}
+.concept-signature .sg-cta-shape{transform:translate(-50%,-50%) rotate(-15deg)}
+
+/* LIGHT: ensure placeholders, text and progress remain legible in every theme. */
+:root[data-mode="light"] .design-lab{box-shadow:0 10px 35px rgba(32,25,25,.16)}
+:root[data-mode="light"] .concept-edition .ed-figure img{background:var(--surface)}
+:root[data-mode="light"] .concept-atelier .at-img-detail{border-color:var(--bg)}
+:root[data-mode="light"] .concept-signature .sg-hero{color:white}
+
+/* Mobile: make the design lab compact, leave the content visible, and prevent overflow. */
+@media(max-width:850px){
+  .concept-page h1,.concept-page h2{overflow-wrap:normal}
+  .concept-atelier .at-cover{background-size:50% 100%,100% 100%}
+  .concept-edition .ed-mast>a:hover{letter-spacing:-.065em}
+}
+@media(max-width:650px){
+  .design-lab{max-height:min(78dvh,570px);overflow-y:auto;overscroll-behavior:contain;
+    padding-bottom:max(12px,env(safe-area-inset-bottom))}
+  .design-lab.is-collapsed{width:auto;max-width:calc(100vw - 22px);padding:10px 14px;
+    bottom:max(9px,env(safe-area-inset-bottom))}
+  .design-lab.is-collapsed .lab-title strong{font-size:10px}
+  .design-lab.is-collapsed .lab-beta{display:none}
+  .design-lab .lab-site-description{font-size:10px}
+  .design-lab .lab-button-group button{min-height:39px}
+  .design-lab .lab-site-group button::before{display:none}
+  .design-lab .lab-theme-group button::before{width:6px;height:6px;margin-right:3px}
+  .gallery-more::before{margin-bottom:15px}
+  .concept-atelier .at-img-main{outline-offset:4px}
+  .concept-atelier .at-contact::before{font-size:390px;right:-130px}
+  .concept-edition .ed-figure-wide img{outline-offset:2px}
+  .concept-signature .sg-steps article:hover{transform:none}
+  .concept-signature .sg-hero h1{max-width:100%}
+  .concept-signature .sg-image-front{opacity:.67}
+}
+@media(max-width:390px){
+  .design-lab:not(.is-collapsed) .lab-site-group .lab-button-group button{font-size:9px;padding-left:4px;padding-right:4px}
+  .design-lab:not(.is-collapsed) .lab-theme-group .lab-button-group button{font-size:9px;padding-left:4px;padding-right:4px}
+  .concept-signature .sg-hero h1{font-size:clamp(56px,12vw,75px)}
+  .concept-edition .ed-mast>a{font-size:clamp(55px,14vw,75px)}
+  .concept-atelier .at-statement h1{font-size:clamp(58px,14vw,76px)}
+}
+@media(prefers-reduced-motion:reduce){
+  .page-progress,.concept-page *, .design-lab *, .art-tile img{transition:none!important;animation:none!important}
+  .concept-signature .sg-steps article:hover{transform:none}
+}
