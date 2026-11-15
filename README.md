@@ -68,3 +68,25 @@ Open https://drawmeone.com/ on desktop or mobile. Use the floating **Design Lab*
 **Preview-only policy:** Sample photographs are fetched from `picsum.photos` and are not the artist's work. They will automatically disappear once real approved artwork is published. A generic local decorative SVG is used if the sample photos fail to load. Because this version deliberately contains unrelated sample photos, the home page currently uses `noindex,follow` to avoid being indexed with inaccurate image content. **Remove noindex after the genuine gallery and business content are launch-ready.**
 
 This is a front-end preview, not a finished commission checkout or private media manager. No customer data is collected.
+
+## v0.5 — Three completely redesigned website concepts
+Based on owner feedback that the alternate layouts looked like basic templates, the entire page structure of **Sidebar, Journal and Immersive** was discarded and rebuilt as three new page architectures. **Studio remains the original layout** for a baseline comparison.
+
+1. **Atelier** (internal id `archive`): bespoke boutique art studio, permanent desktop identity/navigation rail, custom split hero, image collage, manifesto and strongly defined commission process, impactful contrasting contact section.
+2. **Edition** (internal id `journal`): art publication / exhibition website with huge typography-driven masthead, magazine opening spread, featured visual studies, collection-first editorial presentation, typographic commission guide and final-page close.
+3. **Signature** (internal id `cinema`): cinematic brand website with floating navigation, layered full-screen demo visuals, high-impact hero, spacious manifesto, image theatre, premium process cards and an oversized closing invitation.
+
+### Technical approach
+- Three independently templated `<main>` layouts in `concepts.js`, with isolated styles in `concepts.css`. These are **different semantic HTML page architectures**, not simply reordered sections or recoloured styles.
+- The original Studio `<main>` remains unmodified and is toggled only when it is selected.
+- Live gallery and Load more nodes are moved between templates (not duplicated), retaining interactions and image-only publishing.
+- The current theme, light/dark, and gallery layout controls work across all four site styles. No payment or customer data is collected.
+- Every template uses self-hosted sample illustrations and accurately identifies them as samples, not the artist's portfolio. No fake reviews, ratings, order counts or unsupported promises of completed work.
+- `<meta name="robots" content="noindex,follow">` remains while the site is an unfinished design preview.
+
+### Validation checklist
+- [ ] Check Studio remains visually unchanged from v0.4 and still loads images.
+- [ ] Verify Atelier / Edition / Signature show different navigation, header, cover, portfolio framing, commission explanations and footers.
+- [ ] Confirm automatic movement of the same gallery DOM works when switching styles repeatedly.
+- [ ] Test both desktop and mobile responsive behavior; check dark/light and all five themes.
+- [ ] Verify Hostinger deployed the latest main-branch commit and CSS/JS assets.

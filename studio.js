@@ -9,6 +9,7 @@
     mode:["dark","light"]
   };
   const defaultLayouts = {studio:"masonry",archive:"mosaic",journal:"masonry",cinema:"rows"};
+  const siteDescriptions = {studio:"Studio — the original landing-page layout.",archive:"Atelier — boutique studio with an identity rail, project gallery, and clear commission experience.",journal:"Edition — an independent art journal with a masthead, exhibition and editorial chapters.",cinema:"Signature — a cinematic flagship with a full-screen showcase and spacious visual storytelling."};
   const modeIcon = document.getElementById("header-mode-icon");
   const modeShortcut = document.getElementById("header-mode");
   const lab = document.getElementById("design-lab");
@@ -29,6 +30,8 @@
     }
     if (modeIcon) modeIcon.textContent = root.dataset.mode === "dark" ? "☀" : "☾";
     if (modeShortcut) modeShortcut.setAttribute("aria-label",root.dataset.mode === "dark" ? "Switch to light mode" : "Switch to dark mode");
+    const siteDescription = document.getElementById("lab-site-description");
+    if (siteDescription) siteDescription.textContent = siteDescriptions[root.dataset.site] || siteDescriptions.studio;
     const themeColor = document.querySelector('meta[name="theme-color"]');
     if (themeColor) themeColor.setAttribute("content",getComputedStyle(document.body).backgroundColor);
   }
@@ -39,6 +42,7 @@
     if (name === "site") root.dataset.layout = defaultLayouts[value];
     reflect();
     save();
+    if (name === "site") document.dispatchEvent(new CustomEvent("dmo:site-change", {detail:{site:value}}));
     if (root.dataset.layout !== oldLayout) document.dispatchEvent(new CustomEvent("dmo:layout-change"));
   }
   for (const name of Object.keys(allowed)) {

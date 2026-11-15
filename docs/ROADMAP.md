@@ -138,3 +138,19 @@ Testing note: browser validation of the live Hostinger site may be restricted by
 - [ ] Verify live deployment, JS gallery rendering, responsive behaviour and toggles in browser.
 - [ ] Collect user's favourite combinations before removing design lab from public launch.
 - [ ] Get approved real artwork; samples must stay temporary and unindexed.
+
+## v0.5 — Creative overhaul (2026-11-15)
+
+The owner judged the three alternate website styles too close to free WordPress templates. Studio is explicitly exempt from the redesign.
+
+- [x] Keep Studio as original, fully functioning fallback for comparisons.
+- [x] Rebuild Sidebar as **Atelier** — real left rail, striking staggered display typography, bespoke image stage, clear process and bold contact finish.
+- [x] Rebuild Journal as **Edition** — oversized art-publication masthead, editorial cover spread, exhibition-style work section, three-step commission chapter.
+- [x] Rebuild Immersive as **Signature** — edge-to-edge cinematic hero, floating glass navigation, large manifesto, spacious gallery and premium story cards.
+- [x] Separate DOM templates + isolated CSS; share the same actual portfolio viewer and load-more gallery with no duplicate image records.
+- [x] Retain all five theme palettes, dark/light switcher, three gallery layouts and 24 local placeholders.
+- [ ] Desktop live browser QA for all layout toggles and gallery interactions.
+- [ ] Phone viewport QA and polish.
+- [ ] Evaluate new layouts with actual artwork before selecting a final brand design.
+
+**Credibility policy:** Never claim demonstrated quality, ratings, customer feedback or established delivery timelines before verified artist work and genuine customer evidence are available. Use precise, forward-looking process explanations while commissions remain closed.

@@ -22,9 +22,11 @@
       })) if (allowed.includes(pref[key])) document.documentElement.dataset[key] = pref[key];
     } catch (_) {}
   </script>
-  <link rel="stylesheet" href="./styles.css?v=4">
-  <script defer src="./studio.js?v=4"></script>
-  <script defer src="./gallery.js?v=4"></script>
+  <link rel="stylesheet" href="./styles.css?v=5">
+  <link rel="stylesheet" href="./concepts.css?v=5">
+  <script defer src="./concepts.js?v=5"></script>
+  <script defer src="./studio.js?v=5"></script>
+  <script defer src="./gallery.js?v=5"></script>
 </head>
 <body>
   <a class="skip-link" href="#portfolio">Skip to portfolio</a>
@@ -116,7 +118,7 @@
     <footer class="footer">
       <a class="wordmark" href="#top">drawmeone<span>.</span></a>
       <span>Made for the love of making things.</span>
-      <span>Website preview · v0.4</span>
+      <span>Website preview · v0.5</span>
     </footer>
   </div>
 
@@ -130,9 +132,9 @@
         <span class="lab-label">WEBSITE STYLE <small>changes the entire layout</small></span>
         <div class="lab-button-group" role="group" aria-label="Whole website layout style">
           <button type="button" data-site-choice="studio">Studio</button>
-          <button type="button" data-site-choice="archive">Sidebar</button>
-          <button type="button" data-site-choice="journal">Journal</button>
-          <button type="button" data-site-choice="cinema">Immersive</button>
+          <button type="button" data-site-choice="archive">Atelier</button>
+          <button type="button" data-site-choice="journal">Edition</button>
+          <button type="button" data-site-choice="cinema">Signature</button>
         </div>
       </div>
       <div class="lab-group lab-theme-group">
@@ -161,6 +163,7 @@
         </div>
       </div>
     </div>
+    <p class="lab-site-description" id="lab-site-description" aria-live="polite">Studio — the original landing-page layout.</p>
   </aside>
 
   <dialog class="portfolio-lightbox" id="portfolio-lightbox" aria-label="Artwork viewer">
