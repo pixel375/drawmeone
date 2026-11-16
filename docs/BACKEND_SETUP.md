@@ -43,7 +43,7 @@ Important: PHP's `getenv()` does **not** load .env files automatically. `app/boo
 
 Once Hostinger has deployed the new GitHub main branch:
 
-1. Open the friendly [backend connection status page](https://drawmeone.com/backend-status.html). It reads the same endpoint and shows only a safe diagnostic stage. For raw JSON, open [https://drawmeone.com/api/health.php](https://drawmeone.com/api/health.php).
+1. Open the friendly [backend connection status page](https://drawmeone.com/backend-status.php). It reads the same endpoint and shows only a safe diagnostic stage. For raw JSON, open [https://drawmeone.com/api/health.php](https://drawmeone.com/api/health.php).
 2. Healthy database and imported schema:
 
    ```json
@@ -119,3 +119,6 @@ The read-only catalog queries the real tier/add-on column names (`estimate_min_m
 - `setup_required`: unexpected server-side setup problem.
 
 These labels contain no passwords, account names, internal paths, user records or SQL exception messages. The health endpoint still uses HTTP 503 for failed checks. `backend-status.html` displays the safe stage in the browser.
+
+
+The server-rendered `/backend-status.php` endpoint is preferred for setup diagnostics because it returns readable HTML even when the database health API uses HTTP 503. It shows only a sanitized status code.
