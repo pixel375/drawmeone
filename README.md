@@ -10,6 +10,16 @@ For placing watermarks on artwork, use the same black/white variant as appropria
 
 **v0.8 quality fix:** All 20 SVGs were re-traced from the original high-resolution image files using genuine smooth Bézier paths instead of low-resolution straight-line polygons. The image cache version is bumped to `v=8` so existing visitors load the repaired assets.
 
+## v0.9 — Artist-led direction + lightbox fix
+
+The product is now scoped as a **personal hand-drawn character-art portfolio and commissions site**, not an agency. Studio is the main design candidate. Other layout variants remain experiments and should not be exposed as customer choices on launch. Studio has received a smaller, warmer visual treatment.
+
+The desktop/phone gallery viewer now uses a viewport-constrained grid and `object-fit: contain` so full portrait images should fit inside the available stage with navigation and Close always visible; browser testing is still needed.
+
+Owner-supplied drawing collages are **reference-only** and have not been uploaded to this repository. New specification:
+- [Commission Product Specification](docs/COMMISSION_PRODUCT_SPEC.md)
+- [Art direction & reference notes](docs/ART_DIRECTION.md)
+
 ## Current status
 - **v0.6 interactive art-studio preview**: four structurally distinct whole-site styles (Studio, Sidebar, Journal, Immersive), five independent color themes (Noir, Ocean, Paper, Aurora, Ember), three gallery layouts (Masonry, Mosaic, Horizontal Scroll), dark/light mode, remembered preferences, 24 self-hosted demonstration images, responsive design and lightbox. Demo visuals are clearly labelled as examples and automatically disappear once real approved artwork is added to `data/portfolio.json`.
 - Quote/request, payment, contact and admin tools are **not active yet**. We will not accept customer personal data or payments before an agreed secure implementation.

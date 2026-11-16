@@ -170,3 +170,33 @@ The owner judged the three alternate website styles too close to free WordPress 
 - [ ] Build secure PHP+DB admin uploader and inquiry workflow with payment provider after approval.
 
 **Note:** Honest creative credibility requires verified art, real process details, approved pricing and actual client feedback. Do not invent any of them. In-preview status and `noindex` remain on.
+
+## v0.9 — 2026-11-16: Owner requirements and pivot to artist-first site
+
+Owner supplied four original-work reference collages to communicate style. **Do not publish or upload these pictures anywhere.** They show hand-made character portraits (traditional coloured-pencil, ink and digital), anime/game-style and original character art. The studio is a single independent artist, not an agency or generative image business.
+
+**Current direction**: Studio is the only broadly acceptable website style. Alternate Atelier/Edition/Signature are oversized, visually messy and unapproved. Preserve for design experiments only, not as public customer choices. Future concepts should be warmer, smaller scale and sketchbook-inspired; do not build more giant generic landing pages. Visitor controls will ultimately be restricted to light/dark. All other design, pricing, media, SEO, CAPTCHA and page content settings belong in the private admin.
+
+### Frontend fix and light polish
+- [x] Fix portrait-image viewer by constraining entire image to the available central grid row of a viewport-height dialog, while keeping Close and previous/next controls permanently visible; include reduced-height viewport rules and safe-area insets.
+- [x] Reduce Studio hero and section typography and oversized vertical spacing; humanize headline/copy without inventing an artist bio or publishing private works.
+- [ ] **Test** portrait fit on actual desktop viewport with tall aspect ratio and browser zoom; confirm with user.
+- [ ] Retire or replace existing alternate website styles only after new art direction approved.
+- [ ] Obtain publication approval before substituting any user-supplied pictures for local dummy art.
+- [ ] Test Scroll versus Masonry with approved real works; do not crop images in zoom/lightbox.
+
+### Business model and specification
+- [x] Record owner-suggested estimated Simple $5–$10, Normal $15–$20, Advanced $25–$30 tiers, features and add-ons as editable administrative configuration. Prices/currency are examples **not approved for public display**.
+- [x] Document commission flow: order CTA → option selection and estimate → brief and private references → account creation at submit → artist review → exact quote → acceptance → external/manual payment → status updates, revisions and digital delivery.
+- [x] Document users/accounts, onsite order messages, external Discord link, email, quote records and customer inbox.
+- [x] Document admin-first information architecture: **work/orders/messages first**, artwork uploads second, website/config/security settings third.
+- [x] Capture payment preference PayPal personal for commercial Goods & Services, Interac for Canadian bank customers, optional Buy Me a Coffee support link; no automatic paid status without verified evidence.
+- [x] Capture desired buyer ownership, applicable Canadian signed copyright assignment, separate moral rights, and third-party fan-art limitations.
+- [x] Capture portfolio consent option with owner-suggested default checked. **Recommended safer default unchecked; owner to confirm** before launch; private artworks should never appear publicly without explicit consent.
+- [x] Require Turnstile on signup/login/quote forms, with mandatory server validation plus CSRF, secure sessions and throttling.
+- [x] Proposed secure shared-hosting PHP/MySQL architecture and database entity inventory documented in `docs/COMMISSION_PRODUCT_SPEC.md`.
+- [ ] Review/approve actual pricing, currency, tiers and business terms with artist.
+- [ ] Confirm order ownership/rights contract and public showcase permission default with appropriate legal review.
+- [ ] Prototype mobile-first commission form and admin dashboard (without collecting real customer data), then implement backend.
+
+See `docs/ART_DIRECTION.md` and `docs/COMMISSION_PRODUCT_SPEC.md`.
