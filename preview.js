@@ -30,7 +30,7 @@
         else button.removeAttribute("aria-current");
       });
       if(step===3)updateReview();
-      document.querySelector(".quote-workspace")?.scrollIntoView({block:"start",behavior:"instant"});
+      if(n!==1)document.querySelector(".quote-workspace")?.scrollIntoView({block:"start",behavior:"auto"});
     }
     function chooseTier(next){
       if(!prices[next])return;
@@ -71,6 +71,9 @@
       const result=document.getElementById("commission-finish");
       if(result){result.hidden=false;result.scrollIntoView({block:"nearest",behavior:"smooth"});}
     });
+    document.querySelectorAll("[data-tier],[data-next],[data-back],[data-step-button],#finish-demo").forEach(button=>{
+      button.disabled=false;
+    });
     showStep(1);
   }
 
@@ -106,4 +109,7 @@
     }));
     showPanel("overview");
   }
+  document.documentElement.dataset.previewReady="true";
+  const ready=document.getElementById("preview-ready");
+  if(ready)ready.textContent="Interactive preview ready";
 })();

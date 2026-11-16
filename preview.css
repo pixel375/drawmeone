@@ -306,3 +306,6 @@ p{line-height:1.7}
   .prototype-footer{flex-wrap:wrap}
 }
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{transition:none!important;animation:none!important}}
+
+.preview-stripe #preview-ready{display:inline-block;margin-left:10px;font-weight:800;color:var(--accent);letter-spacing:.02em}
+:root:not([data-preview-ready="true"]) .step-marker, :root:not([data-preview-ready="true"]) .tier-card {opacity:.65}

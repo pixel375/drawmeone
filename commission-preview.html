@@ -8,8 +8,8 @@
 <meta name="theme-color" content="#131316">
 <title>Commission a Drawing · UX Preview | Draw Me One</title>
 <link rel="icon" href="./favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="./preview.css?v=10">
-<script defer src="./preview.js?v=10"></script>
+<link rel="stylesheet" href="./preview.css?v=11">
+<script defer src="./preview.js?v=11"></script>
 </head>
 <body class="preview-body commission-view" data-preview="commission">
 <a class="skip-link" href="#commission-main">Skip to commission preview</a>
@@ -18,7 +18,7 @@
   <div class="preview-nav"><a href="./index.html">← Portfolio</a><button type="button" class="mode-button" data-toggle-mode aria-label="Switch appearance">☀</button></div>
 </header>
 <main id="commission-main" class="commission-shell">
-  <div class="preview-stripe" role="status"><span aria-hidden="true">✳</span> INTERACTIVE DESIGN PREVIEW ONLY — NO REQUESTS, FILES, ACCOUNTS, OR PAYMENTS ARE SUBMITTED</div>
+  <div class="preview-stripe" role="status"><span aria-hidden="true">✳</span> INTERACTIVE DESIGN PREVIEW ONLY — NO REQUESTS, FILES, ACCOUNTS, OR PAYMENTS ARE SUBMITTED <strong id="preview-ready">Loading interactive preview…</strong></div>
   <div class="commission-heading">
     <div><span class="eyebrow">A PIECE THAT'S YOURS</span><h1>Tell me what<br><em>you imagine.</em></h1></div>
     <div><p>From original characters to your favourite game worlds — share your idea and I'll help bring it to life.</p><p class="subtle">This is a demonstration of the future commission flow. Pricing and features are provisional.</p></div>
@@ -26,14 +26,14 @@
   <div class="commission-layout">
     <section class="quote-workspace" aria-label="Commission request builder">
       <div class="step-track" aria-label="Form progress">
-        <button type="button" class="step-marker active" data-step-button="1" aria-current="step">01 <span>Choose a style</span></button>
-        <button type="button" class="step-marker" data-step-button="2">02 <span>Describe it</span></button>
-        <button type="button" class="step-marker" data-step-button="3">03 <span>Review</span></button>
+        <button type="button" disabled class="step-marker active" data-step-button="1" aria-current="step">01 <span>Choose a style</span></button>
+        <button type="button" disabled class="step-marker" data-step-button="2">02 <span>Describe it</span></button>
+        <button type="button" disabled class="step-marker" data-step-button="3">03 <span>Review</span></button>
       </div>
       <div class="step-panel" data-step-panel="1">
         <div class="step-intro"><span class="step-number">01 / 03</span><h2>Start with a style.</h2><p>Every drawing is different. These tiers are starting points, not fixed quotes.</p></div>
         <div class="tier-grid" role="radiogroup" aria-label="Choose a provisional commission tier">
-          <button type="button" class="tier-card selected" data-tier="simple" role="radio" aria-checked="true">
+          <button type="button" disabled class="tier-card selected" data-tier="simple" role="radio" aria-checked="true">
             <span class="tier-top">01 <span>QUICK & EXPRESSIVE</span></span>
             <strong>Simple</strong>
             <span class="tier-price">$5–$10 <small>estimated*</small></span>
@@ -41,7 +41,7 @@
             <span class="tier-features">Sketch-led · Minimal detail</span>
             <span class="tier-check" aria-hidden="true">✓</span>
           </button>
-          <button type="button" class="tier-card" data-tier="normal" role="radio" aria-checked="false">
+          <button type="button" disabled class="tier-card" data-tier="normal" role="radio" aria-checked="false">
             <span class="tier-top">02 <span>MORE CHARACTER</span></span>
             <strong>Normal</strong>
             <span class="tier-price">$15–$20 <small>estimated*</small></span>
@@ -49,7 +49,7 @@
             <span class="tier-features">Colour · Detail · Basic revision</span>
             <span class="tier-check" aria-hidden="true">✓</span>
           </button>
-          <button type="button" class="tier-card" data-tier="advanced" role="radio" aria-checked="false">
+          <button type="button" disabled class="tier-card" data-tier="advanced" role="radio" aria-checked="false">
             <span class="tier-top">03 <span>THE FULL IDEA</span></span>
             <strong>Advanced</strong>
             <span class="tier-price">$25–$30 <small>estimated*</small></span>
@@ -66,7 +66,7 @@
           <label class="addon"><input type="checkbox" value="Complex background" data-addon><span>☼</span><span><strong>Extra background</strong><small>More scene detail</small></span></label>
           <label class="addon"><input type="checkbox" value="Extra revision" data-addon><span>↻</span><span><strong>Extra revision</strong><small>Another round of feedback</small></span></label>
         </div>
-        <div class="step-actions"><span class="quiet-note">Estimate only — exact quote after artist review</span><button type="button" class="primary-action" data-next>Continue to your idea <span>→</span></button></div>
+        <div class="step-actions"><span class="quiet-note">Estimate only — exact quote after artist review</span><button type="button" disabled class="primary-action" data-next>Continue to your idea <span>→</span></button></div>
       </div>
       <div class="step-panel" data-step-panel="2" hidden>
         <div class="step-intro"><span class="step-number">02 / 03</span><h2>Tell me the story.</h2><p>There's no perfect way to describe an idea. Start with the details that matter most to you.</p></div>
@@ -79,7 +79,7 @@
           </div>
           <div class="ref-upload-demo" aria-label="Future reference upload"><span class="upload-symbol">↥</span><div><strong>Reference images</strong><p>In the finished site, you can upload private references here.</p><small>Uploads disabled in this demo. Files will be private after backend launch.</small></div></div>
         </div>
-        <div class="step-actions"><button type="button" class="secondary-action" data-back>← Back</button><button type="button" class="primary-action" data-next>Review your idea <span>→</span></button></div>
+        <div class="step-actions"><button type="button" disabled class="secondary-action" data-back>← Back</button><button type="button" disabled class="primary-action" data-next>Review your idea <span>→</span></button></div>
       </div>
       <div class="step-panel" data-step-panel="3" hidden>
         <div class="step-intro"><span class="step-number">03 / 03</span><h2>Almost there.</h2><p>Here's what your future request would look like before you create an account and send it.</p></div>
@@ -93,7 +93,7 @@
         </div>
         <div class="approval-section"><h3>Before sending a real request</h3><label><input type="checkbox" disabled> I'll review the commission terms and privacy policy.</label><label><input type="checkbox" disabled> You may show my finished drawing in your public portfolio (optional, off by default).</label><p>When the backend is ready, you'd sign up with a name, email and password here, verify your email, and submit your request privately. No password entry is enabled in this preview.</p></div>
         <div class="preview-result" id="commission-finish" hidden role="status"><strong>Demo complete ✳</strong><p>This walkthrough is finished. Nothing was submitted, no account was created, and no payment was charged.</p></div>
-        <div class="step-actions"><button type="button" class="secondary-action" data-back>← Back</button><button type="button" class="primary-action" id="finish-demo">Finish demo <span>✓</span></button></div>
+        <div class="step-actions"><button type="button" disabled class="secondary-action" data-back>← Back</button><button type="button" disabled class="primary-action" id="finish-demo">Finish demo <span>✓</span></button></div>
       </div>
     </section>
     <aside class="quote-side" aria-label="What happens after you request a quote">
