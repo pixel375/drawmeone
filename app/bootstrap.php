@@ -16,19 +16,39 @@ function dmo_private_env_path(): ?string
         return null;
     }
 
-    $override = getenv('DMO_ENV_FILE');
     $candidates = [];
+    $override = getenv('DMO_ENV_FILE');
     if (is_string($override) && $override !== '') {
         $candidates[] = $override;
     }
 
-    // Hostinger usual layout: /home/uXXXXX/domains/drawmeone.com/public_html
-    // Personal private folder: /home/uXXXXX/private/.env
-    $candidates[] = dirname($webroot, 3) . '/private/.env';
-    // Alternative domain-specific private folder:
-    $candidates[] = dirname($webroot) . '/private/.env';
-    // Alternative single public_html inside account home:
-    $candidates[] = dirname($webroot) . '/.env';
+    // Hosting may resolve public_html through a symlink, so check both
+    // the PHP source root and the server's declared document root.
+    $roots = [$webroot];
+    $served = $_SERVER['DOCUMENT_ROOT'] ?? '';
+    if (is_string($served) && $served !== '') {
+        $declaredRoot = realpath($served);
+        if ($declaredRoot !== false) {
+            $roots[] = $declaredRoot;
+        }
+    }
+
+    foreach (array_unique($roots) as $root) {
+        // Hostinger usual: /home/uXXXXX/domains/domain.tld/public_html
+        $candidates[] = dirname($root, 3) . '/private/.env';
+        $candidates[] = dirname($root, 3) . '/.env';
+        // Hostinger simpler: /home/uXXXXX/public_html
+        $candidates[] = dirname($root) . '/private/.env';
+        $candidates[] = dirname($root) . '/.env';
+        // Domain-level private folder outside public_html.
+        $candidates[] = dirname($root) . '/config/.env';
+    }
+
+    $accountHome = getenv('HOME');
+    if (is_string($accountHome) && $accountHome !== '') {
+        $candidates[] = rtrim($accountHome, '/') . '/private/.env';
+        $candidates[] = rtrim($accountHome, '/') . '/.env';
+    }
 
     foreach (array_unique($candidates) as $candidate) {
         $path = realpath($candidate);
@@ -36,8 +56,14 @@ function dmo_private_env_path(): ?string
             continue;
         }
         // Fail closed: never load configuration from a web-accessible path.
-        $withinWebroot = $path === $webroot ||
-            strncmp($path, $webroot . DIRECTORY_SEPARATOR, strlen($webroot) + 1) === 0;
+        $withinWebroot = false;
+        foreach (array_unique($roots) as $root) {
+            if ($path === $root ||
+                strncmp($path, $root . DIRECTORY_SEPARATOR, strlen($root) + 1) === 0) {
+                $withinWebroot = true;
+                break;
+            }
+        }
         if (!$withinWebroot) {
             return $path;
         }
