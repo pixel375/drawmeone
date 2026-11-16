@@ -1,0 +1,8 @@
+# Deliberately only the three read-only endpoints are public in phase 1.
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteRule ^(?!health\.php$|catalog\.php$|site-settings\.php$).* - [F,END]
+</IfModule>
+<IfModule mod_headers.c>
+  Header always set X-Content-Type-Options "nosniff"
+</IfModule>

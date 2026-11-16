@@ -1,3 +1,7 @@
+## v1.1 — PHP/MySQL backend connection layer (2026-11-16)
+
+Secure read-only PHP endpoints for **database health, approved commission catalog, and published design settings** are now available at `/api/health.php`, `/api/catalog.php`, and `/api/site-settings.php`. Credentials are loaded from a server-private `.env` outside `public_html`. No admin/customer authentication, registration, file upload, messages, quotes or payments are enabled in this phase. See [docs/BACKEND_SETUP.md](docs/BACKEND_SETUP.md).
+
 ## v1.0 — Static UX previews and database starter (2026-11-16)
 
 **Live routes:** `/commission-preview.html` (client commission wizard) and `/admin-preview.html` (artist dashboard UX). Both are **public, fictional, noindex, non-functional prototypes**. They make no database requests, create no accounts, take no payments and upload no files. The admin route is **not** a secure real admin panel; never use it for actual business records.

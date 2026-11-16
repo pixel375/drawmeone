@@ -212,3 +212,15 @@ See `docs/ART_DIRECTION.md` and `docs/COMMISSION_PRODUCT_SPEC.md`.
 - [ ] Verify GitHub push deployed and both live prototypes display/function on Hostinger.
 - [ ] Confirm Hostinger MySQL/MariaDB version and import schema via phpMyAdmin, keeping the password entirely private.
 - [ ] Build secure PHP backend endpoints and complete a legitimate signup / quote / messaging / bulk-upload workflow only after end-to-end tests.
+
+## v1.1 — 2026-11-16: First real backend connection
+
+- [x] Implement PHP 8.2+ private environment loader searching standard Hostinger private directories; reject all configurations under public_html.
+- [x] Implement PDO MySQL with utf8mb4, UTC timestamps, strict exceptions, native prepared statements, 5s connection timeout.
+- [x] Add GET /api/health.php verifying 001_initial_schema; response never exposes secrets or raw SQL errors.
+- [x] Add GET /api/catalog.php for explicitly active tiers/add-ons; new database returns empty catalog, never invented prices.
+- [x] Add GET /api/site-settings.php exposing only whitelisted published visual settings, no administrative secrets.
+- [x] Add public/private route protection via .htaccess and prevent accidental secret commits via .gitignore.
+- [x] Document database setup and safe verification in docs/BACKEND_SETUP.md.
+- [ ] Check actual Hostinger deployment and response of /api/health.php; diagnose any configuration mismatch without requesting user's password.
+- [ ] Build subsequent authenticated write endpoints only after email, CSRF, Turnstile Siteverify and brute-force controls are ready.

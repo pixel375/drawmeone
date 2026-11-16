@@ -1,0 +1,12 @@
+# Never commit actual secrets, private client media, or local artifacts.
+.env
+.env.*
+!.env.example
+private/
+storage/private/
+*.pem
+*.key
+*.p12
+*.pfx
+.DS_Store
+Thumbs.db
