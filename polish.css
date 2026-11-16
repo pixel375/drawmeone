@@ -296,3 +296,16 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-off
   }
   :root[data-site="studio"] .contact-section{padding:72px 20px 85px}
 }
+
+/* v1.0 development-preview links stay in the owner design lab, not the public commission funnel. */
+.lab-prototype-links{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:10px 2px 0;border-top:1px solid var(--hairline);padding-top:10px}
+.lab-prototype-links>span{font-size:9px;font-weight:800;letter-spacing:.1em;color:var(--muted);margin-right:auto}
+.lab-prototype-links a{font-size:11px;font-weight:800;border:1px solid var(--hairline);background:var(--surface);color:var(--ink);border-radius:7px;padding:9px 11px;display:inline-flex;align-items:center;gap:12px;text-decoration:none}
+.lab-prototype-links a:hover{border-color:var(--accent)}
+.lab-prototype-links a span{color:var(--accent)}
+.design-lab.is-collapsed .lab-prototype-links{display:none}
+@media(max-width:650px){
+  .lab-prototype-links{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+  .lab-prototype-links>span{grid-column:1/-1}
+  .lab-prototype-links a{font-size:10px;padding:9px 7px;justify-content:space-between}
+}

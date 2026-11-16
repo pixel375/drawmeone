@@ -200,3 +200,15 @@ Owner supplied four original-work reference collages to communicate style. **Do 
 - [ ] Prototype mobile-first commission form and admin dashboard (without collecting real customer data), then implement backend.
 
 See `docs/ART_DIRECTION.md` and `docs/COMMISSION_PRODUCT_SPEC.md`.
+
+## v1.0 — 2026-11-16: Prototypes + database preparation
+
+- [x] Deliver a public **non-functional** customer commission UI preview: provisional Simple/Normal/Advanced selections, optional add-ons, request brief, subject, preferred contact, deadline, review and an explicit demo-only completion; **no real passwords, customer uploads, or network submissions**.
+- [x] Deliver separate **fictional admin UX preview** organized as work (overview, requests, messages), art uploads, and site/admin settings (pricing, theme, users, SEO, CAPTCHA/payment planning).
+- [x] Provide 22-table MySQL/MariaDB schema in `database/001_initial_schema.sql.gz` and an uncompressed importable SQL file to user separately. No accounts/payment credentials, actual pricing or real customer records.
+- [x] Add Hostinger setup instructions and keep database migration files inaccessible from the public website through a database-folder `.htaccess`.
+- [x] Add demo links in Design Lab and update stale visible footer label from v0.6 to v1.0.
+- [x] Configure HTML/JSON revalidation so future deployment changes are not masked by a stale HTML cache.
+- [ ] Verify GitHub push deployed and both live prototypes display/function on Hostinger.
+- [ ] Confirm Hostinger MySQL/MariaDB version and import schema via phpMyAdmin, keeping the password entirely private.
+- [ ] Build secure PHP backend endpoints and complete a legitimate signup / quote / messaging / bulk-upload workflow only after end-to-end tests.

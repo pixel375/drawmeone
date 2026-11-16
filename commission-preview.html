@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en" data-preview-mode="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<meta name="description" content="Non-functional preview of the future Draw Me One commission-request experience.">
+<meta name="theme-color" content="#131316">
+<title>Commission a Drawing · UX Preview | Draw Me One</title>
+<link rel="icon" href="./favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="./preview.css?v=10">
+<script defer src="./preview.js?v=10"></script>
+</head>
+<body class="preview-body commission-view" data-preview="commission">
+<a class="skip-link" href="#commission-main">Skip to commission preview</a>
+<header class="preview-header">
+  <a class="preview-brand" href="./index.html">drawmeone<span>.</span></a>
+  <div class="preview-nav"><a href="./index.html">← Portfolio</a><button type="button" class="mode-button" data-toggle-mode aria-label="Switch appearance">☀</button></div>
+</header>
+<main id="commission-main" class="commission-shell">
+  <div class="preview-stripe" role="status"><span aria-hidden="true">✳</span> INTERACTIVE DESIGN PREVIEW ONLY — NO REQUESTS, FILES, ACCOUNTS, OR PAYMENTS ARE SUBMITTED</div>
+  <div class="commission-heading">
+    <div><span class="eyebrow">A PIECE THAT'S YOURS</span><h1>Tell me what<br><em>you imagine.</em></h1></div>
+    <div><p>From original characters to your favourite game worlds — share your idea and I'll help bring it to life.</p><p class="subtle">This is a demonstration of the future commission flow. Pricing and features are provisional.</p></div>
+  </div>
+  <div class="commission-layout">
+    <section class="quote-workspace" aria-label="Commission request builder">
+      <div class="step-track" aria-label="Form progress">
+        <button type="button" class="step-marker active" data-step-button="1" aria-current="step">01 <span>Choose a style</span></button>
+        <button type="button" class="step-marker" data-step-button="2">02 <span>Describe it</span></button>
+        <button type="button" class="step-marker" data-step-button="3">03 <span>Review</span></button>
+      </div>
+      <div class="step-panel" data-step-panel="1">
+        <div class="step-intro"><span class="step-number">01 / 03</span><h2>Start with a style.</h2><p>Every drawing is different. These tiers are starting points, not fixed quotes.</p></div>
+        <div class="tier-grid" role="radiogroup" aria-label="Choose a provisional commission tier">
+          <button type="button" class="tier-card selected" data-tier="simple" role="radio" aria-checked="true">
+            <span class="tier-top">01 <span>QUICK & EXPRESSIVE</span></span>
+            <strong>Simple</strong>
+            <span class="tier-price">$5–$10 <small>estimated*</small></span>
+            <span class="tier-copy">A quick, character-focused drawing with a simpler finish.</span>
+            <span class="tier-features">Sketch-led · Minimal detail</span>
+            <span class="tier-check" aria-hidden="true">✓</span>
+          </button>
+          <button type="button" class="tier-card" data-tier="normal" role="radio" aria-checked="false">
+            <span class="tier-top">02 <span>MORE CHARACTER</span></span>
+            <strong>Normal</strong>
+            <span class="tier-price">$15–$20 <small>estimated*</small></span>
+            <span class="tier-copy">More considered detail, colour, and one simple revision.</span>
+            <span class="tier-features">Colour · Detail · Basic revision</span>
+            <span class="tier-check" aria-hidden="true">✓</span>
+          </button>
+          <button type="button" class="tier-card" data-tier="advanced" role="radio" aria-checked="false">
+            <span class="tier-top">03 <span>THE FULL IDEA</span></span>
+            <strong>Advanced</strong>
+            <span class="tier-price">$25–$30 <small>estimated*</small></span>
+            <span class="tier-copy">An intricate drawing with background, timelapse, and extra revisions.</span>
+            <span class="tier-features">Background · Timelapse · Revisions</span>
+            <span class="tier-check" aria-hidden="true">✓</span>
+          </button>
+        </div>
+        <p class="fineprint">*Illustrative price ranges in unspecified dollars, not final prices, approved rates, or a binding offer. Actual currency, features, and availability are still undecided.</p>
+        <div class="step-section-title"><h3>Make it more personal.</h3><span>Optional add-ons · price TBD</span></div>
+        <div class="addon-grid">
+          <label class="addon"><input type="checkbox" value="Rush priority" data-addon><span>✳</span><span><strong>Priority rush</strong><small>Subject to availability</small></span></label>
+          <label class="addon"><input type="checkbox" value="Additional character" data-addon><span>♡</span><span><strong>Another character</strong><small>For shared scenes</small></span></label>
+          <label class="addon"><input type="checkbox" value="Complex background" data-addon><span>☼</span><span><strong>Extra background</strong><small>More scene detail</small></span></label>
+          <label class="addon"><input type="checkbox" value="Extra revision" data-addon><span>↻</span><span><strong>Extra revision</strong><small>Another round of feedback</small></span></label>
+        </div>
+        <div class="step-actions"><span class="quiet-note">Estimate only — exact quote after artist review</span><button type="button" class="primary-action" data-next>Continue to your idea <span>→</span></button></div>
+      </div>
+      <div class="step-panel" data-step-panel="2" hidden>
+        <div class="step-intro"><span class="step-number">02 / 03</span><h2>Tell me the story.</h2><p>There's no perfect way to describe an idea. Start with the details that matter most to you.</p></div>
+        <div class="preview-form">
+          <div class="field-group"><label for="request-kind">What kind of character?</label><select id="request-kind"><option value="Original character / OC">Original character / OC</option><option value="Game or anime character">Game or anime character</option><option value="Portrait / other">Portrait / other</option></select></div>
+          <div class="field-group"><label for="request-brief">What's your idea? <span class="optional-label">Demo text only</span></label><textarea id="request-brief" rows="5" placeholder="A little about the character, mood, pose, colours, style, or inspiration..."></textarea><small>Do not enter private information — this is a public UI preview and cannot send your request.</small></div>
+          <div class="field-row">
+            <div class="field-group"><label for="request-deadline">Ideal deadline</label><input id="request-deadline" type="date"><small>No delivery date is guaranteed.</small></div>
+            <div class="field-group"><label for="request-contact">Preferred contact</label><select id="request-contact"><option value="Onsite messages">Onsite messages</option><option value="Email">Email</option><option value="Discord">Discord</option></select></div>
+          </div>
+          <div class="ref-upload-demo" aria-label="Future reference upload"><span class="upload-symbol">↥</span><div><strong>Reference images</strong><p>In the finished site, you can upload private references here.</p><small>Uploads disabled in this demo. Files will be private after backend launch.</small></div></div>
+        </div>
+        <div class="step-actions"><button type="button" class="secondary-action" data-back>← Back</button><button type="button" class="primary-action" data-next>Review your idea <span>→</span></button></div>
+      </div>
+      <div class="step-panel" data-step-panel="3" hidden>
+        <div class="step-intro"><span class="step-number">03 / 03</span><h2>Almost there.</h2><p>Here's what your future request would look like before you create an account and send it.</p></div>
+        <div class="review-sheet">
+          <div class="review-line"><span>Drawing style</span><strong id="review-tier">Simple</strong></div>
+          <div class="review-line"><span>Indicative price</span><strong id="review-range">$5–$10*</strong></div>
+          <div class="review-line"><span>Subject</span><strong id="review-kind">Original character / OC</strong></div>
+          <div class="review-line"><span>Add-ons</span><strong id="review-addons">None selected</strong></div>
+          <div class="review-line"><span>Preferred contact</span><strong id="review-contact">Onsite messages</strong></div>
+          <div class="review-brief"><span>Your brief</span><p id="review-brief">No details added yet.</p></div>
+        </div>
+        <div class="approval-section"><h3>Before sending a real request</h3><label><input type="checkbox" disabled> I'll review the commission terms and privacy policy.</label><label><input type="checkbox" disabled> You may show my finished drawing in your public portfolio (optional, off by default).</label><p>When the backend is ready, you'd sign up with a name, email and password here, verify your email, and submit your request privately. No password entry is enabled in this preview.</p></div>
+        <div class="preview-result" id="commission-finish" hidden role="status"><strong>Demo complete ✳</strong><p>This walkthrough is finished. Nothing was submitted, no account was created, and no payment was charged.</p></div>
+        <div class="step-actions"><button type="button" class="secondary-action" data-back>← Back</button><button type="button" class="primary-action" id="finish-demo">Finish demo <span>✓</span></button></div>
+      </div>
+    </section>
+    <aside class="quote-side" aria-label="What happens after you request a quote">
+      <div class="quote-side-top"><span>THE PERSONAL PROCESS</span><span aria-hidden="true">✳</span></div>
+      <h2>Made for<br><em>your idea.</em></h2>
+      <p>You're working with one artist, not a production line. Every request starts with a conversation about what you imagine.</p>
+      <div class="quote-stages"><div><b>01</b><span><strong>You share the idea</strong><small>Pick a style and describe the character.</small></span></div><div><b>02</b><span><strong>The artist reviews it</strong><small>Questions, exact price, and realistic timing.</small></span></div><div><b>03</b><span><strong>You decide</strong><small>Only then do you accept and pay.</small></span></div></div>
+      <div class="quote-side-foot">NO AUTOMATIC CHECKOUT · NO PAYMENT BEFORE YOUR QUOTE</div>
+    </aside>
+  </div>
+  <footer class="prototype-footer"><span>Draw Me One · Commission UI preview</span><a href="./index.html">Back to portfolio ↑</a></footer>
+</main>
+</body>
+</html>

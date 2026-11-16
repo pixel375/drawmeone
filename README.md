@@ -1,3 +1,11 @@
+## v1.0 — Static UX previews and database starter (2026-11-16)
+
+**Live routes:** `/commission-preview.html` (client commission wizard) and `/admin-preview.html` (artist dashboard UX). Both are **public, fictional, noindex, non-functional prototypes**. They make no database requests, create no accounts, take no payments and upload no files. The admin route is **not** a secure real admin panel; never use it for actual business records.
+
+**Database starter:** `database/001_initial_schema.sql.gz` is a gzip-compressed MySQL/MariaDB schema for Hostinger (22 tables and one migration record; no users, passwords, real rates or payment providers configured). An uncompressed importable `.sql` is supplied separately in ChatGPT. Instructions: [database/README.md](database/README.md).
+
+**Why the live footer showed v0.6:** the visible version label had not been updated after v0.6, even when newer changes were present. v1.0 corrects the footer, refreshes asset cache versions, and adds a guarded HTML cache-revalidation `.htaccess` rule. Hostinger Git redeployment should update the live copy.
+
 # Draw Me One
 
 **drawmeone.com** — an original-art portfolio and custom drawing commission website for an independent artist.
