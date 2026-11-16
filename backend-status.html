@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<meta name="referrer" content="no-referrer">
+<title>Backend connection check · Draw Me One</title>
+<style>
+:root{color-scheme:dark;font-family:system-ui,-apple-system,Segoe UI,sans-serif;background:#141418;color:#f4f1f0}
+body{margin:0;min-height:100vh;display:grid;place-items:center;padding:22px;box-sizing:border-box}
+main{width:min(100%,580px);border:1px solid #49414a;background:#211f27;border-radius:18px;padding:clamp(23px,5vw,40px)}
+.logo{font-weight:900;letter-spacing:-.07em;font-size:26px}.logo span{color:#ecb9b6}
+.kicker{color:#eabbb8;font-size:11px;letter-spacing:.14em;font-weight:800;margin:33px 0 9px}
+h1{font-size:clamp(29px,6vw,43px);line-height:1.1;letter-spacing:-.05em;margin:8px 0 14px}
+p{color:#cbc6ca;line-height:1.75}
+.status{border:1px solid #625a65;padding:17px;border-radius:10px;background:#19181f;margin:25px 0}
+.status strong{display:block;margin:0 0 10px;font-size:17px}
+.status code{font-size:12px;overflow-wrap:anywhere;color:#f1b9b6}
+.status p{font-size:13px;margin:9px 0 0}
+button{background:#efc0b4;border:0;border-radius:8px;color:#261b20;padding:13px 18px;font-weight:800;cursor:pointer}
+button:focus-visible,a:focus-visible{outline:3px solid #efc0b4;outline-offset:3px}
+a{color:#efc0b4}
+small{display:block;line-height:1.7;color:#b4aeb7;margin-top:20px}
+</style>
+</head>
+<body>
+<main>
+  <div class="logo">drawmeone<span>.</span></div>
+  <p class="kicker">PHP / MYSQL · BACKEND PHASE 1</p>
+  <h1>Database connection</h1>
+  <p>This checks whether the server can read your private configuration and reach the imported database. It never displays credentials or database names.</p>
+  <div class="status" role="status" aria-live="polite">
+    <strong id="result">Checking connection…</strong>
+    <code id="status-code">loading</code>
+    <p id="details">Requesting the database health endpoint.</p>
+  </div>
+  <button id="retry" type="button">Check again</button>
+  <small>All commission, signup, messaging, upload and payment writes remain disabled. This is a development diagnostics page. If an error persists, you can share only the status code above — never your .env file.</small>
+  <p><a href="./index.html">← Return to website</a></p>
+</main>
+<script>
+(function(){
+  const messages={
+    database_connected:["Connected","The database is reachable and its initial schema is present."],
+    private_env_not_found:["Private file not found","The PHP application cannot find or read the private .env outside public_html. Confirm the actual path and read permissions."],
+    database_config_incomplete:["Database settings incomplete","One or more DB_* entries in the private .env are missing or empty. Do not share their values."],
+    pdo_mysql_unavailable:["MySQL driver unavailable","Enable the pdo_mysql PHP extension in Hostinger's PHP configuration."],
+    database_connection_failed:["MySQL connection failed","The private settings were found, but PHP could not connect. Verify the exact database host, user permissions, password, and whether the schema was imported."],
+    schema_setup_required:["Import not detected","The database connection worked, but migration 001_initial_schema was not found. Import the SQL into this database."],
+    setup_required:["Setup not yet verified","The backend isn't ready. Confirm private .env location and database access."],
+  };
+  const title=document.getElementById("result");
+  const code=document.getElementById("status-code");
+  const detail=document.getElementById("details");
+  async function check(){
+    title.textContent="Checking connection…";code.textContent="loading";detail.textContent="Requesting health endpoint.";
+    try{
+      const response=await fetch("./api/health.php",{cache:"no-store",credentials:"omit"});
+      const data=await response.json();
+      const state=typeof data.status==="string"?data.status:"unknown_response";
+      const selected=messages[state]||["Unexpected result","See Hostinger's PHP error logs for details. Do not publish the log."];
+      title.textContent=selected[0];code.textContent=state;detail.textContent=selected[1];
+    }catch(_){
+      title.textContent="Health check unavailable";
+      code.textContent="request_failed";
+      detail.textContent="The endpoint did not return valid JSON. Check deployment and PHP configuration.";
+    }
+  }
+  document.getElementById("retry").addEventListener("click",check);
+  check();
+})();
+</script>
+</body>
+</html>

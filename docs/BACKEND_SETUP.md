@@ -43,7 +43,7 @@ Important: PHP's `getenv()` does **not** load .env files automatically. `app/boo
 
 Once Hostinger has deployed the new GitHub main branch:
 
-1. Open [https://drawmeone.com/api/health.php](https://drawmeone.com/api/health.php).
+1. Open the friendly [backend connection status page](https://drawmeone.com/backend-status.html). It reads the same endpoint and shows only a safe diagnostic stage. For raw JSON, open [https://drawmeone.com/api/health.php](https://drawmeone.com/api/health.php).
 2. Healthy database and imported schema:
 
    ```json
@@ -107,3 +107,15 @@ The read-only catalog queries the real tier/add-on column names (`estimate_min_m
 5. Admin-managed drafts/published design, logo, SEO, tier settings and real payments.
 
 **Do not enable real submissions until all controls are implemented and tested.**
+
+## Setup status codes (safe to share)
+
+- `database_connected`: connection and initial schema OK.
+- `private_env_not_found`: PHP can't see/read the private config file. Check layout and PHP open_basedir restrictions.
+- `database_config_incomplete`: one of DB_HOST/DB_NAME/DB_USER/DB_PASS is empty or missing.
+- `pdo_mysql_unavailable`: required PHP driver missing.
+- `database_connection_failed`: PDO can't connect or authenticate; check Hostinger credentials, host and privileges privately.
+- `schema_setup_required`: connected database lacks migration 001_initial_schema.
+- `setup_required`: unexpected server-side setup problem.
+
+These labels contain no passwords, account names, internal paths, user records or SQL exception messages. The health endpoint still uses HTTP 503 for failed checks. `backend-status.html` displays the safe stage in the browser.
