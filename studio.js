@@ -36,13 +36,13 @@
         link.classList.add("is-custom-logo");
       }
       link.setAttribute("aria-label","Draw Me One home");
-      const url = "./assets/branding/" + logo + "-" + color + ".svg";
+      const url = "./assets/branding/" + logo + "-" + color + ".svg?v=8";
       if (img.getAttribute("src") !== url) img.src = url;
     });
     document.querySelectorAll("[data-logo-preview]").forEach(img => {
       const slug = img.dataset.logoPreview;
       if (!allowed.logo.includes(slug)) return;
-      const url = "./assets/branding/" + slug + "-" + color + ".svg";
+      const url = "./assets/branding/" + slug + "-" + color + ".svg?v=8";
       if (img.getAttribute("src") !== url) img.src = url;
     });
   }

@@ -8,6 +8,8 @@ The floating **Design Lab → Brand logo** picker provides 10 artist-brand water
 
 For placing watermarks on artwork, use the same black/white variant as appropriate and adjust opacity in the artwork editor; these branding choices do **not** watermark or modify the original portfolio image files. The original high-resolution transparent PNG set is maintained outside this lightweight website repository.
 
+**v0.8 quality fix:** All 20 SVGs were re-traced from the original high-resolution image files using genuine smooth Bézier paths instead of low-resolution straight-line polygons. The image cache version is bumped to `v=8` so existing visitors load the repaired assets.
+
 ## Current status
 - **v0.6 interactive art-studio preview**: four structurally distinct whole-site styles (Studio, Sidebar, Journal, Immersive), five independent color themes (Noir, Ocean, Paper, Aurora, Ember), three gallery layouts (Masonry, Mosaic, Horizontal Scroll), dark/light mode, remembered preferences, 24 self-hosted demonstration images, responsive design and lightbox. Demo visuals are clearly labelled as examples and automatically disappear once real approved artwork is added to `data/portfolio.json`.
 - Quote/request, payment, contact and admin tools are **not active yet**. We will not accept customer personal data or payments before an agreed secure implementation.
