@@ -104,3 +104,7 @@ A separate `DMO_DESIGN_WRITES_ENABLED=0` switch gates draft and publish mutation
 ## Checking whether you entered your Cloudflare keys
 
 You can add your Turnstile site key and secret to the private `.env` **now**, while the admin service stays disabled. Open [admin status](https://drawmeone.com/api/admin/status.php): `app_key_present` and `turnstile_keys_present` report only whether those settings are nonempty (and the app key is long enough); they never disclose the keys. **Presence is not validation** of correct Cloudflare configuration, hostname or token verification. `admin_available` remains false with `DMO_ADMIN_ENABLED=0`. Do not enable it until controlled tests are ready.
+
+## Phase 5: Services & pricing
+
+A new **Services & pricing** panel and `/api/admin/packages.php` are available once admin login works. Editing unpublished tiers requires `DMO_PACKAGE_WRITES_ENABLED=1`. Publishing or editing active public tiers requires both `DMO_PACKAGE_PUBLISH_ENABLED=1` and `DMO_PRICING_APPROVED=1`. All flags default 0. See [PACKAGES_PHASE5.md](PACKAGES_PHASE5.md).

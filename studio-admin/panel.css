@@ -102,3 +102,37 @@ footer{padding:28px 0 70px;border-top:1px solid var(--line);color:var(--muted);f
   .design-actions #design-publish{grid-column:1/-1}
   .design-actions .quiet,.design-actions .primary{width:100%;min-height:47px}
 }
+
+/* Commission package editor — small, practical admin UI, no public controls. */
+.package-workspace{display:grid;grid-template-columns:minmax(185px,280px) minmax(0,1fr);gap:17px;align-items:start}
+.package-sidebar,.package-form{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:22px}
+.package-sidebar-heading{display:flex;gap:10px;align-items:center;justify-content:space-between;padding:0 0 12px;margin-bottom:7px;border-bottom:1px solid var(--line)}
+.package-sidebar-heading:not(:first-child){margin-top:28px}
+.package-sidebar-heading strong{font-size:13px}
+.package-sidebar-heading button{font-size:11px;min-height:35px;padding:6px 10px;white-space:nowrap}
+.package-list{display:grid;gap:7px}
+.package-list>.small{margin:4px 0 8px}
+.package-list-item{display:flex;align-items:start;justify-content:space-between;gap:7px;background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:11px;text-align:left}
+.package-list-item:hover,.package-list-item.selected{border-color:var(--accent)}
+.package-list-item.selected{background:rgba(234,184,175,.1)}
+.package-list-item strong{font-size:12px;line-height:1.5;overflow-wrap:anywhere}
+.package-list-item small{font-size:8px;letter-spacing:.08em;color:var(--muted);white-space:nowrap;font-weight:800;padding-top:3px}
+.package-form{padding:clamp(19px,3.2vw,31px)}
+.package-form-head{margin-bottom:24px;border-bottom:1px solid var(--line);padding-bottom:17px}
+.package-form-head h3{font-size:22px;letter-spacing:-.04em;margin:8px 0}
+.package-form-head p{font-size:12px;margin:0}
+.package-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px 17px}
+.package-fields label{display:flex;flex-direction:column;gap:7px;margin:0;font-size:12px;font-weight:700;min-width:0}
+.package-fields .package-wide{grid-column:1/-1}
+.package-fields input,.package-fields select,.package-fields textarea{width:100%;min-width:0;border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:12px 13px;color:var(--ink);font:inherit;line-height:1.5}
+.package-fields textarea{resize:vertical;min-height:80px}
+.package-fields input:focus-visible,.package-fields select:focus-visible,.package-fields textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.package-form-actions{display:flex;align-items:center;gap:11px;flex-wrap:wrap;margin:25px 0 18px}
+.package-form-actions .quiet{min-height:47px}
+.package-form-actions .primary{width:auto;margin-top:0;min-height:47px}
+.package-form-actions button:disabled{opacity:.4;cursor:not-allowed}
+.package-form>.notice{margin:14px 0;color:var(--ink);max-width:none}
+.package-form>.notice[data-error="true"]{border-color:#d98f8f;color:#f7c5c5}
+.package-form>.small{font-size:11px}
+@media(max-width:900px){.package-workspace{grid-template-columns:1fr}.package-sidebar{display:grid;grid-template-columns:1fr 1fr;gap:8px 14px}.package-sidebar-heading:not(:first-child){margin-top:0}.package-list{align-content:start}}
+@media(max-width:650px){.package-sidebar{display:block}.package-sidebar-heading:not(:first-child){margin-top:20px}.package-fields{grid-template-columns:1fr}.package-form-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.package-form-actions .primary{grid-column:1/-1}.package-form-actions button{width:100%}.package-form{padding:18px}}

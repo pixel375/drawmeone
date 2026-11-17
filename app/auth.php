@@ -69,14 +69,21 @@ function dmo_auth_json_request(): array
         dmo_json(413, ['ok' => false, 'error' => 'request_too_large']);
     }
     try {
-        $parsed = json_decode($body, false, 16, JSON_THROW_ON_ERROR);
+        // First establish that the JSON root is an object, not an array.
+        // Then recursively decode nested objects as associative arrays:
+        // design settings and catalog item forms need this consistently.
+        $root = json_decode($body, false, 16, JSON_THROW_ON_ERROR);
+        if (!$root instanceof stdClass) {
+            dmo_json(400, ['ok' => false, 'error' => 'invalid_json']);
+        }
+        $parsed = json_decode($body, true, 16, JSON_THROW_ON_ERROR);
+        if (!is_array($parsed)) {
+            dmo_json(400, ['ok' => false, 'error' => 'invalid_json']);
+        }
+        return $parsed;
     } catch (JsonException $error) {
         dmo_json(400, ['ok' => false, 'error' => 'invalid_json']);
     }
-    if (!$parsed instanceof stdClass) {
-        dmo_json(400, ['ok' => false, 'error' => 'invalid_json']);
-    }
-    return (array) $parsed;
 }
 
 function dmo_auth_field(array $input, string $key, int $max = 4096): string

@@ -224,6 +224,241 @@
     }
   });
 
+  // Commission catalog editor. Displayed amounts are dollars, but the API
+  // always receives exact integer minor units; never use floating arithmetic.
+  let packageCatalog = { tiers: [], addons: [] };
+  let packageSelected = { kind: "tier", id: null };
+  let packageWrite = false;
+  let packagePublish = false;
+  let packageBusy = false;
+
+  function packageRows(kind) {
+    return kind === "tier" ? packageCatalog.tiers : packageCatalog.addons;
+  }
+
+  function moneyText(value) {
+    if (!Number.isSafeInteger(value) || value < 0) return "";
+    return Math.floor(value / 100) + "." + String(value % 100).padStart(2, "0");
+  }
+
+  function parsePrice(text) {
+    const raw = text.trim();
+    if (raw === "") return null;
+    if (!/^\d{1,6}(?:\.\d{1,2})?$/.test(raw)) return false;
+    const [dollars, cents = ""] = raw.split(".");
+    const value = Number(dollars) * 100 + Number(cents.padEnd(2, "0"));
+    return Number.isSafeInteger(value) && value <= 10000000 ? value : false;
+  }
+
+  function packageShow(message, error = false) {
+    const banner = $("package-message");
+    banner.textContent = message;
+    banner.dataset.error = String(error);
+  }
+
+  function renderPackageLists() {
+    const lists = [
+      { kind:"tier", id:"package-tier-list" },
+      { kind:"addon", id:"package-addon-list" },
+    ];
+    for (const list of lists) {
+      const target = $(list.id);
+      target.replaceChildren();
+      const records = packageRows(list.kind);
+      if (records.length === 0) {
+        const note = document.createElement("p");
+        note.className = "small";
+        note.textContent = "No items created.";
+        target.appendChild(note);
+      }
+      for (const record of records) {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "package-list-item";
+        if (packageSelected.kind === list.kind && packageSelected.id === record.id) {
+          button.classList.add("selected");
+        }
+        const name = document.createElement("strong");
+        name.textContent = record.name || record.slug;
+        const status = document.createElement("small");
+        status.textContent = record.is_active
+          ? "PUBLIC" : "UNPUBLISHED";
+        button.append(name,status);
+        button.addEventListener("click", () => packageSelect(list.kind, record.id));
+        target.appendChild(button);
+      }
+    }
+  }
+
+  function packageSelect(kind, id = null) {
+    if (!["tier", "addon"].includes(kind)) return;
+    const record = id === null ? null : packageRows(kind).find(row => row.id === id);
+    if (id !== null && !record) return;
+    packageSelected = { kind, id };
+    const blank = {
+      slug:"",name:"",description:"",currency:"CAD",
+      estimate_min_minor:null,estimate_max_minor:null,sort_order:0,features:[],
+      is_active:false,
+    };
+    const item = record || blank;
+    $("package-kind-label").textContent =
+      kind === "tier" ? "COMMISSION TIER" : "OPTIONAL ADD-ON";
+    $("package-edit-title").textContent = record
+      ? "Editing " + record.name
+      : (kind === "tier" ? "New commission tier" : "New optional add-on");
+    $("package-slug").value = item.slug || "";
+    $("package-name").value = item.name || "";
+    $("package-description").value = item.description || "";
+    $("package-currency").value = item.currency === "USD" ? "USD" : "CAD";
+    $("package-order").value = Number.isInteger(item.sort_order)
+      ? String(item.sort_order) : "0";
+    $("package-min").value = moneyText(item.estimate_min_minor);
+    $("package-max").value = moneyText(item.estimate_max_minor);
+    $("package-feature-wrap").hidden = kind !== "tier";
+    $("package-features").value = Array.isArray(item.features)
+      ? item.features.join("\n") : "";
+    $("package-editor-status").textContent = record
+      ? (item.is_active ? "Published to public catalog" : "Not visible to customers")
+      : "New item · not published";
+    $("package-save").textContent = record?.is_active
+      ? "Save live changes" : "Save unpublished";
+    $("package-save").disabled = !packageWrite || packageBusy ||
+      (record?.is_active === true && !packagePublish);
+    $("package-visibility").textContent = record?.is_active
+      ? "Unpublish" : "Publish";
+    $("package-visibility").disabled = !packagePublish || packageBusy || !record;
+    renderPackageLists();
+  }
+
+  async function packagesLoad() {
+    packageShow("Loading existing commission tiers and add-ons…");
+    const { response, data } = await get("packages.php");
+    if (response.status === 401) return sessionExpired();
+    if (!response.ok || !data.ok) {
+      packageShow("Unable to load commission packages. Please retry.", true);
+      return;
+    }
+    packageWrite = data.write_enabled === true;
+    packagePublish = data.publish_enabled === true;
+    packageCatalog = data.catalog || {tiers: [],addons: []};
+    const found = packageRows(packageSelected.kind).some(
+      row => row.id === packageSelected.id
+    );
+    packageSelect(packageSelected.kind, found ? packageSelected.id : null);
+    packageShow(packageWrite
+      ? (packagePublish
+        ? "Editing and publication available. Confirm rates before publishing."
+        : "Unpublished editing available. Public publishing remains locked.")
+      : "Editing locked until the private backend switch is enabled.");
+  }
+
+  function packagePayload() {
+    const name = $("package-name").value.trim();
+    const slug = $("package-slug").value.trim();
+    const low = parsePrice($("package-min").value);
+    const high = parsePrice($("package-max").value);
+    if (!name || !/^[a-z0-9][a-z0-9-]{1,79}$/.test(slug)) {
+      packageShow("Enter a name and a lowercase slug, e.g. simple-sketch.", true);
+      return null;
+    }
+    if (low === false || high === false || (low === null) !== (high === null) ||
+        (low !== null && low > high)) {
+      packageShow("Enter valid minimum and maximum estimates, or leave both blank.", true);
+      return null;
+    }
+    const order = Number($("package-order").value);
+    if (!Number.isSafeInteger(order) || order < -10000 || order > 10000) {
+      packageShow("Sort order must be a whole number between -10000 and 10000.", true);
+      return null;
+    }
+    const item = {
+      id:packageSelected.id,
+      slug,name,description:$("package-description").value.trim(),
+      currency:$("package-currency").value,
+      estimate_min_minor:low,estimate_max_minor:high,sort_order:order,
+    };
+    if (packageSelected.kind === "tier") {
+      item.features = $("package-features").value.split("\n")
+        .map(x => x.trim()).filter(Boolean);
+      if (item.features.length > 20 || item.features.some(x => x.length > 180)) {
+        packageShow("Use up to 20 short features, 180 characters each.", true);
+        return null;
+      }
+    }
+    return item;
+  }
+
+  $("package-new-tier").addEventListener("click", () => packageSelect("tier"));
+  $("package-new-addon").addEventListener("click", () => packageSelect("addon"));
+  $("package-refresh").addEventListener("click", () => packagesLoad().catch(() => {
+    packageShow("Unable to refresh packages.",true);
+  }));
+  $("package-form").addEventListener("submit", async event => {
+    event.preventDefault();
+    if (!packageWrite || packageBusy) return;
+    const item = packagePayload();
+    if (!item) return;
+    const current = packageRows(packageSelected.kind)
+      .find(row => row.id === packageSelected.id);
+    if (current?.is_active === true &&
+        !window.confirm("This changes a published price or package immediately. Continue?")) {
+      return;
+    }
+    packageBusy = true;
+    $("package-save").disabled = true;
+    packageShow("Saving package without publishing…");
+    try {
+      const action = packageSelected.kind === "tier" ? "save_tier" : "save_addon";
+      const { response, data } = await post("packages.php", {action,item}, csrf);
+      if (!response.ok || !data.ok) {
+        packageShow(data.error === "duplicate_slug_or_conflict"
+          ? "That slug is already used. Choose another one."
+          : "Unable to save: " + (data.error || "server refused the change"), true);
+        return;
+      }
+      packageSelected.id = data.id;
+      await packagesLoad();
+      packageShow("Saved. New items are unpublished until explicitly activated.");
+    } catch (_) {
+      packageShow("Connection problem. Save was not confirmed.", true);
+    } finally {
+      packageBusy = false;
+      packageSelect(packageSelected.kind, packageSelected.id);
+    }
+  });
+
+  $("package-visibility").addEventListener("click", async () => {
+    if (!packagePublish || packageBusy || packageSelected.id === null) return;
+    const row = packageRows(packageSelected.kind)
+      .find(x => x.id === packageSelected.id);
+    if (!row) return;
+    const active = !row.is_active;
+    const name = row.name || row.slug;
+    if (!window.confirm(active
+      ? "Publish " + name + " to the public catalog? Confirm its prices are approved."
+      : "Remove " + name + " from the public catalog?")) return;
+    packageBusy = true;
+    $("package-visibility").disabled = true;
+    try {
+      const { response, data } = await post("packages.php", {
+        action:"set_active",kind:packageSelected.kind,
+        id:packageSelected.id,active,
+      },csrf);
+      if (!response.ok || !data.ok) {
+        packageShow("Unable to change visibility: " +
+          (data.error || "not approved"), true);
+        return;
+      }
+      await packagesLoad();
+      packageShow(active ? "Published to public catalog." : "Unpublished from catalog.");
+    } catch (_) {
+      packageShow("Connection problem. Visibility was not confirmed.", true);
+    } finally {
+      packageBusy = false;
+      packageSelect(packageSelected.kind,packageSelected.id);
+    }
+  });
+
   function selectPanel(name) {
     clearError();
     document.querySelectorAll("[data-panel]").forEach(section => {
@@ -240,6 +475,7 @@
     if (name === "requests") requests().catch(() => showError("Connection unavailable."));
     if (name === "messages") messages().catch(() => showError("Connection unavailable."));
     if (name === "settings") designLoad().catch(() => showError("Settings unavailable."));
+    if (name === "packages") packagesLoad().catch(() => showError("Packages unavailable."));
   }
 
   function sessionExpired() {

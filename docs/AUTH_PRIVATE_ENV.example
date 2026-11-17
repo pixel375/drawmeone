@@ -22,3 +22,8 @@ DMO_ADMIN_ENABLED=0
 # Phase 4: design drafts and published layout/colour/logo controls.
 # Keep OFF until a controlled admin-auth security test passes.
 DMO_DESIGN_WRITES_ENABLED=0
+
+# Phase 5: artist-configurable tiers and add-ons. All OFF initially.
+DMO_PACKAGE_WRITES_ENABLED=0
+DMO_PACKAGE_PUBLISH_ENABLED=0
+DMO_PRICING_APPROVED=0

@@ -1,3 +1,9 @@
+## v1.5 — Editable commission tiers and add-ons (still gated)
+
+The existing database tables now power a password-protected, role-checked **Services & pricing** editor in Artist's Desk. Create Simple/Normal/Advanced or other custom tiers, configure included features and optional add-ons, set estimates in CAD or USD and deliberately publish or unpublish entries. No sample prices are inserted. New entries remain unpublished. Three private feature switches keep edits and publication disabled pending admin security testing and artist approval. No new SQL import required.
+
+See [Phase 5 commission catalog setup](docs/PACKAGES_PHASE5.md).
+
 ## v1.4 — Admin-managed design drafts and publishing
 
 The database-connected Artist's Desk now contains a **protected visual-settings editor** for the approved Studio design, gallery layout, colour palette, dark/light default and the existing logo options. Drafts and published settings are separate rows in `dmo_site_settings`; admin writes remain OFF by default, protected by an additional `DMO_DESIGN_WRITES_ENABLED` private switch, role validation, CSRF, and version checks. The public theme preview is intentionally unchanged until launch. See [Phase 4 design settings](docs/DESIGN_SETTINGS_PHASE4.md).

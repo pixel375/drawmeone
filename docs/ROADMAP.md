@@ -262,3 +262,13 @@ See `docs/ART_DIRECTION.md` and `docs/COMMISSION_PRODUCT_SPEC.md`.
 - [ ] Run active admin login + draft/publish end-to-end QA once user has configured Turnstile and manually provisioned a test admin.
 - [ ] Transition homepage from localStorage Design Lab to published defaults; keep visitor light/dark only. Do not do this until the owner approves public UI.
 - [ ] Editable commission tiers, add-ons, SEO and art uploader next.
+
+## v1.5 — 2026-11-17: Admin-managed commission tiers and add-ons
+
+- [x] Ground tier/add-on implementation in actual 001 schema (id, slug, descriptions, CAD/USD minor-unit ranges, features JSON, active/sort fields).
+- [x] Build protected GET/POST admin API with editor for tiers, add-ons, features, estimates and ordering. New entries unpublished; no hard-coded sample prices.
+- [x] Require verified admin role/session, CSRF, strict inputs, prepared statements and transaction/audit for mutations.
+- [x] Three private gates: DMO_PACKAGE_WRITES_ENABLED, DMO_PACKAGE_PUBLISH_ENABLED, DMO_PRICING_APPROVED. All default OFF. Editing an active public item requires publication gate.
+- [x] Allowlist admin route; no public POST to catalog, no auto-quote/checkout, no direct deletes.
+- [ ] Verify authenticated CRUD in controlled setup after Turnstile login QA; confirm pricing/currency with artist before publishing.
+- [ ] Wire public commission page to real published catalog and secure logged-in request submission after terms and uploader security work.

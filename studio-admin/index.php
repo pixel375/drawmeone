@@ -19,8 +19,8 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
 <meta name="robots" content="noindex,nofollow">
 <meta name="theme-color" content="#151317">
 <title>Artist's Desk · Draw Me One</title>
-<link rel="stylesheet" href="./panel.css?v=14">
-<script defer src="./panel.js?v=14"></script>
+<link rel="stylesheet" href="./panel.css?v=15">
+<script defer src="./panel.js?v=15"></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to dashboard</a>
@@ -69,6 +69,7 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
       <button type="button" data-view="requests">Orders & quotes</button>
       <button type="button" data-view="messages">Messages</button>
       <button type="button" data-view="artwork">Artwork</button>
+      <button type="button" data-view="packages">Services & pricing</button>
       <button type="button" data-view="settings">Website settings</button>
     </nav>
     <div id="work-error" class="notice" role="status" hidden></div>
@@ -97,6 +98,47 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
     <section data-panel="artwork" class="content-panel" hidden>
       <div class="section-intro"><h2>Artwork library</h2><p>Bulk upload will let you add drawings without filling in a form for every image.</p></div>
       <div class="empty-state">Artwork upload is not connected yet. Private customer reference images will be stored separately.</div>
+    </section>
+
+    <section data-panel="packages" class="content-panel" hidden>
+      <div class="section-intro">
+        <h2>Services & commission pricing</h2>
+        <p>Edit packages and optional extras. These are artist-managed estimates; an exact quote is still sent after reviewing each request.</p>
+      </div>
+      <div class="package-workspace">
+        <aside class="package-sidebar">
+          <div class="package-sidebar-heading"><strong>Commission tiers</strong><button type="button" class="quiet" id="package-new-tier">+ New</button></div>
+          <div id="package-tier-list" class="package-list"><p class="small">Loading tiers…</p></div>
+          <div class="package-sidebar-heading"><strong>Optional add-ons</strong><button type="button" class="quiet" id="package-new-addon">+ New</button></div>
+          <div id="package-addon-list" class="package-list"><p class="small">Loading add-ons…</p></div>
+        </aside>
+        <form id="package-form" class="package-form" novalidate>
+          <div class="package-form-head">
+            <span class="overline" id="package-kind-label">NEW COMMISSION TIER</span>
+            <h3 id="package-edit-title">New commission tier</h3>
+            <p class="small" id="package-editor-status">Loading editor availability…</p>
+          </div>
+          <div class="package-fields">
+            <label>Internal slug <input id="package-slug" type="text" maxlength="80" pattern="[a-z0-9][a-z0-9-]+" placeholder="simple-sketch" required></label>
+            <label>Package name <input id="package-name" type="text" maxlength="120" placeholder="Simple" required></label>
+            <label class="package-wide">Description <textarea id="package-description" rows="3" maxlength="2500" placeholder="Describe the drawing and what is included"></textarea></label>
+            <label>Currency <select id="package-currency"><option value="CAD">CAD</option><option value="USD">USD</option></select></label>
+            <label>Sort order <input id="package-order" type="number" min="-10000" max="10000" step="1" value="0"></label>
+            <label>Estimated minimum ($) <input id="package-min" inputmode="decimal" type="text" maxlength="10" placeholder="Not set"></label>
+            <label>Estimated maximum ($) <input id="package-max" inputmode="decimal" type="text" maxlength="10" placeholder="Not set"></label>
+            <label class="package-wide" id="package-feature-wrap">Included features, one per line
+              <textarea id="package-features" rows="5" maxlength="3700" placeholder="Colouring&#10;One basic revision&#10;Simple background"></textarea>
+            </label>
+          </div>
+          <div class="package-form-actions">
+            <button type="button" class="quiet" id="package-refresh">Reload</button>
+            <button type="submit" class="quiet" id="package-save" disabled>Save unpublished</button>
+            <button type="button" class="primary" id="package-visibility" disabled>Publish</button>
+          </div>
+          <p id="package-message" class="notice" role="status" aria-live="polite">Edits and publication are disabled until the admin security setup and pricing are approved.</p>
+          <p class="small">New items are always created unpublished. Publishing requires a separate server-side switch and artist approval. No prices are seeded, and customers cannot submit commissions yet.</p>
+        </form>
+      </div>
     </section>
 
     <section data-panel="settings" class="content-panel" hidden>
