@@ -22,7 +22,7 @@ No real user signup or login should be enabled on a public site until outgoing e
 By default **all writes are disabled**. The public status endpoint remains readable:
 
 - [https://drawmeone.com/api/auth/status.php](https://drawmeone.com/api/auth/status.php)
-- Expected initial: `{"ok":true,"auth_available":false,"registration_available":false,"turnstile_site_key":null,"email_verification_required":true,"commissions_open":false}`
+- Expected before importing 002: `{"ok":true,"auth_migration_ready":false,"auth_available":false,"registration_available":false,"turnstile_site_key":null,"email_verification_required":true,"commissions_open":false}`. After importing 002, `auth_migration_ready` becomes `true` even though authentication remains intentionally disabled.
 
 These booleans must not be mistaken for an actual registration service.
 
