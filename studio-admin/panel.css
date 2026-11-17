@@ -82,3 +82,23 @@ footer{padding:28px 0 70px;border-top:1px solid var(--line);color:var(--muted);f
 }
 @media(max-width:380px){.desk-tag{display:none}.stats{grid-template-columns:1fr}.stats article{min-height:110px}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+
+/* Studio configuration: restrained controls, not a public theme builder. */
+.design-editor{border:1px solid var(--line);border-radius:12px;background:var(--surface);padding:clamp(18px,3.6vw,33px);max-width:930px}
+.design-header{border-bottom:1px solid var(--line);padding-bottom:15px;margin-bottom:23px}
+.design-header p{font-size:12px;margin:11px 0 0;color:var(--muted)}
+.design-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 20px}
+.design-fields label{display:flex;flex-direction:column;gap:8px;font-size:12px;font-weight:700;margin:0;color:var(--ink)}
+.design-fields select{width:100%;min-width:0;min-height:46px;border:1px solid var(--line);border-radius:8px;padding:11px 13px;font:inherit;color:var(--ink);background:var(--bg)}
+.design-fields select:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.design-actions{display:flex;align-items:center;flex-wrap:wrap;gap:11px;margin:25px 0 19px}
+.design-actions .primary{width:auto;margin-top:0}
+.design-actions .quiet{min-height:47px}
+.design-actions button:disabled{opacity:.42;cursor:not-allowed}
+.design-editor>.small{border-top:1px solid var(--line);padding-top:17px;margin:7px 0 0}
+@media(max-width:650px){
+  .design-fields{grid-template-columns:1fr;gap:17px}
+  .design-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+  .design-actions #design-publish{grid-column:1/-1}
+  .design-actions .quiet,.design-actions .primary{width:100%;min-height:47px}
+}

@@ -251,3 +251,14 @@ See `docs/ART_DIRECTION.md` and `docs/COMMISSION_PRODUCT_SPEC.md`.
 - [ ] Configure private DMO_ADMIN_ENABLED and Turnstile credentials; test controlled admin sign-in, session expiry and audit before enabling.
 - [ ] Implement authenticated commission submissions, private references and artist quote actions once user-facing policies are approved.
 - [ ] Implement image uploader and appearance settings with versioned draft/publish controls.
+
+## v1.4 — 2026-11-17: Admin-only design drafts and publish
+
+- [x] Add strict allowlist for Studio-only live layout, five palettes, three gallery styles, two visitor default modes, and original/10 SVG logos.
+- [x] Add admin-only GET/POST design editor, with draft/published rows, CSRF, version conflict handling, database transaction, and audit trail.
+- [x] Add artist dashboard controls for settings editing behind a separate **disabled-by-default** DMO_DESIGN_WRITES_ENABLED flag.
+- [x] Expand public site settings API with validated published logo; never expose drafts, secrets or arbitrary JSON.
+- [x] No new SQL migration or additional database user required for this phase.
+- [ ] Run active admin login + draft/publish end-to-end QA once user has configured Turnstile and manually provisioned a test admin.
+- [ ] Transition homepage from localStorage Design Lab to published defaults; keep visitor light/dark only. Do not do this until the owner approves public UI.
+- [ ] Editable commission tiers, add-ons, SEO and art uploader next.

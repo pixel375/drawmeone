@@ -18,3 +18,7 @@ DMO_ADMIN_ENABLED=0
 # DMO_APP_KEY=RANDOM_PRIVATE_64_HEX
 # DMO_TURNSTILE_SITE_KEY=PUBLIC_CLOUDFLARE_KEY
 # DMO_TURNSTILE_SECRET=PRIVATE_CLOUDFLARE_SECRET
+
+# Phase 4: design drafts and published layout/colour/logo controls.
+# Keep OFF until a controlled admin-auth security test passes.
+DMO_DESIGN_WRITES_ENABLED=0

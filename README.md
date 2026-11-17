@@ -1,3 +1,7 @@
+## v1.4 — Admin-managed design drafts and publishing
+
+The database-connected Artist's Desk now contains a **protected visual-settings editor** for the approved Studio design, gallery layout, colour palette, dark/light default and the existing logo options. Drafts and published settings are separate rows in `dmo_site_settings`; admin writes remain OFF by default, protected by an additional `DMO_DESIGN_WRITES_ENABLED` private switch, role validation, CSRF, and version checks. The public theme preview is intentionally unchanged until launch. See [Phase 4 design settings](docs/DESIGN_SETTINGS_PHASE4.md).
+
 ## v1.3 — Private Artist's Desk, no MFA
 
 New [Artist's Desk](https://drawmeone.com/studio-admin/index.php) with a separate admin login and **actual read-only worklists** backed by MySQL. No fictional admin figures, no write actions. Admin login is **disabled by default**, uses strong password + Turnstile CAPTCHA + rate limiting + secure short sessions, and deliberately **does not require MFA**. The first admin is provisioned only through a protected CLI command (not a public registration form). See [Admin Phase 3 setup](docs/ADMIN_PHASE3.md).

@@ -125,6 +125,105 @@
     }
   }
 
+  let designDraftVersion = 0;
+  let designWriteEnabled = false;
+  const designIds = {
+    site_style: "design-site",
+    color_theme: "design-color",
+    gallery_layout: "design-layout",
+    default_mode: "design-mode",
+    logo: "design-logo",
+  };
+
+  function designValues() {
+    const values = {};
+    for (const [key, id] of Object.entries(designIds)) {
+      values[key] = $(id).value;
+    }
+    return values;
+  }
+
+  function designDisplay(data) {
+    designDraftVersion = Number.isSafeInteger(data.draft?.version)
+      ? data.draft.version : 0;
+    designWriteEnabled = data.write_enabled === true;
+    const snapshot = data.draft?.exists
+      ? data.draft.settings : (data.published?.settings || {});
+    for (const [key, id] of Object.entries(designIds)) {
+      if (typeof snapshot[key] === "string" &&
+          Array.from($(id).options).some(option => option.value === snapshot[key])) {
+        $(id).value = snapshot[key];
+      }
+    }
+    const version = data.published?.exists
+      ? "Published v" + data.published.version : "Not published yet";
+    $("design-state").textContent = "Draft v" + designDraftVersion +
+      " · " + version + " · " +
+      (designWriteEnabled ? "Editing available" : "Editing locked until setup is complete");
+    $("design-save").disabled = !designWriteEnabled;
+    $("design-publish").disabled = !designWriteEnabled || designDraftVersion === 0;
+  }
+
+  async function designLoad() {
+    $("design-state").textContent = "Loading draft and published settings…";
+    const { response, data } = await get("design.php");
+    if (response.status === 401) return sessionExpired();
+    if (!response.ok || !data.ok) {
+      $("design-state").textContent = "Settings are unavailable. Please retry.";
+      return;
+    }
+    designDisplay(data);
+  }
+
+  async function designAction(action) {
+    if (!designWriteEnabled || !csrf) return;
+    const button = action === "save_draft" ? $("design-save") : $("design-publish");
+    button.disabled = true;
+    $("design-state").textContent = action === "save_draft"
+      ? "Saving design draft…" : "Publishing saved design draft…";
+    try {
+      const body = {
+        action,
+        expected_version: designDraftVersion,
+      };
+      if (action === "save_draft") body.settings = designValues();
+      const { response, data } = await post("design.php", body, csrf);
+      if (response.status === 409) {
+        $("design-state").textContent =
+          "This draft changed in another tab. Reload before saving again.";
+        return;
+      }
+      if (!response.ok || !data.ok) {
+        $("design-state").textContent = "Unable to save settings. Check server configuration.";
+        return;
+      }
+      await designLoad();
+    } catch (_) {
+      $("design-state").textContent = "Connection failed. No changes confirmed.";
+    } finally {
+      button.disabled = !designWriteEnabled;
+      if (action === "publish") {
+        $("design-publish").disabled = !designWriteEnabled || designDraftVersion === 0;
+      }
+    }
+  }
+
+  $("design-form").addEventListener("submit", event => {
+    event.preventDefault();
+    designAction("save_draft");
+  });
+  $("design-reload").addEventListener("click", () => {
+    designLoad().catch(() => {
+      $("design-state").textContent = "Connection failed. Please try again.";
+    });
+  });
+  $("design-publish").addEventListener("click", () => {
+    if (!designWriteEnabled) return;
+    if (window.confirm("Publish the last saved design draft? Unsaved changes will not be included.")) {
+      designAction("publish");
+    }
+  });
+
   function selectPanel(name) {
     clearError();
     document.querySelectorAll("[data-panel]").forEach(section => {
@@ -140,6 +239,7 @@
     if (name === "overview") overview().catch(() => showError("Connection unavailable."));
     if (name === "requests") requests().catch(() => showError("Connection unavailable."));
     if (name === "messages") messages().catch(() => showError("Connection unavailable."));
+    if (name === "settings") designLoad().catch(() => showError("Settings unavailable."));
   }
 
   function sessionExpired() {

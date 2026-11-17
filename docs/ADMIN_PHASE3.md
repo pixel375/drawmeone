@@ -96,3 +96,7 @@ A reset immediately revokes all existing sessions for that account. The script i
 ## Next phase
 
 Read-only worklists are the beginning. Creating a quote, replying to a client, verifying payment, publishing artwork, or editing the website is **not** activated by this deployment. Those actions require new owner-checked POST endpoints, CSRF protection, audit trails and appropriate business policies.
+
+## Phase 4 design settings
+
+A separate `DMO_DESIGN_WRITES_ENABLED=0` switch gates draft and publish mutations. When admin login becomes available, the protected Website Settings tab can read drafts. Even an authenticated admin cannot save or publish until this additional server-side switch is explicitly enabled. See [DESIGN_SETTINGS_PHASE4.md](DESIGN_SETTINGS_PHASE4.md).

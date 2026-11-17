@@ -19,8 +19,8 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
 <meta name="robots" content="noindex,nofollow">
 <meta name="theme-color" content="#151317">
 <title>Artist's Desk · Draw Me One</title>
-<link rel="stylesheet" href="./panel.css?v=13">
-<script defer src="./panel.js?v=13"></script>
+<link rel="stylesheet" href="./panel.css?v=14">
+<script defer src="./panel.js?v=14"></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to dashboard</a>
@@ -101,7 +101,56 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
 
     <section data-panel="settings" class="content-panel" hidden>
       <div class="section-intro"><h2>Website settings</h2><p>Theme, logo, default dark mode, commission pricing and SEO will be editable here.</p></div>
-      <div class="empty-state">Settings editing and publishing will be enabled after the secure administrator workflow is tested. Visitors will only control light/dark mode.</div>
+      <form class="design-editor" id="design-form" novalidate>
+        <div class="design-header">
+          <span class="overline">ARTIST-CONTROLLED APPEARANCE</span>
+          <p id="design-state" role="status">Loading private draft and published settings…</p>
+        </div>
+        <div class="design-fields">
+          <label>Website style
+            <select id="design-site" name="site_style"><option value="studio">Studio (approved)</option></select>
+          </label>
+          <label>Colour palette
+            <select id="design-color" name="color_theme">
+              <option value="noir">Noir</option><option value="canvas">Ocean</option>
+              <option value="editorial">Paper</option><option value="aurora">Aurora</option>
+              <option value="ember">Ember</option>
+            </select>
+          </label>
+          <label>Gallery layout
+            <select id="design-layout" name="gallery_layout">
+              <option value="masonry">Masonry</option><option value="mosaic">Mosaic</option>
+              <option value="rows">Scroll / rows</option>
+            </select>
+          </label>
+          <label>Default appearance
+            <select id="design-mode" name="default_mode">
+              <option value="dark">Dark</option><option value="light">Light</option>
+            </select>
+          </label>
+          <label>Website logo
+            <select id="design-logo" name="logo">
+              <option value="original">Original wordmark</option>
+              <option value="01-minimal-pencil">Minimal pencil</option>
+              <option value="02-signature">Signature</option>
+              <option value="03-dmo-monogram">DMO monogram</option>
+              <option value="04-portrait-seal">Portrait seal</option>
+              <option value="05-editorial">Editorial</option>
+              <option value="06-brushstroke">Brushstroke</option>
+              <option value="07-portrait">Portrait</option>
+              <option value="08-paintbrush-badge">Brush badge</option>
+              <option value="09-pen-lettering">Pen lettering</option>
+              <option value="10-creative-palette">Creative palette</option>
+            </select>
+          </label>
+        </div>
+        <div class="design-actions">
+          <button type="button" class="quiet" id="design-reload">Reload draft</button>
+          <button type="submit" class="quiet" id="design-save" disabled>Save draft</button>
+          <button type="button" class="primary" id="design-publish" disabled>Publish draft</button>
+        </div>
+        <p class="small">Drafts never affect the public site. Publishing requires an authenticated administrator and a second, explicitly enabled server-side write switch. The old Design Lab remains a development preview until the public site is converted to admin-controlled themes.</p>
+      </form>
     </section>
   </section>
   <footer>Draw Me One · Secure artist dashboard · No MFA, password and CAPTCHA protected when enabled</footer>
