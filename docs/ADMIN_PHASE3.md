@@ -100,3 +100,7 @@ Read-only worklists are the beginning. Creating a quote, replying to a client, v
 ## Phase 4 design settings
 
 A separate `DMO_DESIGN_WRITES_ENABLED=0` switch gates draft and publish mutations. When admin login becomes available, the protected Website Settings tab can read drafts. Even an authenticated admin cannot save or publish until this additional server-side switch is explicitly enabled. See [DESIGN_SETTINGS_PHASE4.md](DESIGN_SETTINGS_PHASE4.md).
+
+## Checking whether you entered your Cloudflare keys
+
+You can add your Turnstile site key and secret to the private `.env` **now**, while the admin service stays disabled. Open [admin status](https://drawmeone.com/api/admin/status.php): `app_key_present` and `turnstile_keys_present` report only whether those settings are nonempty (and the app key is long enough); they never disclose the keys. **Presence is not validation** of correct Cloudflare configuration, hostname or token verification. `admin_available` remains false with `DMO_ADMIN_ENABLED=0`. Do not enable it until controlled tests are ready.

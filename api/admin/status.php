@@ -13,6 +13,11 @@ $enabled = $ready && dmo_admin_enabled();
 dmo_json(200, [
     'ok' => true,
     'admin_schema_ready' => $ready,
+    // Presence indicators ONLY; no keys, credentials or values are exposed.
+    'app_key_present' => strlen(dmo_config('DMO_APP_KEY')) >= 32,
+    'turnstile_keys_present' =>
+        dmo_config('DMO_TURNSTILE_SITE_KEY') !== '' &&
+        dmo_config('DMO_TURNSTILE_SECRET') !== '',
     'admin_available' => $enabled,
     'turnstile_site_key' => $enabled ? dmo_config('DMO_TURNSTILE_SITE_KEY') : null,
     'mfa_required' => false,
