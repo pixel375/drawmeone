@@ -1,3 +1,7 @@
+## v1.3 — Private Artist's Desk, no MFA
+
+New [Artist's Desk](https://drawmeone.com/studio-admin/index.php) with a separate admin login and **actual read-only worklists** backed by MySQL. No fictional admin figures, no write actions. Admin login is **disabled by default**, uses strong password + Turnstile CAPTCHA + rate limiting + secure short sessions, and deliberately **does not require MFA**. The first admin is provisioned only through a protected CLI command (not a public registration form). See [Admin Phase 3 setup](docs/ADMIN_PHASE3.md).
+
 ## v1.2 — Secure customer account foundation (closed preview)
 
 Customer auth routes, one-time email verification, password reset, hashed database sessions, HMAC rate limits and server-verified Turnstile integration are staged behind **disabled-by-default** private `.env` switches. The warm personal [account page](https://drawmeone.com/account.html) intentionally shows *coming soon* until configuration/testing is complete. No real registrations or order submissions are enabled.

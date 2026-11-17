@@ -57,7 +57,7 @@ IMPORTANT: request != accepted order; payment must not occur before a confirmed 
 
 ### P4 — Secure admin and database
 - [ ] Backend: PHP (supported on Hostinger shared hosting), MySQL/MariaDB with PDO; no persistent Node server dependency.
-- [ ] Admin: hashed password credentials, MFA if compatible, HTTPS, secure sessions, CSRF protection, rate limits, login alerts, backup/recovery.
+- [ ] Admin: hashed password credentials, no MFA, HTTPS, secure sessions, CSRF protection, rate limits, login alerts, backup/recovery.
 - [ ] Media: validate extension + actual image MIME, dimension/size limits, re-encode and strip metadata, safe non-executable public image folder, originals stored privately, generated thumbnails.
 - [ ] Admin actions: **zero-metadata-required bulk drag/drop** (automatic filenames/dimensions/previews/optimized variants), one-click publish, progress/errors/retries, optional editable alt text/tags, reorder, draft/publish, edit/remove, audit actions.
 - [ ] Commission inbox and statuses; restricted private reference storage; payment status tracking.
@@ -231,9 +231,23 @@ See `docs/ART_DIRECTION.md` and `docs/COMMISSION_PRODUCT_SPEC.md`.
 - [x] Implement Cloudflare Turnstile Siteverify with hostname/action validation on signup/login/reset requests; no client-only CAPTCHA trust.
 - [x] Add migration 002 HMAC rate limiting, separate IP and email bucket, no plaintext IP stored.
 - [x] Implement strict same-origin, HTTPS and JSON checks for POST, secure cookies, hashed sessions and CSRF requirement on logout.
-- [x] Customer login deliberately denies admin/staff roles pending MFA-capable admin system.
+- [x] Customer login deliberately denies admin/staff roles pending separate admin authentication.
 - [x] Add live account and recovery pages that stay closed until security/SMTP/mail integration is configured and enabled.
 - [x] Implement disabled-by-default private switches DMO_AUTH_ENABLED and DMO_REGISTRATION_ENABLED; no real writes on deployment.
 - [ ] Import migration 002 into Hostinger MySQL (via phpMyAdmin) and verify.
 - [ ] Configure and test Turnstile, real sending email, secure HTTPS detection and end-to-end auth flows in a controlled test account.
-- [ ] Implement independent admin MFA/roles and audit verification, plus private commission request endpoints.
+- [ ] Implement independent admin authentication/roles (no MFA) and audit verification, plus private commission request endpoints.
+
+## v1.3 — 2026-11-17: Private admin access and read-only real dashboard (no MFA)
+
+- [x] Confirm migration 002 installed and database is connected.
+- [x] Respect owner's explicit choice: **do not require MFA**, authenticator applications, TOTP, passkeys or recovery codes for administrator login.
+- [x] Add independently gated admin login requiring strong password, Cloudflare Turnstile validation, rate limiting and role=admin; not accessible through customer login.
+- [x] Add 12-hour maximum admin sessions, 30-minute idle timeout, HttpOnly/Secure/SameSite Strict cookie, CSRF-protected logout and audit trail.
+- [x] Add CLI-only first-admin setup and emergency password reset. No public route to elevate users into admin role.
+- [x] Add real read-only admin worklist: actual request counts, active orders, payments needing manual verification and message activity. No fake numbers.
+- [x] Add admin-only request/message listings with strict session checks, no file-storage secrets.
+- [x] Provide separate live admin page at /studio-admin/index.php. Admin accounts remain **disabled by default** pending configuration/testing.
+- [ ] Configure private DMO_ADMIN_ENABLED and Turnstile credentials; test controlled admin sign-in, session expiry and audit before enabling.
+- [ ] Implement authenticated commission submissions, private references and artist quote actions once user-facing policies are approved.
+- [ ] Implement image uploader and appearance settings with versioned draft/publish controls.

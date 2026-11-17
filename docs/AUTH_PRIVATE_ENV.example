@@ -11,3 +11,10 @@ DMO_MAIL_ENABLED=0
 DMO_MAIL_FROM=no-reply@drawmeone.com
 # Do NOT enable login or registration until migration 002, CAPTCHA,
 # email delivery, abuse controls, and account recovery are verified.
+
+# Admin Phase 3 (no MFA). The switches remain off by default.
+DMO_ADMIN_ENABLED=0
+# Configure these same shared private keys before a controlled test:
+# DMO_APP_KEY=RANDOM_PRIVATE_64_HEX
+# DMO_TURNSTILE_SITE_KEY=PUBLIC_CLOUDFLARE_KEY
+# DMO_TURNSTILE_SECRET=PRIVATE_CLOUDFLARE_SECRET

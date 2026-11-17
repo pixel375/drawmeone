@@ -101,7 +101,7 @@ The read-only catalog queries the real tier/add-on column names (`estimate_min_m
 ## Next milestones (not enabled yet)
 
 1. Secure customer auth: password hashes, verified email, rate limiting, secure sessions/cookies, CSRF and mandatory server-verified Turnstile on signup/login.
-2. Admin bootstrap and role-bound dashboard authentication with additional MFA protection and audit logging.
+2. Admin bootstrap and role-bound dashboard authentication with strong passwords, CAPTCHA, rate limiting, short-lived sessions and audit logging (no MFA).
 3. Commission quote requests, private reference files, an artist inbox and messaging. No charge before the exact artist-approved quote.
 4. Bulk image uploads, optimized variants, consent checks and safe public gallery. Metadata-free batch upload remains the priority.
 5. Admin-managed drafts/published design, logo, SEO, tier settings and real payments.

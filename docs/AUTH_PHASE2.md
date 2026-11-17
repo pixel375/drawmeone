@@ -11,7 +11,7 @@ Updated 2026-11-17. Compatible with the imported 001 schema.
 - Server-side Cloudflare Turnstile Siteverify with exact hostname `drawmeone.com` and action (`signup`, `login`, `reset`). Wrong, reused or expired tokens fail closed.
 - Database rate limiting with HMAC-derived keys, never plaintext IP/email addresses. Login, registration, recovery and verification are throttled separately.
 - Strict JSON input-size limits, same-origin POST enforcement, HTTPS-only credentialed requests, prepared SQL statements, generic sign-in errors, CSRF checks for authenticated writes, and audit records without secrets.
-- Customer role only. **Admin accounts cannot use the customer login** until admin MFA and separate authorization are built.
+- Customer role only. **Admin accounts cannot use the customer login**. A separate password-and-CAPTCHA administrator login with a short session is provided, with no MFA as requested.
 - The account pages `/account.html` and `/password-reset.html` automatically check auth availability; while disabled, they show a clear **coming soon** state.
 - Complete API route allowlisting in `/api/.htaccess` and `/api/auth/.htaccess`.
 
@@ -94,7 +94,7 @@ All POST endpoints accept small application/json requests from exact origin `htt
 - Verify this deployment on Hostinger without enabling it.
 - Add and run a real PHP unit/integration test suite against a disposable database before activation.
 - Complete policies, privacy, encrypted backups, email deliverability test and login/registration QA.
-- Separate MFA-protected admin login and permissions.
+- Separate admin login with strong password, Turnstile CAPTCHA, rate limits and strict role permissions; no MFA.
 - Commission submission with authenticated account and owner-checked attachment handling, then secure inbox and quote workflow.
 - Payments only after a customer approves the artist's exact quote.
 

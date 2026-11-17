@@ -1,0 +1,11 @@
+# Public URLs limited to reviewed routes; admin data also requires a server-side
+# verified admin-only session, not just knowledge of this directory's URL.
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteRule ^(?!status\.php$|login\.php$|me\.php$|logout\.php$|overview\.php$|requests\.php$|messages\.php$).* - [F,END]
+</IfModule>
+<IfModule mod_headers.c>
+  Header always set Cache-Control "no-store, private"
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set X-Frame-Options "DENY"
+</IfModule>
