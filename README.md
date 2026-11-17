@@ -1,3 +1,9 @@
+## v1.2 — Secure customer account foundation (closed preview)
+
+Customer auth routes, one-time email verification, password reset, hashed database sessions, HMAC rate limits and server-verified Turnstile integration are staged behind **disabled-by-default** private `.env` switches. The warm personal [account page](https://drawmeone.com/account.html) intentionally shows *coming soon* until configuration/testing is complete. No real registrations or order submissions are enabled.
+
+This phase adds the idempotent [002 rate-limit migration](database/002_auth_rate_limits.sql) for import into your existing database. See [Authentication Phase 2 setup](docs/AUTH_PHASE2.md) and [safe environment example](docs/AUTH_PRIVATE_ENV.example).
+
 ## v1.1 — PHP/MySQL backend connection layer (2026-11-16)
 
 Secure read-only PHP endpoints for **database health, approved commission catalog, and published design settings** are now available at `/api/health.php`, `/api/catalog.php`, and `/api/site-settings.php`. Credentials are loaded from a server-private `.env` outside `public_html`. No admin/customer authentication, registration, file upload, messages, quotes or payments are enabled in this phase. See [docs/BACKEND_SETUP.md](docs/BACKEND_SETUP.md).

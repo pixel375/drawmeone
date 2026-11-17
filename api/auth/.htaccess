@@ -1,0 +1,9 @@
+# Only the explicitly reviewed auth entry points are routed.
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteRule ^(?!status\.php$|signup\.php$|login\.php$|verify\.php$|me\.php$|logout\.php$|reset-request\.php$|reset-confirm\.php$).* - [F,END]
+</IfModule>
+<IfModule mod_headers.c>
+  Header always set Cache-Control "no-store"
+  Header always set X-Content-Type-Options "nosniff"
+</IfModule>

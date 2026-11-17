@@ -4,3 +4,11 @@
     Header set Cache-Control "no-cache, must-revalidate"
   </FilesMatch>
 </IfModule>
+
+# Protect accidentally misplaced configuration and database dumps.
+# Real secrets must still live OUTSIDE public_html.
+<IfModule mod_authz_core.c>
+  <FilesMatch "(^\.env($|\.)|^\.git|\.sql(\.gz)?$|\.pem$|\.key$)">
+    Require all denied
+  </FilesMatch>
+</IfModule>

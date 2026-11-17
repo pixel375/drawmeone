@@ -224,3 +224,16 @@ See `docs/ART_DIRECTION.md` and `docs/COMMISSION_PRODUCT_SPEC.md`.
 - [x] Document database setup and safe verification in docs/BACKEND_SETUP.md.
 - [ ] Check actual Hostinger deployment and response of /api/health.php; diagnose any configuration mismatch without requesting user's password.
 - [ ] Build subsequent authenticated write endpoints only after email, CSRF, Turnstile Siteverify and brute-force controls are ready.
+
+## v1.2 — 2026-11-17 · Secure customer account foundation (gated)
+
+- [x] Reuse 001 user/token/session tables for registration, email verification, session login, logout and password reset.
+- [x] Implement Cloudflare Turnstile Siteverify with hostname/action validation on signup/login/reset requests; no client-only CAPTCHA trust.
+- [x] Add migration 002 HMAC rate limiting, separate IP and email bucket, no plaintext IP stored.
+- [x] Implement strict same-origin, HTTPS and JSON checks for POST, secure cookies, hashed sessions and CSRF requirement on logout.
+- [x] Customer login deliberately denies admin/staff roles pending MFA-capable admin system.
+- [x] Add live account and recovery pages that stay closed until security/SMTP/mail integration is configured and enabled.
+- [x] Implement disabled-by-default private switches DMO_AUTH_ENABLED and DMO_REGISTRATION_ENABLED; no real writes on deployment.
+- [ ] Import migration 002 into Hostinger MySQL (via phpMyAdmin) and verify.
+- [ ] Configure and test Turnstile, real sending email, secure HTTPS detection and end-to-end auth flows in a controlled test account.
+- [ ] Implement independent admin MFA/roles and audit verification, plus private commission request endpoints.

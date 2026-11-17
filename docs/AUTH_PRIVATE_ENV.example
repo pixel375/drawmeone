@@ -1,0 +1,13 @@
+# Example only. NEVER commit real secrets.
+# Copy settings into the Hostinger PRIVATE .env, outside public_html.
+# Existing DB_HOST / DB_NAME / DB_USER / DB_PASS stay unchanged.
+DMO_AUTH_ENABLED=0
+DMO_REGISTRATION_ENABLED=0
+# Generate a secret yourself with: php -r "echo bin2hex(random_bytes(32)), PHP_EOL;"
+# DMO_APP_KEY=YOUR_PRIVATE_64_CHARACTER_RANDOM_HEX
+# DMO_TURNSTILE_SITE_KEY=PUBLIC_KEY_FROM_CLOUDFLARE
+# DMO_TURNSTILE_SECRET=PRIVATE_KEY_FROM_CLOUDFLARE
+DMO_MAIL_ENABLED=0
+DMO_MAIL_FROM=no-reply@drawmeone.com
+# Do NOT enable login or registration until migration 002, CAPTCHA,
+# email delivery, abuse controls, and account recovery are verified.
