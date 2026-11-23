@@ -1,3 +1,3 @@
-DrawMeOne v1.7 post-activation read-only verification
-Check private flag, storage parent and public/unauthenticated HTTP response codes.
-No passwords, secrets or commands in this file.
+DrawMeOne v1.7 post-activation diagnostics, fixed parameterized SQL quoting.
+Date 2026-11-23.
+Read-only checks of artwork flag, storage and public HTTP responses.

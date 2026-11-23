@@ -98,8 +98,11 @@ jobs:
               (dmo_artwork_writes_enabled() ? "enabled" : "disabled") . "\n";
             echo "private_storage_parent_writable=" .
               (is_writable(dirname(dmo_artwork_storage_root())) ? "yes" : "no") . "\n";
-            echo "published_artwork_count=" .
-              (int) $db->query("SELECT COUNT(*) FROM dmo_portfolio_artworks WHERE visibility = 'published'")->fetchColumn() . "\n";
+            $works = $db->prepare(
+              "SELECT COUNT(*) FROM dmo_portfolio_artworks WHERE visibility = :visibility"
+            );
+            $works->execute(["visibility" => "published"]);
+            echo "published_artwork_count=" . (int) $works->fetchColumn() . "\n";
           } catch (Throwable $error) {
             echo "Diagnostic failed: ".get_class($error)."\n";
             exit(1);
