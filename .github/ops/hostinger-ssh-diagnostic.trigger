@@ -1,3 +1,4 @@
-DrawMeOne v1.7 post-activation diagnostics, fixed parameterized SQL quoting.
-Date 2026-11-23.
-Read-only checks of artwork flag, storage and public HTTP responses.
+DrawMeOne v1.8 PHP lint and read-only intake QA
+2026-11-23
+Check new public route, verified-account gate and absence of live request intake.
+No commands or secrets in this marker.

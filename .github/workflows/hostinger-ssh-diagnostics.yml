@@ -71,6 +71,7 @@ jobs:
           echo "PHP syntax: PASS"
           php -r '
           require $argv[1]."/app/artwork.php";
+          require_once $argv[1]."/app/requests.php";
           try {
             $db = dmo_database();
             $stmt = $db->query(
@@ -94,6 +95,10 @@ jobs:
             echo "imagick_available=" . (extension_loaded("imagick") ? "yes" : "no") . "\n";
             echo "upload_limit=" . ini_get("upload_max_filesize") . "\n";
             echo "post_limit=" . ini_get("post_max_size") . "\n";
+            echo "customer_auth_available=" . (dmo_auth_configured() ? "yes" : "no") . "\n";
+            echo "customer_request_intake=" . (dmo_requests_open() ? "open" : "closed") . "\n";
+            echo "request_policy_version_configured=" .
+              (dmo_requests_policy_version() !== "" ? "yes" : "no") . "\n";
             echo "artwork_write_flag=" .
               (dmo_artwork_writes_enabled() ? "enabled" : "disabled") . "\n";
             echo "private_storage_parent_writable=" .
@@ -108,9 +113,12 @@ jobs:
             exit(1);
           }
           ' "$site"
-          for check in portfolio admin-artworks admin-preview; do
+          for check in portfolio request-status commission-page customer-requests admin-artworks admin-preview; do
             case "$check" in
               portfolio) url="https://drawmeone.com/api/portfolio.php" ;;
+              request-status) url="https://drawmeone.com/api/request-status.php" ;;
+              commission-page) url="https://drawmeone.com/commission.html" ;;
+              customer-requests) url="https://drawmeone.com/api/requests.php" ;;
               admin-artworks) url="https://drawmeone.com/api/admin/artworks.php" ;;
               admin-preview) url="https://drawmeone.com/api/admin/artwork-preview.php?id=1" ;;
             esac
