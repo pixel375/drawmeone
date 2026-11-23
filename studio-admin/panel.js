@@ -101,6 +101,14 @@
           .filter(Boolean).join(" · "),
         row.submitted_at || ""
       );
+      const open = document.createElement("button");
+      open.type = "button";
+      open.className = "quiet request-open";
+      open.textContent = "View brief & drafts";
+      open.addEventListener("click", () => openRequest(row.id).catch(() => {
+        showError("Unable to open commission request.");
+      }));
+      list.lastElementChild?.appendChild(open);
     }
   }
 
@@ -122,8 +130,311 @@
         row.body_excerpt || "",
         row.created_at || ""
       );
+      if (Number.isSafeInteger(Number(row.request_id)) && Number(row.request_id) > 0) {
+        const open = document.createElement("button");
+        open.className = "quiet request-open";
+        open.type = "button";
+        open.textContent = "View request & thread";
+        open.addEventListener("click", () => {
+          selectPanel("requests");
+          openRequest(row.request_id).catch(() => showError("Request unavailable."));
+        });
+        list.lastElementChild?.appendChild(open);
+      }
     }
   }
+
+
+  // Admin-only commission review. All user-controlled content is inserted with
+  // textContent, never innerHTML. No public messages or quote sending here.
+  let selectedRequestId = null;
+  let requestWriteEnabled = false;
+  let requestBusy = false;
+
+  function requestText(id, value) {
+    $(id).textContent = value == null || value === "" ? "—" : String(value);
+  }
+
+  function formatQuoteMoney(minor, currency) {
+    if (!Number.isSafeInteger(Number(minor)) || Number(minor) < 0) return "—";
+    const code = currency === "USD" ? "USD" : "CAD";
+    return new Intl.NumberFormat("en-CA", {
+      style:"currency", currency:code,
+    }).format(Number(minor) / 100);
+  }
+
+  function textNode(tag, value, className = "") {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    node.textContent = String(value == null ? "" : value);
+    return node;
+  }
+
+  function renderThread(records) {
+    const root = $("request-thread");
+    root.replaceChildren();
+    if (!Array.isArray(records) || records.length === 0) {
+      root.append(textNode("p", "No notes or messages in this request yet.", "small"));
+      return;
+    }
+    for (const record of records) {
+      const entry = document.createElement("article");
+      entry.className = "request-thread-item";
+      const mark = record.is_internal
+        ? "PRIVATE ARTIST NOTE" : "CUSTOMER CONVERSATION";
+      entry.append(
+        textNode("small", mark + " · " + (record.sender_name || "User") +
+          " · " + (record.created_at || "")),
+        textNode("p", record.body || "")
+      );
+      root.appendChild(entry);
+    }
+  }
+
+  function renderQuotes(records) {
+    const root = $("request-quotes");
+    root.replaceChildren();
+    if (!Array.isArray(records) || records.length === 0) {
+      root.append(textNode("p", "No quotes prepared yet.", "small"));
+      return;
+    }
+    for (const quote of records) {
+      const card = document.createElement("article");
+      card.className = "request-quote-card";
+      card.append(
+        textNode("strong", "Version " + quote.version_number +
+          " · " + (quote.status || "draft") +
+          " · " + formatQuoteMoney(quote.total_minor,quote.currency)),
+        textNode("p", quote.scope_description || ""),
+        textNode("small", "Revisions included: " + quote.revision_allowance +
+          " · Created: " + (quote.created_at || ""))
+      );
+      if (quote.status === "draft") {
+        const copy = document.createElement("button");
+        copy.type = "button";
+        copy.className = "quiet request-open";
+        copy.textContent = "Use as starting point for new version";
+        copy.addEventListener("click", () => {
+          if (!requestWriteEnabled) return;
+          $("quote-currency").value = quote.currency === "USD" ? "USD" : "CAD";
+          $("quote-scope").value = quote.scope_description || "";
+          $("quote-revisions").value = String(quote.revision_allowance);
+          $("quote-lines").replaceChildren();
+          for (const line of quote.lines || []) {
+            addQuoteLine(line.description || "", moneyText(line.amount_minor));
+          }
+          if (!quote.lines?.length) addQuoteLine();
+          updateQuotePreview();
+        });
+        card.append(copy);
+      }
+      if (Array.isArray(quote.lines)) {
+        const list = document.createElement("ul");
+        for (const line of quote.lines) {
+          list.append(textNode("li", (line.description || "") + " — " +
+            formatQuoteMoney(line.amount_minor,quote.currency)));
+        }
+        card.append(list);
+      }
+      root.append(card);
+    }
+  }
+
+  function updateRequestButtons() {
+    $("request-note-save").disabled = !requestWriteEnabled || requestBusy ||
+      selectedRequestId === null;
+    $("quote-save").disabled = !requestWriteEnabled || requestBusy ||
+      selectedRequestId === null;
+    $("quote-add-line").disabled = !requestWriteEnabled || requestBusy;
+  }
+
+  async function openRequest(id) {
+    const parsed = Number(id);
+    if (!Number.isSafeInteger(parsed) || parsed < 1) return;
+    selectedRequestId = parsed;
+    requestWriteEnabled = false;
+    updateRequestButtons();
+    $("request-detail").hidden = false;
+    requestText("request-detail-status", "Loading complete request...");
+    $("request-detail").scrollIntoView({behavior:"smooth",block:"start"});
+    const {response, data} = await get("request.php?id=" + encodeURIComponent(parsed));
+    if (response.status === 401) return sessionExpired();
+    if (!response.ok || !data.ok || !data.detail) {
+      requestText("request-detail-status", "Unable to load request: HTTP " + response.status);
+      return;
+    }
+    if (selectedRequestId !== parsed) return;
+    const item = data.detail;
+    const info = item.request || {};
+    requestWriteEnabled = data.admin_writes_enabled === true;
+    requestText("request-detail-ref", info.public_ref || "COMMISSION REQUEST");
+    requestText("request-detail-title", "Request #" + (info.id || parsed) +
+      " · " + (info.status || "unknown"));
+    requestText("request-customer",
+      (info.customer_name || "Customer") + " · " + (info.customer_email || ""));
+    const addons = Array.isArray(item.addons)
+      ? item.addons.map(x => x.name).filter(Boolean) : [];
+    requestText("request-tier", [info.subject_type || "", info.tier_name || "Custom",
+      ...addons].filter(Boolean).join(" · "));
+    requestText("request-contact", info.preferred_contact || "");
+    requestText("request-deadline", info.preferred_deadline || "Not specified");
+    requestText("request-brief-text", info.brief || "");
+    renderThread(item.messages);
+    renderQuotes(item.quotes);
+    requestText("request-detail-status", requestWriteEnabled
+      ? "Admin draft editing available. Nothing is sent to the customer."
+      : "Viewing only. Private note and quote creation are disabled on the server.");
+    updateRequestButtons();
+  }
+
+  $("request-detail-close").addEventListener("click", () => {
+    selectedRequestId = null;
+    requestWriteEnabled = false;
+    $("request-detail").hidden = true;
+    updateRequestButtons();
+  });
+
+  function addQuoteLine(description = "", amount = "") {
+    const lines = $("quote-lines");
+    if (lines.childElementCount >= 12) return;
+    const row = document.createElement("div");
+    row.className = "quote-line";
+    const text = document.createElement("input");
+    text.type = "text";
+    text.maxLength = 180;
+    text.className = "quote-line-description";
+    text.placeholder = "Item description";
+    text.setAttribute("aria-label","Quote line description");
+    text.value = description;
+    const price = document.createElement("input");
+    price.type = "text";
+    price.inputMode = "decimal";
+    price.maxLength = 12;
+    price.className = "quote-line-price";
+    price.placeholder = "Amount ($)";
+    price.setAttribute("aria-label","Quote line amount in dollars");
+    price.value = amount;
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "quiet";
+    remove.textContent = "Remove";
+    remove.setAttribute("aria-label","Remove quote line");
+    remove.addEventListener("click", () => {
+      if (!requestWriteEnabled || requestBusy) return;
+      if (lines.childElementCount > 1) row.remove();
+      updateQuotePreview();
+    });
+    price.addEventListener("input", updateQuotePreview);
+    row.append(text,price,remove);
+    lines.append(row);
+    updateQuotePreview();
+  }
+
+  function quoteFormLines() {
+    const rows = [];
+    for (const line of $("quote-lines").querySelectorAll(".quote-line")) {
+      const description = line.querySelector(".quote-line-description").value.trim();
+      const amount_minor = parsePrice(
+        line.querySelector(".quote-line-price").value
+      );
+      if (!description || description.length > 180 ||
+          amount_minor === false || amount_minor === null || amount_minor < 1) {
+        return null;
+      }
+      rows.push({description,amount_minor});
+    }
+    return rows.length > 0 && rows.length <= 12 ? rows : null;
+  }
+
+  function updateQuotePreview() {
+    let total = 0, valid = true;
+    for (const line of $("quote-lines").querySelectorAll(".quote-line")) {
+      const cents = parsePrice(line.querySelector(".quote-line-price").value);
+      if (cents === null || cents === false || cents < 1) valid = false;
+      else total += cents;
+    }
+    requestText("quote-total",
+      valid && total <= 10000000
+        ? "Draft total: " + formatQuoteMoney(total, $("quote-currency").value)
+        : "Enter an amount for each line");
+    $("quote-add-line").disabled = !requestWriteEnabled || requestBusy ||
+      $("quote-lines").childElementCount >= 12;
+  }
+
+  $("quote-add-line").addEventListener("click", () => addQuoteLine());
+  $("quote-currency").addEventListener("change", updateQuotePreview);
+  addQuoteLine();
+
+  $("request-note-form").addEventListener("submit", async event => {
+    event.preventDefault();
+    if (!requestWriteEnabled || requestBusy || selectedRequestId === null) return;
+    const body = $("request-note-body").value.trim();
+    if (!body || body.length > 5000) {
+      requestText("request-detail-status", "Note must contain 1–5000 characters.");
+      return;
+    }
+    const id = selectedRequestId;
+    requestBusy = true;
+    updateRequestButtons();
+    try {
+      const {response, data} = await post("request-actions.php", {
+        action:"add_private_note", request_id:id, body,
+      }, csrf);
+      if (response.status === 401) return sessionExpired();
+      if (!response.ok || !data.ok) {
+        requestText("request-detail-status",
+          "Note not saved (" + (data.error || response.status) + ").");
+        return;
+      }
+      $("request-note-body").value = "";
+      await openRequest(id);
+      requestText("request-detail-status", "Private note saved. Not sent to customer.");
+    } catch (_) {
+      requestText("request-detail-status", "Connection problem. Save not confirmed.");
+    } finally {
+      requestBusy = false;
+      updateRequestButtons();
+    }
+  });
+
+  $("request-quote-form").addEventListener("submit", async event => {
+    event.preventDefault();
+    if (!requestWriteEnabled || requestBusy || selectedRequestId === null) return;
+    const scope = $("quote-scope").value.trim();
+    const revision_allowance = Number($("quote-revisions").value);
+    const lines = quoteFormLines();
+    if (scope.length < 10 || scope.length > 5000 ||
+        !Number.isInteger(revision_allowance) ||
+        revision_allowance < 0 || revision_allowance > 25 || !lines ||
+        lines.reduce((sum,line)=>sum+line.amount_minor,0) > 10000000) {
+      requestText("request-detail-status", "Complete the scope, revisions and valid line prices.");
+      return;
+    }
+    const id = selectedRequestId;
+    if (!window.confirm("Create a NEW internal quote version? It will not be sent.")) return;
+    requestBusy = true;
+    updateRequestButtons();
+    try {
+      const {response, data} = await post("request-actions.php", {
+        action:"create_quote_draft", request_id:id,
+        currency:$("quote-currency").value, scope, revision_allowance, lines,
+      }, csrf);
+      if (response.status === 401) return sessionExpired();
+      if (!response.ok || !data.ok) {
+        requestText("request-detail-status",
+          "Draft not saved (" + (data.error || response.status) + ").");
+        return;
+      }
+      await openRequest(id);
+      requestText("request-detail-status",
+        "Draft quote version " + data.version + " saved privately. No customer contact.");
+    } catch (_) {
+      requestText("request-detail-status", "Connection problem. Draft save not confirmed.");
+    } finally {
+      requestBusy = false;
+      updateRequestButtons();
+    }
+  });
 
   let designDraftVersion = 0;
   let designWriteEnabled = false;

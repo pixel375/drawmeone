@@ -27,3 +27,7 @@ DMO_DESIGN_WRITES_ENABLED=0
 DMO_PACKAGE_WRITES_ENABLED=0
 DMO_PACKAGE_PUBLISH_ENABLED=0
 DMO_PRICING_APPROVED=0
+
+# Phase 6: artist-only internal notes and unsent quote drafts.
+# Defaults to OFF; customer intake, messages and payments remain gated.
+DMO_REQUEST_ADMIN_WRITES_ENABLED=0

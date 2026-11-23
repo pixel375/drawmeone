@@ -9,7 +9,7 @@ try {
     $stmt = $db->query(
         'SELECT m.id, LEFT(m.body, 800) AS body_excerpt, m.created_at, ' .
         'm.is_internal, u.display_name AS sender_name, ' .
-        'r.public_ref AS request_ref FROM dmo_messages m ' .
+        'r.id AS request_id, r.public_ref AS request_ref FROM dmo_messages m ' .
         'JOIN dmo_users u ON u.id = m.sender_id ' .
         'JOIN dmo_conversations c ON c.id = m.conversation_id ' .
         'JOIN dmo_commission_requests r ON r.id = c.request_id ' .

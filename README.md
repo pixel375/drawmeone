@@ -1,3 +1,7 @@
+## v1.6 — Artist request review and private quote drafts
+
+Artist's Desk now includes full commission request details, internal-only notes and versioned quote drafts (CAD/USD, scope, revisions, line items, server-calculated totals), all stored in the existing MySQL schema. No outbound customer message, quote sending or payment. All admin mutation buttons are disabled by default behind `DMO_REQUEST_ADMIN_WRITES_ENABLED=0`. The public site and customer registration stay closed. See [Phase 6 docs](docs/COMMISSION_REVIEW_PHASE6.md).
+
 ## Optional Hostinger SSH diagnostic workflow
 
 A **manual-only, read-only** GitHub Actions SSH inspection workflow is included, matching the established model used for CanadaMB. It requires you to configure repository-specific, verified SSH host settings and private-key secrets in the `hostinger-diagnostics` GitHub Environment. It does not deploy, change MySQL or read password values. See [Hostinger SSH diagnostic setup](docs/HOSTINGER_SSH_DIAGNOSTICS.md).

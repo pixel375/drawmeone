@@ -272,3 +272,13 @@ See `docs/ART_DIRECTION.md` and `docs/COMMISSION_PRODUCT_SPEC.md`.
 - [x] Allowlist admin route; no public POST to catalog, no auto-quote/checkout, no direct deletes.
 - [ ] Verify authenticated CRUD in controlled setup after Turnstile login QA; confirm pricing/currency with artist before publishing.
 - [ ] Wire public commission page to real published catalog and secure logged-in request submission after terms and uploader security work.
+
+## v1.6 — 2026-11-23: Private commission review and quote drafting
+
+- [x] Authenticated full request detail (brief, contact, tier/addons, messages, quotes) with no private file storage keys leaked.
+- [x] Artist-only internal notes in existing conversation/message schema; never customer visible, no outbound send.
+- [x] Server-calculated versioned draft quotes with detailed line items and audit events; no sending/accepting/payment operations.
+- [x] Add Orders & quotes and Messages deep links to the request; responsive accessible admin forms and history view.
+- [x] All mutation operations remain disabled by default with DMO_REQUEST_ADMIN_WRITES_ENABLED; no new SQL migration.
+- [ ] Controlled end-to-end authenticated note/draft test once sample requests are safely available and user enables private writes.
+- [ ] Implement customer account onboarding, private request submission, attachments, and explicit artist/customer quote agreement before opening commissions.

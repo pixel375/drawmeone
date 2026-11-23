@@ -19,8 +19,8 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
 <meta name="robots" content="noindex,nofollow">
 <meta name="theme-color" content="#151317">
 <title>Artist's Desk · Draw Me One</title>
-<link rel="stylesheet" href="./panel.css?v=15">
-<script defer src="./panel.js?v=16"></script>
+<link rel="stylesheet" href="./panel.css?v=16">
+<script defer src="./panel.js?v=17"></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to dashboard</a>
@@ -86,8 +86,61 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
     </section>
 
     <section data-panel="requests" class="content-panel" hidden>
-      <div class="section-intro"><h2>Orders & requests</h2><p>Latest forty customer requests, read-only for this phase.</p></div>
+      <div class="section-intro"><h2>Orders & requests</h2><p>Review customer briefs, private artist notes, and quote drafts. Customer submissions and quote sending stay closed.</p></div>
       <div id="request-list" class="record-list"><p class="small">Loading requests…</p></div>
+      <section id="request-detail" class="request-detail" hidden aria-label="Selected commission request">
+        <div class="request-detail-header">
+          <div>
+            <span class="overline" id="request-detail-ref">SELECTED REQUEST</span>
+            <h3 id="request-detail-title">Commission request</h3>
+          </div>
+          <button type="button" class="quiet" id="request-detail-close">Close details</button>
+        </div>
+        <p id="request-detail-status" class="small" role="status" aria-live="polite"></p>
+        <div class="request-summary">
+          <div><strong>Customer</strong><span id="request-customer"></span></div>
+          <div><strong>Type / tier</strong><span id="request-tier"></span></div>
+          <div><strong>Contact preference</strong><span id="request-contact"></span></div>
+          <div><strong>Requested deadline</strong><span id="request-deadline"></span></div>
+        </div>
+        <div class="request-brief">
+          <strong>Customer's artwork brief</strong>
+          <p id="request-brief-text"></p>
+        </div>
+        <div class="request-columns">
+          <section class="request-workpanel">
+            <h4>Conversation & internal notes</h4>
+            <p class="small">Internal notes are never sent to the customer. External replies remain disabled.</p>
+            <div id="request-thread" class="request-thread"></div>
+            <form id="request-note-form" class="request-compose">
+              <label for="request-note-body">Add an internal note</label>
+              <textarea id="request-note-body" rows="4" maxlength="5000" required placeholder="Private reminder, sketch details, or next steps…"></textarea>
+              <button type="submit" class="quiet" id="request-note-save" disabled>Save private note</button>
+            </form>
+          </section>
+          <section class="request-workpanel">
+            <h4>Versioned quote drafts</h4>
+            <p class="small">These are internal drafts only. No quote will be sent, accepted, or charged.</p>
+            <div id="request-quotes" class="request-quote-history"></div>
+            <form id="request-quote-form" class="request-quote-form">
+              <label for="quote-currency">Currency</label>
+              <select id="quote-currency"><option value="CAD">CAD</option><option value="USD">USD</option></select>
+              <label for="quote-scope">Artwork scope</label>
+              <textarea id="quote-scope" rows="4" maxlength="5000" required placeholder="What will be drawn, format, delivery expectations…"></textarea>
+              <label for="quote-revisions">Included revisions (0–25)</label>
+              <input id="quote-revisions" type="number" min="0" max="25" step="1" value="1" required>
+              <div class="request-quote-lines-title">
+                <strong>Line items</strong>
+                <button type="button" class="quiet" id="quote-add-line">+ Add line</button>
+              </div>
+              <div id="quote-lines" class="quote-lines"></div>
+              <p id="quote-total" class="request-quote-total">Draft total: —</p>
+              <button type="submit" class="quiet" id="quote-save" disabled>Create draft quote</button>
+              <p class="small">Each save creates a new version; previous versions remain for reference.</p>
+            </form>
+          </section>
+        </div>
+      </section>
     </section>
 
     <section data-panel="messages" class="content-panel" hidden>
