@@ -1,3 +1,7 @@
+## Optional Hostinger SSH diagnostic workflow
+
+A **manual-only, read-only** GitHub Actions SSH inspection workflow is included, matching the established model used for CanadaMB. It requires you to configure repository-specific, verified SSH host settings and private-key secrets in the `hostinger-diagnostics` GitHub Environment. It does not deploy, change MySQL or read password values. See [Hostinger SSH diagnostic setup](docs/HOSTINGER_SSH_DIAGNOSTICS.md).
+
 ## Admin login diagnostic improvements (2026-11-23)
 
 The Artist's Desk reports distinct, safe failure categories for invalid credentials, rejected Cloudflare CAPTCHA, HTTPS/origin errors, rate limiting and server problems. A read-only `php app/cli-admin.php check email@example.com` command verifies the administrator's password/status locally on Hostinger, without revealing passwords or modifying the database. The server logs whitelisted Turnstile error reasons only, never tokens or secrets. See [Admin login troubleshooting](docs/ADMIN_LOGIN_TROUBLESHOOTING.md).

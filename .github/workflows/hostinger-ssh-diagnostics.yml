@@ -1,0 +1,87 @@
+name: DrawMeOne Hostinger SSH — Read-only Diagnostics
+
+# This workflow never runs on push and does not deploy or modify the site.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: drawmeone-hostinger-readonly
+  cancel-in-progress: false
+
+jobs:
+  inspect:
+    name: Check PHP, schema and admin bootstrap (no secrets printed)
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    environment: hostinger-diagnostics
+    env:
+      SSH_HOST: ${{ vars.HOSTINGER_HOST }}
+      SSH_PORT: ${{ vars.HOSTINGER_PORT }}
+      SSH_USER: ${{ vars.HOSTINGER_USER }}
+      SSH_PRIVATE_KEY: ${{ secrets.HOSTINGER_SSH_PRIVATE_KEY }}
+      SSH_KNOWN_HOSTS: ${{ secrets.HOSTINGER_KNOWN_HOSTS }}
+    steps:
+      - name: Inspect Hostinger without making any changes
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          [[ "${SSH_HOST:-}" =~ ^[A-Za-z0-9.-]+$ ]] || { echo "::error::HOSTINGER_HOST variable missing/invalid"; exit 1; }
+          [[ "${SSH_USER:-}" =~ ^[A-Za-z0-9_-]+$ ]] || { echo "::error::HOSTINGER_USER variable missing/invalid"; exit 1; }
+          [[ "${SSH_PORT:-}" =~ ^[0-9]{1,5}$ ]] && (( SSH_PORT >= 1 && SSH_PORT <= 65535 )) || {
+            echo "::error::HOSTINGER_PORT variable missing/invalid"; exit 1;
+          }
+          [[ -n "${SSH_PRIVATE_KEY:-}" && -n "${SSH_KNOWN_HOSTS:-}" ]] || {
+            echo "::error::Set HOSTINGER_SSH_PRIVATE_KEY and HOSTINGER_KNOWN_HOSTS in the hostinger-diagnostics environment"; exit 1;
+          }
+          umask 077
+          dir=$(mktemp -d)
+          trap 'rm -rf -- "$dir"' EXIT
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$dir/key"
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > "$dir/known_hosts"
+          chmod 600 "$dir/key" "$dir/known_hosts"
+          ssh-keygen -y -P '' -f "$dir/key" >/dev/null || {
+            echo "::error::SSH private key is not a valid unencrypted OpenSSH key"; exit 1;
+          }
+          ssh -T -o BatchMode=yes -o ConnectTimeout=20 -o ConnectionAttempts=1 \
+            -o StrictHostKeyChecking=yes -o "UserKnownHostsFile=$dir/known_hosts" \
+            -o IdentitiesOnly=yes -i "$dir/key" -p "$SSH_PORT" \
+            "$SSH_USER@$SSH_HOST" 'bash -se' <<'REMOTE'
+          set -Eeuo pipefail
+          site="$HOME/domains/drawmeone.com/public_html"
+          [[ -d "$site" && -f "$site/app/cli-admin.php" && -f "$site/app/bootstrap.php" ]] || {
+            echo "Expected DrawMeOne PHP deployment is missing"; exit 1;
+          }
+          for file in app/bootstrap.php app/auth.php app/admin.php app/cli-admin.php api/admin/login.php; do
+            php -l "$site/$file" >/dev/null || { echo "PHP syntax invalid: $file"; exit 1; }
+          done
+          echo "PHP syntax: PASS"
+          php -r '
+          require $argv[1]."/app/admin.php";
+          try {
+            $db = dmo_database();
+            $stmt = $db->query(
+                "SELECT COUNT(*) AS total, " .
+                "SUM(CASE WHEN account_status = '\''active'\'' AND email_verified_at IS NOT NULL THEN 1 ELSE 0 END) AS eligible " .
+                "FROM dmo_users WHERE role = '\''admin'\''"
+            );
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            $total = (int)($row["total"] ?? 0);
+            $active = (int)($row["eligible"] ?? 0);
+            echo "db_connected=yes\n";
+            echo "admin_record_present=" . ($total > 0 ? "yes" : "no") . "\n";
+            echo "eligible_admin_present=" . ($active > 0 ? "yes" : "no") . "\n";
+            echo "admin_flag_enabled=" . (dmo_config("DMO_ADMIN_ENABLED") === "1" ? "yes" : "no") . "\n";
+            echo "turnstile_key_pair_present=" .
+                (dmo_config("DMO_TURNSTILE_SITE_KEY") !== "" &&
+                 dmo_config("DMO_TURNSTILE_SECRET") !== "" ? "yes" : "no") . "\n";
+            echo "php_curl=" . (extension_loaded("curl") ? "yes" : "no") . "\n";
+          } catch (Throwable $error) {
+            echo "Diagnostic failed: ".get_class($error)."\n";
+            exit(1);
+          }
+          ' "$site"
+          echo "READ_ONLY_DIAGNOSTIC_COMPLETED"
+          REMOTE
