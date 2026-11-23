@@ -89,6 +89,11 @@ jobs:
                 (dmo_config("DMO_TURNSTILE_SITE_KEY") !== "" &&
                  dmo_config("DMO_TURNSTILE_SECRET") !== "" ? "yes" : "no") . "\n";
             echo "php_curl=" . (extension_loaded("curl") ? "yes" : "no") . "\n";
+            echo "gd_available=" . (extension_loaded("gd") ? "yes" : "no") . "\n";
+            echo "gd_webp=" . (function_exists("imagewebp") ? "yes" : "no") . "\n";
+            echo "imagick_available=" . (extension_loaded("imagick") ? "yes" : "no") . "\n";
+            echo "upload_limit=" . ini_get("upload_max_filesize") . "\n";
+            echo "post_limit=" . ini_get("post_max_size") . "\n";
           } catch (Throwable $error) {
             echo "Diagnostic failed: ".get_class($error)."\n";
             exit(1);
