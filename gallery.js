@@ -14,7 +14,8 @@
   const count = document.getElementById("lightbox-counter");
   if (![gallery,notice,empty,error,more,moreButton,remaining,progress,dialog,big,count].every(Boolean)) return;
 
-  const realImage = /^assets\/portfolio\/[a-z0-9][a-z0-9/_-]*\.(avif|webp|png|jpe?g)$/i;
+  const realImage = /^(?:assets\/portfolio\/[a-z0-9][a-z0-9/_-]*\.(?:avif|webp|png|jpe?g)|api\/artwork\.php\?id=[1-9][0-9]{0,17}&v=display)$/i;
+  const optimizedThumb = /^api\/artwork\.php\?id=[1-9][0-9]{0,17}&v=thumb$/i;
   const demoImage = /^assets\/demo\/art-[0-9]{2}\.svg$/;
   const fallback = "./assets/demo/placeholder.svg";
   let entries=[],isDemo=false,visible=0,renderedCount=0,expanded=false,activeIndex=0,lastFocused=null,startX=null;
@@ -23,6 +24,7 @@
 
   const acceptable=(item,demo)=>!!item && typeof item.src === "string" &&
     (demo ? demoImage.test(item.src) : realImage.test(item.src)) &&
+    (item.thumb == null || (typeof item.thumb === "string" && optimizedThumb.test(item.thumb))) &&
     (item.alt == null || (typeof item.alt==="string" && item.alt.length<=260));
   const imageAlt=(item)=>typeof item.alt==="string" && item.alt.trim() ?
     item.alt.trim() : (isDemo ? "Decorative sample design image" : "Original drawing by Draw Me One");
@@ -96,7 +98,7 @@
     button.type="button";button.className="art-tile";
     button.setAttribute("aria-label","View image "+(index+1)+" of "+entries.length+": "+imageAlt(item));
     const img=document.createElement("img");
-    img.src=item.src;img.alt=imageAlt(item);
+    img.src=item.thumb||item.src;img.alt=imageAlt(item);
     img.loading=index<4?"eager":"lazy";img.decoding="async";
     if(Number.isInteger(item.width)&&item.width>0)img.width=item.width;
     if(Number.isInteger(item.height)&&item.height>0)img.height=item.height;
@@ -147,7 +149,17 @@
     return data.works;
   }
   async function load(){
-    const real=(await manifest("./data/portfolio.json")).filter(item=>acceptable(item,false));
+    let hosted = [];
+    try {
+      hosted = (await manifest("./api/portfolio.php")).filter(item=>acceptable(item,false));
+    } catch (_) {
+      // Keep the existing local portfolio/demo fallback during outages.
+      console.warn("Draw Me One: Database portfolio temporarily unavailable.");
+    }
+    const local=(await manifest("./data/portfolio.json")).filter(item=>acceptable(item,false));
+    const unique = new Map();
+    for (const item of [...hosted, ...local]) unique.set(item.src,item);
+    const real=[...unique.values()];
     isDemo=real.length===0;
     entries=isDemo?(await manifest("./data/demo-portfolio.json")).filter(item=>acceptable(item,true)):real;
     notice.hidden=!isDemo;empty.hidden=entries.length>0;

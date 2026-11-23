@@ -436,6 +436,254 @@
     }
   });
 
+
+  // Real artwork is processed on Hostinger and stored outside the webroot.
+  // The browser never receives private storage paths or original filenames.
+  let artworkRecords = [];
+  let artworkWriteEnabled = false;
+  let artworkBusy = false;
+
+  function artworkState(message) {
+    $("artwork-library-status").textContent = message;
+  }
+
+  function artworkControls() {
+    $("artwork-upload").disabled = !artworkWriteEnabled || artworkBusy;
+    $("artwork-publish-selected").disabled = !artworkWriteEnabled || artworkBusy ||
+      !document.querySelector("#artwork-list .artwork-select:checked");
+  }
+
+  function artworkSelectCount() {
+    return document.querySelectorAll("#artwork-list .artwork-select:checked").length;
+  }
+
+  function renderArtwork() {
+    const target = $("artwork-list");
+    target.replaceChildren();
+    if (!artworkRecords.length) {
+      const note = document.createElement("p");
+      note.className = "empty-state";
+      note.textContent = "No real artwork uploaded yet. Choose drawing files above.";
+      target.append(note);
+      artworkControls();
+      return;
+    }
+    for (const work of artworkRecords) {
+      const card = document.createElement("article");
+      card.className = "artwork-library-card";
+      const preview = document.createElement("img");
+      // All URLs are built from the integer ID returned by the admin API.
+      if (Number.isSafeInteger(work.id) && work.id > 0) {
+        preview.src = "../api/admin/artwork-preview.php?id=" + work.id + "&v=thumb";
+      }
+      preview.loading = "lazy";
+      preview.decoding = "async";
+      preview.alt = "Private preview of uploaded drawing " + work.id;
+      const body = document.createElement("div");
+      body.className = "artwork-card-info";
+      const title = document.createElement("strong");
+      title.textContent = "Drawing #" + work.id;
+      const state = document.createElement("small");
+      state.textContent = work.visibility === "published" ? "PUBLIC GALLERY" : "PRIVATE DRAFT";
+      const select = document.createElement("input");
+      select.type = "checkbox";
+      select.className = "artwork-select";
+      select.value = String(work.id);
+      select.disabled = !artworkWriteEnabled || work.visibility !== "draft";
+      select.setAttribute("aria-label", "Select draft drawing " + work.id);
+      select.addEventListener("change", artworkControls);
+      const pick = document.createElement("label");
+      pick.className = "artwork-pick";
+      pick.append(select,document.createTextNode(" Select for bulk publish"));
+      pick.hidden = work.visibility !== "draft";
+      const actions = document.createElement("div");
+      actions.className = "artwork-card-actions";
+      const toggle = document.createElement("button");
+      toggle.className = "quiet";
+      toggle.type = "button";
+      toggle.textContent = work.visibility === "published" ? "Unpublish" : "Publish";
+      toggle.disabled = !artworkWriteEnabled || artworkBusy;
+      toggle.addEventListener("click", () => updateArtwork(work.id,"set_visibility",{
+        visibility:work.visibility === "published" ? "draft" : "published",
+      }));
+      const feature = document.createElement("button");
+      feature.className = "quiet";
+      feature.type = "button";
+      feature.textContent = work.featured ? "★ Featured" : "☆ Feature";
+      feature.disabled = !artworkWriteEnabled || artworkBusy;
+      feature.addEventListener("click", () => updateArtwork(work.id,"set_featured",{
+        featured:!work.featured,
+      }));
+      actions.append(toggle,feature);
+      const order = document.createElement("div");
+      order.className = "artwork-sort";
+      const input = document.createElement("input");
+      input.type = "number";
+      input.min = "-10000";
+      input.max = "10000";
+      input.step = "1";
+      input.value = String(work.sort_order);
+      input.disabled = !artworkWriteEnabled;
+      input.setAttribute("aria-label", "Sort order for drawing " + work.id);
+      const save = document.createElement("button");
+      save.type = "button";
+      save.className = "quiet";
+      save.textContent = "Set order";
+      save.disabled = !artworkWriteEnabled || artworkBusy;
+      save.addEventListener("click", () => {
+        const value = Number(input.value);
+        if (!Number.isInteger(value) || value < -10000 || value > 10000) {
+          artworkState("Sort order must be a whole number between -10000 and 10000.");
+          return;
+        }
+        updateArtwork(work.id,"set_order",{sort_order:value});
+      });
+      order.append(input,save);
+      body.append(title,state,pick,actions,order);
+      card.append(preview,body);
+      target.append(card);
+    }
+    artworkControls();
+  }
+
+  async function artworksLoad() {
+    artworkState("Loading real artwork from the database…");
+    const {response,data} = await get("artworks.php");
+    if (response.status === 401) return sessionExpired();
+    if (!response.ok || !data.ok) {
+      artworkState("Artwork library unavailable (HTTP " + response.status + ").");
+      return;
+    }
+    artworkRecords = Array.isArray(data.artworks) ? data.artworks : [];
+    artworkWriteEnabled = data.write_enabled === true;
+    $("artwork-select-all").checked = false;
+    renderArtwork();
+    artworkState(artworkRecords.length + " artwork entries · " +
+      (artworkWriteEnabled ? "Uploads and publishing available" :
+        "Uploads locked until private server setup is complete"));
+  }
+
+  async function updateArtwork(id, action, payload) {
+    if (!artworkWriteEnabled || artworkBusy) return;
+    if (action === "set_visibility" && payload.visibility === "published" &&
+        !window.confirm("Publish this drawing to the public portfolio?")) return;
+    artworkBusy = true;
+    artworkControls();
+    try {
+      const {response,data} = await post("artworks.php",{
+        id,action,...payload,
+      },csrf);
+      if (response.status === 401) return sessionExpired();
+      if (!response.ok || !data.ok) {
+        artworkState("Change not saved: " + (data.error || "HTTP " + response.status));
+        return;
+      }
+      await artworksLoad();
+      artworkState("Artwork #" + id + " updated.");
+    } catch (_) {
+      artworkState("Connection failed. Change not confirmed.");
+    } finally {
+      artworkBusy = false;
+      renderArtwork();
+    }
+  }
+
+  $("artwork-refresh").addEventListener("click", () => {
+    artworksLoad().catch(() => artworkState("Cannot refresh artwork library."));
+  });
+
+  $("artwork-select-all").addEventListener("change", event => {
+    document.querySelectorAll("#artwork-list .artwork-select").forEach(input => {
+      if (!input.disabled) input.checked = event.target.checked;
+    });
+    artworkControls();
+  });
+
+  $("artwork-publish-selected").addEventListener("click", async () => {
+    if (!artworkWriteEnabled || artworkBusy) return;
+    const ids = [...document.querySelectorAll("#artwork-list .artwork-select:checked")]
+      .map(x=>Number(x.value)).filter(x=>Number.isSafeInteger(x) && x > 0);
+    if (!ids.length || !window.confirm(
+      "Publish " + ids.length + " selected drawings to the public portfolio?"
+    )) return;
+    artworkBusy = true;
+    artworkControls();
+    let completed = 0, failures = 0;
+    for (const id of ids) {
+      try {
+        const {response,data} = await post("artworks.php",{
+          id,action:"set_visibility",visibility:"published",
+        },csrf);
+        if (response.status === 401) {sessionExpired();break;}
+        if (response.ok && data.ok) completed++;
+        else failures++;
+      } catch (_) {
+        failures++;
+      }
+      artworkState("Publishing: " + (completed + failures) + " / " + ids.length);
+    }
+    artworkBusy = false;
+    await artworksLoad();
+    artworkState("Published " + completed + " drawing(s)" +
+      (failures ? "; " + failures + " failed." : "."));
+  });
+
+  $("artwork-upload").addEventListener("click", async () => {
+    if (!artworkWriteEnabled || artworkBusy) return;
+    const selected = [...$("artwork-files").files];
+    if (!selected.length) {
+      $("artwork-upload-message").textContent = "Select artwork images first.";
+      return;
+    }
+    artworkBusy = true;
+    artworkControls();
+    const progress = $("artwork-progress");
+    progress.hidden = false;
+    progress.max = selected.length;
+    progress.value = 0;
+    const report = $("artwork-upload-results");
+    report.replaceChildren();
+    let success = 0;
+    for (let i = 0; i < selected.length; i++) {
+      const file = selected[i];
+      const entry = document.createElement("li");
+      entry.textContent = (i + 1) + ". " + file.name + " — ";
+      report.append(entry);
+      if (!["image/jpeg","image/png","image/webp"].includes(file.type) ||
+          file.size > 8 * 1024 * 1024 || file.size < 1) {
+        entry.textContent += "Skipped (unsupported format or file too large).";
+        progress.value = i + 1;
+        continue;
+      }
+      try {
+        const body = new FormData();
+        body.append("artwork",file);
+        const response = await fetch(api + "artwork-upload.php",{
+          method:"POST", credentials:"same-origin",cache:"no-store",
+          headers:{"X-DMO-CSRF":csrf},body,
+        });
+        const data = await response.json();
+        if (response.status === 401) {sessionExpired();break;}
+        if (response.ok && data.ok) {
+          success++;
+          entry.textContent += "Saved privately as draft #" + data.artwork_id;
+        } else {
+          entry.textContent += "Failed (" + (data.error || response.status) + ")";
+        }
+      } catch (_) {
+        entry.textContent += "Network error; upload not confirmed.";
+      }
+      progress.value = i + 1;
+      $("artwork-upload-message").textContent =
+        "Processed " + (i + 1) + " of " + selected.length + " images.";
+    }
+    artworkBusy = false;
+    $("artwork-files").value = "";
+    await artworksLoad();
+    $("artwork-upload-message").textContent = success + " of " + selected.length +
+      " drawings saved as unpublished drafts. Review before publishing.";
+  });
+
   let designDraftVersion = 0;
   let designWriteEnabled = false;
   const designIds = {
@@ -787,6 +1035,7 @@
     if (name === "messages") messages().catch(() => showError("Connection unavailable."));
     if (name === "settings") designLoad().catch(() => showError("Settings unavailable."));
     if (name === "packages") packagesLoad().catch(() => showError("Packages unavailable."));
+    if (name === "artwork") artworksLoad().catch(() => showError("Artwork unavailable."));
   }
 
   function sessionExpired() {

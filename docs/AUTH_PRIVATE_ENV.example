@@ -31,3 +31,7 @@ DMO_PRICING_APPROVED=0
 # Phase 6: artist-only internal notes and unsent quote drafts.
 # Defaults to OFF; customer intake, messages and payments remain gated.
 DMO_REQUEST_ADMIN_WRITES_ENABLED=0
+
+# Phase 7: private artwork upload, thumbnails and publish/unpublish.
+# Enable only after reviewing Hostinger storage, GD and private backup strategy.
+DMO_ARTWORK_WRITES_ENABLED=0

@@ -1,3 +1,7 @@
+## v1.7 — Secure bulk artwork upload, private drafts and public gallery
+
+Artist's Desk now has a real bulk upload queue (JPEG/PNG/WebP), server-side re-encoding to WebP, separate thumbnail/display image variants, private server storage outside `public_html`, and draft/publish/feature/sort controls. The public gallery fetches **published original drawings only**, retaining the demo fallback until real drawings are live. Uploader writes are **off by default** via `DMO_ARTWORK_WRITES_ENABLED=0`. No images or credentials are committed to GitHub. See [Bulk artwork library](docs/BULK_ARTWORK_PHASE7.md).
+
 ## v1.6 — Artist request review and private quote drafts
 
 Artist's Desk now includes full commission request details, internal-only notes and versioned quote drafts (CAD/USD, scope, revisions, line items, server-calculated totals), all stored in the existing MySQL schema. No outbound customer message, quote sending or payment. All admin mutation buttons are disabled by default behind `DMO_REQUEST_ADMIN_WRITES_ENABLED=0`. The public site and customer registration stay closed. See [Phase 6 docs](docs/COMMISSION_REVIEW_PHASE6.md).

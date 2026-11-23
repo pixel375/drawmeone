@@ -19,8 +19,8 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
 <meta name="robots" content="noindex,nofollow">
 <meta name="theme-color" content="#151317">
 <title>Artist's Desk · Draw Me One</title>
-<link rel="stylesheet" href="./panel.css?v=16">
-<script defer src="./panel.js?v=17"></script>
+<link rel="stylesheet" href="./panel.css?v=17">
+<script defer src="./panel.js?v=18"></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to dashboard</a>
@@ -149,8 +149,29 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
     </section>
 
     <section data-panel="artwork" class="content-panel" hidden>
-      <div class="section-intro"><h2>Artwork library</h2><p>Bulk upload will let you add drawings without filling in a form for every image.</p></div>
-      <div class="empty-state">Artwork upload is not connected yet. Private customer reference images will be stored separately.</div>
+      <div class="section-intro"><h2>Artwork library</h2><p>Upload your own drawings in bulk, review private previews, and publish without entering image titles or captions.</p></div>
+      <div class="artwork-toolbar">
+        <div>
+          <strong>Upload drawings</strong>
+          <p class="small">JPEG, PNG, or WebP. Up to 8 MB per image, maximum 16 megapixels. Originals are re-encoded as optimized WebP images without EXIF metadata. New images remain private drafts.</p>
+          <input id="artwork-files" type="file" accept="image/jpeg,image/png,image/webp" multiple aria-label="Choose artwork images for upload">
+          <div class="artwork-toolbar-actions">
+            <button type="button" class="quiet" id="artwork-upload" disabled>Upload as drafts</button>
+            <button type="button" class="quiet" id="artwork-refresh">Refresh library</button>
+          </div>
+          <progress id="artwork-progress" value="0" max="1" hidden aria-label="Artwork upload progress"></progress>
+          <p id="artwork-upload-message" role="status" aria-live="polite" class="small">Checking upload availability…</p>
+          <ul id="artwork-upload-results" class="artwork-upload-results"></ul>
+        </div>
+        <div class="artwork-bulk">
+          <strong>Artwork visibility</strong>
+          <p class="small">Only published artwork appears in the public gallery. Drafts are never served through the public image API.</p>
+          <label class="artwork-select-label"><input type="checkbox" id="artwork-select-all"> Select all displayed drafts</label>
+          <button type="button" class="quiet" id="artwork-publish-selected" disabled>Publish selected drafts</button>
+          <p id="artwork-library-status" role="status" class="small"></p>
+        </div>
+      </div>
+      <div id="artwork-list" class="artwork-library-grid" aria-label="Uploaded artwork">Loading artwork library…</div>
     </section>
 
     <section data-panel="packages" class="content-panel" hidden>

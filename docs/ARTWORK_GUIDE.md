@@ -38,3 +38,6 @@ The site currently presents **24 sample vector graphics stored locally at `asset
 
 The future admin dashboard will accept one-step bulk uploads and will create manifest/database entries automatically. Manual GitHub entries above are only an interim development path, not the planned experience for the artist.
 \nThe v0.4 demonstration collection has **no external photo dependencies**: all SVG files are served directly from the same Hostinger domain. This avoids blocked third-party photo domains and broken image requests. The examples are illustrative mock images for layout testing, not genuine commission work.\n
+## Phase 7 — actual private upload workflow
+
+The authenticated **Artwork** tab now supports multi-select uploads directly from your computer, no metadata forms. Images are re-encoded to two WebP sizes and stored only in private Hostinger server storage. Uploads default to drafts; click Publish or select several drafts and Publish selected. No originals or private attachments are committed to GitHub. See [BULK_ARTWORK_PHASE7.md](BULK_ARTWORK_PHASE7.md). The write flag `DMO_ARTWORK_WRITES_ENABLED` defaults to 0 until controlled live upload and backup testing.

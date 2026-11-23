@@ -282,3 +282,13 @@ See `docs/ART_DIRECTION.md` and `docs/COMMISSION_PRODUCT_SPEC.md`.
 - [x] All mutation operations remain disabled by default with DMO_REQUEST_ADMIN_WRITES_ENABLED; no new SQL migration.
 - [ ] Controlled end-to-end authenticated note/draft test once sample requests are safely available and user enables private writes.
 - [ ] Implement customer account onboarding, private request submission, attachments, and explicit artist/customer quote agreement before opening commissions.
+
+## v1.7 — 2026-11-23: Secure artwork upload and published gallery
+
+- [x] Hostinger SSH confirms PHP GD, WebP support and enough upload capacity for a bounded sequential batch.
+- [x] Upload genuine drawings with no per-image fields; MIME/size/dimensions validation, GD re-encoding, EXIF removal and random storage paths.
+- [x] Private storage outside webroot, draft-first DB records, authenticated admin previews and publish/unpublish/feature/order management.
+- [x] Public DB-backed portfolio feed and WebP response gates; keep demo fallback until published work exists.
+- [x] No SQL schema migration, no real images or secrets in public GitHub repository.
+- [ ] Controlled authenticated upload-publish-unpublish QA with one owner-supplied real drawing; backup private art directory with MySQL.
+- [ ] Improve SEO with per-work pages/sitemap and remove public Design Lab at final design launch.
