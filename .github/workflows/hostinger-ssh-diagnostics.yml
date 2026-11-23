@@ -1,8 +1,16 @@
 name: DrawMeOne Hostinger SSH — Read-only Diagnostics
 
-# This workflow never runs on push and does not deploy or modify the site.
+# No shell commands or arbitrary inputs are accepted from trigger content.
+# Agents can request a bounded, READ-ONLY check by updating a fixed trigger
+# file on main; no user interaction is needed after initial key setup.
+# This workflow never deploys or modifies the Hostinger site/database.
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/ops/hostinger-ssh-diagnostic.trigger
 
 permissions:
   contents: read
@@ -42,6 +50,8 @@ jobs:
           printf '%s\n' "$SSH_PRIVATE_KEY" > "$dir/key"
           printf '%s\n' "$SSH_KNOWN_HOSTS" > "$dir/known_hosts"
           chmod 600 "$dir/key" "$dir/known_hosts"
+          # Windows-origin secrets can contain CRLF. Strip CR safely on runner.
+          sed -i 's/\r$//' "$dir/key" "$dir/known_hosts"
           ssh-keygen -y -P '' -f "$dir/key" >/dev/null || {
             echo "::error::SSH private key is not a valid unencrypted OpenSSH key"; exit 1;
           }
