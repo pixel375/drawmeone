@@ -70,6 +70,8 @@ jobs:
           done
           php -l "$site/tests/mail_smoke.php" >/dev/null
           php "$site/tests/mail_smoke.php"
+          php -l "$site/tests/mail_dns_check.php" >/dev/null
+          php "$site/tests/mail_dns_check.php"
           echo "PHP syntax: PASS"
           php -r '
           require $argv[1]."/app/artwork.php";
