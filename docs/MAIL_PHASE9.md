@@ -100,3 +100,32 @@ fallback to PHP mail if SMTP is misconfigured.
 ## Automatic safe regression smoke
 
 The read-only Hostinger SSH diagnostic now lints the new PHP source and runs `tests/mail_smoke.php`. This verifies MIME/CRLF header construction and UTF-8 content handling without connecting to SMTP, sending messages, reading passwords, or modifying MySQL. Result should be `MAIL_FORMAT_SMOKE=PASS`. A successful smoke test **does not verify live deliverability**; use the administrator test after protected SMTP configuration.
+
+## Diagnostic: missing test email (2026-11-23)
+
+Previously, `transactional_mail_ready=yes` only checked that configuration
+fields were present; it never connected to the SMTP server. The admin owner
+reported no message arriving in Inbox or Spam. We now record the final
+**numeric SMTP server response code** and libcurl error number when sending.
+We do not log the SMTP transcript, passwords, message body or recipient.
+
+A single, rate-limited CLI test can run via the fixed GitHub Actions workflow
+`.github/workflows/hostinger-smtp-probe.yml` when
+`.github/ops/smtp-probe.trigger` changes on `main`. This sends a message
+only to the **existing verified administrator email stored in MySQL**; never
+to an address from a workflow input or arbitrary user command. The server
+enforces at most one CLI test per 60 minutes. An Actions result of
+`smtp_transport_accepted=yes` means the sending server accepted the
+message, **not** that Gmail or another receiving provider delivered it.
+
+Interpreting safe results:
+- Nonzero `smtp_curl_code`: TLS/connection/authentication/SMTP protocol
+  failure, requiring investigation. No credentials in logs.
+- SMTP `4xx` or `5xx`: server-side refusal; review Hostinger mailbox
+  limits/authorization, support logs, provider configuration.
+- SMTP `250` or `251` with cURL 0: server accepted the message. Check
+  Hostinger Email delivery logs, domain SPF/DKIM/DMARC, bounces and Gmail
+  filtering. Never claim delivery solely from a successful send.
+- Missing reference in Inbox and Spam despite SMTP acceptance: check
+  provider message tracking and DNS. Hostinger documents its outgoing
+  host as `smtp.hostinger.com` with SSL port 465 or STARTTLS port 587.

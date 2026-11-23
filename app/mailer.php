@@ -84,7 +84,7 @@ function dmo_mail_message(string $recipient, string $subject, string $content, s
         rtrim($clean, "\r\n") . "\r\n";
 }
 
-function dmo_mail_send(string $recipient, string $subject, string $content): bool
+function dmo_mail_send(string $recipient, string $subject, string $content, ?array &$diagnostic = null): bool
 {
     $from = dmo_mail_from();
     if (!dmo_mail_ready() || $from === '' ||
@@ -142,11 +142,21 @@ function dmo_mail_send(string $recipient, string $subject, string $content): boo
     ]);
     $result = curl_exec($handle);
     $errorNumber = curl_errno($handle);
+    // For SMTP, libcurl exposes the last SMTP server reply code as well.
+    $replyCode = (int) curl_getinfo($handle, CURLINFO_RESPONSE_CODE);
     curl_close($handle);
-    if ($result === false) {
-        // Never include the SMTP password, message body or recipient in logs.
-        error_log('[DrawMeOne] transactional SMTP failed (cURL code ' .
-            $errorNumber . ')');
+    $accepted = $result !== false &&
+        in_array($replyCode, [250, 251], true);
+    // Expose safe numeric diagnostic codes, never SMTP server text,
+    // message bytes, credentials, message IDs or recipient addresses.
+    $diagnostic = [
+        'curl_code' => $errorNumber,
+        'smtp_code' => $replyCode,
+        'accepted' => $accepted,
+    ];
+    if (!$accepted) {
+        error_log('[DrawMeOne] Transactional SMTP not accepted: curl=' .
+            $errorNumber . ', smtp=' . $replyCode);
         return false;
     }
     return true;

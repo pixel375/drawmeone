@@ -65,7 +65,7 @@ jobs:
           [[ -d "$site" && -f "$site/app/cli-admin.php" && -f "$site/app/bootstrap.php" ]] || {
             echo "Expected DrawMeOne PHP deployment is missing"; exit 1;
           }
-          for file in app/bootstrap.php app/auth.php app/mailer.php app/admin.php app/cli-admin.php app/cli-mail-config.php app/commission-workflow.php app/artwork.php app/requests.php api/request-status.php api/requests.php api/request.php api/admin/login.php api/admin/email.php api/admin/request.php api/admin/request-actions.php api/portfolio.php api/artwork.php api/admin/artworks.php api/admin/artwork-preview.php api/admin/artwork-upload.php; do
+          for file in app/bootstrap.php app/auth.php app/mailer.php app/admin.php app/cli-admin.php app/cli-mail-config.php app/cli-smtp-probe.php app/commission-workflow.php app/artwork.php app/requests.php api/request-status.php api/requests.php api/request.php api/admin/login.php api/admin/email.php api/admin/request.php api/admin/request-actions.php api/portfolio.php api/artwork.php api/admin/artworks.php api/admin/artwork-preview.php api/admin/artwork-upload.php; do
             php -l "$site/$file" >/dev/null || { echo "PHP syntax invalid: $file"; exit 1; }
           done
           php -l "$site/tests/mail_smoke.php" >/dev/null
