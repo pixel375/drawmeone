@@ -1,1 +1,1 @@
-2026-11-23 read-only public DNS inspection of MX, SPF, DMARC and selected DKIM DNS. No email sent; no credentials used.
+2026-11-23 recheck live public DNS after Hostinger deploy of tests/mail_dns_check.php. No email sent, no user data, read-only.
