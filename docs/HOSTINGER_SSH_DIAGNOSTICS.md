@@ -94,3 +94,7 @@ Get-Content -Raw "$HOME\.ssh\drawmeone_gh_actions" | Set-Clipboard
 After a successful SSH connection test, delete the plaintext private key from unneeded locations. Keep a secure backup if you want to be able to restore the runner configuration.
 
 **Test result:** `PHP syntax: PASS`, `db_connected=yes`, `admin_record_present=yes`, and `READ_ONLY_DIAGNOSTIC_COMPLETED` with no credentials disclosed.
+
+## Programmatic verification of runs
+
+The workflow posts a GitHub commit status under `drawmeone/hostinger-ssh-readonly` for the specific trigger commit. The status is `success` only when the SSH/PHP/database diagnostic step finished successfully; otherwise it is `failure`. This requires narrowly scoped `statuses: write` permission for its GitHub Actions token, not server-side write access. Status descriptions include no server credentials or private data. The connected GitHub integration can read those statuses without accessing private Actions logs.
