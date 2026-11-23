@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-require_once dirname(__DIR__) . '/app/bootstrap.php';
+require_once dirname(__DIR__) . '/app/requests.php';
 
 dmo_reject_non_get();
 
@@ -61,10 +61,33 @@ try {
         ];
     }
 
+
+    // When the artist configures tier/add-on compatibility, expose only
+    // active, approved matches. Null means no explicit restrictions.
+    $mapping = [];
+    $linked = $database->query(
+        'SELECT tier_id, addon_id, is_available FROM dmo_tier_addons LIMIT 2000'
+    )->fetchAll();
+    $publicAddonIds = array_fill_keys(
+        array_map(static fn(array $addon): int => $addon['id'], $publicAddons), true
+    );
+    foreach ($linked as $link) {
+        $tier = (int) $link['tier_id'];
+        $addon = (int) $link['addon_id'];
+        $mapping[$tier] ??= [];
+        if ((int) $link['is_available'] === 1 && isset($publicAddonIds[$addon])) {
+            $mapping[$tier][] = $addon;
+        }
+    }
+    foreach ($publicTiers as &$tier) {
+        $tier['available_addon_ids'] = $mapping[$tier['id']] ?? null;
+    }
+    unset($tier);
+
     dmo_json(200, [
         'ok' => true,
-        'requests_open' => false,
-        'currency_pricing_approved' => false,
+        'requests_open' => dmo_requests_open(),
+        'currency_pricing_approved' => dmo_config('DMO_PRICING_APPROVED') === '1',
         'tiers' => $publicTiers,
         'addons' => $publicAddons,
     ]);

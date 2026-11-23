@@ -290,5 +290,17 @@ See `docs/ART_DIRECTION.md` and `docs/COMMISSION_PRODUCT_SPEC.md`.
 - [x] Private storage outside webroot, draft-first DB records, authenticated admin previews and publish/unpublish/feature/order management.
 - [x] Public DB-backed portfolio feed and WebP response gates; keep demo fallback until published work exists.
 - [x] No SQL schema migration, no real images or secrets in public GitHub repository.
-- [ ] Controlled authenticated upload-publish-unpublish QA with one owner-supplied real drawing; backup private art directory with MySQL.
+- [x] Owner confirmed live upload, publish and unpublish workflows work (2026-11-23).
+- [ ] Independently back up the private artwork directory alongside MySQL; verify recoverability.
 - [ ] Improve SEO with per-work pages/sitemap and remove public Design Lab at final design launch.
+
+## v1.8 — 2026-11-23: Verified-customer commission intake foundations
+
+- [x] Customer request page using the actual approved catalog, with custom idea option and no assumed prices.
+- [x] Customer-owned list and detail APIs; unsent draft quotes and artist-only notes are never returned.
+- [x] Transactional text-only request submission, server-stored tier/add-on snapshots, CSRF, HTTPS, strict schema validation and audit.
+- [x] Rate limits, per-customer 24-hour cap, and stable HMAC-based idempotency to avoid duplicate retries.
+- [x] Explicit server gates for request opening, reviewed terms, published privacy policy and policy-version acknowledgement.
+- [x] Hostinger artwork uploader verified by owner (upload/publish/unpublish).
+- [ ] Approve Terms/Privacy content, complete SMTP delivery and registration QA, then run controlled customer request tests.
+- [ ] Add private reference uploads, secure messaging, quote delivery/acceptance and payments in separate phases.

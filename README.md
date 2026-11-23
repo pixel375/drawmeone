@@ -1,3 +1,7 @@
+## v1.8 — Verified-account commission requests (not yet open)
+
+A real mobile-friendly commission portal now uses published catalog options and lets verified customers submit text-only, nonbinding requests with rate limits and idempotent retries. Customers can see their own request history; artist notes and unsent quotes stay private. The feature is **disabled by default** pending customer email verification, published policies, and controlled tests. No payments or customer attachments. See [Phase 8 commission intake](docs/CUSTOMER_REQUESTS_PHASE8.md).
+
 ## v1.7 — Secure bulk artwork upload, private drafts and public gallery
 
 Artist's Desk now has a real bulk upload queue (JPEG/PNG/WebP), server-side re-encoding to WebP, separate thumbnail/display image variants, private server storage outside `public_html`, and draft/publish/feature/sort controls. The public gallery fetches **published original drawings only**, retaining the demo fallback until real drawings are live. Uploader writes are **off by default** via `DMO_ARTWORK_WRITES_ENABLED=0`. No images or credentials are committed to GitHub. See [Bulk artwork library](docs/BULK_ARTWORK_PHASE7.md).

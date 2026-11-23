@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#151317">
+<meta name="description" content="Request an original custom drawing through Draw Me One when commissions open.">
+<title>Commission a drawing · Draw Me One</title>
+<link rel="icon" href="./favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="./commission.css?v=18">
+<script defer src="./commission.js?v=18"></script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="site-head">
+  <a href="./index.html" class="wordmark" aria-label="Draw Me One homepage">drawmeone<span>.</span></a>
+  <nav aria-label="Main navigation">
+    <a href="./index.html">Portfolio</a>
+    <a href="./account.html">My account</a>
+  </nav>
+</header>
+<main id="main">
+  <div class="page-heading">
+    <span class="eyebrow">MADE JUST FOR YOU</span>
+    <h1>A drawing that's <em>yours.</em></h1>
+    <p>Tell me about a character, portrait or idea you'd love to see brought to life. We'll discuss the details and price before anything is confirmed.</p>
+  </div>
+  <section id="request-status" class="notice" role="status" aria-live="polite">Checking commission availability…</section>
+  <section id="request-closed" class="state-panel" hidden>
+    <span class="eyebrow">COMING SOON</span>
+    <h2>Commissions aren't open just yet.</h2>
+    <p>The artist is preparing the private request and messaging process. The portfolio is open to explore in the meantime.</p>
+    <a href="./index.html" class="primary-link">Explore artwork</a>
+  </section>
+  <section id="request-signin" class="state-panel" hidden>
+    <span class="eyebrow">YOUR CREATIVE CORNER</span>
+    <h2>Sign in to send your idea.</h2>
+    <p>Your private customer account keeps commission details separate from public artwork. A confirmed email address is required.</p>
+    <a href="./account.html" class="primary-link">Sign in or create an account</a>
+  </section>
+  <div id="customer-workspace" class="workspace" hidden>
+    <section id="request-create-panel" class="request-form-panel">
+      <div class="panel-heading">
+        <span class="eyebrow">01 / START YOUR REQUEST</span>
+        <h2>Tell me what you're imagining.</h2>
+        <p class="small">This sends a text-only request for review—not an order or payment. Exact availability, delivery time and price are decided afterward.</p>
+      </div>
+      <form id="request-form" novalidate>
+        <div class="field-row">
+          <div class="field">
+            <label for="request-tier">Drawing package</label>
+            <select id="request-tier" name="tier">
+              <option value="">Custom idea — discuss with artist</option>
+            </select>
+            <small id="tier-note">Choose a package or describe a custom idea.</small>
+          </div>
+          <div class="field">
+            <label for="request-subject">Type of drawing</label>
+            <select id="request-subject" required>
+              <option value="original_character">Original character (OC)</option>
+              <option value="fan_character">Game, anime or fan character</option>
+              <option value="portrait">Portrait</option>
+              <option value="other">Something else</option>
+            </select>
+          </div>
+        </div>
+        <fieldset id="request-addons" class="addons">
+          <legend>Optional add-ons</legend>
+          <p class="small" id="addons-empty">No add-ons are currently available.</p>
+          <div id="addons-options" class="addon-options"></div>
+        </fieldset>
+        <div class="field">
+          <label for="request-brief">Describe your drawing</label>
+          <textarea id="request-brief" minlength="30" maxlength="6000" rows="8" required placeholder="Who or what should be in the artwork? What mood, pose, colours, details or setting are important?"></textarea>
+          <small>At least 30 characters. Avoid sharing sensitive information. Reference-image uploads will be added separately.</small>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label for="request-deadline">Preferred deadline (optional)</label>
+            <input id="request-deadline" type="date">
+            <small>No delivery date is guaranteed by submitting this request.</small>
+          </div>
+          <div class="field">
+            <label for="request-contact">Preferred contact</label>
+            <select id="request-contact">
+              <option value="onsite">Private messages on this site</option>
+              <option value="email">Email</option>
+            </select>
+            <small>A preferred contact method, not permission to send automated marketing.</small>
+          </div>
+        </div>
+        <label class="review-checkbox">
+          <input type="checkbox" id="request-ack" required>
+          <span>I understand this is only a request for artist review. The artwork, pricing, delivery schedule and any payment will be agreed separately before an order is placed.</span>
+        </label>
+        <div class="submit-row">
+          <span class="small">No charge at submission. Maximum three new requests per 24 hours.</span>
+          <button id="request-submit" class="primary-button" type="submit" disabled>Send request for review</button>
+        </div>
+        <p id="request-feedback" class="notice" role="status" aria-live="polite" hidden></p>
+      </form>
+    </section>
+    <section class="history-panel" id="history-panel">
+      <div class="panel-heading">
+        <span class="eyebrow">02 / YOUR CREATIVE HISTORY</span>
+        <h2>My commission requests</h2>
+        <p class="small">Only your own requests are shown. Artist notes and unsent quotes stay private.</p>
+      </div>
+      <button type="button" id="refresh-requests" class="text-button">Refresh requests</button>
+      <div id="my-request-list" class="request-list" aria-live="polite">
+        <p class="small">Loading your requests…</p>
+      </div>
+      <section id="my-request-detail" class="request-detail" hidden>
+        <div class="detail-heading">
+          <h3 id="detail-ref">Request</h3>
+          <button type="button" id="detail-close" class="text-button">Close</button>
+        </div>
+        <dl class="request-facts">
+          <div><dt>Status</dt><dd id="detail-status"></dd></div>
+          <div><dt>Drawing type</dt><dd id="detail-type"></dd></div>
+          <div><dt>Tier and extras</dt><dd id="detail-options"></dd></div>
+          <div><dt>Preferred contact</dt><dd id="detail-contact"></dd></div>
+          <div><dt>Requested deadline</dt><dd id="detail-deadline"></dd></div>
+        </dl>
+        <h4>Your description</h4>
+        <p id="detail-brief" class="detail-brief"></p>
+        <div id="detail-messages" class="detail-messages"></div>
+        <p class="small">Sending replies and accepting quotes are not available yet.</p>
+      </section>
+    </section>
+  </div>
+  <footer>
+    <a href="./index.html">Draw Me One</a>
+    <span>Commission request experience · text only · no automatic payments</span>
+  </footer>
+</main>
+</body>
+</html>

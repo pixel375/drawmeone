@@ -122,5 +122,17 @@
     document.addEventListener("dmo:site-change",()=>requestAnimationFrame(tick));
     tick();
   }
+  // Intentionally use server-side intake status, never sample Design Lab
+  // pricing or visitor localStorage, to communicate commission availability.
+  fetch("./api/request-status.php",{cache:"no-store"})
+    .then(response => response.ok ? response.json() : null)
+    .then(data => {
+      if (!data || data.requests_open !== true) return;
+      const flag = document.getElementById("commission-status");
+      const title = document.getElementById("contact-title");
+      if (flag) flag.textContent = "COMMISSION REQUESTS ARE OPEN";
+      if (title) title.textContent = "Your next drawing starts here.";
+    })
+    .catch(() => {}); // Leave default closed status on temporary API failures.
   reflect();
 })();

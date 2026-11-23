@@ -1,6 +1,6 @@
 <?php
 declare(strict_types=1);
-require_once dirname(__DIR__, 2) . '/app/auth.php';
+require_once dirname(__DIR__, 2) . '/app/requests.php';
 dmo_reject_non_get();
 
 $storageReady = false;
@@ -23,5 +23,5 @@ dmo_json(200, [
     'registration_available' => $registration,
     'turnstile_site_key' => $ready ? dmo_config('DMO_TURNSTILE_SITE_KEY') : null,
     'email_verification_required' => true,
-    'commissions_open' => false,
+    'commissions_open' => dmo_requests_open(),
 ]);

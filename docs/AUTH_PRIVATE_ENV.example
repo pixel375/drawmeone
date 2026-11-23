@@ -35,3 +35,10 @@ DMO_REQUEST_ADMIN_WRITES_ENABLED=0
 # Phase 7: private artwork upload, thumbnails and publish/unpublish.
 # Enable only after reviewing Hostinger storage, GD and private backup strategy.
 DMO_ARTWORK_WRITES_ENABLED=0
+
+# Phase 8: verified-account customer intake, NOT live until policy and mail QA.
+# All must be deliberately configured in private Hostinger .env.
+DMO_REQUESTS_ENABLED=0
+DMO_REQUEST_TERMS_APPROVED=0
+DMO_PRIVACY_PUBLISHED=0
+# DMO_REQUEST_POLICY_VERSION=OWNER_APPROVED_REVISION

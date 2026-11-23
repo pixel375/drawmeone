@@ -41,3 +41,8 @@ The future admin dashboard will accept one-step bulk uploads and will create man
 ## Phase 7 — actual private upload workflow
 
 The authenticated **Artwork** tab now supports multi-select uploads directly from your computer, no metadata forms. Images are re-encoded to two WebP sizes and stored only in private Hostinger server storage. Uploads default to drafts; click Publish or select several drafts and Publish selected. No originals or private attachments are committed to GitHub. See [BULK_ARTWORK_PHASE7.md](BULK_ARTWORK_PHASE7.md). The write flag `DMO_ARTWORK_WRITES_ENABLED` defaults to 0 until controlled live upload and backup testing.
+
+
+## Verified operational milestone — 2026-11-23
+
+The owner tested real image upload, publication and unpublication through Artist's Desk and confirmed all three work. Phase 7's essential functionality has therefore been owner-tested. Backups of the PRIVATE Hostinger image storage and a recovery rehearsal remain outstanding. Uploaded images are stored separately from the public GitHub repository.
