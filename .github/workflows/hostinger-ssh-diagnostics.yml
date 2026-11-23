@@ -70,7 +70,7 @@ jobs:
           done
           echo "PHP syntax: PASS"
           php -r '
-          require $argv[1]."/app/admin.php";
+          require $argv[1]."/app/artwork.php";
           try {
             $db = dmo_database();
             $stmt = $db->query(
@@ -94,11 +94,26 @@ jobs:
             echo "imagick_available=" . (extension_loaded("imagick") ? "yes" : "no") . "\n";
             echo "upload_limit=" . ini_get("upload_max_filesize") . "\n";
             echo "post_limit=" . ini_get("post_max_size") . "\n";
+            echo "artwork_write_flag=" .
+              (dmo_artwork_writes_enabled() ? "enabled" : "disabled") . "\n";
+            echo "private_storage_parent_writable=" .
+              (is_writable(dirname(dmo_artwork_storage_root())) ? "yes" : "no") . "\n";
+            echo "published_artwork_count=" .
+              (int) $db->query("SELECT COUNT(*) FROM dmo_portfolio_artworks WHERE visibility = 'published'")->fetchColumn() . "\n";
           } catch (Throwable $error) {
             echo "Diagnostic failed: ".get_class($error)."\n";
             exit(1);
           }
           ' "$site"
+          for check in portfolio admin-artworks admin-preview; do
+            case "$check" in
+              portfolio) url="https://drawmeone.com/api/portfolio.php" ;;
+              admin-artworks) url="https://drawmeone.com/api/admin/artworks.php" ;;
+              admin-preview) url="https://drawmeone.com/api/admin/artwork-preview.php?id=1" ;;
+            esac
+            status=$(curl -sSL --max-time 12 -o /dev/null -w '%{http_code}' "$url" || true)
+            echo "http_${check}=$status"
+          done
           echo "READ_ONLY_DIAGNOSTIC_COMPLETED"
           REMOTE
       - name: Report diagnostic status back to GitHub commit

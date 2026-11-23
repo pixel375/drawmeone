@@ -1,4 +1,3 @@
-DrawMeOne v1.7 Hostinger PHP syntax and DB preflight
-Request date: 2026-11-23
-Read-only check: bulk upload library endpoints and public gallery APIs
-No shell commands or credentials accepted in this marker.
+DrawMeOne v1.7 post-activation read-only verification
+Check private flag, storage parent and public/unauthenticated HTTP response codes.
+No passwords, secrets or commands in this file.
