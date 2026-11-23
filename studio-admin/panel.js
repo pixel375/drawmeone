@@ -530,17 +530,54 @@
     $("login-button").disabled = true;
     $("login-message").textContent = "Checking credentials…";
     try {
-      const { response } = await post("login.php", {
+      const { response, data } = await post("login.php", {
         email: $("login-email").value,
         password: $("login-password").value,
         turnstile_token: token,
       });
       $("login-password").value = "";
       window.turnstile.reset(widget);
-      if (response.ok && await checkSession()) return;
-      $("login-message").textContent =
-        response.status === 429 ? "Too many attempts. Please try later."
-          : "Sign-in not accepted. Please check your details.";
+      if (response.ok && data.ok) {
+        if (await checkSession()) return;
+        $("login-message").textContent =
+          "Password accepted, but the admin session was not recognized. " +
+          "Check whether this browser allows cookies for drawmeone.com.";
+        return;
+      }
+      // The API never discloses whether an email address exists.
+      // Status-specific guidance helps distinguish CAPTCHA, transport,
+      // temporary lockout and actual credential problems.
+      switch (response.status) {
+        case 401:
+          $("login-message").textContent =
+            "Admin email/password did not match an active administrator. " +
+            "Check the exact email used with the SSH account-creation command.";
+          break;
+        case 422:
+          $("login-message").textContent =
+            data.error === "verification_failed"
+              ? "Cloudflare Turnstile rejected the security challenge. " +
+                "Check widget hostname, site key and secret key configuration."
+              : "Login request validation failed. Check the email and retry.";
+          break;
+        case 403:
+          $("login-message").textContent =
+            "Secure request refused (HTTP 403). HTTPS or same-origin validation " +
+            "may be failing at the server. Do not disable security checks.";
+          break;
+        case 429:
+          $("login-message").textContent =
+            "Too many login attempts. Please wait at least 15 minutes before retrying.";
+          break;
+        case 503:
+          $("login-message").textContent =
+            "Server-side login setup failed (HTTP 503). Check Hostinger's PHP error log.";
+          break;
+        default:
+          $("login-message").textContent =
+            "Login failed (HTTP " + response.status +
+            "). Please report only this status, not your password.";
+      }
     } catch (_) {
       $("login-message").textContent = "Unable to connect. Try again later.";
     } finally {

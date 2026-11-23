@@ -1,3 +1,7 @@
+## Admin login diagnostic improvements (2026-11-23)
+
+The Artist's Desk reports distinct, safe failure categories for invalid credentials, rejected Cloudflare CAPTCHA, HTTPS/origin errors, rate limiting and server problems. A read-only `php app/cli-admin.php check email@example.com` command verifies the administrator's password/status locally on Hostinger, without revealing passwords or modifying the database. The server logs whitelisted Turnstile error reasons only, never tokens or secrets. See [Admin login troubleshooting](docs/ADMIN_LOGIN_TROUBLESHOOTING.md).
+
 ## v1.5 — Editable commission tiers and add-ons (still gated)
 
 The existing database tables now power a password-protected, role-checked **Services & pricing** editor in Artist's Desk. Create Simple/Normal/Advanced or other custom tiers, configure included features and optional add-ons, set estimates in CAD or USD and deliberately publish or unpublish entries. No sample prices are inserted. New entries remain unpublished. Three private feature switches keep edits and publication disabled pending admin security testing and artist approval. No new SQL import required.

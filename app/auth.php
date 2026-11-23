@@ -133,10 +133,12 @@ function dmo_auth_rate_limit(PDO $db, string $action, string $subject, int $max,
 function dmo_auth_verify_turnstile(string $token, string $action): bool
 {
     if (strlen($token) < 10 || strlen($token) > 2048 || !extension_loaded('curl')) {
+        error_log('[DrawMeOne] Turnstile: response_or_curl_unavailable');
         return false;
     }
     $handle = curl_init('https://challenges.cloudflare.com/turnstile/v0/siteverify');
     if ($handle === false) {
+        error_log('[DrawMeOne] Turnstile: curl_init_failed');
         return false;
     }
     curl_setopt_array($handle, [
@@ -154,16 +156,43 @@ function dmo_auth_verify_turnstile(string $token, string $action): bool
         CURLOPT_HTTPHEADER => ['Content-Type: application/x-www-form-urlencoded'],
     ]);
     $response = curl_exec($handle);
-    $status = curl_getinfo($handle, CURLINFO_HTTP_CODE);
+    $status = (int) curl_getinfo($handle, CURLINFO_HTTP_CODE);
     curl_close($handle);
     if (!is_string($response) || $status !== 200 || strlen($response) > 12000) {
+        // Never log the submitted challenge token, secret, response body or URL.
+        error_log('[DrawMeOne] Turnstile: transport_or_http_error_' . $status);
         return false;
     }
     $result = json_decode($response, true);
-    return is_array($result)
-        && ($result['success'] ?? false) === true
-        && ($result['hostname'] ?? '') === 'drawmeone.com'
-        && ($result['action'] ?? '') === $action;
+    if (!is_array($result)) {
+        error_log('[DrawMeOne] Turnstile: invalid_json_response');
+        return false;
+    }
+    if (($result['success'] ?? false) !== true) {
+        // Restrict logged diagnostic codes to known benign Cloudflare values.
+        $knownCodes = [
+            'missing-input-secret', 'invalid-input-secret',
+            'missing-input-response', 'invalid-input-response',
+            'bad-request', 'timeout-or-duplicate', 'internal-error',
+        ];
+        $codes = $result['error-codes'] ?? [];
+        $safe = is_array($codes)
+            ? array_values(array_filter($codes, static fn($code) =>
+                is_string($code) && in_array($code, $knownCodes, true)))
+            : [];
+        error_log('[DrawMeOne] Turnstile: validation_failed_' .
+            ($safe === [] ? 'unknown' : implode('_', array_slice($safe, 0, 3))));
+        return false;
+    }
+    if (($result['hostname'] ?? '') !== 'drawmeone.com') {
+        error_log('[DrawMeOne] Turnstile: hostname_mismatch');
+        return false;
+    }
+    if (($result['action'] ?? '') !== $action) {
+        error_log('[DrawMeOne] Turnstile: action_mismatch');
+        return false;
+    }
+    return true;
 }
 
 function dmo_auth_send_email(string $recipient, string $subject, string $content): bool
