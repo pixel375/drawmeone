@@ -19,8 +19,8 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
 <meta name="robots" content="noindex,nofollow">
 <meta name="theme-color" content="#151317">
 <title>Artist's Desk · Draw Me One</title>
-<link rel="stylesheet" href="./panel.css?v=17">
-<script defer src="./panel.js?v=18"></script>
+<link rel="stylesheet" href="./panel.css?v=18">
+<script defer src="./panel.js?v=19"></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to dashboard</a>
@@ -267,6 +267,21 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
         </div>
         <p class="small">Drafts never affect the public site. Publishing requires an authenticated administrator and a second, explicitly enabled server-side write switch. The old Design Lab remains a development preview until the public site is converted to admin-controlled themes.</p>
       </form>
+      <section class="mail-check" aria-labelledby="mail-check-heading">
+        <div class="mail-check-head">
+          <div>
+            <span class="overline">CUSTOMER ACCOUNT LAUNCH PREPARATION</span>
+            <h3 id="mail-check-heading">Transactional email diagnostics</h3>
+            <p class="small">Test verification and password-recovery mail before opening customer registration. Nothing is enabled automatically.</p>
+          </div>
+          <button type="button" class="quiet" id="mail-check-refresh">Check configuration</button>
+        </div>
+        <div class="mail-check-status" id="mail-check-status" role="status" aria-live="polite">Checking mail transport…</div>
+        <p class="small" id="mail-check-detail">Tests are sent exclusively to the address on your administrator account.</p>
+        <button type="button" class="primary" id="mail-check-send" disabled>Send a test email to my admin address</button>
+        <p id="mail-test-feedback" class="small" role="status" aria-live="polite"></p>
+        <p class="small">Before opening commission requests, <a href="https://github.com/pixel375/drawmeone/blob/main/docs/CUSTOMER_POLICIES_DRAFT.md" rel="noopener noreferrer" target="_blank">review the draft Terms and Privacy Policy</a>. The drafts are not approved or binding.</p>
+      </section>
     </section>
   </section>
   <footer>Draw Me One · Secure artist dashboard · No MFA, password and CAPTCHA protected when enabled</footer>

@@ -65,9 +65,11 @@ jobs:
           [[ -d "$site" && -f "$site/app/cli-admin.php" && -f "$site/app/bootstrap.php" ]] || {
             echo "Expected DrawMeOne PHP deployment is missing"; exit 1;
           }
-          for file in app/bootstrap.php app/auth.php app/admin.php app/cli-admin.php app/commission-workflow.php app/artwork.php app/requests.php api/request-status.php api/requests.php api/request.php api/admin/login.php api/admin/request.php api/admin/request-actions.php api/portfolio.php api/artwork.php api/admin/artworks.php api/admin/artwork-preview.php api/admin/artwork-upload.php; do
+          for file in app/bootstrap.php app/auth.php app/mailer.php app/admin.php app/cli-admin.php app/cli-mail-config.php app/commission-workflow.php app/artwork.php app/requests.php api/request-status.php api/requests.php api/request.php api/admin/login.php api/admin/email.php api/admin/request.php api/admin/request-actions.php api/portfolio.php api/artwork.php api/admin/artworks.php api/admin/artwork-preview.php api/admin/artwork-upload.php; do
             php -l "$site/$file" >/dev/null || { echo "PHP syntax invalid: $file"; exit 1; }
           done
+          php -l "$site/tests/mail_smoke.php" >/dev/null
+          php "$site/tests/mail_smoke.php"
           echo "PHP syntax: PASS"
           php -r '
           require $argv[1]."/app/artwork.php";
@@ -95,6 +97,13 @@ jobs:
             echo "imagick_available=" . (extension_loaded("imagick") ? "yes" : "no") . "\n";
             echo "upload_limit=" . ini_get("upload_max_filesize") . "\n";
             echo "post_limit=" . ini_get("post_max_size") . "\n";
+            echo "mail_transport=" .
+              (in_array(dmo_mail_transport(), ["smtp","php"], true) ?
+                 dmo_mail_transport() : "not_configured") . "\n";
+            echo "smtp_settings_ready=" . (dmo_mail_smtp_ready() ? "yes" : "no") . "\n";
+            echo "transactional_mail_ready=" . (dmo_mail_ready() ? "yes" : "no") . "\n";
+            echo "customer_registration_flag=" .
+              (dmo_config("DMO_REGISTRATION_ENABLED") === "1" ? "enabled" : "disabled") . "\n";
             echo "customer_auth_available=" . (dmo_auth_configured() ? "yes" : "no") . "\n";
             echo "customer_request_intake=" . (dmo_requests_open() ? "open" : "closed") . "\n";
             echo "request_policy_version_configured=" .
@@ -113,13 +122,14 @@ jobs:
             exit(1);
           }
           ' "$site"
-          for check in portfolio request-status commission-page customer-requests admin-artworks admin-preview; do
+          for check in portfolio request-status commission-page customer-requests admin-artworks admin-preview admin-mail; do
             case "$check" in
               portfolio) url="https://drawmeone.com/api/portfolio.php" ;;
               request-status) url="https://drawmeone.com/api/request-status.php" ;;
               commission-page) url="https://drawmeone.com/commission.html" ;;
               customer-requests) url="https://drawmeone.com/api/requests.php" ;;
               admin-artworks) url="https://drawmeone.com/api/admin/artworks.php" ;;
+              admin-mail) url="https://drawmeone.com/api/admin/email.php" ;;
               admin-preview) url="https://drawmeone.com/api/admin/artwork-preview.php?id=1" ;;
             esac
             status=$(curl -sSL --max-time 12 -o /dev/null -w '%{http_code}' "$url" || true)

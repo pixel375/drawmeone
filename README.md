@@ -1,3 +1,7 @@
+## v1.9 — TLS SMTP mail readiness and policy drafts (customer accounts still closed)
+
+Added an explicit TLS SMTP transport for transactional verification/recovery mail, a private Hostinger configuration workflow, and a rate-limited administrator-only test-email control in Artist's Desk → Website settings. Passwords stay in private Hostinger configuration and GitHub Actions Secrets, not source code. The commission Terms and Privacy draft is **for review only**; customer login/registration/intake remain disabled. See [SMTP setup](docs/MAIL_PHASE9.md) and [draft policies](docs/CUSTOMER_POLICIES_DRAFT.md).
+
 ## v1.8 — Verified-account commission requests (not yet open)
 
 A real mobile-friendly commission portal now uses published catalog options and lets verified customers submit text-only, nonbinding requests with rate limits and idempotent retries. Customers can see their own request history; artist notes and unsent quotes stay private. The feature is **disabled by default** pending customer email verification, published policies, and controlled tests. No payments or customer attachments. See [Phase 8 commission intake](docs/CUSTOMER_REQUESTS_PHASE8.md).

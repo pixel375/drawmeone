@@ -304,3 +304,13 @@ See `docs/ART_DIRECTION.md` and `docs/COMMISSION_PRODUCT_SPEC.md`.
 - [x] Hostinger artwork uploader verified by owner (upload/publish/unpublish).
 - [ ] Approve Terms/Privacy content, complete SMTP delivery and registration QA, then run controlled customer request tests.
 - [ ] Add private reference uploads, secure messaging, quote delivery/acceptance and payments in separate phases.
+
+## v1.9 — 2026-11-23: Customer email service readiness and policy drafts
+
+- [x] Build explicit authenticated TLS SMTP transport using PHP cURL; no silent fallback to PHP mail and no unencrypted SMTP.
+- [x] Build fixed GitHub Actions workflow for configuring private SMTP values via pinned Hostinger SSH without exposing the mailbox password.
+- [x] Add Artist's Desk email readiness and admin-only test (fixed recipient, CSRF and two-tests/hour rate limit).
+- [x] Draft proposed commission Terms and Privacy Policy with owner-specific unanswered items prominently marked; no legal flags enabled.
+- [ ] Owner creates/verifies an actual drawmeone.com mailbox, configures protected GitHub environment values, and confirms a test email arrives.
+- [ ] Owner/legal review of terms, refunds, licence, customer age/retention policies; publish final pages only after approval.
+- [ ] Controlled customer signup/verification/password reset testing with no public registrations; then pilot commission requests.

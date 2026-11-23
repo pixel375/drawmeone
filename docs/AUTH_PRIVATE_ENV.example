@@ -42,3 +42,16 @@ DMO_REQUESTS_ENABLED=0
 DMO_REQUEST_TERMS_APPROVED=0
 DMO_PRIVACY_PUBLISHED=0
 # DMO_REQUEST_POLICY_VERSION=OWNER_APPROVED_REVISION
+
+# Phase 9: authenticated SMTP for account verification/recovery.
+# Hostinger Email commonly uses smtp.hostinger.com:465 (implicit TLS);
+# 587 requires STARTTLS. Private mailbox must exist with verified DNS.
+# Keep customer auth and signup OFF while configuring and testing.
+DMO_MAIL_TRANSPORT=
+# DMO_SMTP_HOST=smtp.hostinger.com
+# DMO_SMTP_PORT=465
+# DMO_SMTP_USER=verified-mailbox@drawmeone.com
+# DMO_MAIL_FROM=verified-mailbox@drawmeone.com
+# DMO_SMTP_PASSWORD_B64=PRIVATE_BASE64_OF_PASSWORD_NOT_ENCRYPTION
+# Never commit SMTP credentials to GitHub. Use GitHub Environment Secret
+# DMO_SMTP_PASSWORD and the fixed SSH configuration workflow instead.

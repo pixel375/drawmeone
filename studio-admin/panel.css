@@ -207,3 +207,15 @@ footer{padding:28px 0 70px;border-top:1px solid var(--line);color:var(--muted);f
 @media(max-width:1050px){.artwork-library-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:720px){.artwork-toolbar{grid-template-columns:1fr}.artwork-library-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.artwork-library-card>img{height:185px}}
 @media(max-width:490px){.artwork-library-grid{grid-template-columns:1fr}.artwork-library-card>img{height:260px}.artwork-toolbar-actions button{flex:1}}
+
+/* Private transactional mail diagnostic panel (no recipient input or credentials). */
+.mail-check{margin-top:28px;border:1px solid var(--line);border-radius:12px;background:var(--surface);padding:clamp(19px,3vw,28px);display:grid;gap:16px}
+.mail-check-head{display:flex;gap:16px;align-items:start;justify-content:space-between}
+.mail-check-head h3{font-size:20px;margin:10px 0}
+.mail-check-head .small{max-width:650px;margin:7px 0}
+.mail-check-head button{min-height:42px;white-space:nowrap}
+.mail-check-status{border:1px solid var(--line);border-radius:8px;padding:15px 17px;background:var(--bg);font-size:13px;font-weight:750}
+.mail-check .small{font-size:12px;line-height:1.7;margin:0}
+.mail-check>.primary{width:fit-content;min-height:47px}
+.mail-check>.primary:disabled{opacity:.45;cursor:not-allowed}
+@media(max-width:650px){.mail-check-head{display:grid}.mail-check>.primary{width:100%}}

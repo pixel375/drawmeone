@@ -1,0 +1,84 @@
+name: DrawMeOne - Configure Private SMTP
+
+# Fixed command only, triggered by explicit marker path on main.
+on:
+  push:
+    branches: [main]
+    paths: ['.github/ops/mail-config.trigger']
+
+permissions:
+  contents: read
+  statuses: write
+
+concurrency:
+  group: drawmeone-hostinger-mail-config
+  cancel-in-progress: false
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    environment: hostinger-diagnostics
+    env:
+      SSH_HOST: ${{ vars.HOSTINGER_HOST }}
+      SSH_PORT: ${{ vars.HOSTINGER_PORT }}
+      SSH_USER: ${{ vars.HOSTINGER_USER }}
+      SSH_PRIVATE_KEY: ${{ secrets.HOSTINGER_SSH_PRIVATE_KEY }}
+      SSH_KNOWN_HOSTS: ${{ secrets.HOSTINGER_KNOWN_HOSTS }}
+      SMTP_HOST: ${{ vars.DMO_SMTP_HOST }}
+      SMTP_PORT: ${{ vars.DMO_SMTP_PORT }}
+      SMTP_USER: ${{ vars.DMO_SMTP_USER }}
+      SMTP_PASSWORD: ${{ secrets.DMO_SMTP_PASSWORD }}
+    steps:
+      - name: Configure SMTP via pinned SSH without logging credentials
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          [[ "${SSH_HOST:-}" =~ ^[A-Za-z0-9.-]+$ ]] || exit 1
+          [[ "${SSH_USER:-}" =~ ^[A-Za-z0-9_-]+$ ]] || exit 1
+          [[ "${SSH_PORT:-}" =~ ^[0-9]{1,5}$ ]] && (( SSH_PORT >= 1 && SSH_PORT <= 65535 )) || exit 1
+          [[ -n "${SSH_PRIVATE_KEY:-}" && -n "${SSH_KNOWN_HOSTS:-}" &&
+             -n "${SMTP_USER:-}" && -n "${SMTP_PASSWORD:-}" ]] || {
+            echo "::error::Missing SSH or SMTP environment settings"; exit 1;
+          }
+          SMTP_HOST="${SMTP_HOST:-smtp.hostinger.com}"
+          SMTP_PORT="${SMTP_PORT:-465}"
+          [[ "$SMTP_HOST" =~ ^[A-Za-z0-9.-]+$ ]] || exit 1
+          [[ "$SMTP_PORT" == "465" || "$SMTP_PORT" == "587" ]] || exit 1
+          [[ "$SMTP_USER" == *@drawmeone.com ]] || exit 1
+          umask 077
+          dir=$(mktemp -d)
+          trap 'rm -rf -- "$dir"' EXIT
+          printf '%s\n' "$SSH_PRIVATE_KEY" | sed 's/\r$//' > "$dir/key"
+          printf '%s\n' "$SSH_KNOWN_HOSTS" | sed 's/\r$//' > "$dir/known_hosts"
+          chmod 600 "$dir/key" "$dir/known_hosts"
+          ssh-keygen -y -P '' -f "$dir/key" >/dev/null
+          # The only stdin consumed remotely is validated JSON.
+          python3 -c 'import json,os,sys; sys.stdout.write(json.dumps({
+            "host":os.environ["SMTP_HOST"],"port":os.environ["SMTP_PORT"],
+            "user":os.environ["SMTP_USER"],"password":os.environ["SMTP_PASSWORD"]
+          }))' | ssh -T -o BatchMode=yes -o ConnectTimeout=20 \
+            -o StrictHostKeyChecking=yes -o "UserKnownHostsFile=$dir/known_hosts" \
+            -o IdentitiesOnly=yes -i "$dir/key" -p "$SSH_PORT" \
+            "$SSH_USER@$SSH_HOST" \
+            'php "$HOME/domains/drawmeone.com/public_html/app/cli-mail-config.php" configure'
+      - name: Report sanitized status
+        if: always()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          JOB_RESULT: ${{ job.status }}
+        run: |
+          set -Eeuo pipefail
+          state=failure
+          description="Private SMTP setup unsuccessful"
+          if [[ "$JOB_RESULT" == "success" ]]; then
+            state=success
+            description="Private TLS SMTP configured; customer auth unchanged"
+          fi
+          gh api --method POST "repos/$GITHUB_REPOSITORY/statuses/$GITHUB_SHA" \
+            -f state="$state" \
+            -f context="drawmeone/private-smtp-configuration" \
+            -f description="$description" \
+            -f target_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
+            --silent

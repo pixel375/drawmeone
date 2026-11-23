@@ -61,7 +61,7 @@ Generate `DMO_APP_KEY` locally: `php -r "echo bin2hex(random_bytes(32)), PHP_EOL
 
 **Cloudflare Turnstile:** create a widget for `drawmeone.com` (not the fake Preview site), obtain site key (safe in page) and secret key (private only). Siteverify must succeed from Hostinger PHP with hostname and action validation. Official guide: https://developers.cloudflare.com/turnstile/get-started/server-side-validation/
 
-**Email delivery:** configure a real mailbox under `drawmeone.com` and confirm Hostinger can deliver PHP `mail()` messages and that SPF/DKIM are set. `DMO_MAIL_FROM` must be an actual address ending in `@drawmeone.com`. The backend intentionally will not send without `DMO_MAIL_ENABLED=1`. Before activating, test mail delivery with a controlled address and check both Inbox and Spam. `mail()` accepting a message is not a delivery guarantee.
+**Email delivery:** configure a real mailbox under `drawmeone.com` and confirm Hostinger can deliver authenticated TLS SMTP messages and that SPF/DKIM are set. `DMO_MAIL_FROM` must be an actual address ending in `@drawmeone.com`. The backend intentionally will not send without `DMO_MAIL_ENABLED=1`. Before activating, test mail delivery with a controlled address and check both Inbox and Spam. SMTP accepting a message is not a delivery guarantee. See [Phase 9 mail setup](MAIL_PHASE9.md).
 
 ### Safe activation procedure (later, after reviewing tests)
 

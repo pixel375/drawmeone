@@ -1,21 +1,18 @@
 <?php
 declare(strict_types=1);
 
-require_once __DIR__ . '/bootstrap.php';
+require_once __DIR__ . '/mailer.php';
 
 const DMO_SESSION_COOKIE = '__Host-dmo_session';
 const DMO_AUTH_ORIGIN = 'https://drawmeone.com';
 
 function dmo_auth_configured(): bool
 {
-    $from = dmo_config('DMO_MAIL_FROM');
     return dmo_config('DMO_AUTH_ENABLED') === '1'
         && strlen(dmo_config('DMO_APP_KEY')) >= 32
         && dmo_config('DMO_TURNSTILE_SITE_KEY') !== ''
         && dmo_config('DMO_TURNSTILE_SECRET') !== ''
-        && dmo_config('DMO_MAIL_ENABLED') === '1'
-        && filter_var($from, FILTER_VALIDATE_EMAIL) !== false
-        && str_ends_with(strtolower($from), '@drawmeone.com');
+        && dmo_mail_ready();
 }
 
 function dmo_auth_require_enabled(bool $registration = false): void
@@ -197,21 +194,7 @@ function dmo_auth_verify_turnstile(string $token, string $action): bool
 
 function dmo_auth_send_email(string $recipient, string $subject, string $content): bool
 {
-    $from = dmo_config('DMO_MAIL_FROM');
-    if (dmo_config('DMO_MAIL_ENABLED') !== '1'
-        || filter_var($from, FILTER_VALIDATE_EMAIL) === false
-        || !str_ends_with(strtolower($from), '@drawmeone.com')
-        || filter_var($recipient, FILTER_VALIDATE_EMAIL) === false
-        || preg_match('/[\r\n]/', $recipient . $from . $subject)) {
-        return false;
-    }
-    $headers = [
-        'From' => 'Draw Me One <' . $from . '>',
-        'Reply-To' => $from,
-        'Content-Type' => 'text/plain; charset=UTF-8',
-        'MIME-Version' => '1.0',
-    ];
-    return mail($recipient, $subject, $content, $headers);
+    return dmo_mail_send($recipient, $subject, $content);
 }
 
 function dmo_auth_make_verification(PDO $db, int $userId): string

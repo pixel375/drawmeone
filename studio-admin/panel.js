@@ -684,6 +684,79 @@
       " drawings saved as unpublished drafts. Review before publishing.";
   });
 
+
+  // Administrative SMTP readiness, without showing secrets or permitting
+  // arbitrary email recipients. Tests go to the authenticated admin only.
+  let mailReady = false;
+  let mailBusy = false;
+
+  async function emailDiagnosticsLoad() {
+    $("mail-check-status").textContent = "Checking transactional mail settings…";
+    const {response, data} = await get("email.php");
+    if (response.status === 401) return sessionExpired();
+    if (!response.ok || !data.ok) {
+      $("mail-check-status").textContent =
+        "Mail configuration unavailable (HTTP " + response.status + ").";
+      $("mail-check-send").disabled = true;
+      return;
+    }
+    mailReady = data.mail_ready === true;
+    const transport = data.transport === "smtp" ? "TLS SMTP" :
+      data.transport === "php" ? "PHP mail() fallback" : "Not configured";
+    $("mail-check-status").textContent = mailReady
+      ? "Transactional mail configured (" + transport + ")."
+      : "Email transport not ready. Customer registration remains closed.";
+    $("mail-check-detail").textContent =
+      "SMTP settings complete: " + (data.smtp_settings_present ? "yes" : "no") +
+      " · Customer login: " + (data.customer_login_enabled ? "enabled" : "disabled") +
+      " · Customer registration: " +
+      (data.customer_registration_enabled ? "enabled" : "disabled") +
+      " · Test recipient: your registered administrator email";
+    $("mail-check-send").disabled = !mailReady || mailBusy;
+  }
+
+  $("mail-check-refresh").addEventListener("click", () => {
+    emailDiagnosticsLoad().catch(() => {
+      $("mail-check-status").textContent = "Unable to check mail settings.";
+    });
+  });
+
+  $("mail-check-send").addEventListener("click", async () => {
+    if (!mailReady || mailBusy) return;
+    if (!window.confirm(
+      "Send one transactional mail test to this admin account's email? " +
+      "A maximum of two tests per hour is allowed."
+    )) return;
+    mailBusy = true;
+    $("mail-check-send").disabled = true;
+    $("mail-test-feedback").textContent = "Requesting test message…";
+    try {
+      const {response,data} = await post("email.php",{action:"send_test"},csrf);
+      if (response.status === 401) return sessionExpired();
+      if (response.ok && data.ok) {
+        $("mail-test-feedback").textContent =
+          "SMTP accepted reference " + data.test_reference +
+          ". Verify arrival in your inbox or spam folder. " +
+          "Sending a test does not enable customer registration.";
+      } else {
+        const errors = {
+          mail_not_configured:"The SMTP mail transport is not configured.",
+          test_limit_reached:"Maximum two mail tests per hour; try again later.",
+          mail_transport_failed:"The mail server rejected the message or a network error occurred.",
+          csrf_failed:"Session security check failed. Refresh the admin page.",
+        };
+        $("mail-test-feedback").textContent = errors[data.error] ||
+          "Mail test failed (HTTP " + response.status + ").";
+      }
+    } catch (_) {
+      $("mail-test-feedback").textContent =
+        "A network error occurred. Email delivery is not confirmed.";
+    } finally {
+      mailBusy = false;
+      $("mail-check-send").disabled = !mailReady;
+    }
+  });
+
   let designDraftVersion = 0;
   let designWriteEnabled = false;
   const designIds = {
@@ -1034,6 +1107,9 @@
     if (name === "requests") requests().catch(() => showError("Connection unavailable."));
     if (name === "messages") messages().catch(() => showError("Connection unavailable."));
     if (name === "settings") designLoad().catch(() => showError("Settings unavailable."));
+    if (name === "settings") emailDiagnosticsLoad().catch(() => {
+      $("mail-check-status").textContent = "Email diagnostics unavailable.";
+    });
     if (name === "packages") packagesLoad().catch(() => showError("Packages unavailable."));
     if (name === "artwork") artworksLoad().catch(() => showError("Artwork unavailable."));
   }
