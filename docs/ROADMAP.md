@@ -526,5 +526,6 @@ See `docs/ART_DIRECTION.md` and `docs/COMMISSION_PRODUCT_SPEC.md`.
 - [x] Show human-readable quote states (sent, accepted, declined, superseded, expired) and block expired or historical decisions in the UI.
 - [x] Add request-detail Refresh, accessible loading/error states and hide potentially stale private content until the latest fetch succeeds.
 - [x] Guard against out-of-order detail responses and close/refresh races with a monotonically increasing request sequence.
-- [x] Extend signed-in synthetic Chromium tests for expired/replaced quotes, failed decisions and stale response isolation.
+- [x] Extend signed-in synthetic Chromium tests for expired/replaced quotes, failed and successful quote decisions (without new order/payment), stale response isolation and detail refresh (full browser run 45462290911).
+- [x] Read-only Hostinger verification confirmed v25 quote/detail assets are deployed while customer registration and commission intake stay closed (run 45462408843).
 - [ ] Controlled production customer/artist pilot once policies, genuine artwork and access are approved; do not open payments on browser QA alone.
