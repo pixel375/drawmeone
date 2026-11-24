@@ -83,7 +83,14 @@ try {
          (display_name,email,password_hash,role,account_status,email_verified_at)
          VALUES ('Other CI user','other-ci@example.invalid',:hash,'customer','active',UTC_TIMESTAMP())",
         ['hash'=>$hash]);
-    $verifyToken=dmo_auth_make_verification($db,$pending);
+    $admin=auth_insert($db,
+        "INSERT INTO dmo_users
+         (display_name,email,password_hash,role,account_status,email_verified_at)
+         VALUES ('Admin CI user','admin-ci@example.invalid',:hash,'admin','active',UTC_TIMESTAMP())",
+        ['hash'=>$hash]);
+    $adminReset=bin2hex(random_bytes(32));
+    auth_reset_token($db,$admin,$adminReset);
+        $verifyToken=dmo_auth_make_verification($db,$pending);
     $expiredToken=dmo_auth_make_verification($db,$pending);
     $db->prepare(
         "UPDATE dmo_auth_tokens SET expires_at=DATE_SUB(UTC_TIMESTAMP(),INTERVAL 1 MINUTE)
@@ -158,6 +165,9 @@ try {
          WHERE id=:id"
     )->execute(['id'=>$resetExpiredId]);
     [$code]=auth_request('/api/auth/reset-confirm.php',
+        ['token'=>$adminReset,'password'=>$newPassword]);
+    auth_check($code===422,'admin_role_not_resettable_through_customer_endpoint');
+        [$code]=auth_request('/api/auth/reset-confirm.php',
         ['token'=>$expiredReset,'password'=>$newPassword]);
     auth_check($code===422,'expired_password_reset_rejected');
     [$code]=auth_request('/api/auth/reset-confirm.php',
