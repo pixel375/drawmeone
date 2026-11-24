@@ -379,6 +379,25 @@ jobs:
             exit 1
           }
           echo "customer_onboarding_assets=deployed"
+          # v4.0 public accessibility: validate deployed revised theme
+          # picker contrast and skip-to-main links. Read-only assets only.
+          home_html=$(curl -fsSL --max-time 15 "https://drawmeone.com/")
+          [[ "$home_html" == *'styles.css?v=11'* ]] || {
+            echo "a11y_homepage=stale_version"
+            exit 1
+          }
+          home_css=$(curl -fsSL --max-time 15 "https://drawmeone.com/styles.css?v=11")
+          [[ "$home_css" == *'.lab-label small{font-size:10px'* ]] &&
+          [[ "$home_css" == *'opacity:1;color:var(--ink)'* ]] || {
+            echo "a11y_homepage=stale_accessibility_css"
+            exit 1
+          }
+          [[ "$customer_page" == *'href="#main">Skip to main content'* ]] &&
+          [[ "$recover_page" == *'href="#main">Skip to main content'* ]] || {
+            echo "a11y_account_skip_links=missing"
+            exit 1
+          }
+          echo "a11y_public_assets=deployed"
           echo "READ_ONLY_DIAGNOSTIC_COMPLETED"
           REMOTE
       - name: Report diagnostic status back to GitHub commit
