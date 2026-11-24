@@ -4,11 +4,11 @@ The live [DrawMeOne website](https://drawmeone.com) includes a protected Artist'
 
 **Latest areas:** [Gallery artwork publishing](docs/ARTWORK_PUBLISH_QA_PHASE22.md), [full encrypted backup recovery](docs/FULL_RECOVERY_QA_PHASE23.md), [backup monitoring and independent-copy preparation](docs/BACKUP_MONITORING_PHASE24.md), [customer commission history](docs/COMMISSION_HISTORY_QA_PHASE25.md), [quote and request-detail reliability](docs/QUOTE_DETAIL_QA_PHASE26.md), [customer verification and recovery](docs/ONBOARDING_QA_PHASE27.md), and [automated accessibility and keyboard QA](docs/ACCESSIBILITY_QA_PHASE28.md). Earlier backend, policy, authentication and messaging milestones are in the [roadmap](docs/ROADMAP.md).
 
-The disposable database integration suite tests synthetic customers, artist actions, quote/order safeguards, image conversion, and independent encrypted restoration. [Latest passing full integration run](https://github.com/pixel375/drawmeone/actions/runs/45465632043).
+The disposable database integration suite tests synthetic customers, artist actions, quote/order safeguards, image conversion, and independent encrypted restoration. [Latest passing full integration run](https://github.com/pixel375/drawmeone/actions/runs/45469194541).
 
-Chromium browser QA covers all four public designs, all six Artist Desk tabs, synthetic signed-in customer commission/onboarding flows, and axe-core WCAG accessibility checks in desktop/mobile light/dark layouts. [Latest passing accessibility/browser suite](https://github.com/pixel375/drawmeone/actions/runs/45468970978).
+Chromium browser QA covers all four public designs, all six Artist Desk tabs, synthetic signed-in customer commission/onboarding flows, and axe-core WCAG accessibility checks in desktop/mobile light/dark layouts. [Latest passing accessibility/browser suite](https://github.com/pixel375/drawmeone/actions/runs/45469194540).
 
-The [latest successful read-only Hostinger verification](https://github.com/pixel375/drawmeone/actions/runs/45465970997) checked deployment, private storage, mail formatting, and closed account/request gates.
+The [latest successful read-only Hostinger verification](https://github.com/pixel375/drawmeone/actions/runs/45469404677) checked deployment, private storage, mail formatting, and closed account/request gates.
 
 **Outstanding before opening to customers:** genuine rights-cleared published artwork, owner-approved Terms/Privacy and policies, controlled real-account onboarding/Turnstile tests, independently held encrypted off-site backup and recovery key, and provider-verified payments. **No test success alone enables public business operations.**
 
