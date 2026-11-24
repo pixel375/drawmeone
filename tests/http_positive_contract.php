@@ -221,6 +221,30 @@ try {
     qa_positive($code===200 && ($initial['quotes']??[])===[],
         'draft_not_visible_before_artist_release');
 
+    [$code,$status]=qa_http('/api/admin/request-actions.php',$tokenAdmin,'__Host-dmo_admin',[
+        'action'=>'set_review_status','request_id'=>$requestB,'expected_status'=>'submitted','status'=>'clarification_needed'
+    ],$csrfAdmin);
+    qa_positive($code===200 && $status['status']==='clarification_needed','artist_marks_clarification_needed');
+    [$code]=qa_http('/api/admin/request-actions.php',$tokenAdmin,'__Host-dmo_admin',[
+        'action'=>'set_review_status','request_id'=>$requestB,'expected_status'=>'submitted','status'=>'rejected'
+    ],$csrfAdmin);
+    qa_positive($code===409,'stale_review_status_conflict');
+    [$code,$status]=qa_http('/api/admin/request-actions.php',$tokenAdmin,'__Host-dmo_admin',[
+        'action'=>'set_review_status','request_id'=>$requestB,'expected_status'=>'clarification_needed','status'=>'submitted'
+    ],$csrfAdmin);
+    qa_positive($code===200 && $status['status']==='submitted','artist_returns_request_to_review');
+    [$code]=qa_http('/api/admin/request-actions.php',$tokenAdmin,'__Host-dmo_admin',[
+        'action'=>'set_review_status','request_id'=>$requestB,'expected_status'=>'submitted','status'=>'rejected'
+    ],$csrfAdmin);
+    qa_positive($code===200,'artist_declines_unquoted_request');
+    [$code,$status]=qa_http('/api/request.php?ref='.urlencode($referenceB),$tokenB);
+    qa_positive($code===200 && $status['request']['status']==='rejected' && $status['can_reply']===false,'declined_request_readable');
+    [$code]=qa_http('/api/admin/request-actions.php',$tokenAdmin,'__Host-dmo_admin',[
+        'action'=>'create_quote_draft','request_id'=>$requestB,'currency'=>'CAD','scope'=>'Closed synthetic request',
+        'revision_allowance'=>0,'lines'=>[['description'=>'Portrait','amount_minor'=>1000]]
+    ],$csrfAdmin);
+    qa_positive($code===409,'closed_request_cannot_receive_quote_draft');
+
     [$code,$draft]=qa_http('/api/admin/request-actions.php',$tokenAdmin,
         '__Host-dmo_admin',[
             'action'=>'create_quote_draft','request_id'=>$requestA,
@@ -354,6 +378,32 @@ try {
         !str_contains(json_encode($thread,JSON_THROW_ON_ERROR),
             'CI ARTIST-ONLY PRIVATE NOTE'),
         'internal_note_excluded_from_real_http_response');
+
+    [$code]=qa_http('/api/admin/request-actions.php',$tokenAdmin,'__Host-dmo_admin',[
+        'action'=>'set_review_status','request_id'=>$requestA,'expected_status'=>'submitted','status'=>'rejected'
+    ],$csrfAdmin);
+    qa_positive($code===409,'accepted_order_cannot_be_declined_as_new_request');
+    $conversation=$db->prepare('SELECT id FROM dmo_conversations WHERE request_id=:id');
+    $conversation->execute(['id'=>$requestA]);$cid=$conversation->fetchColumn();
+    $seed=$db->prepare('INSERT INTO dmo_messages (conversation_id,sender_id,body,is_internal) VALUES (:c,:u,:body,:internal)');
+    for($i=0;$i<110;$i++)$seed->execute(['c'=>$cid,'u'=>$i%2?$admin:$a,'body'=>'CI long thread '.$i,'internal'=>$i%2]);
+    [$code,$recent]=qa_http('/api/request.php?ref='.urlencode($referenceA),$tokenA);
+    qa_positive($code===200 && count($recent['messages'])===40 && $recent['messages_have_older']===true,'customer_recent_thread_bounded');
+    [$code,$full]=qa_http('/api/request.php?ref='.urlencode($referenceA).'&thread=full',$tokenA);
+    qa_positive($code===200 && count($full['messages'])===57 && $full['messages_have_older']===false &&
+        !str_contains(json_encode($full,JSON_THROW_ON_ERROR),'CI ARTIST-ONLY PRIVATE NOTE'),'customer_full_thread_excludes_internal');
+    [$code,$recent]=qa_http('/api/admin/request.php?id='.$requestA,$tokenAdmin,'__Host-dmo_admin');
+    qa_positive($code===200 && count($recent['detail']['messages'])===100 && $recent['detail']['messages_have_older']===true,'artist_recent_thread_bounded');
+    [$code,$full]=qa_http('/api/admin/request.php?id='.$requestA.'&thread=full',$tokenAdmin,'__Host-dmo_admin');
+    qa_positive($code===200 && count($full['detail']['messages'])===113,'artist_full_thread_includes_internal');
+    [$code,$messages]=qa_http('/api/admin/messages.php?filter=internal&page=1',$tokenAdmin,'__Host-dmo_admin');
+    qa_positive($code===200 && count($messages['messages'])===50 && $messages['has_more']===true &&
+        count(array_filter($messages['messages'],fn($m)=>(int)$m['is_internal']!==1))===0,'artist_message_filter_and_page');
+    [$code,$messages]=qa_http('/api/admin/messages.php?filter=customer&page=2',$tokenAdmin,'__Host-dmo_admin');
+    qa_positive($code===200 && count($messages['messages'])===6 && $messages['has_more']===false &&
+        count(array_filter($messages['messages'],fn($m)=>$m['sender_role']!=='customer'))===0,'artist_customer_messages_second_page');
+    [$code]=qa_http('/api/admin/messages.php?filter=internal',$tokenA,'__Host-dmo_admin');
+    qa_positive(in_array($code,[401,403],true),'customer_cannot_read_artist_inbox');
 
     $db->prepare("UPDATE dmo_commission_requests SET status='completed' WHERE id=:id")
        ->execute(['id'=>$requestA]);

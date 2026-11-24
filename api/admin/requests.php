@@ -26,8 +26,9 @@ try {
         $where[] = '(LOCATE(:ref, r.public_ref) > 0 OR LOCATE(:name, u.display_name) > 0)';
         $params = ['ref'=>$search, 'name'=>$search];
     }
-    if ($filter === 'review') $where[] = "r.status IN ('submitted','clarification_needed')";
-    if ($filter === 'other') $where[] = "r.status NOT IN ('submitted','clarification_needed')";
+    $review = "r.status IN ('submitted','clarification_needed') AND NOT EXISTS (SELECT 1 FROM dmo_quotes q WHERE q.request_id=r.id AND q.status IN ('sent','accepted')) AND NOT EXISTS (SELECT 1 FROM dmo_orders o WHERE o.request_id=r.id)";
+    if ($filter === 'review') $where[] = '(' . $review . ')';
+    if ($filter === 'other') $where[] = 'NOT (' . $review . ')';
     $from = ' FROM dmo_commission_requests r JOIN dmo_users u ON u.id = r.customer_id ' .
         'LEFT JOIN dmo_commission_tiers t ON t.id = r.tier_id ';
     $conditions = $where === [] ? '' : 'WHERE ' . implode(' AND ', $where) . ' ';

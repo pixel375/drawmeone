@@ -60,7 +60,20 @@ function dmo_workflow_request(PDO $db, int $id): ?array
     return is_array($row) ? dmo_requests_historical_tier($row) : null;
 }
 
-function dmo_workflow_load(PDO $db, int $id): ?array
+function dmo_workflow_review_choices(string $status, array $quotes, array $orders): array
+{
+    if (!dmo_workflow_writes_enabled() || !dmo_quote_policy_ready() || $orders !== []) return [];
+    foreach ($quotes as $quote) {
+        if (in_array($quote['status'] ?? '', ['sent','accepted'], true)) return [];
+    }
+    return match ($status) {
+        'submitted' => ['clarification_needed','rejected'],
+        'clarification_needed' => ['submitted','rejected'],
+        default => [],
+    };
+}
+
+function dmo_workflow_load(PDO $db, int $id, bool $fullThread = false): ?array
 {
     $request = dmo_workflow_request($db, $id);
     if ($request === null) {
@@ -84,10 +97,13 @@ function dmo_workflow_load(PDO $db, int $id): ?array
         'u.display_name AS sender_name, u.role AS sender_role ' .
         'FROM dmo_conversations c JOIN dmo_messages m ON m.conversation_id = c.id ' .
         'JOIN dmo_users u ON u.id = m.sender_id ' .
-        'WHERE c.request_id = :id ORDER BY m.id DESC LIMIT 100'
+        'WHERE c.request_id = :id ORDER BY m.id DESC LIMIT ' . ($fullThread ? '500' : '101')
     );
     $messages->execute(['id' => $id]);
-    $thread = array_reverse($messages->fetchAll());
+    $thread = $messages->fetchAll();
+    $hasOlder = !$fullThread && count($thread) > 100;
+    if ($hasOlder) array_pop($thread);
+    $thread = array_reverse($thread);
     foreach ($thread as &$m) {
         $m['is_internal'] = (bool) $m['is_internal'];
     }
@@ -117,13 +133,16 @@ function dmo_workflow_load(PDO $db, int $id): ?array
         unset($line);
     }
     unset($q);
+    $orders = dmo_orders_customer_rows($db, $id);
     return [
+        'review_choices' => dmo_workflow_review_choices((string)$request['status'], $quotes, $orders),
+        'messages_have_older' => $hasOlder,
         'request' => $request,
         'addons' => $extra,
         'messages' => $thread,
         'quotes' => $quotes,
         'references' => dmo_refs_metadata($db, $id),
-        'orders' => dmo_orders_customer_rows($db, $id),
+        'orders' => $orders,
     ];
 }
 

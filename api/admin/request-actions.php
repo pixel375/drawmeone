@@ -13,7 +13,7 @@ try {
 
     $action = $input['action'] ?? null;
     $requestId = dmo_workflow_id($input['request_id'] ?? null);
-    if (!in_array($action, ['add_private_note', 'create_quote_draft', 'send_customer_message'], true)) {
+    if (!in_array($action, ['add_private_note', 'create_quote_draft', 'send_customer_message','set_review_status'], true)) {
         dmo_json(422, ['ok' => false, 'error' => 'unsupported_action']);
     }
 
@@ -21,7 +21,15 @@ try {
     // exits with an uncommitted transaction.
     $note = null;
     $quote = null;
-    if ($action === 'add_private_note' || $action === 'send_customer_message') {
+    if ($action === 'set_review_status') {
+        if (count($input) !== 4 || array_diff(array_keys($input),
+            ['action','request_id','expected_status','status']) !== [] ||
+            !in_array($input['expected_status'] ?? null,['submitted','clarification_needed'],true) ||
+            !in_array($input['status'] ?? null,['submitted','clarification_needed','rejected'],true)) {
+            dmo_json(422,['ok'=>false,'error'=>'invalid_review_transition']);
+        }
+        if (!dmo_quote_policy_ready()) dmo_json(503,['ok'=>false,'error'=>'review_status_disabled']);
+    } elseif ($action === 'add_private_note' || $action === 'send_customer_message') {
         if (array_diff(array_keys($input), ['action', 'request_id', 'body']) !== []) {
             dmo_json(422, ['ok' => false, 'error' => 'unexpected_fields']);
         }
@@ -46,12 +54,31 @@ try {
         // Lock the parent request to serialize internal-note conversation
         // creation and quote version numbering across simultaneous admins.
         $lock = $db->prepare(
-            'SELECT id FROM dmo_commission_requests WHERE id = :id FOR UPDATE'
+            'SELECT status FROM dmo_commission_requests WHERE id = :id FOR UPDATE'
         );
         $lock->execute(['id' => $requestId]);
-        if ($lock->fetchColumn() === false) {
+        $currentStatus = $lock->fetchColumn();
+        if ($currentStatus === false) {
             $db->rollBack();
             dmo_json(404, ['ok' => false, 'error' => 'request_not_found']);
+        }
+
+        if ($action === 'set_review_status') {
+            $q = $db->prepare("SELECT status FROM dmo_quotes WHERE request_id=:id AND status IN ('sent','accepted')");
+            $q->execute(['id'=>$requestId]);
+            $o = $db->prepare('SELECT id FROM dmo_orders WHERE request_id=:id LIMIT 1');
+            $o->execute(['id'=>$requestId]);
+            $allowed = dmo_workflow_review_choices((string)$currentStatus,$q->fetchAll(PDO::FETCH_ASSOC),$o->fetchAll(PDO::FETCH_ASSOC));
+            if ($currentStatus !== $input['expected_status'] || !in_array($input['status'],$allowed,true)) {
+                $db->rollBack();
+                dmo_json(409,['ok'=>false,'error'=>'review_status_changed_or_ineligible']);
+            }
+            $db->prepare('UPDATE dmo_commission_requests SET status=:status WHERE id=:id')
+                ->execute(['status'=>$input['status'],'id'=>$requestId]);
+            dmo_workflow_audit($db,(int)$admin['user_id'],$requestId,'request.review_status_changed',
+                ['from'=>$currentStatus,'to'=>$input['status']]);
+            $db->commit();
+            dmo_json(200,['ok'=>true,'status'=>$input['status']]);
         }
 
         if ($action === 'add_private_note' || $action === 'send_customer_message') {
@@ -117,6 +144,11 @@ try {
                 'visibility' => $action === 'add_private_note' ?
                     'internal_only' : 'customer_visible',
             ]);
+        }
+
+        if (!dmo_messages_request_open((string)$currentStatus)) {
+            $db->rollBack();
+            dmo_json(409,['ok'=>false,'error'=>'request_closed']);
         }
 
         // An accepted quote is immutable: no later draft/price revision may

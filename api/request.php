@@ -39,6 +39,10 @@ try {
     }
     $request = dmo_requests_historical_tier($request);
 
+    $full = $_GET['thread'] ?? 'recent';
+    if (!is_string($full) || !in_array($full,['recent','full'],true)) {
+        dmo_json(422,['ok'=>false,'error'=>'invalid_thread_view']);
+    }
     // Internal artist notes are NEVER returned. Draft quotes are also private
     // until a future explicit quote-delivery workflow is implemented.
     $messages = $db->prepare(
@@ -47,9 +51,12 @@ try {
         'JOIN dmo_messages m ON m.conversation_id = c.id ' .
         'JOIN dmo_users u ON u.id = m.sender_id ' .
         'WHERE c.request_id = :id AND m.is_internal = 0 ' .
-        'ORDER BY m.id DESC LIMIT 40'
+        'ORDER BY m.id DESC LIMIT ' . ($full === 'full' ? '500' : '41')
     );
     $messages->execute(['id' => $request['id']]);
+    $thread = $messages->fetchAll();
+    $hasOlder = $full !== 'full' && count($thread)>40;
+    if ($hasOlder) array_pop($thread);
     $references = dmo_refs_metadata($db, (int) $request['id']);
     $canManageReferences = dmo_refs_management_enabled($db);
     $canUpload = dmo_refs_enabled($db) &&
@@ -71,7 +78,8 @@ try {
         'references' => $references,
         'can_upload_references' => $canUpload,
         'can_manage_references' => $canManageReferences,
-        'messages' => array_reverse($messages->fetchAll()),
+        'messages' => array_reverse($thread),
+        'messages_have_older' => $hasOlder,
         'can_reply' => dmo_messages_enabled() &&
             dmo_messages_request_open((string) $request['status']),
         'quotes' => $quotes,

@@ -8,7 +8,11 @@ try {
     $db = dmo_database();
     dmo_admin_require_session($db);
     $id = dmo_workflow_id($_GET['id'] ?? null);
-    $detail = dmo_workflow_load($db, $id);
+    $full = $_GET['thread'] ?? 'recent';
+    if (!is_string($full) || !in_array($full,['recent','full'],true)) {
+        dmo_json(422,['ok'=>false,'error'=>'invalid_thread_view']);
+    }
+    $detail = dmo_workflow_load($db, $id, $full === 'full');
     if ($detail === null) {
         dmo_json(404, ['ok' => false, 'error' => 'request_not_found']);
     }

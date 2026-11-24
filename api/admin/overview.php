@@ -10,8 +10,8 @@ try {
     $db = dmo_database();
     dmo_admin_require_session($db);
     $queries = [
-        'requests_for_review' => "SELECT COUNT(*) FROM dmo_commission_requests " .
-            "WHERE status IN ('submitted','clarification_needed')",
+        'requests_for_review' => "SELECT COUNT(*) FROM dmo_commission_requests r " .
+            "WHERE r.status IN ('submitted','clarification_needed') AND NOT EXISTS (SELECT 1 FROM dmo_quotes q WHERE q.request_id=r.id AND q.status IN ('sent','accepted')) AND NOT EXISTS (SELECT 1 FROM dmo_orders o WHERE o.request_id=r.id)",
         'active_orders' => "SELECT COUNT(*) FROM dmo_orders " .
             "WHERE status IN ('awaiting_arrangement','in_progress','ready_for_delivery'," .
             "'queued','drawing','awaiting_feedback','revision')",
