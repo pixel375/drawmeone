@@ -518,3 +518,13 @@ See `docs/ART_DIRECTION.md` and `docs/COMMISSION_PRODUCT_SPEC.md`.
 - [x] Guard concurrent history refreshes so late stale responses cannot replace current results.
 - [x] Add synthetic customer Chromium coverage for closed-intake existing history, quote/order display and disabled private messaging/uploads; plus open-intake form compatibility and idempotency on an intercepted test API.
 - [ ] Controlled real customer browser/SMTP/Turnstile pilot before opening registration or any live commission intake.
+
+## v3.8 — 2026-11-24: Clearer quote decisions and race-safe private detail
+
+- [x] Disable quote acceptance until the customer explicitly acknowledges the offered scope/price; leave decline independently available.
+- [x] Restore eligible quote action buttons after failed/expired server responses; suppress outdated response navigation.
+- [x] Show human-readable quote states (sent, accepted, declined, superseded, expired) and block expired or historical decisions in the UI.
+- [x] Add request-detail Refresh, accessible loading/error states and hide potentially stale private content until the latest fetch succeeds.
+- [x] Guard against out-of-order detail responses and close/refresh races with a monotonically increasing request sequence.
+- [x] Extend signed-in synthetic Chromium tests for expired/replaced quotes, failed decisions and stale response isolation.
+- [ ] Controlled production customer/artist pilot once policies, genuine artwork and access are approved; do not open payments on browser QA alone.
