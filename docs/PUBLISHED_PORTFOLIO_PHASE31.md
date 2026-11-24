@@ -10,3 +10,7 @@ Three fixes in gallery.js:
 The regression checks cover sample notice removal, thumbnail/full image distinction, duplicate precedence, invalid URLs, switching site layout with genuine entries, individual artwork links, consecutive display failures and recovery to a valid image. All fixtures use browser-intercepted synthetic SVG data, no production publication, no customer information. The production script URL is bumped to gallery.js?v=13.
 
 No feature gates or deployment credentials changed. Initial CI and Hostinger verification pending.
+
+## Regression results
+
+The published-portfolio regression passed on Chromium, Firefox and WebKit in [Chromium run 45491298783](https://github.com/pixel375/drawmeone/actions/runs/45491298783) and [compatibility run 45491298800](https://github.com/pixel375/drawmeone/actions/runs/45491298800). The latter overall run failed separately in the 320px Artist Desk artwork panel; this does not invalidate the passed public gallery suite. Database integration and source quality also passed. Production deployment verification remains pending.

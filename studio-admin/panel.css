@@ -28,7 +28,8 @@ p{color:var(--muted);margin:0 0 16px;line-height:1.8}
 .login-layout .welcome{padding:0}
 .login-card{background:var(--surface);padding:clamp(25px,4vw,39px);border:1px solid var(--line);border-radius:14px}
 label{display:block;font-size:12px;font-weight:750;margin:18px 0 7px}
-input{width:100%;padding:13px 15px;min-height:48px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink)}
+input:not([type=checkbox]):not([type=radio]){width:100%;padding:13px 15px;min-height:48px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink)}
+input[type=checkbox],input[type=radio]{width:18px;height:18px;min-width:18px;min-height:18px;padding:0;margin:0;flex:0 0 18px;accent-color:var(--accent)}
 input:focus{border-color:var(--accent)}
 .captcha{margin:23px 0 0}
 .primary{border:0;background:var(--accent);color:var(--accent-text);min-height:49px;padding:12px 18px;border-radius:8px;font-weight:800;margin-top:20px;width:100%}

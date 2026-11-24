@@ -85,7 +85,7 @@ async function horizontalOverflow(page) {
     measured:document.documentElement.scrollWidth,
     internalOverflow:[...document.querySelectorAll("body *")].filter(x=>
       x.clientWidth>0 && x.scrollWidth>x.clientWidth+3 && getComputedStyle(x).overflowX==="visible"
-    ).slice(0,12).map(x=>({tag:x.tagName,id:x.id,client:x.clientWidth,scroll:x.scrollWidth})),
+    ).slice(0,12).map(x=>({tag:x.tagName,id:x.id,className:typeof x.className==="string"?x.className.slice(0,90):"",client:x.clientWidth,scroll:x.scrollWidth})),
     culprits:[...document.querySelectorAll("body *")]
       .filter(x => {
         const rect=x.getBoundingClientRect();
@@ -162,6 +162,10 @@ async function verifyArtistDesk(browser, width) {
           "published filter selects only public drawings");
         assert.match(await page.locator("#artwork-visible-count").innerText(),/1 of 2/);
         await page.locator("#artwork-filter").selectOption("all");
+        for(const checkbox of await active.locator('input[type="checkbox"]').all()){
+          const rect=await checkbox.boundingBox();
+          assert(rect && rect.width>=16 && rect.width<=24,"artwork checkbox uses compact control sizing");
+        }
       } else if(name==="packages"){
         await page.locator("#package-editor-status").waitFor();
         assert.equal(await page.locator("#package-save").isEnabled(),false,
