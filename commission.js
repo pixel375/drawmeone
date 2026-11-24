@@ -475,11 +475,13 @@
       "Not specified" : String(value);
   }
   let detailRequestSequence = 0;
+  let detailFullThread = false;
   async function openDetail(ref) {
     if (typeof ref !== "string" || !/^DMO-[0-9a-f]{20}$/.test(ref)) return;
     if (leavingSession || (detailMutationBusy() && state.selectedRef !== ref)) return;
     const sequence = ++detailRequestSequence;
-    if (state.selectedRef !== ref) clearDetailDrafts();
+    if (state.selectedRef !== ref) { clearDetailDrafts(); detailFullThread=false; }
+    $("detail-thread-full").hidden = true;
     state.selectedRef = ref;
     const panel = $("my-request-detail");
     panel.hidden = false;
@@ -505,7 +507,7 @@
     panel.scrollIntoView({behavior:"smooth",block:"start"});
     try {
       const {response,body} = await getJSON(
-        "./api/request.php?ref=" + encodeURIComponent(ref)
+        "./api/request.php?ref=" + encodeURIComponent(ref) + (detailFullThread ? "&thread=full" : "")
       );
       if (response.status === 401) return customerSessionExpired();
       if (sequence !== detailRequestSequence || state.selectedRef !== ref) return;
@@ -564,6 +566,7 @@
       showFact("detail-contact",r.preferred_contact);
       showFact("detail-deadline",r.preferred_deadline);
       showFact("detail-brief",r.brief);
+      $("detail-thread-full").hidden = body.messages_have_older !== true;
       const root = $("detail-messages");
       root.replaceChildren();
       if (Array.isArray(body.messages) && body.messages.length) {
@@ -593,6 +596,11 @@
   $("refresh-requests").addEventListener("click",loadMyRequests);
   $("detail-refresh").addEventListener("click", () => {
     if (state.selectedRef && !detailMutationBusy()) openDetail(state.selectedRef);
+  });
+  $("detail-thread-full").addEventListener("click",()=>{
+    if(!state.selectedRef||detailMutationBusy())return;
+    detailFullThread=true;
+    openDetail(state.selectedRef);
   });
   $("detail-close").addEventListener("click",() => {
     if (detailMutationBusy()) return;

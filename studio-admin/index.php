@@ -19,8 +19,8 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
 <meta name="robots" content="noindex,nofollow">
 <meta name="theme-color" content="#151317">
 <title>Artist's Desk · Draw Me One</title>
-<link rel="stylesheet" href="./panel.css?v=26">
-<script defer src="./panel.js?v=25"></script>
+<link rel="stylesheet" href="./panel.css?v=27">
+<script defer src="./panel.js?v=26"></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to dashboard</a>
@@ -129,6 +129,13 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
           <div><strong>Contact preference</strong><span id="request-contact"></span></div>
           <div><strong>Requested deadline</strong><span id="request-deadline"></span></div>
         </div>
+        <section class="request-brief" id="request-review-actions" hidden aria-label="Request review status">
+          <h4>Review decision</h4>
+          <p class="small">Update the customer's review status. This does not send a message, create an order or collect payment.</p>
+          <label for="request-review-status">New status</label>
+          <select id="request-review-status"></select>
+          <button type="button" id="request-review-save" class="quiet" disabled>Update status</button>
+        </section>
         <div class="request-brief">
           <strong>Customer's artwork brief</strong>
           <p id="request-brief-text"></p>
@@ -148,6 +155,7 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
           <section class="request-workpanel">
             <h4>Conversation & internal notes</h4>
             <p class="small">Internal notes stay artist-only. Customer replies become available only after the separate messaging service is enabled.</p>
+            <button type="button" id="request-thread-full" class="quiet" hidden>Show earlier notes and messages</button>
             <div id="request-thread" class="request-thread"></div>
             <form id="request-note-form" class="request-compose">
               <label for="request-note-body">Add an internal note</label>
@@ -188,7 +196,18 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
 
     <section data-panel="messages" class="content-panel" hidden>
       <div class="section-intro"><h2>Messages</h2><p>Recent conversation activity, including internal notes. Open a request to read details and reply when customer messaging is enabled.</p></div>
+      <div class="request-list-filters">
+        <label for="message-list-filter">Message type
+          <select id="message-list-filter"><option value="all">All activity</option><option value="customer">Customer messages</option><option value="artist">Artist replies</option><option value="internal">Private notes</option></select>
+        </label>
+        <button type="button" class="quiet" id="message-list-refresh">Refresh</button>
+      </div>
       <div id="message-list" class="record-list"><p class="small">Loading messages…</p></div>
+      <div class="request-list-pagination">
+        <button type="button" class="quiet" id="message-list-previous" disabled>Previous</button>
+        <span id="message-list-status" role="status" aria-live="polite">Loading messages…</span>
+        <button type="button" class="quiet" id="message-list-next" disabled>Next</button>
+      </div>
     </section>
 
     <section data-panel="artwork" class="content-panel" hidden>

@@ -193,20 +193,28 @@
   });
   $("request-list-refresh").addEventListener("click", () => requests());
 
+  let messagePage=1, messageGeneration=0;
   async function messages() {
-    const list = $("message-list");
-    const { response, data } = await get("messages.php");
-    if (response.status === 401) return sessionExpired();
-    if (!response.ok || !data.ok) return showError("Unable to load messages.");
+    const generation=++messageGeneration;
+    const list=$("message-list"), status=$("message-list-status");
+    const previous=$("message-list-previous"),next=$("message-list-next");
+    previous.disabled=next.disabled=true;
+    status.textContent="Loading messages…";
     list.replaceChildren();
-    if (!Array.isArray(data.messages) || data.messages.length === 0) {
-      empty(list, "No messages yet. Private customer conversations will appear here.");
-      return;
-    }
+    try {
+      const query=new URLSearchParams({page:String(messagePage),filter:$("message-list-filter").value});
+      const {response,data}=await get("messages.php?"+query);
+      if(generation!==messageGeneration)return;
+      if(response.status===401)return sessionExpired();
+      if(!response.ok||!data.ok||!Array.isArray(data.messages))throw Error("unavailable");
+      previous.disabled=messagePage===1;
+      next.disabled=data.has_more!==true;
+      status.textContent="Page "+messagePage+" · "+data.messages.length+" message(s)";
+      if(!data.messages.length){empty(list,"No messages match this view.");return;}
     for (const row of data.messages) {
       record(list,
         (row.request_ref || "MESSAGE") +
-          (Number(row.is_internal) === 1 ? " · INTERNAL NOTE" : ""),
+          (Number(row.is_internal) === 1 ? " · INTERNAL NOTE" : row.sender_role === "customer" ? " · CUSTOMER" : " · ARTIST REPLY"),
         row.sender_name || "Sender",
         row.body_excerpt || "",
         row.created_at || ""
@@ -223,8 +231,17 @@
         list.lastElementChild?.appendChild(open);
       }
     }
+    }catch(_){
+      if(generation===messageGeneration){
+        status.textContent="Unable to load messages. Try Refresh.";
+        previous.disabled=messagePage===1;
+      }
+    }
   }
-
+  $("message-list-filter").addEventListener("change",()=>{messagePage=1;messages();});
+  $("message-list-refresh").addEventListener("click",()=>messages());
+  $("message-list-previous").addEventListener("click",()=>{if(messagePage>1){messagePage--;messages();}});
+  $("message-list-next").addEventListener("click",()=>{messagePage++;messages();});
 
   // Admin-only commission review. All user-controlled content is inserted with
   // textContent, never innerHTML. No public messages or quote sending here.
@@ -235,6 +252,9 @@
   let quoteDeliveryEnabled = false;
   let orderCreationEnabled = false;
   let requestBusy = false;
+  let requestFullThread = false;
+  let reviewStatus = null;
+  let quoteDraftAllowed = false;
 
   function requestText(id, value) {
     $(id).textContent = value == null || value === "" ? "—" : String(value);
@@ -482,6 +502,9 @@
 
   function updateRequestButtons() {
     $("request-detail-close").disabled = requestBusy;
+    $("request-thread-full").disabled = requestBusy;
+    $("request-review-save").disabled = requestBusy || !reviewStatus;
+    $("request-review-status").disabled = requestBusy || !reviewStatus;
     for (const field of $("request-note-form").querySelectorAll("textarea")) {
       field.disabled = !requestWriteEnabled || requestBusy;
     }
@@ -489,15 +512,15 @@
       field.disabled = !requestMessagingEnabled || requestBusy;
     }
     for (const field of $("request-quote-form").querySelectorAll("input,textarea,select")) {
-      field.disabled = !requestWriteEnabled || requestBusy;
+      field.disabled = !quoteDraftAllowed || requestBusy;
     }
     $("request-note-save").disabled = !requestWriteEnabled || requestBusy ||
       selectedRequestId === null;
     $("request-message-send").disabled = !requestMessagingEnabled || requestBusy ||
       selectedRequestId === null;
-    $("quote-save").disabled = !requestWriteEnabled || requestBusy ||
+    $("quote-save").disabled = !quoteDraftAllowed || requestBusy ||
       selectedRequestId === null;
-    $("quote-add-line").disabled = !requestWriteEnabled || requestBusy;
+    $("quote-add-line").disabled = !quoteDraftAllowed || requestBusy;
   }
 
   function resetRequestDrafts() {
@@ -530,7 +553,11 @@
     quoteDeliveryEnabled = false;
     orderCreationEnabled = false;
     $("request-message-form").hidden = true;
-    if (switching) resetRequestDrafts();
+    quoteDraftAllowed = false;
+    reviewStatus = null;
+    $("request-review-actions").hidden = true;
+    $("request-thread-full").hidden = true;
+    if (switching) { requestFullThread=false; resetRequestDrafts(); }
     clearRequestContent();
     updateRequestButtons();
     $("request-detail").hidden = false;
@@ -538,7 +565,7 @@
     $("request-detail").scrollIntoView({behavior:"smooth",block:"start"});
     let response, data;
     try {
-      ({response, data} = await get("request.php?id=" + encodeURIComponent(parsed)));
+      ({response, data} = await get("request.php?id=" + encodeURIComponent(parsed) + (requestFullThread ? "&thread=full" : "")));
     } catch (_) {
       if (generation === requestLoadGeneration) {
         requestText("request-detail-status", "Unable to load request. Select it again to retry.");
@@ -554,6 +581,15 @@
     const item = data.detail;
     const info = item.request || {};
     requestWriteEnabled = data.admin_writes_enabled === true;
+    quoteDraftAllowed = requestWriteEnabled && !["cancelled","canceled","rejected","declined","completed","closed","archived","refunded"].includes(info.status) && !(item.quotes||[]).some(q=>q.status==="accepted");
+    const choices = Array.isArray(item.review_choices) ? item.review_choices : [];
+    reviewStatus = choices.length ? info.status : null;
+    const select = $("request-review-status");
+    select.replaceChildren();
+    const labels = {submitted:"Return to review",clarification_needed:"Request clarification",rejected:"Decline request"};
+    for(const choice of choices)if(labels[choice])select.append(new Option(labels[choice],choice));
+    $("request-review-actions").hidden = !reviewStatus;
+    $("request-thread-full").hidden = item.messages_have_older !== true;
     requestMessagingEnabled = data.customer_messaging_enabled === true;
     quoteDeliveryEnabled = data.quote_sending_enabled === true;
     orderCreationEnabled = data.order_creation_enabled === true;
@@ -580,10 +616,37 @@
     updateRequestButtons();
   }
 
+  $("request-thread-full").addEventListener("click",()=>{
+    if(selectedRequestId===null||requestBusy)return;
+    requestFullThread=true;
+    openRequest(selectedRequestId);
+  });
+  $("request-review-save").addEventListener("click",async()=>{
+    if(requestBusy||!reviewStatus||selectedRequestId===null)return;
+    const id=selectedRequestId, status=$("request-review-status").value;
+    if(!window.confirm("Update this customer's review status? No message or payment will be sent."))return;
+    requestBusy=true;
+    updateRequestButtons();
+    try{
+      const {response,data}=await post("request-actions.php",{action:"set_review_status",request_id:id,expected_status:reviewStatus,status},csrf);
+      if(response.status===401)return sessionExpired();
+      if(!response.ok||!data.ok){
+        requestText("request-detail-status","Status not changed. Refresh the request before retrying.");
+        return;
+      }
+      await openRequest(id);
+      await requests();
+      requestText("request-detail-status","Review status updated. No message or payment sent.");
+    }catch(_){requestText("request-detail-status","Status update not confirmed. Refresh before retrying.");}
+    finally{requestBusy=false;updateRequestButtons();}
+  });
+
   $("request-detail-close").addEventListener("click", () => {
     if (requestBusy) return;
     ++requestLoadGeneration;
     selectedRequestId = null;
+    reviewStatus = null;
+    quoteDraftAllowed = false;
     requestWriteEnabled = false;
     requestMessagingEnabled = false;
     quoteDeliveryEnabled = false;
@@ -735,7 +798,7 @@
 
   $("request-quote-form").addEventListener("submit", async event => {
     event.preventDefault();
-    if (!requestWriteEnabled || requestBusy || selectedRequestId === null) return;
+    if (!quoteDraftAllowed || requestBusy || selectedRequestId === null) return;
     const scope = $("quote-scope").value.trim();
     const revision_allowance = Number($("quote-revisions").value);
     const lines = quoteFormLines();
@@ -1513,6 +1576,7 @@
     // the whole document so no previous session's DOM or JS state is reused.
     ++requestLoadGeneration;
     ++requestListGeneration;
+    ++messageGeneration;
     $("workspace").hidden = true;
     const url = new URL(location.href);
     url.search = "";
