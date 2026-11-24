@@ -35,3 +35,10 @@ The existing `tests/browser_commission_smoke.cjs` suite now also checks:
 ## Outstanding
 
 Controlled real-customer browser verification, policy approval, genuine portfolio artwork and independent off-site backups remain separate launch requirements. Server-side quotes and orders have already been covered by disposable MariaDB tests.
+
+## Final verification
+
+- [Browser UI QA run 45462290911](https://github.com/pixel375/drawmeone/actions/runs/45462290911): **all three suites passed** (`BROWSER_SMOKE=PASS`, `ADMIN_BROWSER_SMOKE=PASS`, `COMMISSION_BROWSER_SMOKE=PASS`). In addition to error-path and race tests, synthetic positive quote acceptance updated the UI to **Accepted** and left no new order or payment collection action.
+- [Disposable MariaDB integration run 45462290888](https://github.com/pixel375/drawmeone/actions/runs/45462290888): **passed**. Existing quote/order ownership, CSRF and transaction rules remain tested.
+- [Source Quality run 45462291074](https://github.com/pixel375/drawmeone/actions/runs/45462291074): **passed**.
+- [Read-only Hostinger production verification run 45462408843](https://github.com/pixel375/drawmeone/actions/runs/45462408843): **passed**, including `customer_quote_detail=deployed`, disabled customer registration and closed new commission intake. No live quote decision was submitted.
