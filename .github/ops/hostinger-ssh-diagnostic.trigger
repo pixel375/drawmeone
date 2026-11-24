@@ -1,1 +1,1 @@
-v2.6 read-only production checks: PHP/JS order path, all gated endpoints, order schema and source safety; no order creation, payment changes or customer data printed.
+v2.7 final Hostinger inspection: admin dashboard/overview, order gate, quote and reference security, daily backup freshness and protected endpoints. Read-only, no customer data printed.
