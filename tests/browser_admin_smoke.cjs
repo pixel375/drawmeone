@@ -31,7 +31,15 @@ const mockAdmin = {
   },
   "requests.php": {ok:true,readonly:true,requests:[]},
   "messages.php": {ok:true,readonly:true,messages:[]},
-  "artworks.php": {ok:true,artworks:[],write_enabled:false},
+  "artworks.php": {
+    ok:true,write_enabled:false,
+    artworks:[
+      {id:4,visibility:"draft",featured:false,sort_order:0,
+       width:620,height:420,created_at:"2026-11-24"},
+      {id:5,visibility:"published",featured:true,sort_order:2,
+       width:320,height:240,created_at:"2026-11-24"}
+    ]
+  },
   "packages.php": {
     ok:true,write_enabled:false,publish_enabled:false,
     catalog:{tiers:[],addons:[]}
@@ -133,6 +141,18 @@ async function verifyArtistDesk(browser, width) {
           "uploads disabled");
         assert.equal(await page.locator("#artwork-publish-selected").isEnabled(),false,
           "publish disabled");
+        assert.equal(await page.locator("#artwork-unpublish-selected").isEnabled(),false,
+          "unpublish disabled");
+        assert.equal(await page.locator("#artwork-list .artwork-library-card").count(),2,
+          "mixed artwork library rendered");
+        await page.locator("#artwork-filter").selectOption("draft");
+        assert.equal(await page.locator("#artwork-list .artwork-library-card").count(),1,
+          "draft filter selects only private drawings");
+        await page.locator("#artwork-filter").selectOption("published");
+        assert.equal(await page.locator("#artwork-list .artwork-library-card").count(),1,
+          "published filter selects only public drawings");
+        assert.match(await page.locator("#artwork-visible-count").innerText(),/1 of 2/);
+        await page.locator("#artwork-filter").selectOption("all");
       } else if(name==="packages"){
         await page.locator("#package-editor-status").waitFor();
         assert.equal(await page.locator("#package-save").isEnabled(),false,
