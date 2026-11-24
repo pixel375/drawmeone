@@ -219,3 +219,7 @@ footer{padding:28px 0 70px;border-top:1px solid var(--line);color:var(--muted);f
 .mail-check>.primary{width:fit-content;min-height:47px}
 .mail-check>.primary:disabled{opacity:.45;cursor:not-allowed}
 @media(max-width:650px){.mail-check-head{display:grid}.mail-check>.primary{width:100%}}
+
+.admin-reference-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:10px;margin-top:15px}
+.admin-reference-grid a{display:flex;align-items:center;justify-content:center;min-height:120px;background:var(--panel,#17141a);border:1px solid var(--line,#514551);border-radius:10px;overflow:hidden}
+.admin-reference-grid img{display:block;max-width:100%;max-height:180px;object-fit:contain}
