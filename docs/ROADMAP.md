@@ -498,3 +498,14 @@ See `docs/ART_DIRECTION.md` and `docs/COMMISSION_PRODUCT_SPEC.md`.
 - [x] Require read-only SSH diagnostics to validate backup age (<36 hours), restrictive permissions and recovery key presence without printing key contents (run 45440561280).
 - [ ] Configure a truly independent off-site encrypted snapshot destination and separately retain the recovery key; no production backup has been copied to a third-party provider.
 - [ ] Carry out a controlled production-derived restore on independent infrastructure once destination and access protections are established.
+
+## v3.6 — 2026-11-24: Backup observability and encrypted-only independent transfer
+
+- [x] Make Artist Desk's local-backup readiness require private directory, snapshot, recovery-key permissions and a recent file; do not confuse metadata freshness with authenticated restore.
+- [x] Test missing, stale, exposed, symlinked and invalid-key backup fixtures in the Source Quality workflow (run 45444053146).
+- [x] Add daily read-only Hostinger health inspections after the scheduled encrypted backup; diagnostics verify the same metadata-only helper.
+- [x] Add one deduplicated GitHub issue for failed backup workflow runs, automatically resolved after the latest completed workflow succeeds; ignore out-of-order events.
+- [x] Implement and test an authenticated ciphertext-only `export-latest` backup command (full disposable integration run 45444471510).
+- [x] Prepare manual-only independent encrypted transfer with rclone remote readback hash validation, rejecting path traversal/plaintext and storing no recovery key (local-simulation run 45444968601).
+- [x] Track independent destination and separate recovery-key custody as [GitHub issue #1](https://github.com/pixel375/drawmeone/issues/1).
+- [ ] Select and approve independent storage, configure private rclone credentials/destination, verify a real encrypted transfer and separately held key, then enable recurring off-site transfer and full independent restore drills.
