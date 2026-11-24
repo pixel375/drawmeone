@@ -369,3 +369,14 @@ See `docs/ART_DIRECTION.md` and `docs/COMMISSION_PRODUCT_SPEC.md`.
 - [ ] A separate future commercial implementation must create orders *after* agreed terms and use provider-verified payment status, not a browser success redirect.
 
 **New private switches (all default OFF):** `DMO_QUOTE_DELIVERY_ENABLED`, `DMO_QUOTE_RESPONSES_ENABLED`. Both require existing customer auth and the approved Terms/Privacy/policy revision gates; artist release additionally requires `DMO_REQUEST_ADMIN_WRITES_ENABLED`.
+
+## v2.3 — 2026-11-23/24: Encrypted local backups
+
+- [x] Confirm Hostinger CLI contains mysqldump, tar and PHP libsodium.
+- [x] Implement fixed CLI-only private MySQL and artwork/reference archive creation, authenticated XChaCha20-Poly1305 encryption and verification, with zero credentials or private content in Actions logs.
+- [x] Generate restricted private backup recovery key on Hostinger; rotate and retain seven newest local snapshots.
+- [x] First production encrypted backup successfully created and verified (Actions run 45318772324).
+- [x] Enable daily private encrypted backups at 08:17 UTC.
+- [ ] Independent encrypted off-site copy and separately preserved recovery key.
+- [ ] Full restore drill in an isolated environment; do not restore over production. Current backups are not independently recoverable after a total Hostinger account loss.
+
