@@ -60,3 +60,4 @@ jobs:
           php tests/private_reference_smoke.php
           php tests/quote_smoke.php
           php tests/order_smoke.php
+          DMO_CI_INTEGRATION=1 php tests/backup_health_contract.php
