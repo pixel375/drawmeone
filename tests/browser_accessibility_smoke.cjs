@@ -112,6 +112,143 @@ async function closedPage(browser,url,width) {
     }
   } finally{await context.close();}
 }
+const syntheticAdmin={
+  "status.php":{ok:true,admin_schema_ready:true,admin_available:true,turnstile_site_key:null},
+  "me.php":{ok:true,authenticated:true,
+    admin:{display_name:"Synthetic QA Artist",email:"admin@example.invalid"},
+    csrf_token:"synthetic-browser-only"},
+  "overview.php":{ok:true,readonly:true,
+    counts:{requests_for_review:0,active_orders:0,payments_to_verify:0,messages_last_seven_days:0},
+    readiness:[
+      {key:"mail",label:"Transactional email",status:"ready",detail:"Synthetic QA"},
+      {key:"artwork",label:"Published portfolio",status:"blocked",detail:"No real works"},
+      {key:"accounts",label:"Customer accounts",status:"blocked",detail:"Closed"},
+      {key:"payments",label:"Payment processing",status:"planned",detail:"Unavailable"}
+    ]},
+  "requests.php":{ok:true,readonly:true,requests:[]},
+  "messages.php":{ok:true,readonly:true,messages:[]},
+  "artworks.php":{ok:true,write_enabled:false,artworks:[
+    {id:4,visibility:"draft",featured:false,sort_order:0,width:640,height:480,
+      created_at:"2026-11-24"}]},
+  "packages.php":{ok:true,write_enabled:false,publish_enabled:false,
+    catalog:{tiers:[],addons:[]}},
+  "design.php":{ok:true,write_enabled:false,
+    draft:{exists:false,version:0},published:{exists:false}},
+  "email.php":{ok:true,mail_ready:false,transport:"none",
+    smtp_settings_present:false,customer_login_enabled:false,
+    customer_registration_enabled:false}
+};
+async function authenticatedAdmin(browser,width) {
+  const context=await browser.newContext({
+    viewport:{width,height:920},reducedMotion:"reduce"
+  });
+  const page=await context.newPage();
+  let writes=0;
+  try {
+    await page.route("**/api/admin/**",route=>{
+      if(route.request().method()!=="GET"){
+        writes++;
+        return route.fulfill({status:503,contentType:"application/json",
+          body:'{"ok":false,"error":"ci_mutations_forbidden"}'});
+      }
+      const name=new URL(route.request().url()).pathname.split("/").pop();
+      const value=syntheticAdmin[name]||{ok:false,error:"ci_unmocked"};
+      return route.fulfill({status:syntheticAdmin[name]?200:404,
+        contentType:"application/json",body:JSON.stringify(value)});
+    });
+    await page.goto(base+"/studio-admin/index.php",{waitUntil:"domcontentloaded"});
+    await page.locator("#workspace").waitFor({state:"visible",timeout:15000});
+    await page.locator("#launch-checks .launch-check").first().waitFor();
+    for(const name of ["overview","requests","messages","artwork","packages","settings"]){
+      await page.locator('[data-view="'+name+'"]').click();
+      await page.locator('[data-panel="'+name+'"]').waitFor({state:"visible"});
+      if(name==="artwork") await page.locator(".artwork-library-card").first()
+        .waitFor({state:"visible"});
+      await checkAxe(page,"authenticated-artist-"+name+"-"+width);
+      if(width===320){
+        const dims=await page.evaluate(()=>({
+          viewport:document.documentElement.clientWidth,
+          scroll:document.documentElement.scrollWidth
+        }));
+        assert(dims.scroll<=dims.viewport+3,
+          "artist "+name+" fails 320px reflow "+JSON.stringify(dims));
+      }
+    }
+    assert.equal(writes,0,"artist accessibility tests never submit writes");
+    console.log("PASS: all six synthetic authenticated Artist Desk accessibility panels "+width+"px");
+  }finally{await context.close();}
+}
+async function authenticatedCustomer(browser,width) {
+  const context=await browser.newContext({
+    viewport:{width,height:900},reducedMotion:"reduce"
+  });
+  const page=await context.newPage();
+  let writes=0;
+  const ref="DMO-"+"a".repeat(20);
+  try {
+    await page.route("**/api/**",route=>{
+      const req=route.request(),url=new URL(req.url()),name=url.pathname;
+      if(req.method()!=="GET"){
+        writes++;
+        return route.fulfill({status:503,contentType:"application/json",
+          body:'{"ok":false,"error":"ci_mutations_forbidden"}'});
+      }
+      let value;
+      if(name==="/api/request-status.php")
+        value={ok:true,requests_open:false,text_only:true,policy_version:null};
+      if(name==="/api/catalog.php")
+        value={ok:true,requests_open:false,tiers:[],addons:[]};
+      if(name==="/api/auth/status.php")
+        value={ok:true,auth_available:true,registration_available:false};
+      if(name==="/api/auth/me.php")
+        value={ok:true,authenticated:true,
+          user:{display_name:"Synthetic Customer",email:"customer@example.invalid",role:"customer"},
+          csrf_token:"ci-synthetic-only"};
+      if(name==="/api/requests.php")
+        value={ok:true,requests:[{public_ref:ref,subject_type:"portrait",
+          tier_name:"Portrait",status:"submitted",submitted_at:"2026-11-23"}]};
+      if(name==="/api/request.php")
+        value={ok:true,request:{public_ref:ref,subject_type:"portrait",
+          brief:"Synthetic customer artwork brief for isolated accessibility testing.",
+          status:"submitted",tier_name:"Portrait",policy_version:"ci-v1",
+          preferred_contact:"onsite",preferred_deadline:null},
+          addons:[],references:[],can_manage_references:false,
+          can_upload_references:false,can_reply:false,
+          messages:[{sender_name:"Synthetic Artist",body:"Synthetic private reply.",
+            created_at:"2026-11-23"}],
+          quotes:[{id:19,version_number:1,status:"sent",
+            scope_description:"Original portrait with a plain background",
+            total_minor:12500,currency:"CAD",revision_allowance:1,
+            validity_ends_at:"2026-12-03 20:00:00",is_expired:false,
+            can_respond:true,lines:[{description:"Portrait",amount_minor:12500}]}],
+          orders:[{id:9,status:"awaiting_arrangement",
+            payment_status:"unverified",total_minor:12500,currency:"CAD",
+            created_at:"2026-11-23"}],
+          payments_enabled:false};
+      return route.fulfill({status:value?200:404,
+        contentType:"application/json",
+        body:JSON.stringify(value||{ok:false,error:"ci_unmocked"})});
+    });
+    await page.goto(base+"/commission.html",{waitUntil:"domcontentloaded"});
+    await page.locator("#my-request-list .request-list-item").first()
+      .waitFor({state:"visible",timeout:15000});
+    await checkAxe(page,"authenticated-customer-history-"+width);
+    await page.locator("#my-request-list .request-list-item button").first().click();
+    await page.locator("#detail-content").waitFor({state:"visible"});
+    await checkAxe(page,"authenticated-customer-quote-"+width);
+    if(width===320){
+      const dims=await page.evaluate(()=>({
+        viewport:document.documentElement.clientWidth,
+        scroll:document.documentElement.scrollWidth
+      }));
+      assert(dims.scroll<=dims.viewport+3,
+        "customer quote fails 320px reflow "+JSON.stringify(dims));
+    }
+    assert.equal(writes,0,"customer accessibility tests never submit writes");
+    console.log("PASS: synthetic customer request and quote accessibility "+width+"px");
+  }finally{await context.close();}
+}
+
 (async()=>{
   const browser=await chromium.launch({headless:true});
   try {
@@ -126,6 +263,10 @@ async function closedPage(browser,url,width) {
     for(const file of ["/commission.html","/account.html","/password-reset.html"]){
       await closedPage(browser,file,390);
       await closedPage(browser,file,1440);
+    }
+    for(const width of [320,1440]){
+      await authenticatedAdmin(browser,width);
+      await authenticatedCustomer(browser,width);
     }
     fs.writeFileSync(path.join(out,"accessibility-report.json"),
       JSON.stringify({tested:new Date().toISOString(),scans:allViolations},null,2));
