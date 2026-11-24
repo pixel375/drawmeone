@@ -1,0 +1,236 @@
+"use strict";
+const { chromium } = require("playwright");
+const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
+const base="http://127.0.0.1:18868";
+const output=path.join(process.cwd(),"test-results");
+fs.mkdirSync(output,{recursive:true});
+
+const A="DMO-"+"a".repeat(20);
+const B="DMO-"+"b".repeat(20);
+const C="DMO-"+"c".repeat(20);
+const requests=[
+  {public_ref:A,subject_type:"portrait",tier_name:"Portrait",status:"submitted",submitted_at:"2026-11-22 18:00:00"},
+  {public_ref:B,subject_type:"original_character",tier_name:"Character",status:"clarification_needed",submitted_at:"2026-11-21 20:00:00"},
+  {public_ref:C,subject_type:"other",tier_name:null,status:"completed",submitted_at:"2026-11-18 11:00:00"}
+];
+function detail(ref) {
+  const item=requests.find(row=>row.public_ref===ref);
+  if(!item) return {ok:false,error:"request_not_found"};
+  return {
+    ok:true,
+    request:{
+      public_ref:ref,subject_type:item.subject_type,brief:"A long, synthetic artwork brief for a private commission, used only for visual testing.",
+      preferred_contact:"onsite",preferred_deadline:null,status:item.status,
+      tier_name:item.tier_name,policy_version:"qa-policy-2026"
+    },
+    addons:[],references:[],can_manage_references:false,
+    can_upload_references:false,can_reply:false,
+    messages:ref===A?[{
+      sender_name:"Fake Artist",body:"Synthetic message visible to only this account.",
+      created_at:"2026-11-23"
+    }]:[],
+    quotes:ref===A?[{
+      id:19,version_number:1,status:"sent",
+      scope_description:"Drawing a portrait on a simple background",
+      total_minor:12500,currency:"CAD",revision_allowance:1,
+      validity_ends_at:"2026-12-03 20:00:00",is_expired:false,
+      can_respond:true,lines:[{description:"Portrait",amount_minor:12500}]
+    }]:[],
+    orders:ref===A?[{
+      id:9,status:"awaiting_arrangement",payment_status:"unverified",
+      total_minor:12500,currency:"CAD",created_at:"2026-11-23"
+    }]:[],
+    payments_enabled:false
+  };
+}
+const answer=(route,data,status=200)=>route.fulfill({
+  status,contentType:"application/json",body:JSON.stringify(data)
+});
+async function installMocks(page,options={}) {
+  const posts=[];
+  let storedRequests=options.requests||requests;
+  let submitTimes=0;
+  await page.route("**/api/**",async route=>{
+    const req=route.request(), url=new URL(req.url());
+    const endpoint=url.pathname;
+    if(req.method()!=="GET"){
+      posts.push({endpoint,method:req.method(),body:req.postDataJSON?.()});
+      if(options.enableSubmission && endpoint==="/api/requests.php"){
+        submitTimes++;
+        if(options.submissionFails) return route.abort("failed");
+        const payload=req.postDataJSON();
+        return answer(route,{
+          ok:true,public_ref:"DMO-"+"d".repeat(20),status:"submitted",
+          submitted_payload_kind:typeof payload.idempotency_key
+        },201);
+      }
+      return answer(route,{ok:false,error:"synthetic_mutations_disabled"},503);
+    }
+    if(endpoint==="/api/request-status.php") return answer(route,{
+      ok:true,requests_open:!!options.open,text_only:true,
+      policy_version:options.open?"qa-policy-2026":null
+    });
+    if(endpoint==="/api/catalog.php") return answer(route,{
+      ok:true,requests_open:!!options.open,currency_pricing_approved:false,
+      tiers:[{
+        id:12,name:"Portrait",description:"A simple portrait.",
+        estimate_min_minor:5000,estimate_max_minor:15000,currency:"CAD",
+        available_addon_ids:[31]
+      }],
+      addons:[
+        {id:31,name:"Additional subject",estimate_min_minor:2000,
+         estimate_max_minor:2000,currency:"CAD"},
+        {id:32,name:"Detailed background",estimate_min_minor:3000,
+         estimate_max_minor:3000,currency:"CAD"}
+      ]
+    });
+    if(endpoint==="/api/auth/status.php") return answer(route,{
+      ok:true,auth_available:true,registration_available:false
+    });
+    if(endpoint==="/api/auth/me.php") return answer(route,{
+      ok:true,authenticated:!!options.signedIn,
+      user:options.signedIn?{
+        display_name:"Fake Customer",role:"customer",email:"fake@example.invalid"
+      }:undefined,
+      csrf_token:options.signedIn?"synthetic-only-csrf":undefined
+    });
+    if(endpoint==="/api/requests.php") return answer(route,{
+      ok:true,requests:storedRequests,new_requests_open:!!options.open
+    });
+    if(endpoint==="/api/request.php") {
+      const ref=url.searchParams.get("ref");
+      return answer(route,detail(ref),requests.some(row=>row.public_ref===ref)?200:404);
+    }
+    return answer(route,{ok:false,error:"test_endpoint_not_mocked"},404);
+  });
+  return {posts,get submissions(){return submitTimes;}};
+}
+async function checkOverflow(page,context) {
+  const measured=await page.evaluate(()=>({
+    width:document.documentElement.clientWidth,
+    content:document.documentElement.scrollWidth
+  }));
+  assert(measured.content<=measured.width+3,
+    context+" horizontal overflow "+JSON.stringify(measured));
+}
+async function signedInClosed(browser,width) {
+  const context=await browser.newContext({
+    viewport:{width,height:900},reducedMotion:"reduce",deviceScaleFactor:1
+  });
+  const page=await context.newPage();
+  const jsErrors=[];
+  page.on("pageerror",err=>jsErrors.push(err.message));
+  const test=await installMocks(page,{signedIn:true,open:false});
+  try {
+    await page.goto(base+"/commission.html",{waitUntil:"domcontentloaded"});
+    await page.locator("#my-request-list .request-list-item").first()
+      .waitFor({state:"visible",timeout:12000});
+    assert.equal(await page.locator("#customer-workspace").isVisible(),true);
+    assert.equal(await page.locator("#request-create-panel").isVisible(),false);
+    assert.equal(await page.locator("#request-closed").isVisible(),false);
+    assert.match(await page.locator("#request-status").innerText(),/commissions are closed/i);
+    assert.equal(await page.locator("#my-request-list .request-list-item").count(),3);
+    assert.match(await page.locator("#request-history-count").innerText(),/3 of 3/);
+
+    await page.locator("#request-history-filter").selectOption("active");
+    assert.equal(await page.locator("#my-request-list .request-list-item").count(),2);
+    await page.locator("#request-history-filter").selectOption("closed");
+    assert.equal(await page.locator("#my-request-list .request-list-item").count(),1);
+    assert.match(await page.locator("#my-request-list").innerText(),/Completed/);
+
+    await page.locator("#request-history-filter").selectOption("all");
+    await page.locator("#request-history-search").fill(B.slice(-8));
+    assert.equal(await page.locator("#my-request-list .request-list-item").count(),1);
+    assert.match(await page.locator("#my-request-list").innerText(),/Clarification requested/);
+    await page.locator("#request-history-search").fill("nothing-matches-1234");
+    assert.equal(await page.locator("#my-request-list .request-list-item").count(),0);
+    assert.match(await page.locator("#my-request-list").innerText(),/No requests match/);
+    assert.match(await page.locator("#request-history-count").innerText(),/0 of 3/);
+
+    await page.locator("#request-history-search").fill("");
+    await page.locator('#my-request-list button[aria-label$="'+A+'"]').click();
+    await page.locator("#detail-quote-section").waitFor({state:"visible"});
+    assert.equal(await page.locator("#detail-status").innerText(),"Awaiting artist review");
+    assert.match(await page.locator("#detail-brief").innerText(),/synthetic artwork brief/);
+    assert.match(await page.locator("#detail-quotes").innerText(),/CA\$125\.00/);
+    assert.match(await page.locator("#detail-orders").innerText(),/Payment has not been verified/);
+    assert.equal(await page.locator("#detail-reference-form").isVisible(),false);
+    assert.equal(await page.locator("#detail-reply-form").isVisible(),false);
+    assert.equal(await page.locator("#detail-quote-section button").count(),2);
+    assert.equal(await page.locator("#detail-quote-section input[type=checkbox]").count(),1);
+    assert(!await page.locator("body").innerText().then(x=>x.includes("Fake hidden internal note")));
+    await page.locator("#detail-close").click();
+    assert.equal(await page.locator("#my-request-detail").isVisible(),false);
+    await page.locator("#refresh-requests").click();
+    await page.locator("#my-request-list .request-list-item").first().waitFor();
+    assert.equal(await page.locator("#my-request-list .request-list-item").count(),3);
+    assert.deepEqual(test.posts,[],"no account modifications during read-only browser tests");
+    assert.deepEqual(jsErrors,[],"no JavaScript errors");
+    await checkOverflow(page,"customer history "+width);
+    if(width===390||width===1440){
+      await page.screenshot({
+        path:path.join(output,"commission-history-"+width+".png"),
+        animations:"disabled",fullPage:false
+      });
+    }
+    console.log("PASS: signed-in closed-intake history, filters, private detail, quote/order display at "+width+"px");
+  } finally {await context.close();}
+}
+async function openIntake(browser) {
+  const context=await browser.newContext({
+    viewport:{width:390,height:844},reducedMotion:"reduce"
+  });
+  const page=await context.newPage();
+  const test=await installMocks(page,{signedIn:true,open:true,enableSubmission:true});
+  try {
+    await page.goto(base+"/commission.html",{waitUntil:"domcontentloaded"});
+    await page.locator("#request-submit").waitFor({state:"visible"});
+    assert.equal(await page.locator("#request-create-panel").isVisible(),true);
+    assert.equal(await page.locator("#request-submit").isEnabled(),true);
+    await page.locator("#request-tier").selectOption("12");
+    await page.locator('#addons-options input[value="31"]').check();
+    assert.equal(await page.locator('#addons-options input[value="32"]').isVisible(),false,
+      "incompatible add-on hidden");
+    assert.equal(await page.locator('#addons-options input[value="32"]').isDisabled(),true);
+    await page.locator("#request-brief").fill(
+      "Synthetic request for a portrait with warm colors and a calm background."
+    );
+    await page.locator("#request-ack").check();
+    await page.locator("#request-submit").click();
+    await page.locator("#request-feedback").waitFor({state:"visible"});
+    await page.waitForFunction(()=>
+      document.querySelector("#request-feedback")?.textContent?.includes("received for artist review"));
+    assert.equal(test.submissions,1,"exactly one POST for request creation");
+    assert.equal(test.posts[0].endpoint,"/api/requests.php");
+    assert.equal(test.posts[0].body.acknowledge_review,true);
+    assert.equal(test.posts[0].body.tier_id,12);
+    assert.deepEqual(test.posts[0].body.addon_ids,[31]);
+    assert.match(test.posts[0].body.idempotency_key,
+      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+    assert.equal(await page.locator("#request-brief").inputValue(),"");
+    assert.equal(await page.locator("#request-ack").isChecked(),false);
+    console.log("PASS: synthetic signed-in commission form, tier/addon compatibility, single idempotent POST");
+  } finally {await context.close();}
+}
+async function openWithoutLogin(browser) {
+  const page=await browser.newPage({viewport:{width:390,height:844}});
+  await installMocks(page,{signedIn:false,open:true});
+  try {
+    await page.goto(base+"/commission.html",{waitUntil:"domcontentloaded"});
+    await page.locator("#request-signin").waitFor({state:"visible"});
+    assert.equal(await page.locator("#request-create-panel").isVisible(),false);
+    assert.equal(await page.locator("#customer-workspace").isVisible(),false);
+    console.log("PASS: open intake requires authenticated customer");
+  } finally {await page.close();}
+}
+(async()=>{
+  const browser=await chromium.launch({headless:true});
+  try {
+    for(const width of [320,390,768,1440]) await signedInClosed(browser,width);
+    await openIntake(browser);
+    await openWithoutLogin(browser);
+    console.log("COMMISSION_BROWSER_SMOKE=PASS");
+  } finally {await browser.close();}
+})().catch(err=>{console.error(err.stack||String(err));process.exitCode=1;});
