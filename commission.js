@@ -230,6 +230,16 @@
   $("request-history-filter").addEventListener("change", renderRequestHistory);
 
 
+  function syncQuoteButtons() {
+    for (const card of $("detail-quotes").querySelectorAll(".customer-quote-card")) {
+      const checkbox = card.querySelector(".customer-quote-confirm input");
+      const accept = card.querySelector('[data-quote-action="accept"]');
+      const decline = card.querySelector('[data-quote-action="decline"]');
+      if (accept) accept.disabled = state.quoteBusy || !checkbox?.checked;
+      if (decline) decline.disabled = state.quoteBusy;
+    }
+  }
+
   async function respondToQuote(ref, quoteId, policyVersion, decision, checkbox) {
     if (state.quoteBusy || state.selectedRef !== ref || !state.csrf ||
         !Number.isSafeInteger(quoteId) || quoteId < 1) return;
@@ -243,7 +253,8 @@
         : "Decline this quote? You can ask the artist about a different version.")) return;
     state.quoteBusy = true;
     $("detail-quote-feedback").textContent = "Recording your decision securely…";
-    for (const button of $("detail-quotes").querySelectorAll("button")) button.disabled = true;
+    $("detail-refresh").disabled = true;
+    syncQuoteButtons();
     try {
       const response = await fetch("./api/quote-response.php", {
         method:"POST", credentials:"same-origin", cache:"no-store",
@@ -261,16 +272,24 @@
             : "Could not record decision (" + (body.error || response.status) + ").";
         return;
       }
+      // Do not navigate back to this request if the customer selected
+      // another request while a quote decision was in flight.
+      if (state.selectedRef !== ref) return;
       await openDetail(ref);
+      if (state.selectedRef !== ref || $("detail-content").hidden) return;
       $("detail-quote-feedback").textContent =
         decision === "accept"
           ? "Your agreement to the quote was recorded. No order or payment has been created."
           : "You declined this quote. Contact the artist if you'd like a revised offer.";
     } catch (_) {
-      $("detail-quote-feedback").textContent =
-        "Connection interrupted. Refresh the quote status before trying again.";
+      if (state.selectedRef === ref) {
+        $("detail-quote-feedback").textContent =
+          "Connection interrupted. Refresh the quote status before trying again.";
+      }
     } finally {
       state.quoteBusy = false;
+      $("detail-refresh").disabled = $("my-request-detail").hidden;
+      syncQuoteButtons();
     }
   }
 
@@ -314,13 +333,22 @@
     root.replaceChildren();
     $("detail-quote-section").hidden = !Array.isArray(quotes) || !quotes.length;
     if (!Array.isArray(quotes)) return;
+    const statuses = {
+      sent:"Awaiting your decision",
+      accepted:"Accepted",
+      declined:"Declined",
+      superseded:"Replaced by a newer quote",
+    };
+    const hasAccepted = quotes.some(quote => quote.status === "accepted");
     for (const quote of quotes) {
       if (!Number.isSafeInteger(quote.id) || quote.id < 1) continue;
       const card = document.createElement("article");
       card.className = "customer-quote-card";
+      const statusText = statuses[quote.status] || "Under review";
       card.append(
-        renderText("strong", "Quote v" + quote.version_number + " · " +
-          (quote.status || "review")),
+        renderText("strong", "Quote v" + quote.version_number),
+        renderText("p",statusText + (quote.is_expired && quote.status === "sent" ?
+          " · Expired" : ""),"customer-quote-status"),
         renderText("p", quote.scope_description || ""),
         renderText("small", "Total: " +
           (money(quote.total_minor,quote.currency) || "Unavailable") +
@@ -339,11 +367,13 @@
         card.append(renderText("small",
           "This quote has expired. Contact the artist for an updated offer."));
       }
-      if (quote.can_respond === true) {
+      if (quote.can_respond === true && quote.status === "sent" &&
+          !quote.is_expired && !hasAccepted) {
         const label = document.createElement("label");
         label.className = "customer-quote-confirm";
         const checkbox = document.createElement("input");
         checkbox.type = "checkbox";
+        checkbox.addEventListener("change", syncQuoteButtons);
         const span = renderText("span",
           "I have read this quote and agree to its exact scope, price and revisions. " +
           "Payment and any order confirmation will be handled separately.");
@@ -354,6 +384,8 @@
         accept.type = "button";
         accept.className = "primary-button";
         accept.textContent = "Accept quoted terms";
+        accept.dataset.quoteAction = "accept";
+        accept.disabled = true;
         accept.addEventListener("click",()=>respondToQuote(
           ref,quote.id,policyVersion,"accept",checkbox
         ));
@@ -361,6 +393,7 @@
         decline.type = "button";
         decline.className = "text-button";
         decline.textContent = "Decline quote";
+        decline.dataset.quoteAction = "decline";
         decline.addEventListener("click",()=>respondToQuote(
           ref,quote.id,policyVersion,"decline",null
         ));
@@ -369,6 +402,7 @@
       }
       root.append(card);
     }
+    syncQuoteButtons();
   }
 
   function showFact(id, value) {
