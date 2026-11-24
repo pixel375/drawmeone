@@ -77,7 +77,7 @@
               </div>
             </div>
           </section>
-          <section class="at-contact" id="contact" aria-labelledby="at-contact-title"><div class="at-contact-top">03 / THE NEXT CHAPTER <span>DRAW ME ONE</span></div><h2 id="at-contact-title">Your idea deserves<br><em>its own canvas.</em></h2><p>We're preparing a thoughtful commission experience. Requests and payments aren't open just yet.</p><span class="at-contact-state">COMMISSION ENQUIRIES OPENING LATER <span aria-hidden="true">↗</span></span></section>
+          <section class="at-contact" id="contact" aria-labelledby="at-contact-title"><div class="at-contact-top">03 / THE NEXT CHAPTER <span>DRAW ME ONE</span></div><h2 id="at-contact-title">Your idea deserves<br><em>its own canvas.</em></h2><p>We're preparing a thoughtful commission experience. Requests and payments aren't open just yet.</p><span class="at-contact-state">ONLINE BOOKINGS ARE NOT OPEN YET</span><div class="concept-email-actions"><a class="concept-email-link" href="mailto:support@drawmeone.com?subject=Draw%20Me%20One%20inquiry">Email the studio <span aria-hidden="true">↗</span></a><a class="concept-info-link" href="./commission.html">Commission information</a></div></section>
           <footer class="at-footer"><a href="#top">drawmeone.</a><span>MADE TO MEAN SOMETHING.</span><span>CONCEPT A / ATELIER</span></footer>
         </div>
       </div>
@@ -113,7 +113,7 @@
           </div>
         </div>
       </section>
-      <section class="ed-lastpage" id="contact" aria-labelledby="ed-last-title"><div class="ed-last-meta">A FINAL NOTE / NO. 01</div><h2 id="ed-last-title">Something worth<br><em>waiting for.</em></h2><p>We're creating the space for personal art and thoughtful commissions. Contact and ordering details will arrive here when ready.</p><span>REQUESTS ARE NOT OPEN YET</span></section>
+      <section class="ed-lastpage" id="contact" aria-labelledby="ed-last-title"><div class="ed-last-meta">A FINAL NOTE / NO. 01</div><h2 id="ed-last-title">Something worth<br><em>waiting for.</em></h2><p>We aren't accepting orders yet, but general studio questions are welcome by email.</p><span>REQUESTS ARE NOT OPEN YET</span><div class="concept-email-actions"><a class="concept-email-link" href="mailto:support@drawmeone.com?subject=Draw%20Me%20One%20inquiry">Email the studio <span aria-hidden="true">↗</span></a><a class="concept-info-link" href="./commission.html">Commission information</a></div></section>
       <footer class="ed-footer"><span>DRAW ME ONE — INDEPENDENT ART</span><a href="#top">BACK TO THE FIRST PAGE ↑</a><span>WEBSITE EDITION 01</span></footer>
     </main>`;
   }
@@ -137,7 +137,7 @@
       <section class="sg-process" id="process" aria-labelledby="sg-process-title"><div class="sg-process-head"><span>03 / BEHIND EVERY COMMISSION</span><h2 id="sg-process-title">Confidence at<br><em>every step.</em></h2><p>We're designing a transparent request-to-delivery experience, with a confirmed quote and scope before checkout.</p></div>
         <div class="sg-steps"><article><span class="sg-step-no">01 / SHARE</span><div class="sg-step-icon" aria-hidden="true">↗</div><h3>The vision</h3><p>Tell us what the drawing should capture, and attach reference material.</p></article><article><span class="sg-step-no">02 / CONFIRM</span><div class="sg-step-icon" aria-hidden="true">◎</div><h3>The agreement</h3><p>Review the price, timing, scope, and next steps before any payment.</p></article><article><span class="sg-step-no">03 / CREATE</span><div class="sg-step-icon" aria-hidden="true">✳</div><h3>The artwork</h3><p>A personally commissioned piece, produced to the confirmed brief.</p></article></div>
       </section>
-      <section class="sg-cta" id="contact" aria-labelledby="sg-cta-title"><div class="sg-cta-shape" aria-hidden="true">✳</div><span>THE NEXT CHAPTER STARTS HERE</span><h2 id="sg-cta-title">Something<br><em>unmistakably</em> yours.</h2><p>Commission requests and direct contact are being prepared. We aren't accepting orders yet.</p><span class="sg-coming">COMING SOON — DRAW ME ONE</span></section>
+      <section class="sg-cta" id="contact" aria-labelledby="sg-cta-title"><div class="sg-cta-shape" aria-hidden="true">✳</div><span>THE NEXT CHAPTER STARTS HERE</span><h2 id="sg-cta-title">Something<br><em>unmistakably</em> yours.</h2><p>Commission requests and payments aren't open yet. You can email the studio with general questions.</p><span class="sg-coming">BOOKINGS COMING SOON — DRAW ME ONE</span><div class="concept-email-actions"><a class="concept-email-link" href="mailto:support@drawmeone.com?subject=Draw%20Me%20One%20inquiry">Email the studio <span aria-hidden="true">↗</span></a><a class="concept-info-link" href="./commission.html">Commission information</a></div></section>
       <footer class="sg-footer"><a class="sg-wordmark" href="#top">drawmeone<span>✳</span></a><span>AN ART STUDIO FOR THE ONE-OF-A-KIND</span><a href="#top">BACK TO TOP ↑</a></footer>
     </main>`;
   }
