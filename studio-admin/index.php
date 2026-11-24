@@ -78,7 +78,7 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
       <div class="section-intro"><h2>At a glance</h2><p>Activity from the connected database.</p></div>
       <div class="stats">
         <article><span>REQUESTS TO REVIEW</span><strong id="stat-requests">—</strong><small>Submitted or requiring clarification</small></article>
-        <article><span>ACTIVE ORDERS</span><strong id="stat-orders">—</strong><small>Currently in the drawing workflow</small></article>
+        <article><span>ACTIVE ORDERS</span><strong id="stat-orders">—</strong><small>Awaiting arrangements or in progress</small></article>
         <article><span>PAYMENTS TO CHECK</span><strong id="stat-payments">—</strong><small>Require manual verification</small></article>
         <article><span>MESSAGE ACTIVITY</span><strong id="stat-messages">—</strong><small>Last seven days, not an unread count</small></article>
       </div>
