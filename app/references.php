@@ -15,6 +15,12 @@ function dmo_refs_schema_ready(PDO $db): bool
     return $q->fetchColumn() === '003_private_references';
 }
 
+/** Existing private references may be removed even if new uploads pause. */
+function dmo_refs_management_enabled(PDO $db): bool
+{
+    return dmo_auth_configured() && dmo_refs_schema_ready($db);
+}
+
 function dmo_refs_enabled(PDO $db): bool
 {
     return dmo_auth_configured() &&
