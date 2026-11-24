@@ -90,7 +90,14 @@ try {
         ['hash'=>$hash]);
     $adminReset=bin2hex(random_bytes(32));
     auth_reset_token($db,$admin,$adminReset);
-        $verifyToken=dmo_auth_make_verification($db,$pending);
+    $pendingAdmin=auth_insert($db,
+        "INSERT INTO dmo_users
+         (display_name,email,password_hash,role,account_status)
+         VALUES ('Pending CI admin','pending-admin-ci@example.invalid',:hash,'admin','pending_verification')",
+        ['hash'=>$hash]);
+    $pendingAdminToken=dmo_auth_make_verification($db,$pendingAdmin);
+    $verifyToken=dmo_auth_make_verification($db,$pending);
+    $parallelToken=dmo_auth_make_verification($db,$pending);
     $expiredToken=dmo_auth_make_verification($db,$pending);
     $db->prepare(
         "UPDATE dmo_auth_tokens SET expires_at=DATE_SUB(UTC_TIMESTAMP(),INTERVAL 1 MINUTE)
@@ -132,6 +139,8 @@ try {
 
     [$code]=auth_request('/api/auth/verify.php',['token'=>'not-a-valid-token']);
     auth_check($code===422,'invalid_verification_token_rejected');
+    [$code]=auth_request('/api/auth/verify.php',['token'=>$pendingAdminToken]);
+    auth_check($code===422,'public_email_verification_rejects_admin_role');
     [$code]=auth_request('/api/auth/verify.php',['token'=>$verifyToken],null,
         'https://not-the-studio.invalid');
     auth_check($code===403,'verification_wrong_origin_rejected');
@@ -142,6 +151,14 @@ try {
         'actual_email_token_activates_account');
     [$code]=auth_request('/api/auth/verify.php',['token'=>$verifyToken]);
     auth_check($code===422,'verification_token_replay_rejected');
+    [$code]=auth_request('/api/auth/verify.php',['token'=>$parallelToken]);
+    auth_check($code===422,'parallel_email_verification_link_rejected');
+    $pendingTokens=$db->prepare(
+        "SELECT COUNT(*) FROM dmo_auth_tokens WHERE user_id=:id AND " .
+        "purpose='verify_email' AND consumed_at IS NULL");
+    $pendingTokens->execute(['id'=>$pending]);
+    auth_check((int)$pendingTokens->fetchColumn()===0,
+        'all_outstanding_verification_links_consumed');
     $statement=$db->prepare(
         "SELECT account_status,email_verified_at FROM dmo_users WHERE id=:id");
     $statement->execute(['id'=>$pending]);
