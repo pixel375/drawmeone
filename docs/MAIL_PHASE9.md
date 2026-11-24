@@ -129,3 +129,11 @@ Interpreting safe results:
 - Missing reference in Inbox and Spam despite SMTP acceptance: check
   provider message tracking and DNS. Hostinger documents its outgoing
   host as `smtp.hostinger.com` with SSL port 465 or STARTTLS port 587.
+
+## Follow-up verification — 2026-11-23 (v1.9.1)
+
+- Connected Hostinger mailbox `support@drawmeone.com` and the connected technical Gmail account were tested in both directions. One message sent through the Hostinger mail connector arrived in the Gmail Inbox, and one Gmail test arrived in the Hostinger Inbox. A previous website cURL SMTP probe returned error `0`, server response `250`; its original destination inbox was not independently confirmed.
+- Public DNS check from Hostinger found two Hostinger MX hosts, one SPF record including Hostinger, three Hostinger DKIM selector records and one DMARC record with `p=none`. This is a DNS-presence check, not cryptographic verification of an individual message's authentication results.
+- Added `POST /api/auth/resend-verification.php`, which is unavailable when customer auth is disabled and otherwise requires HTTPS, same-origin JSON, Cloudflare Turnstile action `resend`, IP/email database rate limits and an existing pending customer account. It rotates verification tokens before sending, commits on accepted transport, and gives an indistinguishable success response for unknown, pending and already-verified addresses.
+- Account page includes a resend form only when account authentication is available; there is no public signup activation from this change.
+- **Outstanding:** controlled registration + resend + verify + reset QA, including rate-limit and expired/reused-token tests. Site customer registration, commission intake and legal approval gates remain closed.
