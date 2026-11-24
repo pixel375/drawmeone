@@ -325,3 +325,33 @@ See `docs/ART_DIRECTION.md` and `docs/COMMISSION_PRODUCT_SPEC.md`.
 - [ ] Verify the new endpoint's syntax and closed-state safety on the live Hostinger deployment.
 - [ ] Controlled signup/verification/resend/password reset and customer isolation tests before enabling public accounts.
 - [ ] Publish artist-approved Terms and Privacy; keep order submission and payments closed until requirements are met.
+
+
+## v2.0 — 2026-11-23: Gated private customer and artist conversations
+
+- [x] Add server-gated plain-text replies for the verified owner of each request and an independent, clearly labeled artist reply action.
+- [x] Keep artist-only internal notes and unsent quote drafts invisible to customers; prevent sending to closed/completed requests.
+- [x] Require explicit customer messaging flag plus approved policies, verified login, origin/CSRF, rate limiting, bounded message size/history and audit metadata.
+- [x] Add responsive request-detail conversation forms with no user text inserted as HTML; both sides show messages only when their server gate allows.
+- [x] Fix Apache allowlist for the earlier resend-verification endpoint; verify closed routes return 503 rather than being unexpectedly blocked by rewrite rules.
+- [x] Install GitHub Actions source-quality workflow for every PHP/JavaScript change.
+- [ ] End-to-end authorized customer+artist messaging, role isolation, CSRF and rate-limit testing with controlled accounts.
+
+## v2.1 — 2026-11-23: Private commission reference images
+
+- [x] Add reversible/gated private customer reference images to request details, with server-side ownership checks and private thumbnail/display image routes.
+- [x] Accept only uploaded JPEG/PNG/WebP, limit 4 MB and 16 megapixels per source, strip metadata via GD re-encoding, keep private outside public_html and cap eight files per request.
+- [x] Add individual reference removal for owning customer; remove DB visibility first, then delete private WebP variants, with incomplete-cleanup indication.
+- [x] Add additive migration 003 and fixed pinned SSH workflow; **Hostinger migration run succeeded**, confirmed new private reference schema and customer service still closed.
+- [x] Add live guarded UI in My Requests and artist request review, showing no raw paths or filenames.
+- [x] Run source-quality PHP/JS checks; check private storage-key validation and thread closure with no-network tests.
+- [ ] Complete end-to-end controlled account upload, removal, access control, malformed image, closure and cross-account tests.
+- [ ] Independent backups/restore of private MySQL and private reference/artwork files; implement orphan cleanup and consent/retention policies.
+- [ ] Owner-approved Terms and Privacy before activating auth, messaging, reference uploads or commissions.
+
+## Next — v2.2
+
+- [ ] Artist quote delivery with versioned immutable quote, validity expiry, customer acknowledgement and separate payment/contract agreement gate.
+- [ ] Customer acceptance/decline and order state transitions only after confirmed owner-approved terms.
+- [ ] Verifiable payment providers and manual payment validation with clear refund rules.
+- [ ] Mobile/desktop visual polish on real approved artworks, art-specific SEO pages and final public design.
