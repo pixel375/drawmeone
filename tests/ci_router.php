@@ -17,6 +17,9 @@ $allowed = [
     '/api/quote-response.php',
     '/api/admin/overview.php',
     '/api/admin/order-create.php',
+    '/api/admin/request.php',
+    '/api/admin/request-actions.php',
+    '/api/admin/quote-send.php',
 ];
 if (!in_array($uri, $allowed, true)) {
     http_response_code(404);
