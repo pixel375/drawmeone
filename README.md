@@ -8,7 +8,7 @@ The disposable database integration suite tests synthetic customers, artist acti
 
 Chromium browser QA covers all four public designs, all six Artist Desk tabs, plus a synthetic signed-in customer commission workspace at desktop/tablet/mobile sizes. [Latest passing browser suite](https://github.com/pixel375/drawmeone/actions/runs/45465658442).
 
-The [latest successful read-only Hostinger verification](https://github.com/pixel375/drawmeone/actions/runs/45462408843) checked deployment, private storage, mail formatting, and closed account/request gates.
+The [latest successful read-only Hostinger verification](https://github.com/pixel375/drawmeone/actions/runs/45465970997) checked deployment, private storage, mail formatting, and closed account/request gates.
 
 **Outstanding before opening to customers:** genuine rights-cleared published artwork, owner-approved Terms/Privacy and policies, controlled real-account onboarding/Turnstile tests, independently held encrypted off-site backup and recovery key, and provider-verified payments. **No test success alone enables public business operations.**
 
