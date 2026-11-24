@@ -1,1 +1,1 @@
-2026-11-24 v3.5 controlled production encrypted backup: verify candidate archive can decrypt and extract before promotion and before seven-snapshot rotation; then verify latest and isolated restore-check. Do not publish archives, plaintext or key.
+2026-11-24 v3.6 safe live regression: exercise the current encrypted backup CLI after adding verified ciphertext-only export support, validate pre-promotion restore and latest encrypted snapshot. Also verify success-path GitHub backup incident monitor. No offsite transfer and no key export.
