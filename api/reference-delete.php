@@ -9,7 +9,7 @@ try {
     $customer = dmo_customer_require($db);
     $input = dmo_auth_json_request();
     dmo_auth_verify_csrf($customer);
-    if (!dmo_refs_enabled($db)) {
+    if (!dmo_refs_management_enabled($db)) {
         dmo_json(503, ['ok' => false, 'error' => 'reference_management_disabled']);
     }
     if (count($input) !== 2 ||
@@ -35,10 +35,6 @@ try {
         if (!is_array($request)) {
             $db->rollBack();
             dmo_json(404, ['ok' => false, 'error' => 'reference_not_found']);
-        }
-        if (!dmo_messages_request_open((string) $request['status'])) {
-            $db->rollBack();
-            dmo_json(409, ['ok' => false, 'error' => 'request_closed']);
         }
         $record = $db->prepare(
             'SELECT id, storage_key FROM dmo_request_attachments WHERE ' .
