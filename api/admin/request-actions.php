@@ -119,6 +119,16 @@ try {
             ]);
         }
 
+        // An accepted quote is immutable: no later draft/price revision may
+        // be created through this endpoint.
+        $acceptedQuote = $db->prepare(
+            "SELECT id FROM dmo_quotes WHERE request_id = :id AND status = 'accepted' LIMIT 1"
+        );
+        $acceptedQuote->execute(['id' => $requestId]);
+        if ($acceptedQuote->fetchColumn() !== false) {
+            $db->rollBack();
+            dmo_json(409, ['ok' => false, 'error' => 'quote_already_accepted']);
+        }
         $countStmt = $db->prepare(
             'SELECT MAX(version_number) FROM dmo_quotes WHERE request_id = :id'
         );
