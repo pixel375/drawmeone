@@ -10,7 +10,7 @@
 <title>Commission a drawing · Draw Me One</title>
 <link rel="icon" href="./favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="./commission.css?v=18">
-<script defer src="./commission.js?v=18"></script>
+<script defer src="./commission.js?v=20"></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
@@ -127,7 +127,14 @@
         <h4>Your description</h4>
         <p id="detail-brief" class="detail-brief"></p>
         <div id="detail-messages" class="detail-messages"></div>
-        <p class="small">Sending replies and accepting quotes are not available yet.</p>
+        <form id="detail-reply-form" class="detail-reply-form" hidden>
+          <label for="detail-reply-body">Private message to the artist</label>
+          <textarea id="detail-reply-body" minlength="2" maxlength="3000" rows="4" required placeholder="Ask a question or add a detail to your request…"></textarea>
+          <button type="submit" class="primary-button" id="detail-reply-send" disabled>Send message</button>
+          <p id="detail-reply-feedback" class="small" role="status" aria-live="polite"></p>
+        </form>
+        <p class="small" id="detail-reply-disabled">Private replies are not available yet. Your history remains readable.</p>
+        <p class="small">Quote acceptance and online payments are not available yet.</p>
       </section>
     </section>
   </div>
