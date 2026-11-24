@@ -327,20 +327,29 @@ jobs:
           # Public commission intake remains closed, but its signed-in history
           # assets must include the new browser-only filters and status labels.
           commission_page=$(curl -fsSL --max-time 15 "https://drawmeone.com/commission.html")
-          [[ "$commission_page" == *'commission.js?v=24'* ]] &&
-          [[ "$commission_page" == *'commission.css?v=24'* ]] &&
+          [[ "$commission_page" == *'commission.js?v=25'* ]] &&
+          [[ "$commission_page" == *'commission.css?v=25'* ]] &&
           [[ "$commission_page" == *'id="request-history-search"'* ]] &&
           [[ "$commission_page" == *'id="request-history-filter"'* ]] || {
             echo "customer_history=stale_html"
             exit 1
           }
-          commission_js=$(curl -fsSL --max-time 15 "https://drawmeone.com/commission.js?v=24")
+          commission_js=$(curl -fsSL --max-time 15 "https://drawmeone.com/commission.js?v=25")
           [[ "$commission_js" == *'function renderRequestHistory()'* ]] &&
           [[ "$commission_js" == *'readableRequestStatus(r.status)'* ]] &&
           [[ "$commission_js" == *'requestsFetchSequence'* ]] || {
             echo "customer_history=stale_script"
             exit 1
           }
+          [[ "$commission_page" == *'id="detail-refresh"'* ]] &&
+          [[ "$commission_page" == *'id="detail-content"'* ]] &&
+          [[ "$commission_page" == *'id="detail-load-status"'* ]] &&
+          [[ "$commission_js" == *'function syncQuoteButtons()'* ]] &&
+          [[ "$commission_js" == *'detailRequestSequence'* ]] || {
+            echo "customer_quote_detail=stale_or_missing"
+            exit 1
+          }
+          echo "customer_quote_detail=deployed"
           echo "customer_history=deployed"
           echo "READ_ONLY_DIAGNOSTIC_COMPLETED"
           REMOTE
