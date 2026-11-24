@@ -13,13 +13,13 @@ New GitHub Actions workflow: `.github/workflows/disposable-integration.yml`.
 - No live SMTP, third-party Turnstile, payment provider, Hostinger production SQL, real customer address, live uploaded file or private SSH key is used by these tests. They do not validate public onboarding in production.
 - Code and synthetic fixtures remain in a public source repository; no true customer data is added.
 
-Verified: [successful synthetic HTTP lifecycle run](https://github.com/pixel375/drawmeone/actions/runs/45417101951).
+Verified: [successful synthetic HTTP lifecycle run](https://github.com/pixel375/drawmeone/actions/runs/45417101951). The later [full CI run 45418706387](https://github.com/pixel375/drawmeone/actions/runs/45418706387) also passed, now with a strict `tests/ci_reset.php` between suites and an assertion that unpaid orders count correctly in Artist's Desk. The reset refuses any database except the disposable localhost CI schema.
 
 ## Public contact and private source hardening (v2.9)
 
 - The homepage and closed commissions page offer a **mailto:support@drawmeone.com** general inquiry link. The mailbox's inbound/outbound delivery had been separately verified. No form is submitted, no registration is enabled, and no email constitutes an order or payment authorization.
 - Added independent Apache HTTP-denial files to `tests/`, `docs/` and `.github/`, complementing existing `app/` and `database/` protections. These source files are not public website endpoints.
-- The live read-only SSH diagnostic checks the internal paths are not HTTP-200 and confirms the homepage email link is available.
+- The [live read-only SSH diagnostic](https://github.com/pixel375/drawmeone/actions/runs/45417924628) confirmed internal paths are not HTTP-200, public contact is visible, and guarded requests/quotes/orders remain closed. A temporary failed diagnostic was caused by curl's early-exit grep under `pipefail`; the diagnostic was corrected and rerun successfully.
 
 ## Known remaining prelaunch tests
 
