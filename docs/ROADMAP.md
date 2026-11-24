@@ -417,3 +417,19 @@ See `docs/ART_DIRECTION.md` and `docs/COMMISSION_PRODUCT_SPEC.md`.
 - [x] Explicitly mark off-site recovery and payment processing as not implemented rather than pretending the site is ready to charge.
 - [x] Create a responsive dashboard readiness checklist with manual refresh; no launch-enabling controls added.
 - [ ] After approving business policies and performing controlled customer tests, update gated private settings as a separate owner-authorized launch action.
+
+## v2.8 — 2026-11-24: Disposable DB and HTTP integration QA
+
+- [x] Add GitHub Actions MariaDB container that imports committed migrations from scratch and runs tests whenever application/backend tests change.
+- [x] Verify fake two-customer order/quote/message ownership, internal-note confidentiality and unpaid order amount using actual SQL.
+- [x] Test actual HTTP session/CSRF/origin behavior with anonymous and authenticated synthetic customers.
+- [x] Test complete synthetic artist draft → publish quote → customer acceptance → separate unpaid order with rejection of cross-customer actions, browser price override, duplicate acceptance/order, and closed-thread messaging.
+- [x] All integration gates passed in Actions run 45417101951; no Hostinger data or real payments touched.
+- [ ] Controlled customer registration/verification/forgot password/Turnstile and image upload QA against a dedicated private pilot environment before launch.
+
+## v2.9 — 2026-11-24: Safe public inquiries and HTTP hardening
+
+- [x] Replace no-contact dead end on homepage and closed commissions page with direct `support@drawmeone.com` general inquiry links. Clarify that email is not an accepted order or payment.
+- [x] Add Apache deny rules for internal tests, operational docs and workflows in the deployed repository.
+- [ ] Confirm through live read-only SSH diagnostics that the contact link is visible and internal paths are HTTP-denied.
+- [ ] Finalize owner-approved legal/business terms and publish real artwork before public order intake.
