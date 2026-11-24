@@ -183,6 +183,31 @@ try {
     $candidates=glob($workspace.'/drawmeone-encrypted-backups/dmo-*.bak') ?: [];
     drill_assert(count($candidates)===1 && filesize($candidates[0])>512,
         'one_real_encrypted_snapshot_created');
+    // A damaged private WebP in a candidate archive must not evict or
+    // overwrite the verified previous snapshot. Deliberately corrupt only
+    // the temporary CI fixture; the real source code path is still used.
+    $beforeHash = hash_file('sha256', $candidates[0]);
+    $previousThumb = file_get_contents($refThumb);
+    if (!is_string($beforeHash) || !is_string($previousThumb)) {
+        throw new RuntimeException('Snapshot corruption test preflight failed');
+    }
+    $rejected = false;
+    try {
+        file_put_contents($refThumb, 'CI intentionally invalid WebP bytes');
+        try {
+            drill_exec([PHP_BINARY,$script,'run']);
+        } catch (RuntimeException $expectedError) {
+            $rejected = true;
+        }
+    } finally {
+        file_put_contents($refThumb, $previousThumb);
+    }
+    $retained = glob($workspace.'/drawmeone-encrypted-backups/dmo-*.bak') ?: [];
+    drill_assert($rejected && count($retained)===1 &&
+        hash_file('sha256',$retained[0])===$beforeHash,
+        'invalid_candidate_cannot_replace_verified_backup');
+    drill_exec([PHP_BINARY,$script,'verify-latest']);
+    drill_exec([PHP_BINARY,$script,'restore-check');
     $recoveryKey = file_get_contents($workspace.'/drawmeone-backup-recovery.key');
     if (!is_string($recoveryKey) ||
         strlen($recoveryKey)!==SODIUM_CRYPTO_SECRETSTREAM_XCHACHA20POLY1305_KEYBYTES) {
