@@ -547,5 +547,6 @@ See `docs/ART_DIRECTION.md` and `docs/COMMISSION_PRODUCT_SPEC.md`.
 - [x] Find and fix serious low-contrast explanatory labels in desktop design/logo selector by removing opacity and increasing contrast; version `styles.css?v=11`.
 - [x] Add keyboard-visible Skip to main content links to customer account and password-reset pages, verified with real Chromium keyboard navigation.
 - [x] Confirm comprehensive initial dark/light accessibility/skip-link test run passes (run 45468970978).
-- [x] Add open gallery lightbox axe audit and keyboard focus restoration test.
+- [x] Add open gallery lightbox axe audit and keyboard focus restoration test; full v4.0 Chromium QA passed (run 45469194540).
+- [x] Read-only live Hostinger verification confirms stylesheet v11 and both keyboard skip links deployed, with registration/intake closed (run 45469404677).
 - [ ] Manual screen-reader testing (VoiceOver/TalkBack), 200%+ zoom and real authenticated workflows before customer launch; automated axe success does not certify WCAG compliance.
