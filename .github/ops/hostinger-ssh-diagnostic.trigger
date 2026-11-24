@@ -1,1 +1,1 @@
-2026-11-23 recheck live public DNS after Hostinger deploy of tests/mail_dns_check.php. No email sent, no user data, read-only.
+DrawMeOne v1.9.1 verification resend deployment check 2026-11-23: lint new guarded endpoint; confirm mail remains configured, customer intake closed, admin endpoints protected.
