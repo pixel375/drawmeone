@@ -431,6 +431,7 @@ See `docs/ART_DIRECTION.md` and `docs/COMMISSION_PRODUCT_SPEC.md`.
 
 - [x] Replace no-contact dead end on homepage and closed commissions page with direct `support@drawmeone.com` general inquiry links. Clarify that email is not an accepted order or payment.
 - [x] Add Apache deny rules for internal tests, operational docs and workflows in the deployed repository.
+- [x] Keep the closed commission contact panel visible even when JavaScript fails, while signed-in/open states still hide it as appropriate.
 - [x] Live read-only SSH diagnostic confirmed the contact link is visible and internal paths are HTTP-denied (run 45417924628).
 - [ ] Finalize owner-approved legal/business terms and publish real artwork before public order intake.
 
