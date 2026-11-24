@@ -550,3 +550,15 @@ See `docs/ART_DIRECTION.md` and `docs/COMMISSION_PRODUCT_SPEC.md`.
 - [x] Add open gallery lightbox axe audit and keyboard focus restoration test; full v4.0 Chromium QA passed (run 45469194540).
 - [x] Read-only live Hostinger verification confirms stylesheet v11 and both keyboard skip links deployed, with registration/intake closed (run 45469404677).
 - [ ] Manual screen-reader testing (VoiceOver/TalkBack), 200%+ zoom and real authenticated workflows before customer launch; automated axe success does not certify WCAG compliance.
+
+## v4.1 — 2026-11-24: Authenticated accessibility and focus-state verification
+
+- [x] Run WCAG 2.0/2.1 A/AA axe scans of all six signed-in Artist Desk panels at 320px and 1440px with intercepted synthetic API responses.
+- [x] Run scans of a synthetic signed-in customer's request history, private message, detailed quote and unverified order at the same widths.
+- [x] Verify no document horizontal overflow at 320 CSS px (a useful **reflow approximation**, not an actual browser zoom/screen-reader certification) and assert zero API mutations.
+- [x] Provide high-visibility keyboard focus outlines for Artist Desk `select` and `textarea` controls; version `panel.css?v=23`.
+- [x] Make the Artist Desk and commission `#main` focusable via `tabindex="-1"`, and verify Tab then Enter on each skip link places focus in main.
+- [x] Preserve the admin's strict same-origin CSP by loading axe in CI via a locally intercepted same-origin script instead of weakening `script-src`.
+- [x] Comprehensive browser suite passed (run 45487112228); source quality (45487112277) and real-HTTP disposable MariaDB suite (45487112163) passed.
+- [x] Read-only Hostinger check confirmed the updated focus styles and both skip targets deployed (run 45487199976).
+- [ ] Manual VoiceOver/TalkBack, actual browser 200%+ zoom and controlled real authenticated artist/customer device QA before declaring accessibility conformance.
