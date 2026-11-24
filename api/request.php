@@ -2,6 +2,7 @@
 declare(strict_types=1);
 require_once dirname(__DIR__) . '/app/references.php';
 require_once dirname(__DIR__) . '/app/quotes.php';
+require_once dirname(__DIR__) . '/app/orders.php';
 dmo_reject_non_get();
 
 try {
@@ -56,6 +57,7 @@ try {
         foreach ($quotes as &$quoted) $quoted['can_respond'] = false;
         unset($quoted);
     }
+    $orders = dmo_orders_customer_rows($db, (int) $request['id']);
     unset($request['id']);
     dmo_json(200, [
         'ok' => true,
@@ -68,6 +70,7 @@ try {
         'can_reply' => dmo_messages_enabled() &&
             dmo_messages_request_open((string) $request['status']),
         'quotes' => $quotes,
+        'orders' => $orders,
         'quotes_visible' => count($quotes) > 0,
         'payments_enabled' => false,
     ]);
