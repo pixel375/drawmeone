@@ -4,7 +4,7 @@
   const state = {
     service: null, auth: null, catalog: null, account: null, csrf: "",
     sending: false, pendingKey: null, selectedRef: null, messageBusy: false,
-    uploadBusy: false, quoteBusy: false,
+    uploadBusy: false, quoteBusy: false, requests: [],
   };
   const labels = {
     original_character: "Original character (OC)",
@@ -122,42 +122,112 @@
     return state.pendingKey;
   }
 
+  const closedRequestStatuses = new Set([
+    "cancelled","canceled","rejected","declined","completed",
+    "closed","archived","refunded",
+  ]);
+  const requestStatusLabels = {
+    submitted:"Awaiting artist review",
+    clarification_needed:"Clarification requested",
+    quote_ready:"Quote under review",
+    quoted:"Quote available",
+    awaiting_customer:"Awaiting your response",
+    accepted:"Quote accepted",
+    awaiting_arrangement:"Awaiting arrangements",
+    queued:"In the artist queue",
+    drawing:"Drawing in progress",
+    in_progress:"In progress",
+    awaiting_feedback:"Awaiting feedback",
+    revision:"Revisions in progress",
+    ready_for_delivery:"Ready for delivery",
+    completed:"Completed",
+    cancelled:"Cancelled",
+    canceled:"Cancelled",
+    rejected:"Declined by artist",
+    declined:"Declined",
+    closed:"Closed",
+    archived:"Archived",
+    refunded:"Refunded",
+  };
+  function readableRequestStatus(value) {
+    return requestStatusLabels[value] || "Awaiting review";
+  }
+  function renderRequestHistory() {
+    const target = $("my-request-list");
+    const rows = state.requests;
+    const query = $("request-history-search").value.trim().toLocaleLowerCase();
+    const filter = $("request-history-filter").value;
+    const matches = rows.filter(item => {
+      const closed = closedRequestStatuses.has(item.status);
+      if (filter === "closed" && !closed) return false;
+      if (filter === "active" && closed) return false;
+      return !query || [
+        item.public_ref, item.tier_name, labels[item.subject_type],
+        readableRequestStatus(item.status),
+      ].some(value => String(value || "").toLocaleLowerCase().includes(query));
+    });
+    target.replaceChildren();
+    $("request-history-count").textContent = rows.length
+      ? "Showing " + matches.length + " of " + rows.length + " recent requests"
+      : "No requests yet";
+    if (!rows.length) {
+      target.append(renderText("p",
+        "You don't have any commission requests yet.","small"));
+      return;
+    }
+    if (!matches.length) {
+      target.append(renderText("p",
+        "No requests match these filters. Try another status or reference.","small"));
+      return;
+    }
+    for (const item of matches) {
+      const card = document.createElement("article");
+      card.className = "request-list-item";
+      const detail = document.createElement("div");
+      detail.append(
+        renderText("strong",item.public_ref),
+        renderText("small",(item.tier_name || labels[item.subject_type] || "Custom") +
+          " · " + readableRequestStatus(item.status)),
+        renderText("small","Submitted " + (item.submitted_at || ""))
+      );
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "text-button";
+      button.textContent = "View details";
+      button.setAttribute("aria-label","View details for " + item.public_ref);
+      button.addEventListener("click", () => openDetail(item.public_ref));
+      card.append(detail,button);
+      target.append(card);
+    }
+  }
+
+  let requestsFetchSequence = 0;
   async function loadMyRequests() {
+    const sequence = ++requestsFetchSequence;
     const target = $("my-request-list");
     target.replaceChildren(renderText("p","Loading your requests…","small"));
+    $("request-history-count").textContent = "Refreshing request history…";
     try {
       const {response, body} = await getJSON("./api/requests.php");
-      if (!response.ok || !body.ok) throw new Error("Requests unavailable");
-      target.replaceChildren();
-      const rows = Array.isArray(body.requests) ? body.requests : [];
-      if (!rows.length) {
-        target.append(renderText("p","You don't have any commission requests yet.","small"));
-        return;
+      if (sequence !== requestsFetchSequence) return;
+      if (!response.ok || !body.ok || !Array.isArray(body.requests)) {
+        throw new Error("Requests unavailable");
       }
-      for (const item of rows) {
-        const card = document.createElement("article");
-        card.className = "request-list-item";
-        const detail = document.createElement("div");
-        detail.append(
-          renderText("strong",item.public_ref),
-          renderText("small",(item.tier_name || labels[item.subject_type] || "Custom") +
-            " · " + (item.status || "submitted")),
-          renderText("small","Submitted " + (item.submitted_at || ""))
-        );
-        const button = document.createElement("button");
-        button.type = "button";
-        button.className = "text-button";
-        button.textContent = "View details";
-        button.addEventListener("click", () => openDetail(item.public_ref));
-        card.append(detail,button);
-        target.append(card);
-      }
+      state.requests = body.requests.filter(item =>
+        typeof item.public_ref === "string" &&
+        /^DMO-[0-9a-f]{20}$/.test(item.public_ref)
+      );
+      renderRequestHistory();
     } catch (_) {
+      if (sequence !== requestsFetchSequence) return;
+      $("request-history-count").textContent = "Could not refresh request history";
       target.replaceChildren(
         renderText("p","Couldn't load your requests. Try refreshing.","small")
       );
     }
   }
+  $("request-history-search").addEventListener("input", renderRequestHistory);
+  $("request-history-filter").addEventListener("change", renderRequestHistory);
 
 
   async function respondToQuote(ref, quoteId, policyVersion, decision, checkbox) {
