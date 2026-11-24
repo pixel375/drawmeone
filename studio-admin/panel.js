@@ -149,6 +149,7 @@
   // textContent, never innerHTML. No public messages or quote sending here.
   let selectedRequestId = null;
   let requestWriteEnabled = false;
+  let requestMessagingEnabled = false;
   let requestBusy = false;
 
   function requestText(id, value) {
@@ -181,7 +182,8 @@
       const entry = document.createElement("article");
       entry.className = "request-thread-item";
       const mark = record.is_internal
-        ? "PRIVATE ARTIST NOTE" : "CUSTOMER CONVERSATION";
+        ? "PRIVATE ARTIST NOTE" :
+        (record.sender_role === "admin" ? "ARTIST REPLY" : "CUSTOMER MESSAGE");
       entry.append(
         textNode("small", mark + " · " + (record.sender_name || "User") +
           " · " + (record.created_at || "")),
@@ -243,6 +245,8 @@
   function updateRequestButtons() {
     $("request-note-save").disabled = !requestWriteEnabled || requestBusy ||
       selectedRequestId === null;
+    $("request-message-send").disabled = !requestMessagingEnabled || requestBusy ||
+      selectedRequestId === null;
     $("quote-save").disabled = !requestWriteEnabled || requestBusy ||
       selectedRequestId === null;
     $("quote-add-line").disabled = !requestWriteEnabled || requestBusy;
@@ -253,6 +257,8 @@
     if (!Number.isSafeInteger(parsed) || parsed < 1) return;
     selectedRequestId = parsed;
     requestWriteEnabled = false;
+    requestMessagingEnabled = false;
+    $("request-message-form").hidden = true;
     updateRequestButtons();
     $("request-detail").hidden = false;
     requestText("request-detail-status", "Loading complete request...");
@@ -267,6 +273,8 @@
     const item = data.detail;
     const info = item.request || {};
     requestWriteEnabled = data.admin_writes_enabled === true;
+    requestMessagingEnabled = data.customer_messaging_enabled === true;
+    $("request-message-form").hidden = !requestMessagingEnabled;
     requestText("request-detail-ref", info.public_ref || "COMMISSION REQUEST");
     requestText("request-detail-title", "Request #" + (info.id || parsed) +
       " · " + (info.status || "unknown"));
@@ -290,6 +298,7 @@
   $("request-detail-close").addEventListener("click", () => {
     selectedRequestId = null;
     requestWriteEnabled = false;
+    requestMessagingEnabled = false;
     $("request-detail").hidden = true;
     updateRequestButtons();
   });
@@ -391,6 +400,42 @@
       requestText("request-detail-status", "Private note saved. Not sent to customer.");
     } catch (_) {
       requestText("request-detail-status", "Connection problem. Save not confirmed.");
+    } finally {
+      requestBusy = false;
+      updateRequestButtons();
+    }
+  });
+
+
+  $("request-message-form").addEventListener("submit", async event => {
+    event.preventDefault();
+    if (!requestMessagingEnabled || requestBusy || selectedRequestId === null) return;
+    const body = $("request-message-body").value.trim();
+    if (body.length < 2 || body.length > 3000) {
+      requestText("request-detail-status", "Message must contain 2–3000 characters.");
+      return;
+    }
+    const id = selectedRequestId;
+    if (!window.confirm("Send this message to the customer's private account?")) return;
+    requestBusy = true;
+    updateRequestButtons();
+    try {
+      const {response, data} = await post("request-actions.php", {
+        action:"send_customer_message",request_id:id,body,
+      },csrf);
+      if (response.status === 401) return sessionExpired();
+      if (!response.ok || !data.ok) {
+        requestText("request-detail-status", "Message not sent (" +
+          (data.error || response.status) + ").");
+        return;
+      }
+      $("request-message-body").value = "";
+      await openRequest(id);
+      requestText("request-detail-status",
+        "Customer-visible message saved. No email or payment was sent.");
+    } catch (_) {
+      requestText("request-detail-status",
+        "Connection interrupted. Check conversation before retrying to avoid duplicates.");
     } finally {
       requestBusy = false;
       updateRequestButtons();
