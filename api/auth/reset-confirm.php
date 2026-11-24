@@ -68,10 +68,10 @@ try {
     // This notification is intentionally sent AFTER commit. A mail outage
     // must never roll back a completed reset or suggest the old password works.
     try {
-        $message = "The password for your Draw Me One account was changed.\\n\\n" .
+        $message = "The password for your Draw Me One account was changed.\n\n" .
             "If you made this change, no action is required. If you did not, " .
             "contact support@drawmeone.com promptly. Existing sessions " .
-            "have been signed out.\\n";
+            "have been signed out.\n";
         if (!dmo_auth_send_email((string) $record['email'],
             'Draw Me One account password changed', $message)) {
             error_log('[DrawMeOne] Password-change notification not accepted.');
