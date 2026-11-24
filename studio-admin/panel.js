@@ -151,6 +151,7 @@
   let requestWriteEnabled = false;
   let requestMessagingEnabled = false;
   let quoteDeliveryEnabled = false;
+  let orderCreationEnabled = false;
   let requestBusy = false;
 
   function requestText(id, value) {
@@ -319,6 +320,84 @@
     }
   }
 
+
+  function renderAdminOrders(orders, quotes) {
+    const root = $("request-orders");
+    root.replaceChildren();
+    const entries = Array.isArray(orders) ? orders : [];
+    if (entries.length) {
+      for (const order of entries) {
+        const card = document.createElement("article");
+        card.className = "request-order-card";
+        card.append(
+          textNode("strong", "Order #" + order.id + " · " + order.status),
+          textNode("p", "Accepted quote #" + order.quote_id +
+            " · " + formatQuoteMoney(order.total_minor, order.currency)),
+          textNode("small", "Payment: " + (order.payment_status || "unverified") +
+            " · Created: " + (order.created_at || ""))
+        );
+        root.append(card);
+      }
+      return;
+    }
+    const accepted = (Array.isArray(quotes) ? quotes : [])
+      .find(q => q.status === "accepted" && Number.isSafeInteger(Number(q.id)));
+    if (!accepted) {
+      root.append(textNode("p",
+        "No confirmed order. The customer must first accept a reviewed quote.", "small"));
+      return;
+    }
+    root.append(textNode("p",
+      "Accepted quote #" + accepted.id + " · " +
+      formatQuoteMoney(accepted.total_minor, accepted.currency), "small"));
+    if (!orderCreationEnabled) {
+      root.append(textNode("p",
+        "Unpaid order confirmation is disabled until business terms are approved.", "small"));
+      return;
+    }
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "quiet";
+    button.textContent = "Confirm order (payment unverified)";
+    button.disabled = requestBusy;
+    button.addEventListener("click", () => confirmUnpaidOrder(Number(accepted.id)));
+    root.append(button);
+  }
+
+  async function confirmUnpaidOrder(quoteId) {
+    const requestId = selectedRequestId;
+    if (!orderCreationEnabled || requestBusy || requestId === null ||
+        !Number.isSafeInteger(quoteId) || quoteId < 1) return;
+    if (!window.confirm(
+      "Confirm this accepted quote as an order awaiting payment arrangements? " +
+      "No payment will be processed or marked as received."
+    )) return;
+    requestBusy = true;
+    updateRequestButtons();
+    requestText("request-detail-status", "Recording unverified order…");
+    try {
+      const {response, data} = await post("order-create.php", {
+        request_id:requestId,accepted_quote_id:quoteId,confirm_unpaid:true,
+      },csrf);
+      if (response.status === 401) return sessionExpired();
+      if (!response.ok || !data.ok) {
+        requestText("request-detail-status",
+          "Order not confirmed (" + (data.error || response.status) + ").");
+        return;
+      }
+      await openRequest(requestId);
+      requestText("request-detail-status",
+        "Order #" + data.order_id +
+        " confirmed as awaiting arrangements. Payment remains unverified.");
+    } catch (_) {
+      requestText("request-detail-status",
+        "Connection interrupted. Refresh the request before attempting confirmation again.");
+    } finally {
+      requestBusy = false;
+      updateRequestButtons();
+    }
+  }
+
   function updateRequestButtons() {
     $("request-note-save").disabled = !requestWriteEnabled || requestBusy ||
       selectedRequestId === null;
@@ -336,6 +415,7 @@
     requestWriteEnabled = false;
     requestMessagingEnabled = false;
     quoteDeliveryEnabled = false;
+    orderCreationEnabled = false;
     $("request-message-form").hidden = true;
     updateRequestButtons();
     $("request-detail").hidden = false;
@@ -353,6 +433,7 @@
     requestWriteEnabled = data.admin_writes_enabled === true;
     requestMessagingEnabled = data.customer_messaging_enabled === true;
     quoteDeliveryEnabled = data.quote_sending_enabled === true;
+    orderCreationEnabled = data.order_creation_enabled === true;
     $("request-message-form").hidden = !requestMessagingEnabled;
     requestText("request-detail-ref", info.public_ref || "COMMISSION REQUEST");
     requestText("request-detail-title", "Request #" + (info.id || parsed) +
@@ -369,6 +450,7 @@
     renderThread(item.messages);
     renderQuotes(item.quotes);
     renderRequestReferences(item.references);
+    renderAdminOrders(item.orders, item.quotes);
     requestText("request-detail-status", requestWriteEnabled
       ? "Admin draft editing available. Nothing is sent to the customer."
       : "Viewing only. Private note and quote creation are disabled on the server.");
@@ -380,6 +462,7 @@
     requestWriteEnabled = false;
     requestMessagingEnabled = false;
     quoteDeliveryEnabled = false;
+    orderCreationEnabled = false;
     $("request-detail").hidden = true;
     updateRequestButtons();
   });
