@@ -207,7 +207,7 @@ try {
         hash_file('sha256',$retained[0])===$beforeHash,
         'invalid_candidate_cannot_replace_verified_backup');
     drill_exec([PHP_BINARY,$script,'verify-latest']);
-    drill_exec([PHP_BINARY,$script,'restore-check');
+    drill_exec([PHP_BINARY,$script,'restore-check']);
     $recoveryKey = file_get_contents($workspace.'/drawmeone-backup-recovery.key');
     if (!is_string($recoveryKey) ||
         strlen($recoveryKey)!==SODIUM_CRYPTO_SECRETSTREAM_XCHACHA20POLY1305_KEYBYTES) {
