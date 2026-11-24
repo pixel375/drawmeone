@@ -30,3 +30,7 @@ The disposable integration workflow performs quick PHP syntax lint before instal
 This is **not** an off-site recovery drill of the current production customer's data. Hostinger remains the location of the real encrypted backup archives and the separate recovery key. There is **no verified independent off-site copy or separately stored production recovery key yet**, and therefore Hostinger account loss could still prevent disaster recovery. No new provider credentials or third-party backup transfers have been invented or enabled.
 
 Other outstanding work includes documenting approved retention rules, independently copying encrypted archives and storing the key in a different protected location, and a controlled production-derived recovery drill only once a secure off-site destination is approved.
+
+## Live recovery readiness checked
+
+The [Hostinger read-only diagnostic 45440561280](https://github.com/pixel375/drawmeone/actions/runs/45440561280) passed: `local_backup_health=recent_and_private`, `local_backup_retained_count=3`, `local_backup_recovery_key_present=yes`. Customer registration and commission intake remained closed; quote, order and reference-security tests also passed. The backup key has not been exported and no off-site destination was configured.
