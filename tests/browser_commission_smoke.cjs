@@ -277,7 +277,9 @@ async function detailRaceAndRecovery(browser) {
       return answer(route,detail(B));
     });
     await page.locator("#detail-refresh").click();
-    await page.locator("#detail-load-status").waitFor({state:"visible"});
+    await page.waitForFunction(() =>
+      document.querySelector("#detail-load-status")?.textContent
+        ?.includes("could not be loaded"));
     assert.match(await page.locator("#detail-load-status").innerText(),/could not be loaded/i);
     assert.equal(await page.locator("#detail-content").isVisible(),false,
       "failed request does not show stale private detail");
