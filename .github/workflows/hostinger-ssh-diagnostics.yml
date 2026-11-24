@@ -73,13 +73,17 @@ jobs:
             [[ -f "$site/$file" ]] || { echo "Deployment file missing: $file"; exit 1; }
             php -l "$site/$file" >/dev/null || { echo "PHP syntax invalid: $file"; exit 1; }
           done
-          php -l "$site/tests/mail_smoke.php" >/dev/null
-          php -l "$site/tests/private_reference_smoke.php" >/dev/null
-          php -l "$site/tests/quote_smoke.php" >/dev/null
+          for test in mail_smoke.php quote_smoke.php private_reference_smoke.php mail_dns_check.php; do
+            for attempt in 1 2 3 4 5 6; do
+              [[ -f "$site/tests/$test" ]] && break
+              sleep 3
+            done
+            [[ -f "$site/tests/$test" ]] || { echo "Deployment test missing: $test"; exit 1; }
+            php -l "$site/tests/$test" >/dev/null
+          done
+          php "$site/tests/mail_smoke.php"
           php "$site/tests/quote_smoke.php"
           php "$site/tests/private_reference_smoke.php"
-          php "$site/tests/mail_smoke.php"
-          php -l "$site/tests/mail_dns_check.php" >/dev/null
           php "$site/tests/mail_dns_check.php"
           echo "PHP syntax: PASS"
           if command -v mariadb-dump >/dev/null 2>&1 || command -v mysqldump >/dev/null 2>&1; then
