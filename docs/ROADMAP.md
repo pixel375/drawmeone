@@ -409,3 +409,11 @@ See `docs/ART_DIRECTION.md` and `docs/COMMISSION_PRODUCT_SPEC.md`.
 - [x] Add order-gate smoke test, PHP/JavaScript lint and live closed-state diagnostics.
 - [ ] Run controlled end-to-end quote acceptance → unpaid order creation with two distinct test customers and artist account, checking CSRF, replay, cross-owner reads and duplicates before opening customer accounts.
 - [ ] Payment provider verification, controlled order status transitions, deliverables and final approved Terms/Privacy remain separate phases.
+
+## v2.7 — 2026-11-23/24: Live Artist Desk launch readiness
+
+- [x] Extend the existing authenticated admin overview with readiness data that never contains customer identities, secrets, storage paths or payment references.
+- [x] Show live email setup, published artwork count, approved policies, auth/commission/message/reference/quote/order gates and local backup freshness.
+- [x] Explicitly mark off-site recovery and payment processing as not implemented rather than pretending the site is ready to charge.
+- [x] Create a responsive dashboard readiness checklist with manual refresh; no launch-enabling controls added.
+- [ ] After approving business policies and performing controlled customer tests, update gated private settings as a separate owner-authorized launch action.
