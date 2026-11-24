@@ -131,3 +131,12 @@ footer{border-top:1px solid var(--line);display:flex;gap:18px;justify-content:sp
 .request-history-toolbar #refresh-requests{min-height:44px}
 .request-history-toolbar #request-history-count{width:100%;margin:0}
 @media(max-width:560px){.request-history-filters{flex-basis:100%;flex-direction:column}.request-history-filters label{flex:0 1 auto}.request-history-toolbar #refresh-requests{width:100%}}
+
+/* v3.8 — Clear private request-loading state and quote decision affordances. */
+.detail-heading-actions{display:flex;align-items:center;flex-wrap:wrap;gap:10px}
+.detail-heading-actions button{min-height:44px}
+#detail-load-status{padding:14px 17px;margin:12px 0;border:1px solid var(--line);border-radius:9px;background:var(--input)}
+.customer-quote-status{font-size:12px;font-weight:800;color:var(--accent);margin:4px 0 12px}
+.customer-quote-actions button:disabled{opacity:.55;cursor:not-allowed}
+.customer-quote-confirm:has(input:checked){border-color:var(--accent)}
+@media(max-width:560px){.detail-heading{align-items:flex-start;flex-direction:column}.detail-heading-actions{width:100%}.detail-heading-actions button{flex:1;min-width:0}}
