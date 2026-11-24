@@ -237,6 +237,20 @@ jobs:
             }
           done
           echo "auth_recovery_get_guards=closed"
+          # The three alternate layouts render their contact CTAs from JS.
+          # Check that Hostinger serves the newly versioned asset, not stale code.
+          public_home=$(curl -fsSL --max-time 15 "https://drawmeone.com/")
+          [[ "$public_home" == *'concepts.js?v=11'* ]] || {
+            echo "alternate_contact_asset=stale_homepage"
+            exit 1
+          }
+          alt_js=$(curl -fsSL --max-time 15 "https://drawmeone.com/concepts.js?v=11")
+          alt_count=$(printf '%s' "$alt_js" | grep -o 'class="concept-email-actions"' | wc -l)
+          [[ "$alt_count" == "3" ]] || {
+            echo "alternate_contact_asset=missing_layout_action"
+            exit 1
+          }
+          echo "alternate_contact_layouts=3"
           echo "READ_ONLY_DIAGNOSTIC_COMPLETED"
           REMOTE
       - name: Report diagnostic status back to GitHub commit
