@@ -373,6 +373,20 @@ function dmo_backup_restore_check(string $source, string $key, string $root): ar
                 throw new RuntimeException('Unsafe recovery member name.');
             }
         }
+        // GNU tar's verbose inventory starts each entry with its type.
+        // Refuse symlinks, hard links and device nodes *before* extraction.
+        $verbose = $scratch . '/members-verbose.txt';
+        dmo_backup_command([$tar, '-tvzf', $archive], $verbose);
+        $typeRows = file($verbose, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+        if (!is_array($typeRows) || count($typeRows) !== count($contents)) {
+            throw new RuntimeException('Recovered archive inventory inconsistent.');
+        }
+        foreach ($typeRows as $typeRow) {
+            if (!is_string($typeRow) || $typeRow === '' ||
+                !in_array($typeRow[0], ['-', 'd'], true)) {
+                throw new RuntimeException('Unexpected archive entry type.');
+            }
+        }
         $extracted = $scratch . '/extracted';
         if (!mkdir($extracted, 0700)) {
             throw new RuntimeException('Recovery extract directory unavailable.');
