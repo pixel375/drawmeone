@@ -90,6 +90,14 @@ async function closedPage(browser,url,width) {
     else await page.waitForFunction(()=>
       document.querySelector("#reset-state")?.textContent?.includes("closed"));
     await checkAxe(page,url+"-"+width);
+    if(width===390&&(url.includes("account")||url.includes("password-reset"))){
+      await page.keyboard.press("Tab");
+      const label=await page.evaluate(()=>document.activeElement?.textContent?.trim());
+      assert.equal(label,"Skip to main content","keyboard skip link is first accessible control");
+      await page.keyboard.press("Enter");
+      assert.equal(new URL(page.url()).hash,"#main","skip link reaches main landmark");
+      console.log("PASS: "+url+" skip-to-main keyboard navigation");
+    }
   } finally{await context.close();}
 }
 (async()=>{
