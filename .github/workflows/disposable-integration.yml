@@ -15,7 +15,7 @@ on:
       - 'app/**'
       - 'api/**'
       - 'database/**'
-      - 'tests/integration_contract.php'
+      - 'tests/**'
       - '.github/workflows/disposable-integration.yml'
 
 permissions:
@@ -82,3 +82,7 @@ jobs:
         run: php tests/ci_reset.php
       - name: Test complete positive quote and unpaid-order workflow over HTTP
         run: php tests/http_positive_contract.php
+      - name: Remove synthetic records before account recovery tests
+        run: php tests/ci_reset.php
+      - name: Exercise email verification, token expiry and password recovery
+        run: php tests/http_auth_contract.php
