@@ -107,6 +107,12 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
           <strong>Customer's artwork brief</strong>
           <p id="request-brief-text"></p>
         </div>
+        <section class="request-brief" aria-label="Private customer reference images">
+          <strong>Customer reference images (private)</strong>
+          <div id="request-references" class="admin-reference-grid">
+            <p class="small">No reference images.</p>
+          </div>
+        </section>
         <div class="request-columns">
           <section class="request-workpanel">
             <h4>Conversation & internal notes</h4>
