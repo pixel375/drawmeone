@@ -126,6 +126,42 @@ try {
         usleep(100000);
     }
     qa_positive($ready,'local_positive_server_ready');
+    [$code]=qa_http('/api/admin/requests.php');
+    qa_positive($code===401,'anonymous_admin_request_search_denied');
+    [$code]=qa_http('/api/admin/requests.php',$tokenA,'__Host-dmo_admin');
+    qa_positive(in_array($code,[401,403],true),'customer_admin_request_search_denied');
+    [$code,$found]=qa_http('/api/admin/requests.php?q='.urlencode($referenceA),
+        $tokenAdmin,'__Host-dmo_admin');
+    qa_positive($code===200 && count($found['requests']??[])===1 &&
+        $found['requests'][0]['public_ref']===$referenceA,'admin_search_reference');
+    [$code,$found]=qa_http('/api/admin/requests.php?q=Test%20B&filter=review',
+        $tokenAdmin,'__Host-dmo_admin');
+    qa_positive($code===200 && count($found['requests']??[])===1 &&
+        $found['requests'][0]['public_ref']===$referenceB,'admin_search_name_and_review_filter');
+    [$code,$found]=qa_http('/api/admin/requests.php?q=%25',
+        $tokenAdmin,'__Host-dmo_admin');
+    qa_positive($code===200 && $found['requests']===[],'admin_search_wildcard_is_literal');
+    [$code]=qa_http('/api/admin/requests.php?page=-1',$tokenAdmin,'__Host-dmo_admin');
+    qa_positive($code===422,'invalid_admin_list_page_rejected');
+    $extraIds=[];
+    for($i=0;$i<41;$i++){
+        $extraIds[]=qa_seed($db,
+            "INSERT INTO dmo_commission_requests
+             (public_ref,customer_id,subject_type,brief,preferred_contact,policy_version,status)
+             VALUES (:ref,:customer,'portrait','Pagination test','onsite','qa-policy-v1','submitted')",
+            ['ref'=>'DMO-'.substr(hash('sha256','page-fixture-'.$i),0,20),'customer'=>$a]);
+    }
+    [$code,$first]=qa_http('/api/admin/requests.php?q=Test%20A&page=1',
+        $tokenAdmin,'__Host-dmo_admin');
+    qa_positive($code===200 && count($first['requests'])===40 && $first['has_more']===true,
+        'admin_list_first_page_bounded');
+    [$code,$second]=qa_http('/api/admin/requests.php?q=Test%20A&page=2',
+        $tokenAdmin,'__Host-dmo_admin');
+    qa_positive($code===200 && count($second['requests'])===2 && $second['has_more']===false &&
+        array_intersect(array_column($first['requests'],'id'),array_column($second['requests'],'id'))===[],
+        'admin_list_next_page_no_duplicates');
+    $delete=$db->prepare('DELETE FROM dmo_commission_requests WHERE id=:id');
+    foreach($extraIds as $extraId)$delete->execute(['id'=>$extraId]);
 
     [$code,$initial]=qa_http('/api/request.php?ref='.urlencode($referenceA),$tokenA);
     qa_positive($code===200 && ($initial['quotes']??[])===[],

@@ -320,6 +320,42 @@ async function verifyRequestIsolation(browser) {
     console.log("PASS: artist request draft isolation, stale responses and failed detail loading");
   }finally{await page.close();}
 }
+async function verifyRequestList(browser) {
+  const page=await browser.newPage({viewport:{width:320,height:844},reducedMotion:"reduce"});
+  const posts=[];await simulateBackend(page,posts);
+  const queries=[];
+  await page.route("**/api/admin/requests.php*",route=>{
+    const url=new URL(route.request().url());const q=url.searchParams.get("q");
+    const n=Number(url.searchParams.get("page"));const filter=url.searchParams.get("filter");
+    queries.push({q,n,filter});
+    const row={id:n,public_ref:"CI-"+n,customer_name:q||"CI Customer",status:"submitted"};
+    return route.fulfill({status:200,contentType:"application/json",
+      body:JSON.stringify({ok:true,requests:[row],page:n,has_more:n===1})});
+  });
+  try{
+    await page.goto(base+"/studio-admin/index.php",{waitUntil:"domcontentloaded"});
+    await page.locator("#workspace").waitFor({state:"visible"});
+    await page.locator('[data-view="requests"]').click();
+    await page.locator("#request-list .record").first().waitFor();
+    await page.locator("#request-list-query").fill("Synthetic name");
+    await page.locator("#request-list-filter").selectOption("review");
+    await page.locator("#request-list-filters button[type=submit]").click();
+    await page.waitForFunction(()=>document.querySelector("#request-list")?.textContent.includes("Synthetic name"));
+    assert.deepEqual(queries.at(-1),{q:"Synthetic name",n:1,filter:"review"});
+    await page.locator("#request-list-next").click();
+    await page.waitForFunction(()=>document.querySelector("#request-list-status")?.textContent.includes("Page 2"));
+    assert.deepEqual(queries.at(-1),{q:"Synthetic name",n:2,filter:"review"});
+    assert.equal(await page.locator("#request-list-next").isEnabled(),false);
+    await page.locator("#request-list-previous").click();
+    await page.waitForFunction(()=>document.querySelector("#request-list-status")?.textContent.includes("Page 1"));
+    assert.equal(await page.locator("#request-list-previous").isEnabled(),false);
+    const overflow=await horizontalOverflow(page);
+    assert(overflow.measured<=overflow.available+3,JSON.stringify(overflow));
+    assert.deepEqual(posts,[]);
+    console.log("PASS: artist request search, filter and pagination at 320px");
+  }finally{await page.close();}
+}
+
 async function verifyClosedDesk(browser) {
   const page=await browser.newPage({viewport:{width:390,height:844}});
   await page.route("**/api/admin/status.php*",route=>route.fulfill({
@@ -345,6 +381,7 @@ async function verifyClosedDesk(browser) {
     await verifyClosedDesk(browser);
     await verifyBulkArtworkChoices(browser);
     await verifyRequestIsolation(browser);
+    await verifyRequestList(browser);
     console.log("ADMIN_BROWSER_SMOKE=PASS");
   } finally {await browser.close();}
 })().catch(error=>{

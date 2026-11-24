@@ -279,3 +279,12 @@ footer{padding:28px 0 70px;border-top:1px solid var(--line);color:var(--muted);f
   .artwork-card-info{min-width:0;grid-template-columns:minmax(0,1fr)}
   .artwork-sort{grid-template-columns:minmax(0,1fr) auto}
 }
+
+/* Artist commission search and bounded pages. */
+.request-list-filters{display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap;margin:0 0 18px}
+.request-list-filters label{display:grid;gap:5px;margin:0;min-width:0;flex:1 1 180px}
+.request-list-filters input,.request-list-filters select{min-width:0;width:100%;min-height:46px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit}
+.request-list-filters button,.request-list-pagination button{min-height:44px}
+.request-list-pagination{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;margin:15px 0 24px;font-size:12px;color:var(--muted)}
+.request-list-pagination button:disabled{opacity:.5;cursor:not-allowed}
+@media(max-width:490px){.request-list-filters label{flex-basis:100%}.request-list-filters button{flex:1;min-width:0}.request-list-pagination{gap:6px}.request-list-pagination button{padding:9px 10px}}

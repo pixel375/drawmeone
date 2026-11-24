@@ -19,8 +19,8 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
 <meta name="robots" content="noindex,nofollow">
 <meta name="theme-color" content="#151317">
 <title>Artist's Desk · Draw Me One</title>
-<link rel="stylesheet" href="./panel.css?v=25">
-<script defer src="./panel.js?v=23"></script>
+<link rel="stylesheet" href="./panel.css?v=26">
+<script defer src="./panel.js?v=24"></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to dashboard</a>
@@ -98,7 +98,22 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
 
     <section data-panel="requests" class="content-panel" hidden>
       <div class="section-intro"><h2>Orders & requests</h2><p>Review customer briefs, private artist notes, and quote drafts. Customer submissions and quote sending stay closed.</p></div>
+      <form id="request-list-filters" class="request-list-filters">
+        <label for="request-list-query">Find by reference or customer name
+          <input id="request-list-query" type="search" maxlength="80" placeholder="Search commissions">
+        </label>
+        <label for="request-list-filter">Request status
+          <select id="request-list-filter"><option value="all">All requests</option><option value="review">Needs review</option><option value="other">Other statuses</option></select>
+        </label>
+        <button type="submit" class="quiet">Search</button>
+        <button type="button" class="quiet" id="request-list-refresh">Refresh</button>
+      </form>
       <div id="request-list" class="record-list"><p class="small">Loading requests…</p></div>
+      <div class="request-list-pagination">
+        <button type="button" class="quiet" id="request-list-previous" disabled>Previous</button>
+        <span id="request-list-status" role="status" aria-live="polite">Loading requests…</span>
+        <button type="button" class="quiet" id="request-list-next" disabled>Next</button>
+      </div>
       <section id="request-detail" class="request-detail" hidden aria-label="Selected commission request">
         <div class="request-detail-header">
           <div>

@@ -121,14 +121,42 @@
     });
   });
 
+  let requestListPage = 1;
+  let requestListQuery = "";
+  let requestListFilter = "all";
+  let requestListGeneration = 0;
+
   async function requests() {
+    const generation = ++requestListGeneration;
     const list = $("request-list");
-    const { response, data } = await get("requests.php");
-    if (response.status === 401) return sessionExpired();
-    if (!response.ok || !data.ok) return showError("Unable to load requests.");
+    const status = $("request-list-status");
+    const previous = $("request-list-previous");
+    const next = $("request-list-next");
+    previous.disabled = next.disabled = true;
+    status.textContent = "Loading requests…";
     list.replaceChildren();
-    if (!Array.isArray(data.requests) || data.requests.length === 0) {
-      empty(list, "No commission requests yet. Submissions are still disabled.");
+    let response, data;
+    try {
+      const query = new URLSearchParams({page:String(requestListPage),
+        q:requestListQuery,filter:requestListFilter});
+      ({response,data} = await get("requests.php?" + query));
+    } catch (_) {
+      if (generation === requestListGeneration) status.textContent = "Unable to load requests. Try Refresh.";
+      return;
+    }
+    if (generation !== requestListGeneration) return;
+    if (response.status === 401) return sessionExpired();
+    if (!response.ok || !data.ok || !Array.isArray(data.requests)) {
+      status.textContent = "Unable to load requests. Try Refresh.";
+      previous.disabled = requestListPage === 1;
+      return;
+    }
+    previous.disabled = requestListPage === 1;
+    next.disabled = data.has_more !== true;
+    status.textContent = "Page " + requestListPage + " · " + data.requests.length + " request(s)";
+    if (data.requests.length === 0) {
+      empty(list, requestListQuery || requestListFilter !== "all"
+        ? "No requests match your search." : "No commission requests on this page.");
       return;
     }
     for (const row of data.requests) {
@@ -149,6 +177,21 @@
       list.lastElementChild?.appendChild(open);
     }
   }
+
+  $("request-list-filters").addEventListener("submit", event => {
+    event.preventDefault();
+    requestListPage = 1;
+    requestListQuery = $("request-list-query").value.trim();
+    requestListFilter = $("request-list-filter").value;
+    requests();
+  });
+  $("request-list-previous").addEventListener("click", () => {
+    if (requestListPage > 1) { requestListPage--; requests(); }
+  });
+  $("request-list-next").addEventListener("click", () => {
+    requestListPage++; requests();
+  });
+  $("request-list-refresh").addEventListener("click", () => requests());
 
   async function messages() {
     const list = $("message-list");
