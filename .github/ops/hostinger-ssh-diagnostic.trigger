@@ -1,1 +1,1 @@
-v3.1 Nov 24 final read-only Hostinger inspection: private tests/docs denied, customer registration still disabled, reset endpoints method-gated, account/order safeguards and public contact intact. CI verified reference uploads in isolation; no live upload attempted.
+v3.2 2026-11-24 read-only live production verification: all 3 alternative site contact links via versioned concepts JS, original mailto, protected customer endpoints, PHP lint and private-source HTTP denial. No account/customer/payment writes.
