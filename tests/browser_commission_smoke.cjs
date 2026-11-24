@@ -443,6 +443,25 @@ async function verifyOlderCustomerHistory(browser) {
   }finally{await page.close();}
 }
 
+async function verifyFullCustomerThread(browser) {
+  const page=await browser.newPage({viewport:{width:320,height:844},reducedMotion:"reduce"});
+  const test=await installMocks(page,{signedIn:true,open:false});
+  await page.route("**/api/request.php?*",route=>{
+    const url=new URL(route.request().url()),ref=url.searchParams.get("ref"),full=url.searchParams.get("thread")==="full";
+    return answer(route,{...detail(ref),messages_have_older:!full,messages:[{sender_name:"Synthetic artist",body:full?"Earlier visible message":"Recent visible message"}]});
+  });
+  try{
+    await page.goto(base+"/commission.html",{waitUntil:"domcontentloaded"});
+    await page.locator('#my-request-list button[aria-label$="'+A+'"]').click();
+    await page.locator("#detail-thread-full").click();
+    await page.waitForFunction(()=>document.querySelector("#detail-messages")?.textContent.includes("Earlier visible message"));
+    assert.equal(await page.locator("#detail-thread-full").isVisible(),false);
+    await checkOverflow(page,"full customer thread");
+    assert.deepEqual(test.posts,[]);
+    console.log("PASS: customer full conversation history at 320px");
+  }finally{await page.close();}
+}
+
 async function openWithoutLogin(browser) {
   const page=await browser.newPage({viewport:{width:390,height:844}});
   await installMocks(page,{signedIn:false,open:true});
@@ -466,6 +485,7 @@ async function openWithoutLogin(browser) {
     await detailRaceAndRecovery(browser);
     await customerDraftAndSessionIsolation(browser);
     await verifyOlderCustomerHistory(browser);
+    await verifyFullCustomerThread(browser);
     console.log("COMMISSION_BROWSER_SMOKE=PASS");
   } finally {await browser.close();}
 })().catch(err=>{console.error(err.stack||String(err));process.exitCode=1;});

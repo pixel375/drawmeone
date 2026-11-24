@@ -402,6 +402,60 @@ async function verifyFreshAdminSignIn(browser) {
   }
 }
 
+async function verifyReviewAndInbox(browser) {
+  const page=await browser.newPage({viewport:{width:320,height:844},reducedMotion:"reduce"});
+  const posts=[];await simulateBackend(page,posts);
+  const fixture={id:51,public_ref:"CI-51",status:"submitted",customer_name:"Synthetic review customer"};
+  let state="submitted";
+  const answer=(route,data)=>route.fulfill({status:200,contentType:"application/json",body:JSON.stringify(data)});
+  await page.route("**/api/admin/requests.php*",route=>answer(route,{ok:true,requests:[{...fixture,status:state}]}));
+  await page.route("**/api/admin/request.php?*",route=>{
+    const full=new URL(route.request().url()).searchParams.get("thread")==="full";
+    return answer(route,{ok:true,admin_writes_enabled:true,detail:{
+      request:{...fixture,status:state},review_choices:state==="submitted"?["clarification_needed","rejected"]:["submitted","rejected"],
+      messages_have_older:!full,messages:[{body:full?"Older private note":"Recent message",is_internal:full,sender_role:"admin"}],quotes:[],orders:[],references:[],addons:[]
+    }});
+  });
+  await page.route("**/api/admin/request-actions.php*",route=>{
+    const data=route.request().postDataJSON();
+    assert.deepEqual(data,{action:"set_review_status",request_id:51,expected_status:"submitted",status:"clarification_needed"});
+    state=data.status;return answer(route,{ok:true,status:state});
+  });
+  const queries=[];
+  await page.route("**/api/admin/messages.php*",route=>{
+    const url=new URL(route.request().url()),filter=url.searchParams.get("filter"),n=Number(url.searchParams.get("page"));
+    queries.push({filter,n});
+    return answer(route,{ok:true,has_more:n===1,messages:[{request_id:51,request_ref:"CI-51",sender_role:filter==="customer"?"customer":"admin",is_internal:filter==="internal"?1:0,body_excerpt:"Synthetic message page "+n}]});
+  });
+  try{
+    await page.goto(base+"/studio-admin/index.php",{waitUntil:"domcontentloaded"});
+    await page.locator("#workspace").waitFor({state:"visible"});
+    await page.locator('[data-view="requests"]').click();
+    await page.locator("#request-list .request-open").first().click();
+    await page.locator("#request-review-actions").waitFor({state:"visible"});
+    await page.locator("#request-thread-full").click();
+    await page.waitForFunction(()=>document.querySelector("#request-thread")?.textContent.includes("Older private note"));
+    assert.equal(await page.locator("#request-thread-full").isVisible(),false);
+    await page.locator("#request-review-status").selectOption("clarification_needed");
+    page.once("dialog",dialog=>dialog.accept());
+    await page.locator("#request-review-save").click();
+    await page.waitForFunction(()=>document.querySelector("#request-detail-status")?.textContent.includes("Review status updated"));
+    assert.match(await page.locator("#request-detail-title").innerText(),/clarification_needed/);
+    await page.locator('[data-view="messages"]').click();
+    await page.locator("#message-list .record").first().waitFor();
+    await page.locator("#message-list-filter").selectOption("internal");
+    await page.waitForFunction(()=>document.querySelector("#message-list")?.textContent.includes("INTERNAL NOTE"));
+    await page.locator("#message-list-next").click();
+    await page.waitForFunction(()=>document.querySelector("#message-list-status")?.textContent.includes("Page 2"));
+    assert.deepEqual(queries.at(-1),{filter:"internal",n:2});
+    assert.equal(await page.locator("#message-list-next").isEnabled(),false);
+    const overflow=await horizontalOverflow(page);
+    assert(overflow.measured<=overflow.available+3,JSON.stringify(overflow));
+    assert.deepEqual(posts,[]);
+    console.log("PASS: review transition, full thread and filtered message inbox at 320px");
+  }finally{await page.close();}
+}
+
 async function verifyClosedDesk(browser) {
   const page=await browser.newPage({viewport:{width:390,height:844}});
   await page.route("**/api/admin/status.php*",route=>route.fulfill({
@@ -429,6 +483,7 @@ async function verifyClosedDesk(browser) {
     await verifyRequestIsolation(browser);
     await verifyRequestList(browser);
     await verifyFreshAdminSignIn(browser);
+    await verifyReviewAndInbox(browser);
     console.log("ADMIN_BROWSER_SMOKE=PASS");
   } finally {await browser.close();}
 })().catch(error=>{
