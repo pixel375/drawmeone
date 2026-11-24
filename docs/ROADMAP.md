@@ -492,7 +492,9 @@ See `docs/ART_DIRECTION.md` and `docs/COMMISSION_PRODUCT_SPEC.md`.
 - [x] Generate synthetic artist and customer-reference WebP files and verify full CLI backup/encryption, independent decryption, tar extraction, restored SQL import and DB-to-media correspondence.
 - [x] First independent full recovery run passed (Actions run 45439549783).
 - [x] Require fresh encrypted candidates to pass isolated archive restore-check **before** promotion or pruning previously verified backups.
-- [x] Add corrupted-candidate regression: damage a synthetic private image, reject snapshot and preserve last good encrypted backup byte-for-byte.
+- [x] Add corrupted-candidate regression: damage a synthetic private image, reject snapshot and preserve last good encrypted backup byte-for-byte (run 45440045053).
 - [x] Add fast standalone PHP test lint before costly CI dependency installation.
+- [x] Verify v3.5 on live Hostinger: fresh backup passes pre-promotion restore, 3 encrypted snapshots retained and 10 private image files checked (run 45440322221).
+- [x] Require read-only SSH diagnostics to validate backup age (<36 hours), restrictive permissions and recovery key presence without printing key contents (run 45440561280).
 - [ ] Configure a truly independent off-site encrypted snapshot destination and separately retain the recovery key; no production backup has been copied to a third-party provider.
 - [ ] Carry out a controlled production-derived restore on independent infrastructure once destination and access protections are established.
