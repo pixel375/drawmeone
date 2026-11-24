@@ -1,1 +1,1 @@
-v2.5 read-only table metadata inspection for dmo_orders, dmo_payments and dmo_deliverables, plus existing live security checks. No customer data or private SQL dumps printed.
+v2.6 read-only production checks: PHP/JS order path, all gated endpoints, order schema and source safety; no order creation, payment changes or customer data printed.
