@@ -540,3 +540,12 @@ See `docs/ART_DIRECTION.md` and `docs/COMMISSION_PRODUCT_SPEC.md`.
 - [x] Add Chromium tests for closed auth gates, synthetically enabled signup, resend verification, login/logout, verification links, reset-request and password-reset errors/success at narrow and wider screen widths (browser run 45465658442).
 - [x] Read-only Hostinger verification confirmed account signup/recovery v15/v13 assets, PHP syntax and closed customer gates (run 45465970997).
 - [ ] Controlled real account/SMTP/Turnstile pilot only with approved policies and safeguards. Production customer registration, new commission intake and payments stay disabled.
+
+## v4.0 — 2026-11-24: Automated accessibility and keyboard navigation
+
+- [x] Add axe-core WCAG 2.0/2.1 A/AA checks to Chromium CI for all four homepage designs, light/dark desktop, mobile, and closed customer pages; retain structured violations report.
+- [x] Find and fix serious low-contrast explanatory labels in desktop design/logo selector by removing opacity and increasing contrast; version `styles.css?v=11`.
+- [x] Add keyboard-visible Skip to main content links to customer account and password-reset pages, verified with real Chromium keyboard navigation.
+- [x] Confirm comprehensive initial dark/light accessibility/skip-link test run passes (run 45468970978).
+- [x] Add open gallery lightbox axe audit and keyboard focus restoration test.
+- [ ] Manual screen-reader testing (VoiceOver/TalkBack), 200%+ zoom and real authenticated workflows before customer launch; automated axe success does not certify WCAG compliance.
