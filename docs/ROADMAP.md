@@ -390,3 +390,22 @@ See `docs/ART_DIRECTION.md` and `docs/COMMISSION_PRODUCT_SPEC.md`.
 - [ ] Artist uploads/publishes approved real drawings; browser and Search Console validation for actual artwork pages and image indexing.
 - [ ] Decide final public site design and remove Design Lab/dummy artwork after approval; no fake portfolio imagery.
 
+
+## v2.5 — 2026-11-23/24: Isolated encrypted backup recovery validation
+
+- [x] Add `restore-check` to the existing CLI-only backup tool, decrypting the newest archive into a temporary private directory and validating SQL presence, archive paths/types and WebP file signatures.
+- [x] Reject archive entries with unsafe paths, symlink/device types or invalid image headers; clean temporary plaintext recovery files after verification.
+- [x] Require the recovery key to already exist when verifying or restoring; only an actual new backup may generate it.
+- [x] Verified second encrypted backup and isolated archive recovery on live Hostinger: **10 private image files checked**, production database unchanged, no SQL imported (Actions run 45323755105).
+- [x] Make the safe archive recovery check a mandatory part of every daily encrypted backup workflow.
+- [ ] Independently copy encrypted backups and recovery key off Hostinger; complete isolated MySQL import + media reattachment to test full disaster recovery.
+
+## v2.6 — 2026-11-23/24: Separate unpaid order confirmation and tracking
+
+- [x] Inspect existing `dmo_orders`, `dmo_payments` and `dmo_deliverables` table structures on live Hostinger with no customer data exposure.
+- [x] Add strictly gated authenticated artist-only order confirmation after customer quote acceptance, transaction-safe duplicate protection and audit.
+- [x] Record new orders as `awaiting_arrangement` / `unverified`; never create payment rows, mark paid or send payment links.
+- [x] Show actual owner-only order status to customers and actual order records in the artist dashboard without exposing payment private notes or other customer data.
+- [x] Add order-gate smoke test, PHP/JavaScript lint and live closed-state diagnostics.
+- [ ] Run controlled end-to-end quote acceptance → unpaid order creation with two distinct test customers and artist account, checking CSRF, replay, cross-owner reads and duplicates before opening customer accounts.
+- [ ] Payment provider verification, controlled order status transitions, deliverables and final approved Terms/Privacy remain separate phases.
