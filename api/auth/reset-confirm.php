@@ -41,9 +41,13 @@ try {
             $db->rollBack();
             dmo_json(422, ['ok' => false, 'error' => 'invalid_or_expired_link']);
         }
+        // Invalidate every outstanding reset link for the account, not only
+        // the presented token. This also closes a concurrent reset-request
+        // race that could otherwise leave a second usable recovery link.
         $db->prepare(
-            'UPDATE dmo_auth_tokens SET consumed_at = UTC_TIMESTAMP() WHERE id = :id'
-        )->execute(['id' => $record['id']]);
+            "UPDATE dmo_auth_tokens SET consumed_at = UTC_TIMESTAMP() " .
+            "WHERE user_id = :id AND purpose = 'reset_password' AND consumed_at IS NULL"
+        )->execute(['id' => $record['user_id']]);
         // Logging out every existing device is mandatory after recovery.
         $db->prepare('DELETE FROM dmo_sessions WHERE user_id = :id')
             ->execute(['id' => $record['user_id']]);
