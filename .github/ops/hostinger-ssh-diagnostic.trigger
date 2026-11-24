@@ -1,1 +1,1 @@
-v3.4 Nov 24 read-only live check: verify versioned Artist Desk artwork library v22 HTML/CSS/JS, all filters and bulk unpublish controls, PHP lint, private storage/portfolio gates, customer registration and payment protections. No image uploads or DB writes.
+v3.5 backup readiness check 2026-11-24: require under-36h encrypted snapshot, private 0700 storage, 0600 key, valid key length, public/private API guards and existing site deployment. Read-only Hostinger checks; do not print key or archive.
