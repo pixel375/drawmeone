@@ -150,6 +150,7 @@
   let selectedRequestId = null;
   let requestWriteEnabled = false;
   let requestMessagingEnabled = false;
+  let quoteDeliveryEnabled = false;
   let requestBusy = false;
 
   function requestText(id, value) {
@@ -223,6 +224,8 @@
       root.append(textNode("p", "No quotes prepared yet.", "small"));
       return;
     }
+    const newestVersion = Math.max(0, ...records.map(q => Number(q.version_number) || 0));
+    const alreadyAccepted = records.some(q => q.status === "accepted");
     for (const quote of records) {
       const card = document.createElement("article");
       card.className = "request-quote-card";
@@ -253,6 +256,24 @@
         });
         card.append(copy);
       }
+      if (quote.status === "draft" && quoteDeliveryEnabled &&
+          quote.version_number === newestVersion && !alreadyAccepted) {
+        const actions = document.createElement("div");
+        actions.className = "quote-publish-actions";
+        const label = textNode("label", "Customer review window");
+        const days = document.createElement("select");
+        days.setAttribute("aria-label", "Quote validity in days");
+        for (const n of [3,7,14,30]) days.append(new Option(n + " days", String(n)));
+        days.value = "7";
+        const publish = document.createElement("button");
+        publish.type = "button";
+        publish.className = "quiet";
+        publish.textContent = "Release to customer's account";
+        publish.addEventListener("click", () => releaseQuote(quote.id, Number(days.value)));
+        label.append(days);
+        actions.append(label,publish);
+        card.append(actions);
+      }
       if (Array.isArray(quote.lines)) {
         const list = document.createElement("ul");
         for (const line of quote.lines) {
@@ -262,6 +283,39 @@
         card.append(list);
       }
       root.append(card);
+    }
+  }
+
+
+  async function releaseQuote(quoteId, validityDays) {
+    const requestId = selectedRequestId;
+    if (!quoteDeliveryEnabled || requestBusy || requestId === null ||
+        !Number.isSafeInteger(Number(quoteId)) || Number(quoteId) < 1 ||
+        !Number.isInteger(validityDays) || validityDays < 1 || validityDays > 30) return;
+    if (!window.confirm("Release this exact draft quote to the customer's private account for " +
+        validityDays + " days? This does NOT send email or collect payment.")) return;
+    requestBusy = true;
+    updateRequestButtons();
+    requestText("request-detail-status", "Publishing reviewed quote privately…");
+    try {
+      const {response, data} = await post("quote-send.php", {
+        request_id:requestId, quote_id:Number(quoteId), validity_days:validityDays,
+      }, csrf);
+      if (response.status === 401) return sessionExpired();
+      if (!response.ok || !data.ok) {
+        requestText("request-detail-status",
+          "Quote not released (" + (data.error || response.status) + ").");
+        return;
+      }
+      await openRequest(requestId);
+      requestText("request-detail-status",
+        "Quote v" + data.version + " is visible in the customer's private account. No email or payment.");
+    } catch (_) {
+      requestText("request-detail-status",
+        "Could not verify quote release. Refresh the request before trying again.");
+    } finally {
+      requestBusy = false;
+      updateRequestButtons();
     }
   }
 
@@ -281,6 +335,7 @@
     selectedRequestId = parsed;
     requestWriteEnabled = false;
     requestMessagingEnabled = false;
+    quoteDeliveryEnabled = false;
     $("request-message-form").hidden = true;
     updateRequestButtons();
     $("request-detail").hidden = false;
@@ -297,6 +352,7 @@
     const info = item.request || {};
     requestWriteEnabled = data.admin_writes_enabled === true;
     requestMessagingEnabled = data.customer_messaging_enabled === true;
+    quoteDeliveryEnabled = data.quote_sending_enabled === true;
     $("request-message-form").hidden = !requestMessagingEnabled;
     requestText("request-detail-ref", info.public_ref || "COMMISSION REQUEST");
     requestText("request-detail-title", "Request #" + (info.id || parsed) +
@@ -323,6 +379,7 @@
     selectedRequestId = null;
     requestWriteEnabled = false;
     requestMessagingEnabled = false;
+    quoteDeliveryEnabled = false;
     $("request-detail").hidden = true;
     updateRequestButtons();
   });
