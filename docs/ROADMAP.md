@@ -529,3 +529,13 @@ See `docs/ART_DIRECTION.md` and `docs/COMMISSION_PRODUCT_SPEC.md`.
 - [x] Extend signed-in synthetic Chromium tests for expired/replaced quotes, failed and successful quote decisions (without new order/payment), stale response isolation and detail refresh (full browser run 45462290911).
 - [x] Read-only Hostinger verification confirmed v25 quote/detail assets are deployed while customer registration and commission intake stay closed (run 45462408843).
 - [ ] Controlled production customer/artist pilot once policies, genuine artwork and access are approved; do not open payments on browser QA alone.
+
+## v3.9 — 2026-11-24: Validated customer onboarding, verification and recovery UX
+
+- [x] Require password confirmation on signup and block mismatched passwords before POST; enforce maximum UTF-8 password length.
+- [x] Improve sign-in and recovery messages for rate limiting, expired links, and transient errors; avoid telling a successful login that its password was incorrect if `me.php` fails.
+- [x] After reset success, offer sign-in; after expired links, offer a new reset link; allow retries after temporary errors without prematurely clearing passwords.
+- [x] Restrict public email verification to pending, unverified customer roles and consume all other outstanding verification links after success.
+- [x] Add disposable database tests for pending-admin verification rejection and parallel-link invalidation (full integration run 45465632043).
+- [x] Add Chromium tests for closed auth gates, synthetically enabled signup, resend verification, login/logout, verification links, reset-request and password-reset errors/success at narrow and wider screen widths (browser run 45465658442).
+- [ ] Controlled real account/SMTP/Turnstile pilot only with approved policies and safeguards. Production customer registration, new commission intake and payments stay disabled.
