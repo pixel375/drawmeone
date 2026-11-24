@@ -81,7 +81,45 @@
       $(name).textContent = Number.isSafeInteger(value) && value >= 0
         ? value.toLocaleString() : "—";
     }
+    const list = $("launch-checks");
+    list.replaceChildren();
+    const checks = Array.isArray(data.readiness) ? data.readiness : [];
+    const totals = {ready:0,blocked:0,planned:0};
+    for (const check of checks) {
+      const status = ["ready","blocked","planned"].includes(check.status)
+        ? check.status : "blocked";
+      totals[status]++;
+      const card = document.createElement("article");
+      card.className = "launch-check";
+      const top = document.createElement("div");
+      top.className = "launch-check-head";
+      const name = document.createElement("strong");
+      name.textContent = String(check.label || "Requirement");
+      const chip = document.createElement("span");
+      chip.className = "launch-check-status";
+      chip.dataset.state = status;
+      chip.textContent = status === "ready" ? "Ready" :
+        status === "planned" ? "Planned" : "Not enabled";
+      top.append(name,chip);
+      const detail = document.createElement("p");
+      detail.className = "small";
+      detail.textContent = String(check.detail || "");
+      card.append(top,detail);
+      list.append(card);
+    }
+    $("launch-status").textContent = checks.length
+      ? totals.ready + " of " + checks.length +
+        " checks ready · " + totals.blocked + " not enabled · " +
+        totals.planned + " pending implementation"
+      : "No readiness information is currently available.";
   }
+
+  $("launch-refresh").addEventListener("click", () => {
+    $("launch-status").textContent = "Refreshing live launch requirements…";
+    overview().catch(() => {
+      $("launch-status").textContent = "Unable to refresh. Please try again.";
+    });
+  });
 
   async function requests() {
     const list = $("request-list");
