@@ -165,10 +165,10 @@ try {
     $requestId=(int)$db->lastInsertId();
     $db->prepare(
         "INSERT INTO dmo_request_attachments
-         (request_id,storage_key,mime_type,byte_size,pixel_width,pixel_height)
-         VALUES (:request,:key,'image/webp',:bytes,320,240)"
+         (request_id,uploaded_by,storage_key,mime_type,byte_size,pixel_width,pixel_height)
+         VALUES (:request,:user,:key,'image/webp',:bytes,320,240)"
     )->execute([
-        'request'=>$requestId,'key'=>$refKey.'/display.webp',
+        'request'=>$requestId,'user'=>$userId,'key'=>$refKey.'/display.webp',
         'bytes'=>filesize($refDisplay)
     ]);
     drill_assert((int)$db->query('SELECT COUNT(*) FROM dmo_portfolio_artworks')
