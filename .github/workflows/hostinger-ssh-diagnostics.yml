@@ -56,7 +56,7 @@ jobs:
           ssh-keygen -y -P '' -f "$dir/key" >/dev/null || {
             echo "::error::SSH private key is not a valid unencrypted OpenSSH key"; exit 1;
           }
-          ssh -T -o BatchMode=yes -o ConnectTimeout=20 -o ConnectionAttempts=1 \
+          ssh -T -o BatchMode=yes -o ConnectTimeout=15 -o ConnectionAttempts=3 \
             -o StrictHostKeyChecking=yes -o "UserKnownHostsFile=$dir/known_hosts" \
             -o IdentitiesOnly=yes -i "$dir/key" -p "$SSH_PORT" \
             "$SSH_USER@$SSH_HOST" 'bash -se' <<'REMOTE'
