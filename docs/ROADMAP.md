@@ -476,3 +476,12 @@ See `docs/ART_DIRECTION.md` and `docs/COMMISSION_PRODUCT_SPEC.md`.
 - [x] Confirm that upload/publish, package edit/publish, theme edit/publish and SMTP test actions remain disabled when the private server gates are off; reject all simulated writes.
 - [x] Confirm the closed admin workspace stays hidden, all browser checks pass and sanitized screenshots are saved to ephemeral Actions artifacts (run 45434167222).
 - [ ] Actual authenticated mobile-device QA with a controlled account before customer launch.
+
+## v3.4 — 2026-11-24: Verified publishing and gallery bulk controls
+
+- [x] Add a full actual-HTTP, disposable MariaDB image lifecycle test covering artist upload, EXIF-stripping WebP conversion, private draft storage and preview, public publishing, featured/order updates, unpublishing, CSRF/origin enforcement and audit.
+- [x] Verify public portfolio manifest and direct image API cannot reveal drafts, while public published WebP can load (integration run 45437532651).
+- [x] Add filtered All / Private drafts / Published views to the artist artwork library with actual counts.
+- [x] Add safe bulk unpublish with explicit confirmation, no image deletion, feature-gated buttons and selection clearing when filters change.
+- [x] Expand Chromium admin checks for draft/published counts, filter behavior and cancelled bulk actions.
+- [ ] Controlled artist-authenticated upload of genuine rights-cleared artwork on Hostinger; review real images before publishing and verify independent offsite media recovery.
