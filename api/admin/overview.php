@@ -12,7 +12,8 @@ try {
         'requests_for_review' => "SELECT COUNT(*) FROM dmo_commission_requests " .
             "WHERE status IN ('submitted','clarification_needed')",
         'active_orders' => "SELECT COUNT(*) FROM dmo_orders " .
-            "WHERE status IN ('queued','drawing','awaiting_feedback','revision')",
+            "WHERE status IN ('awaiting_arrangement','in_progress','ready_for_delivery'," .
+            "'queued','drawing','awaiting_feedback','revision')",
         'payments_to_verify' => "SELECT COUNT(*) FROM dmo_payments " .
             "WHERE status = 'pending_verification'",
         'messages_last_seven_days' => "SELECT COUNT(*) FROM dmo_messages " .
