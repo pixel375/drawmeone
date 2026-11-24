@@ -1,1 +1,1 @@
-v3.5 backup readiness check 2026-11-24: require under-36h encrypted snapshot, private 0700 storage, 0600 key, valid key length, public/private API guards and existing site deployment. Read-only Hostinger checks; do not print key or archive.
+2026-11-24 v3.6 read-only Hostinger check: lint deployed app/backup-health.php and cli-backup.php encrypted-only exporter, verify Artist Desk strict local-backup metadata readiness, existing mail/quote/order security, public contact and closed customer/payment gates. Never export ciphertext/key or write user records.
