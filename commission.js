@@ -265,6 +265,7 @@
         }),
       });
       const body = await response.json();
+      if (state.selectedRef !== ref) return;
       if (!response.ok || !body.ok) {
         $("detail-quote-feedback").textContent =
           response.status === 409
