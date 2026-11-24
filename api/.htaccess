@@ -1,7 +1,7 @@
 # Deliberately only the reviewed read-only and gated authentication endpoints are public while signup remains gated.
 <IfModule mod_rewrite.c>
   RewriteEngine On
-  RewriteRule ^(?!health\.php$|catalog\.php$|site-settings\.php$|portfolio\.php$|artwork\.php$|request-status\.php$|requests\.php$|request\.php$|request-message\.php$|request-attachment\.php$|reference\.php$|auth/(?:status|signup|login|verify|resend-verification|me|logout|reset-request|reset-confirm)\.php$|admin/(?:status|login|me|logout|overview|requests|messages|design|packages|request|request-actions|artworks|artwork-upload|artwork-preview|email)\.php$).* - [F,END]
+  RewriteRule ^(?!health\.php$|catalog\.php$|site-settings\.php$|portfolio\.php$|artwork\.php$|request-status\.php$|requests\.php$|request\.php$|request-message\.php$|request-attachment\.php$|reference\.php$|reference-delete\.php$|auth/(?:status|signup|login|verify|resend-verification|me|logout|reset-request|reset-confirm)\.php$|admin/(?:status|login|me|logout|overview|requests|messages|design|packages|request|request-actions|artworks|artwork-upload|artwork-preview|email)\.php$).* - [F,END]
 </IfModule>
 <IfModule mod_headers.c>
   Header always set X-Content-Type-Options "nosniff"
