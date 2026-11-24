@@ -296,11 +296,11 @@ jobs:
           echo "alternate_contact_layouts=3"
           # Verify mobile Artist Desk stylesheet was deployed and cache-busted.
           desk_page=$(curl -fsSL --max-time 15 "https://drawmeone.com/studio-admin/index.php")
-          [[ "$desk_page" == *'panel.css?v=22'* ]] || {
+          [[ "$desk_page" == *'panel.css?v=23'* ]] || {
             echo "mobile_artist_desk=stale_stylesheet_reference"
             exit 1
           }
-          desk_css=$(curl -fsSL --max-time 15 "https://drawmeone.com/studio-admin/panel.css?v=22")
+          desk_css=$(curl -fsSL --max-time 15 "https://drawmeone.com/studio-admin/panel.css?v=23")
           [[ "$desk_css" == *'v3.3: All six Artist Desk sections'* ]] &&
           [[ "$desk_css" == *'grid-template-columns:repeat(3,minmax(0,1fr))'* ]] || {
             echo "mobile_artist_desk=stale_or_missing_mobile_layout"
@@ -323,6 +323,12 @@ jobs:
             exit 1
           }
           echo "artist_artwork_library=deployed"
+          [[ "$desk_css" == *'select:focus-visible,textarea:focus-visible'* ]] &&
+          [[ "$desk_page" == *'id="main" tabindex="-1"'* ]] || {
+            echo "artist_keyboard_focus=stale_assets"
+            exit 1
+          }
+          echo "artist_keyboard_focus=deployed"
           echo "mobile_artist_desk=deployed"
           # Public commission intake remains closed, but its signed-in history
           # assets must include the new browser-only filters and status labels.
@@ -349,6 +355,11 @@ jobs:
             echo "customer_quote_detail=stale_or_missing"
             exit 1
           }
+          [[ "$commission_page" == *'id="main" tabindex="-1"'* ]] || {
+            echo "customer_keyboard_focus=missing_main_target"
+            exit 1
+          }
+          echo "customer_keyboard_focus=deployed"
           echo "customer_quote_detail=deployed"
           echo "customer_history=deployed"
           # v3.9 registration remains closed, but verify the versioned
