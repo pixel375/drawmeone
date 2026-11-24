@@ -324,3 +324,13 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-off
   .contact-section .contact-actions{flex-direction:column;align-items:stretch}
   .contact-section .contact-actions a{width:100%;min-width:0;text-align:center}
 }
+
+/* Consistent real contact path across all four independent site architectures. */
+.concept-page .concept-email-actions{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:12px;margin-top:22px}
+.concept-page .concept-email-actions a{display:inline-flex;align-items:center;justify-content:center;gap:9px;min-height:46px;padding:11px 18px;font:700 12px/1.4 system-ui,-apple-system,Segoe UI,sans-serif;letter-spacing:.02em;text-decoration:none;border-radius:7px;transition:background-color .15s ease,transform .15s ease}
+.concept-page .concept-email-link{background:#efbfb4;color:#241c1e!important;border:1px solid #efbfb4}
+.concept-page .concept-info-link{border:1px solid currentColor;color:inherit}
+.concept-page .concept-email-actions a:hover{transform:translateY(-1px);text-decoration:none}
+.concept-page .concept-email-actions a:focus-visible{outline:3px solid #f0a68e;outline-offset:4px}
+@media(max-width:480px){.concept-page .concept-email-actions{flex-direction:column;align-items:stretch}.concept-page .concept-email-actions a{width:100%}}
+@media(prefers-reduced-motion:reduce){.concept-page .concept-email-actions a{transition:none}.concept-page .concept-email-actions a:hover{transform:none}}
