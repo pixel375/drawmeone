@@ -59,6 +59,18 @@ async function home(browser,site,width,mode="dark") {
     await page.goto(base+"/index.html",{waitUntil:"domcontentloaded"});
     await page.locator("#portfolio-gallery .art-tile").first().waitFor({state:"visible",timeout:15000});
     await checkAxe(page,"home-"+site+"-"+width+"-"+mode);
+    if(site==="studio" && width===1440 && mode==="dark") {
+      const first=page.locator("#portfolio-gallery .art-tile").first();
+      await first.click();
+      assert.equal(await page.locator("#portfolio-lightbox").evaluate(el=>el.open),true);
+      await checkAxe(page,"gallery-open-modal-desktop");
+      assert.equal(await page.locator(".lightbox-close").evaluate(el=>el===document.activeElement),true,
+        "gallery puts keyboard focus on accessible close button");
+      await page.keyboard.press("Escape");
+      assert.equal(await first.evaluate(el=>el===document.activeElement),true,
+        "closing gallery returns keyboard focus to the originating drawing");
+      console.log("PASS: gallery modal accessibility and focus restoration");
+    }
     if(site==="studio"&&width===390) {
       await page.keyboard.press("Tab");
       const focused=await page.evaluate(()=>({
