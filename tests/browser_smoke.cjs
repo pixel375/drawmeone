@@ -154,6 +154,77 @@ async function checkPage(browser, site, viewport) {
     await context.close();
   }
 }
+// Deliberately synthetic published entries and images. Never contacts production.
+async function checkPublishedPortfolio(browser) {
+  for (const legacyUnavailable of [false, true]) {
+    const context = await browser.newContext({
+      viewport: {width: 1440, height: 900}, reducedMotion: "reduce"
+    });
+    const page = await context.newPage();
+    const artwork = id => ({
+      src: "api/artwork.php?id="+id+"&v=display",
+      thumb: "api/artwork.php?id="+id+"&v=thumb",
+      alt: "Synthetic CI drawing "+id, width: 120, height: 180
+    });
+    const sample = '<svg xmlns="http://www.w3.org/2000/svg" width="120" height="180"><rect width="120" height="180" fill="#aaa"/></svg>';
+    const reply = (route,data) => route.fulfill({
+      status:200,contentType:"application/json",body:JSON.stringify(data)
+    });
+    try {
+      await context.addInitScript(() => localStorage.setItem("dmo-preview-settings",
+        JSON.stringify({site:"studio",design:"noir",mode:"dark",layout:"masonry",logo:"original"})));
+      await mockPublicBackend(page);
+      await page.route("**/api/portfolio.php*", route => reply(route,{ok:true,works:[
+        artwork(101),artwork(102),artwork(103),artwork(104),
+        {...artwork(105),thumb:artwork(999).thumb},
+        {...artwork(106),src:"https://example.invalid/not-art.webp"}
+      ]}));
+      await page.route("**/data/portfolio.json", route => legacyUnavailable
+        ? route.fulfill({status:503,body:"Synthetic legacy manifest outage"})
+        : reply(route,{works:[{...artwork(101),alt:"Stale duplicate label"}]}));
+      await page.route("**/api/artwork.php?*", route => {
+        const url=new URL(route.request().url());
+        const broken=["103","104"].includes(url.searchParams.get("id"))
+          && url.searchParams.get("v")==="display";
+        return broken ? route.fulfill({status:404,body:"Synthetic missing display"})
+          : route.fulfill({status:200,contentType:"image/svg+xml",body:sample});
+      });
+      await page.goto(base+"/index.html",{waitUntil:"domcontentloaded"});
+      const tiles=page.locator("#portfolio-gallery .art-tile");
+      await tiles.first().waitFor({state:"visible"});
+      assert.equal(await tiles.count(),4,"invalid entries and duplicates excluded");
+      assert.equal(await page.locator("#gallery-demo-notice").isVisible(),false);
+      assert.equal(await page.locator("html").getAttribute("data-has-artwork"),"true");
+      assert.equal(await page.locator("#portfolio-error").isVisible(),false);
+      assert.equal(await tiles.first().locator("img").getAttribute("alt"),"Synthetic CI drawing 101");
+      assert.match(await tiles.first().locator("img").getAttribute("src"),/id=101&v=thumb$/);
+      await page.locator("[data-site-choice=archive]").click();
+      await page.waitForFunction(()=>[...document.querySelectorAll("[data-showcase-image]")]
+        .every(img=>img.src.includes("/api/artwork.php?")));
+      assert.equal(await page.locator("#portfolio-gallery .art-tile").count(),4);
+      await page.locator("[data-site-choice=studio]").click();
+      await tiles.first().click();
+      const image=page.locator("#lightbox-image"),link=page.locator("#lightbox-detail-link");
+      assert.match(await image.getAttribute("src"),/id=101&v=display$/);
+      assert.equal(await link.getAttribute("href"),"./artwork.php?id=101");
+      await page.keyboard.press("ArrowRight");
+      assert.equal(await link.getAttribute("href"),"./artwork.php?id=102");
+      // Two consecutive missing full-size images must both fall back.
+      for (const id of [103,104]) {
+        await page.keyboard.press("ArrowRight");
+        await page.waitForFunction(()=>document.querySelector("#lightbox-image")
+          ?.getAttribute("src")==="./assets/demo/placeholder.svg");
+        assert.equal(await link.getAttribute("href"),"./artwork.php?id="+id);
+      }
+      await page.keyboard.press("ArrowRight");
+      assert.match(await image.getAttribute("src"),/id=101&v=display$/);
+      await page.keyboard.press("Escape");
+      assert.equal(await page.locator("#portfolio-lightbox").evaluate(el=>el.open),false);
+      console.log("PASS: published portfolio / invalid manifests / consecutive missing images / legacy outage="+legacyUnavailable);
+    } finally {await context.close();}
+  }
+}
+
 async function checkClosedWorkflows(browser) {
   const context = await browser.newContext({
     viewport: { width: 390, height: 844 }, reducedMotion: "reduce"
@@ -202,6 +273,7 @@ async function checkClosedWorkflows(browser) {
         await checkPage(browser, site, viewport);
       }
     }
+    await checkPublishedPortfolio(browser);
     await checkClosedWorkflows(browser);
     console.log("BROWSER_SMOKE=PASS");
   } finally { await browser.close(); }

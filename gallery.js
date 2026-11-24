@@ -25,7 +25,8 @@
 
   const acceptable=(item,demo)=>!!item && typeof item.src === "string" &&
     (demo ? demoImage.test(item.src) : realImage.test(item.src)) &&
-    (item.thumb == null || (typeof item.thumb === "string" && optimizedThumb.test(item.thumb))) &&
+    (item.thumb == null || (typeof item.thumb === "string" && optimizedThumb.test(item.thumb) &&
+      item.src === item.thumb.replace(/&v=thumb$/i,"&v=display"))) &&
     (item.alt == null || (typeof item.alt==="string" && item.alt.length<=260));
   const imageAlt=(item)=>typeof item.alt==="string" && item.alt.trim() ?
     item.alt.trim() : (isDemo ? "Decorative sample design image" : "Original drawing by Draw Me One");
@@ -39,6 +40,7 @@
   function showAt(i) {
     if (!entries.length) return;
     activeIndex=(i+entries.length)%entries.length;
+    delete big.dataset.fallback;
     big.src=entries[activeIndex].src;
     big.alt=imageAlt(entries[activeIndex]);
     count.textContent=(activeIndex+1)+" / "+entries.length;
@@ -161,9 +163,18 @@
       // Keep the existing local portfolio/demo fallback during outages.
       console.warn("Draw Me One: Database portfolio temporarily unavailable.");
     }
-    const local=(await manifest("./data/portfolio.json")).filter(item=>acceptable(item,false));
+    let local = [];
+    try {
+      local = (await manifest("./data/portfolio.json")).filter(item=>acceptable(item,false));
+    } catch (issue) {
+      // A missing legacy manifest must not hide successfully fetched published art.
+      if (!hosted.length) throw issue;
+      console.warn("Draw Me One: Local portfolio temporarily unavailable.");
+    }
     const unique = new Map();
-    for (const item of [...hosted, ...local]) unique.set(item.src,item);
+    for (const item of [...hosted, ...local]) {
+      if (!unique.has(item.src)) unique.set(item.src,item);
+    }
     const real=[...unique.values()];
     isDemo=real.length===0;
     entries=isDemo?(await manifest("./data/demo-portfolio.json")).filter(item=>acceptable(item,true)):real;

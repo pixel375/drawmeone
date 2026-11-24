@@ -12,6 +12,8 @@ The [latest successful read-only Hostinger verification](https://github.com/pixe
 
 Additional [Firefox and WebKit compatibility QA](docs/BROWSER_COMPATIBILITY_PHASE30.md) runs the same four functional browser suites in separate engine jobs; first results are pending. Chromium remains the accessibility baseline.
 
+[Published portfolio browser resilience](docs/PUBLISHED_PORTFOLIO_PHASE31.md) adds synthetic publication, invalid manifest, duplicate, layout-switch and broken-image checks; results pending.
+
 **Outstanding before opening to customers:** genuine rights-cleared published artwork, owner-approved Terms/Privacy and policies, controlled real-account onboarding/Turnstile tests, independently held encrypted off-site backup and recovery key, and provider-verified payments. **No test success alone enables public business operations.**
 
 ---
