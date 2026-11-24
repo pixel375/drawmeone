@@ -110,12 +110,18 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
         <div class="request-columns">
           <section class="request-workpanel">
             <h4>Conversation & internal notes</h4>
-            <p class="small">Internal notes are never sent to the customer. External replies remain disabled.</p>
+            <p class="small">Internal notes stay artist-only. Customer replies become available only after the separate messaging service is enabled.</p>
             <div id="request-thread" class="request-thread"></div>
             <form id="request-note-form" class="request-compose">
               <label for="request-note-body">Add an internal note</label>
               <textarea id="request-note-body" rows="4" maxlength="5000" required placeholder="Private reminder, sketch details, or next steps…"></textarea>
               <button type="submit" class="quiet" id="request-note-save" disabled>Save private note</button>
+            </form>
+            <form id="request-message-form" class="request-compose" hidden>
+              <label for="request-message-body">Reply privately to customer</label>
+              <textarea id="request-message-body" rows="4" maxlength="3000" minlength="2" required placeholder="Write a message that the customer will see in their account…"></textarea>
+              <p class="small">Customer-visible message. This does not send an email, quote, or invoice.</p>
+              <button type="submit" class="quiet" id="request-message-send" disabled>Send private reply</button>
             </form>
           </section>
           <section class="request-workpanel">
