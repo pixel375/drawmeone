@@ -105,6 +105,38 @@ jobs:
           fi
           php -r 'echo "backup_sodium=" . (extension_loaded("sodium") ? "yes" : "no") . "\\n";'
           php -r 'echo "backup_openssl=" . (extension_loaded("openssl") ? "yes" : "no") . "\\n";'
+          # Inspect only metadata and permissions; never read the recovery key,
+          # decrypt a snapshot here, or print private paths or credentials.
+          php -r '
+          require_once $argv[1]."/app/bootstrap.php";
+          $env = dmo_private_env_path();
+          if ($env === null) { fwrite(STDERR,"local_backup_health=no_private_config\n"); exit(1); }
+          $parent = dirname($env);
+          $root = $parent . "/drawmeone-encrypted-backups";
+          $keyFile = $parent . "/drawmeone-backup-recovery.key";
+          if (!is_dir($root) || is_link($root) ||
+              !is_file($keyFile) || is_link($keyFile) ||
+              filesize($keyFile) !== SODIUM_CRYPTO_SECRETSTREAM_XCHACHA20POLY1305_KEYBYTES ||
+              ((fileperms($root) & 0077) !== 0) ||
+              ((fileperms($keyFile) & 0077) !== 0)) {
+              fwrite(STDERR,"local_backup_health=unsafe_storage_or_key\n"); exit(1);
+          }
+          $files = array_values(array_filter(glob($root . "/dmo-*.bak") ?: [],
+              static function (string $path): bool {
+                  return !is_link($path) && is_file($path) &&
+                      preg_match("~\/dmo-[0-9]{8}T[0-9]{6}Z-[a-f0-9]{8}\\.bak$~D",$path) === 1 &&
+                      filesize($path) > 150 && ((fileperms($path) & 0077) === 0);
+              }));
+          if (!$files) { fwrite(STDERR,"local_backup_health=no_valid_snapshots\n"); exit(1); }
+          usort($files, static fn(string $a,string $b): int => filemtime($b) <=> filemtime($a));
+          $age = time() - filemtime($files[0]);
+          if ($age < 0 || $age > 36 * 3600) {
+              fwrite(STDERR,"local_backup_health=stale\n"); exit(1);
+          }
+          echo "local_backup_health=recent_and_private\n";
+          echo "local_backup_retained_count=" . count($files) . "\n";
+          echo "local_backup_recovery_key_present=yes\n";
+          ' "$site"
           php -r '
           require $argv[1]."/app/artwork.php";
           require_once $argv[1]."/app/requests.php";
