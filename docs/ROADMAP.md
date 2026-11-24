@@ -504,8 +504,9 @@ See `docs/ART_DIRECTION.md` and `docs/COMMISSION_PRODUCT_SPEC.md`.
 - [x] Make Artist Desk's local-backup readiness require private directory, snapshot, recovery-key permissions and a recent file; do not confuse metadata freshness with authenticated restore.
 - [x] Test missing, stale, exposed, symlinked and invalid-key backup fixtures in the Source Quality workflow (run 45444053146).
 - [x] Add daily read-only Hostinger health inspections after the scheduled encrypted backup; diagnostics verify the same metadata-only helper.
-- [x] Add one deduplicated GitHub issue for failed backup workflow runs, automatically resolved after the latest completed workflow succeeds; ignore out-of-order events.
+- [x] Add one deduplicated GitHub issue for failed backup workflow runs, automatically resolved after the latest completed workflow succeeds; ignore out-of-order events. Success-path monitor verified in run 45445471845; no production failure induced.
 - [x] Implement and test an authenticated ciphertext-only `export-latest` backup command (full disposable integration run 45444471510).
 - [x] Prepare manual-only independent encrypted transfer with rclone remote readback hash validation, rejecting path traversal/plaintext and storing no recovery key (local-simulation run 45444968601).
+- [x] Verify latest production backup with 4 retained private encrypted snapshots and 10 image files inspected (run 45445427769).
 - [x] Track independent destination and separate recovery-key custody as [GitHub issue #1](https://github.com/pixel375/drawmeone/issues/1).
 - [ ] Select and approve independent storage, configure private rclone credentials/destination, verify a real encrypted transfer and separately held key, then enable recurring off-site transfer and full independent restore drills.
