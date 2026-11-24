@@ -1,1 +1,1 @@
-DrawMeOne v2.0 gated messaging and route allowlist check 2026-11-23. Read-only PHP syntax, auth guards, mail readiness and attachment-related schema metadata only.
+DrawMeOne final v2.1 read-only production regression: validate new PHP, private references migration, protected image/upload/delete endpoints, customer feature gates and unchanged site.
