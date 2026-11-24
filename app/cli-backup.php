@@ -5,8 +5,8 @@ require_once __DIR__ . '/references.php';
 // Private encrypted, local-only operational backups. No HTTP entry point,
 // no arbitrary paths/commands/SQL and no secrets in output or GitHub.
 if (PHP_SAPI !== 'cli' || count($argv) !== 2 ||
-    !in_array($argv[1], ['run', 'verify-latest'], true)) {
-    fwrite(STDERR, "Usage: php app/cli-backup.php run|verify-latest\n");
+    !in_array($argv[1], ['run', 'verify-latest', 'restore-check'], true)) {
+    fwrite(STDERR, "Usage: php app/cli-backup.php run|verify-latest|restore-check\n");
     exit(2);
 }
 umask(0077);
@@ -26,7 +26,7 @@ function dmo_backup_root(): string
     return $dir;
 }
 
-function dmo_backup_key(): string
+function dmo_backup_key(bool $allowCreate): string
 {
     if (!extension_loaded('sodium')) {
         throw new RuntimeException('Authenticated encryption unavailable.');
@@ -37,7 +37,7 @@ function dmo_backup_key(): string
     // webroot or GitHub. It must eventually be copied offsite separately.
     $path = dirname($env) . '/drawmeone-backup-recovery.key';
     if (is_link($path)) throw new RuntimeException('Backup key is a symlink.');
-    if (!file_exists($path)) {
+    if (!file_exists($path) && $allowCreate) {
         $key = sodium_crypto_secretstream_xchacha20poly1305_keygen();
         $out = @fopen($path, 'xb');
         if (!is_resource($out)) throw new RuntimeException('Backup key initialization failed.');
@@ -274,6 +274,158 @@ function dmo_backup_verify(string $path, string $key): bool
     }
 }
 
+
+/**
+ * Recover into an isolated private scratch directory only. This checks the
+ * archive member paths, decrypted SQL dump and private image files without
+ * importing ANY SQL or touching production image paths.
+ */
+function dmo_backup_decrypt(string $backup, string $destination, string $key): void
+{
+    $input = fopen($backup, 'rb');
+    $output = @fopen($destination, 'xb');
+    if (!is_resource($input) || !is_resource($output)) {
+        if (is_resource($input)) fclose($input);
+        throw new RuntimeException('Unable to open recovery streams.');
+    }
+    chmod($destination, 0600);
+    try {
+        if (dmo_backup_read_exact($input, 6) !== 'DMOBK2') {
+            throw new RuntimeException('Unknown private recovery format.');
+        }
+        $header = dmo_backup_read_exact(
+            $input, SODIUM_CRYPTO_SECRETSTREAM_XCHACHA20POLY1305_HEADERBYTES
+        );
+        $state = sodium_crypto_secretstream_xchacha20poly1305_init_pull($header, $key);
+        if (!is_string($state)) throw new RuntimeException('Invalid recovery header.');
+        $finished = false;
+        while (!$finished) {
+            $frame = unpack('Nlength', dmo_backup_read_exact($input, 4));
+            $length = (int) ($frame['length'] ?? 0);
+            if ($length < SODIUM_CRYPTO_SECRETSTREAM_XCHACHA20POLY1305_ABYTES ||
+                $length > 1024 * 1024 + 256) {
+                throw new RuntimeException('Invalid encrypted recovery frame.');
+            }
+            $decoded = sodium_crypto_secretstream_xchacha20poly1305_pull(
+                $state, dmo_backup_read_exact($input, $length)
+            );
+            if (!is_array($decoded)) throw new RuntimeException('Recovery authentication failed.');
+            dmo_backup_write_all($output, $decoded[0]);
+            $finished = $decoded[1] ===
+                SODIUM_CRYPTO_SECRETSTREAM_XCHACHA20POLY1305_TAG_FINAL;
+        }
+        if (fread($input, 1) !== '') throw new RuntimeException('Unexpected encrypted data.');
+        fflush($output);
+    } finally {
+        fclose($input);
+        fclose($output);
+    }
+}
+
+function dmo_backup_remove_scratch(string $root): void
+{
+    if (!is_dir($root) || is_link($root)) return;
+    $it = new RecursiveIteratorIterator(
+        new RecursiveDirectoryIterator($root, FilesystemIterator::SKIP_DOTS),
+        RecursiveIteratorIterator::CHILD_FIRST
+    );
+    foreach ($it as $item) {
+        if ($item->isDir() && !$item->isLink()) {
+            @rmdir($item->getPathname());
+        } else {
+            @unlink($item->getPathname());
+        }
+    }
+    @rmdir($root);
+}
+
+function dmo_backup_restore_check(string $source, string $key, string $root): array
+{
+    $free = disk_free_space($root);
+    if ($free === false || $free < 200 * 1024 * 1024) {
+        throw new RuntimeException('Insufficient free space for isolated recovery.');
+    }
+    $scratch = $root . '/.recovery-check-' . bin2hex(random_bytes(8));
+    if (!mkdir($scratch, 0700)) {
+        throw new RuntimeException('Private recovery workspace cannot be created.');
+    }
+    try {
+        $archive = $scratch . '/snapshot.tar.gz';
+        dmo_backup_decrypt($source, $archive, $key);
+        $tar = dmo_backup_binary(['tar']);
+        $list = $scratch . '/members.txt';
+        dmo_backup_command([$tar, '-tzf', $archive], $list);
+        $contents = file($list, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+        if (!is_array($contents) || !in_array('database.sql', $contents, true)) {
+            throw new RuntimeException('Recovered archive lacks the database.');
+        }
+        foreach ($contents as $member) {
+            // Only allow the exact relative paths our private archiver writes.
+            // Prevent traversal, symlinks and arbitrary files during extraction.
+            if ($member === 'database.sql') continue;
+            if (!preg_match(
+                '~^drawmeone-(?:artworks|references)/(?:[a-f0-9]{32}/(?:thumb|display)\.webp)?$~D',
+                $member
+            ) && !preg_match(
+                '~^drawmeone-(?:artworks|references)/[a-f0-9]{32}/?$~D',
+                $member
+            )) {
+                throw new RuntimeException('Unsafe recovery member name.');
+            }
+        }
+        $extracted = $scratch . '/extracted';
+        if (!mkdir($extracted, 0700)) {
+            throw new RuntimeException('Recovery extract directory unavailable.');
+        }
+        dmo_backup_command([
+            $tar, '-xzf', $archive, '-C', $extracted,
+            '--no-same-owner', '--no-same-permissions',
+        ], '/dev/null');
+        $sql = $extracted . '/database.sql';
+        if (!is_file($sql) || is_link($sql) || filesize($sql) < 256) {
+            throw new RuntimeException('Recovered SQL file absent or empty.');
+        }
+        $fp = fopen($sql, 'rb');
+        if (!is_resource($fp)) throw new RuntimeException('Recovered SQL not readable.');
+        $begin = fread($fp, 100000);
+        fclose($fp);
+        if (!is_string($begin) || !str_contains($begin, 'CREATE TABLE')) {
+            throw new RuntimeException('Recovered SQL is missing schema.');
+        }
+        $images = 0;
+        $dirs = 0;
+        foreach (['drawmeone-artworks', 'drawmeone-references'] as $base) {
+            $folder = $extracted . '/' . $base;
+            if (!file_exists($folder)) continue;
+            if (is_link($folder) || !is_dir($folder)) {
+                throw new RuntimeException('Invalid recovered private root.');
+            }
+            $scan = new RecursiveIteratorIterator(
+                new RecursiveDirectoryIterator($folder, FilesystemIterator::SKIP_DOTS)
+            );
+            foreach ($scan as $file) {
+                if ($file->isLink() || !$file->isFile()) {
+                    throw new RuntimeException('Unexpected recovered filesystem object.');
+                }
+                $data = fopen($file->getPathname(), 'rb');
+                if (!is_resource($data)) throw new RuntimeException('Recovered image unreadable.');
+                $header = fread($data, 12);
+                fclose($data);
+                if (!is_string($header) || strlen($header) !== 12 ||
+                    substr($header, 0, 4) !== 'RIFF' ||
+                    substr($header, 8, 4) !== 'WEBP') {
+                    throw new RuntimeException('Invalid recovered WebP image.');
+                }
+                $images++;
+            }
+            $dirs++;
+        }
+        return ['private_image_files' => $images, 'private_directories' => $dirs];
+    } finally {
+        dmo_backup_remove_scratch($scratch);
+    }
+}
+
 function dmo_backup_list(string $root): array
 {
     $paths = glob($root . '/dmo-*.bak') ?: [];
@@ -292,8 +444,16 @@ try {
         throw new RuntimeException('Another backup operation is already running.');
     }
     try {
-        $key = dmo_backup_key();
-        if ($argv[1] === 'verify-latest') {
+        $key = dmo_backup_key($argv[1] === 'run');
+        if ($argv[1] === 'restore-check') {
+            $snapshots = dmo_backup_list($root);
+            if (!$snapshots) throw new RuntimeException('No recovery snapshot available.');
+            $inspection = dmo_backup_restore_check($snapshots[0], $key, $root);
+            echo "isolated_archive_restore_check=passed\n";
+            echo "private_image_files_checked=" . $inspection['private_image_files'] . "\n";
+            echo "production_database_unchanged=yes\n";
+            echo "sql_import_attempted=no\n";
+        } elseif ($argv[1] === 'verify-latest') {
             $snapshots = dmo_backup_list($root);
             if (!$snapshots) throw new RuntimeException('No backups yet.');
             if (!dmo_backup_verify($snapshots[0], $key)) {
