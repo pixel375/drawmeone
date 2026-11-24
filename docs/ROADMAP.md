@@ -311,6 +311,17 @@ See `docs/ART_DIRECTION.md` and `docs/COMMISSION_PRODUCT_SPEC.md`.
 - [x] Build fixed GitHub Actions workflow for configuring private SMTP values via pinned Hostinger SSH without exposing the mailbox password.
 - [x] Add Artist's Desk email readiness and admin-only test (fixed recipient, CSRF and two-tests/hour rate limit).
 - [x] Draft proposed commission Terms and Privacy Policy with owner-specific unanswered items prominently marked; no legal flags enabled.
-- [ ] Owner creates/verifies an actual drawmeone.com mailbox, configures protected GitHub environment values, and confirms a test email arrives.
+- [x] Hostinger SMTP configured; SMTP server accepted test with response 250, and separate connected Hostinger-to-Gmail and Gmail-to-Hostinger mailbox tests both arrived in the recipient Inbox (2026-11-23). Original site's individual SMTP-test inbox receipt remains unconfirmed.
 - [ ] Owner/legal review of terms, refunds, licence, customer age/retention policies; publish final pages only after approval.
 - [ ] Controlled customer signup/verification/password reset testing with no public registrations; then pilot commission requests.
+
+
+## v1.9.1 — 2026-11-23: Verified mail path and verification resend safeguard
+
+- [x] Confirm a real inbound and outbound delivery between Hostinger `support@drawmeone.com` and a connected technical Gmail mailbox, independent of SMTP acceptance.
+- [x] Check public MX, SPF, DKIM selector existence and DMARC policy from Hostinger, without printing private credentials.
+- [x] Add dedicated authenticated-service-gated and Turnstile-protected resend workflow for pending customers with strict IP/email limits, fresh one-time token and non-enumerating responses.
+- [x] Add customer account UI for resending a lost/expired email verification message without exposing administrative details.
+- [ ] Verify the new endpoint's syntax and closed-state safety on the live Hostinger deployment.
+- [ ] Controlled signup/verification/resend/password reset and customer isolation tests before enabling public accounts.
+- [ ] Publish artist-approved Terms and Privacy; keep order submission and payments closed until requirements are met.
