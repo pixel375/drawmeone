@@ -10,6 +10,7 @@
   const signupForm = $("signup-form");
   const loginTab = $("tab-login");
   const signupTab = $("tab-signup");
+  const resendForm = $("resend-form");
   const widgets = {};
   let csrf = "";
   let status = null;
@@ -26,6 +27,7 @@
     signupTab.setAttribute("aria-selected", String(signup));
     loginTab.setAttribute("aria-selected", String(!signup));
     note.hidden = true;
+    resendForm.hidden = true;
   }
   async function request(path, payload, token) {
     const headers = {"Content-Type":"application/json"};
@@ -67,6 +69,10 @@
         sitekey:key, action:"login", appearance:"always",
       });
       $("submit-login").disabled = false;
+      widgets.resend = window.turnstile.render("#captcha-resend", {
+        sitekey:key, action:"resend", appearance:"always",
+      });
+      $("submit-resend").disabled = false;
       if(status.registration_available) {
         widgets.signup = window.turnstile.render("#captcha-signup", {
           sitekey:key, action:"signup", appearance:"always",
@@ -79,6 +85,31 @@
   }
   loginTab.addEventListener("click", () => show("login"));
   signupTab.addEventListener("click", () => show("signup"));
+  $("toggle-resend").addEventListener("click", () => {
+    resendForm.hidden = !resendForm.hidden;
+    note.hidden = true;
+  });
+  resendForm.addEventListener("submit", async event => {
+    event.preventDefault();
+    if (!status?.auth_available || !resendForm.reportValidity()) return;
+    const token = captchaToken("resend");
+    if (!token) { message("Please complete the security check.", true); return; }
+    $("submit-resend").disabled = true;
+    message("Requesting another verification link…");
+    try {
+      const {response,body} = await request("./api/auth/resend-verification.php", {
+        email:$("resend-email").value,turnstile_token:token,
+      });
+      resetCaptcha("resend");
+      message(response.ok && body.ok
+        ? "If your address has a pending account, we'll send a new verification link. Check Inbox and Spam."
+        : response.status === 429
+          ? "Too many requests. Please retry later."
+          : "Verification email could not be requested. Please retry later.",
+        !(response.ok && body.ok));
+    } catch (_) { message("Unable to request a new link. Please retry later.", true); }
+    finally { $("submit-resend").disabled = false; }
+  });
 
   loginForm.addEventListener("submit", async (event) => {
     event.preventDefault();
@@ -166,6 +197,7 @@
       }
       if(await currentAccount()) return;
       unavailable.hidden=true;workspace.hidden=false;
+      $("resend-wrap").hidden = false;
       signupTab.hidden = !status.registration_available;
       show("login");
       activateTurnstile(status.turnstile_site_key);
