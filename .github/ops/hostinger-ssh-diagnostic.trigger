@@ -1,1 +1,1 @@
-v3.3 Nov 24 read-only production check of live Artist Desk mobile CSS v21 and browser-tested six-tab grid; retain customer registration, commission intake, order/payment protections, public gallery and email health checks. No production writes.
+v3.4 Nov 24 read-only live check: verify versioned Artist Desk artwork library v22 HTML/CSS/JS, all filters and bulk unpublish controls, PHP lint, private storage/portfolio gates, customer registration and payment protections. No image uploads or DB writes.
