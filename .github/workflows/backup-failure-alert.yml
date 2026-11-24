@@ -1,0 +1,53 @@
+name: DrawMeOne — Backup Failure Alert
+
+# Notify repository maintainers through one deduplicated GitHub issue.
+# Never read backup contents, login secrets, private paths or customer data.
+on:
+  workflow_run:
+    workflows: ["DrawMeOne — Encrypted Private Backup"]
+    types: [completed]
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: drawmeone-backup-issue-alert
+  cancel-in-progress: false
+
+jobs:
+  reconcile:
+    if: ${{ github.event.workflow_run.head_repository.full_name == github.repository && github.event.workflow_run.head_branch == 'main' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: ${{ github.token }}
+      RUN_ID: ${{ github.event.workflow_run.id }}
+      RUN_CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+      REPO: ${{ github.repository }}
+    steps:
+      - name: Open or resolve a backup warning without sensitive details
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          [[ "$REPO" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]] || exit 1
+          [[ "$RUN_ID" =~ ^[0-9]+$ ]] || exit 1
+          [[ "$RUN_CONCLUSION" =~ ^[a-z_]+$ ]] || exit 1
+          title="[DrawMeOne Ops] Daily encrypted backup failed"
+          url="https://github.com/$REPO/actions/runs/$RUN_ID"
+          current=$(gh api "repos/$REPO/issues?state=open&per_page=100"             --jq '[.[] | select(.pull_request == null and .title == "[DrawMeOne Ops] Daily encrypted backup failed") | .number][0] // empty')
+          if [[ "$RUN_CONCLUSION" == "success" ]]; then
+            if [[ -n "$current" ]]; then
+              gh api --method POST "repos/$REPO/issues/$current/comments"                 -f body="The latest encrypted Hostinger backup workflow succeeded: $url. The local backup alert is resolved. This does **not** establish an off-site copy." >/dev/null
+              gh api --method PATCH "repos/$REPO/issues/$current"                 -f state=closed -f state_reason=completed >/dev/null
+            fi
+            echo "backup_alert=healthy"
+          else
+            message="The DrawMeOne encrypted local backup workflow ended with status **$RUN_CONCLUSION**. Inspect the run: $url. Check SSH connection, available disk space and encrypted archive verification. Never paste private keys, SQL dumps or customer data here. The previous verified snapshots should remain intact; do not assume a new snapshot was created."
+            if [[ -n "$current" ]]; then
+              gh api --method POST "repos/$REPO/issues/$current/comments"                 -f body="$message" >/dev/null
+            else
+              gh api --method POST "repos/$REPO/issues"                 -f title="$title" -f body="$message" >/dev/null
+            fi
+            echo "backup_alert=issue_opened_or_updated"
+          fi
