@@ -1,1 +1,1 @@
-One controlled first run of fixed private encrypted backup. Database snapshot + private artwork only; authenticated encryption, rotation and verification; no upload to GitHub.
+2026-11-23 v2.5: create another encrypted backup and validate isolated recovery extraction without importing MySQL or touching production data. No offsite export.
