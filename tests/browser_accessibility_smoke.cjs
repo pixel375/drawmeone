@@ -113,7 +113,8 @@ async function closedPage(browser,url,width) {
   } finally{await context.close();}
 }
 const syntheticAdmin={
-  "status.php":{ok:true,admin_schema_ready:true,admin_available:true,turnstile_site_key:null},
+  "status.php":{ok:true,admin_schema_ready:true,admin_available:true,
+    turnstile_site_key:"ci-only-unusable-site-key"},
   "me.php":{ok:true,authenticated:true,
     admin:{display_name:"Synthetic QA Artist",email:"admin@example.invalid"},
     csrf_token:"synthetic-browser-only"},
