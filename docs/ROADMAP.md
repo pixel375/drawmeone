@@ -380,3 +380,13 @@ See `docs/ART_DIRECTION.md` and `docs/COMMISSION_PRODUCT_SPEC.md`.
 - [ ] Independent encrypted off-site copy and separately preserved recovery key.
 - [ ] Full restore drill in an isolated environment; do not restore over production. Current backups are not independently recoverable after a total Hostinger account loss.
 
+
+## v2.4 — 2026-11-23/24: Published portfolio SEO
+
+- [x] Add server-rendered artwork detail pages with responsive uncropped imagery, genuine alt text, canonical metadata and valid ImageObject schema. Pages only exist for published artist-approved pieces.
+- [x] Add generated XML/image sitemap, rewired through the existing /sitemap.xml URL; includes only published works and homepage, never private customer references or draft artworks.
+- [x] Add a direct published-artwork page link inside the existing lightbox; keep it hidden for placeholder and demo images.
+- [x] Verify dynamic sitemap live (HTTP 200 and XML image namespace), and unpublished detail page stays 404 when there are no published works (Actions run 45319307505).
+- [ ] Artist uploads/publishes approved real drawings; browser and Search Console validation for actual artwork pages and image indexing.
+- [ ] Decide final public site design and remove Design Lab/dummy artwork after approval; no fake portfolio imagery.
+
