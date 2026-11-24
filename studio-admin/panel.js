@@ -695,9 +695,13 @@
   }
 
   function artworkControls() {
-    $("artwork-upload").disabled = !artworkWriteEnabled || artworkBusy;
-    $("artwork-publish-selected").disabled = !artworkWriteEnabled || artworkBusy ||
-      !document.querySelector("#artwork-list .artwork-select:checked");
+    const checked = [...document.querySelectorAll("#artwork-list .artwork-select:checked")];
+    const canWrite = artworkWriteEnabled && !artworkBusy;
+    $("artwork-upload").disabled = !canWrite;
+    $("artwork-publish-selected").disabled = !canWrite ||
+      !checked.some(input => input.dataset.visibility === "draft");
+    $("artwork-unpublish-selected").disabled = !canWrite ||
+      !checked.some(input => input.dataset.visibility === "published");
   }
 
   function artworkSelectCount() {
@@ -708,14 +712,26 @@
     const target = $("artwork-list");
     target.replaceChildren();
     if (!artworkRecords.length) {
-      const note = document.createElement("p");
-      note.className = "empty-state";
-      note.textContent = "No real artwork uploaded yet. Choose drawing files above.";
-      target.append(note);
+      $("artwork-visible-count").textContent = "No artworks uploaded";
+      $("artwork-select-all").checked = false;
+      empty(target, "No real artwork uploaded yet. Choose drawing files above.");
       artworkControls();
       return;
     }
-    for (const work of artworkRecords) {
+    const filter = $("artwork-filter").value;
+    const visible = artworkRecords.filter(work => filter === "all" ||
+      (filter === "draft" ? work.visibility === "draft" : work.visibility === "published"));
+    $("artwork-visible-count").textContent = "Showing " + visible.length + " of " +
+      artworkRecords.length + " drawings · " +
+      artworkRecords.filter(work => work.visibility === "draft").length + " drafts · " +
+      artworkRecords.filter(work => work.visibility === "published").length + " published";
+    if (!visible.length) {
+      empty(target, "No artworks match this view.");
+      $("artwork-select-all").checked = false;
+      artworkControls();
+      return;
+    }
+    for (const work of visible) {
       const card = document.createElement("article");
       card.className = "artwork-library-card";
       const preview = document.createElement("img");
@@ -736,13 +752,13 @@
       select.type = "checkbox";
       select.className = "artwork-select";
       select.value = String(work.id);
-      select.disabled = !artworkWriteEnabled || work.visibility !== "draft";
-      select.setAttribute("aria-label", "Select draft drawing " + work.id);
+      select.disabled = !artworkWriteEnabled || artworkBusy;
+      select.dataset.visibility = work.visibility === "published" ? "published" : "draft";
+      select.setAttribute("aria-label", "Select drawing " + work.id + " for bulk actions");
       select.addEventListener("change", artworkControls);
       const pick = document.createElement("label");
       pick.className = "artwork-pick";
-      pick.append(select,document.createTextNode(" Select for bulk publish"));
-      pick.hidden = work.visibility !== "draft";
+      pick.append(select,document.createTextNode(" Select for bulk actions"));
       const actions = document.createElement("div");
       actions.className = "artwork-card-actions";
       const toggle = document.createElement("button");
@@ -839,6 +855,11 @@
     artworksLoad().catch(() => artworkState("Cannot refresh artwork library."));
   });
 
+  $("artwork-filter").addEventListener("change", () => {
+    $("artwork-select-all").checked = false;
+    renderArtwork();
+  });
+
   $("artwork-select-all").addEventListener("change", event => {
     document.querySelectorAll("#artwork-list .artwork-select").forEach(input => {
       if (!input.disabled) input.checked = event.target.checked;
@@ -849,6 +870,7 @@
   $("artwork-publish-selected").addEventListener("click", async () => {
     if (!artworkWriteEnabled || artworkBusy) return;
     const ids = [...document.querySelectorAll("#artwork-list .artwork-select:checked")]
+      .filter(x => x.dataset.visibility === "draft")
       .map(x=>Number(x.value)).filter(x=>Number.isSafeInteger(x) && x > 0);
     if (!ids.length || !window.confirm(
       "Publish " + ids.length + " selected drawings to the public portfolio?"
@@ -873,6 +895,38 @@
     await artworksLoad();
     artworkState("Published " + completed + " drawing(s)" +
       (failures ? "; " + failures + " failed." : "."));
+  });
+
+  $("artwork-unpublish-selected").addEventListener("click", async () => {
+    if (!artworkWriteEnabled || artworkBusy) return;
+    const ids = [...document.querySelectorAll("#artwork-list .artwork-select:checked")]
+      .filter(x => x.dataset.visibility === "published")
+      .map(x => Number(x.value)).filter(x => Number.isSafeInteger(x) && x > 0);
+    if (!ids.length || !window.confirm(
+      "Remove " + ids.length + " selected drawings from the public gallery? " +
+      "Images stay in your private library and can be republished later."
+    )) return;
+    artworkBusy = true;
+    artworkControls();
+    let completed = 0, failures = 0;
+    for (const id of ids) {
+      try {
+        const {response,data} = await post("artworks.php", {
+          id,action:"set_visibility",visibility:"draft",
+        },csrf);
+        if (response.status === 401) {sessionExpired();break;}
+        if (response.ok && data.ok) completed++;
+        else failures++;
+      } catch (_) {
+        failures++;
+      }
+      artworkState("Unpublishing: " + (completed + failures) + " / " + ids.length);
+    }
+    artworkBusy = false;
+    await artworksLoad();
+    artworkState("Unpublished " + completed + " drawing(s)" +
+      (failures ? "; " + failures + " failed." : ".") +
+      " Originals remain private and are not deleted.");
   });
 
   $("artwork-upload").addEventListener("click", async () => {
