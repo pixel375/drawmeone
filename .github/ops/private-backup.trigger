@@ -1,1 +1,1 @@
-2026-11-23 v2.5: create another encrypted backup and validate isolated recovery extraction without importing MySQL or touching production data. No offsite export.
+2026-11-24 v3.5 controlled production encrypted backup: verify candidate archive can decrypt and extract before promotion and before seven-snapshot rotation; then verify latest and isolated restore-check. Do not publish archives, plaintext or key.
