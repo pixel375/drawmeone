@@ -44,9 +44,9 @@ try {
     );
     $messages->execute(['id' => $request['id']]);
     $references = dmo_refs_metadata($db, (int) $request['id']);
-    $canManageReferences = dmo_refs_enabled($db) &&
-        dmo_messages_request_open((string) $request['status']);
-    $canUpload = $canManageReferences &&
+    $canManageReferences = dmo_refs_management_enabled($db);
+    $canUpload = dmo_refs_enabled($db) &&
+        dmo_messages_request_open((string) $request['status']) &&
         count($references) < DMO_REFERENCE_MAX_ITEMS;
     unset($request['id']);
     dmo_json(200, [
