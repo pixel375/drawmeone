@@ -4,10 +4,10 @@
 set -Eeuo pipefail
 umask 077
 
-: "\${LOCAL_ENCRYPTED_SNAPSHOT:?}"
-: "\${OFFSITE_RCLONE_CONFIG_PATH:?}"
-: "\${OFFSITE_RCLONE_DEST:?}"
-: "\${OFFSITE_OBJECT_NAME:?}"
+: "${LOCAL_ENCRYPTED_SNAPSHOT:?}"
+: "${OFFSITE_RCLONE_CONFIG_PATH:?}"
+: "${OFFSITE_RCLONE_DEST:?}"
+: "${OFFSITE_OBJECT_NAME:?}"
 command -v rclone >/dev/null || { echo "offsite_tool_unavailable"; exit 1; }
 command -v sha256sum >/dev/null || exit 1
 
@@ -35,7 +35,7 @@ localBytes=$(stat -c '%s' "$LOCAL_ENCRYPTED_SNAPSHOT")
 [[ "$localBytes" =~ ^[0-9]+$ ]] && (( localBytes > 256 )) ||
   { echo "offsite_snapshot_too_small"; exit 1; }
 
-destination="\${OFFSITE_RCLONE_DEST%/}/\${OFFSITE_OBJECT_NAME}"
+destination="${OFFSITE_RCLONE_DEST%/}/${OFFSITE_OBJECT_NAME}"
 rclone --config "$OFFSITE_RCLONE_CONFIG_PATH" --quiet copyto \
   --immutable --retries 3 --low-level-retries 3 \
   "$LOCAL_ENCRYPTED_SNAPSHOT" "$destination"
