@@ -219,7 +219,7 @@ jobs:
             [[ "$code" != "200" ]] || { echo "private_internal_http_access=FAIL"; exit 1; }
           done
           echo "private_internal_http_access=denied"
-          if curl -fsSL --max-time 12 https://drawmeone.com/ | grep -q 'mailto:support@drawmeone.com'; then
+          if curl -fsSL --max-time 12 https://drawmeone.com/ | grep -F 'mailto:support@drawmeone.com' >/dev/null; then
             echo "public_contact_link=present"
           else
             echo "public_contact_link=not_visible"
