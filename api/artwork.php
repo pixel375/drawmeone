@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 require_once dirname(__DIR__) . '/app/artwork.php';
+header('Cache-Control: private, no-store');
 dmo_reject_non_get();
 
 try {

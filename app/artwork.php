@@ -120,6 +120,8 @@ function dmo_artwork_record_audit(PDO $db, int $adminId, int $artworkId, string 
 
 function dmo_artwork_send_file(PDO $db, int $id, string $variant, bool $admin): never
 {
+    // Errors and private previews must not be retained by caches.
+    header('Cache-Control: private, no-store');
     if (!in_array($variant, ['thumb', 'display'], true)) {
         http_response_code(404);
         exit;
@@ -148,7 +150,27 @@ function dmo_artwork_send_file(PDO $db, int $id, string $variant, bool $admin): 
     header('Referrer-Policy: no-referrer');
     header('Cross-Origin-Resource-Policy: same-origin');
     header('Content-Security-Policy: default-src ' . "'none'");
-    header('Cache-Control: ' . ($admin ? 'private, no-store' : 'public, max-age=3600'));
+    if (!$admin) {
+        // Revalidate every public image request against current visibility.
+        // Only emit a 304 after the published row and readable file are verified.
+        $digest = hash_file('sha256', $path);
+        header('Cache-Control: public, no-cache, must-revalidate');
+        if (is_string($digest)) {
+            $etag = '"' . $digest . '"';
+            header('ETag: ' . $etag);
+            $requestTags = $_SERVER['HTTP_IF_NONE_MATCH'] ?? '';
+            if (is_string($requestTags)) {
+                foreach (explode(',', $requestTags) as $tag) {
+                    $tag = trim($tag);
+                    if (str_starts_with($tag, 'W/')) $tag = substr($tag, 2);
+                    if ($tag === '*' || $tag === $etag) {
+                        http_response_code(304);
+                        exit;
+                    }
+                }
+            }
+        }
+    }
     header('Content-Length: ' . filesize($path));
     readfile($path);
     exit;

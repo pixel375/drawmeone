@@ -28,7 +28,7 @@ try {
     exit;
 }
 header('Content-Type: application/xml; charset=utf-8');
-header('Cache-Control: public, max-age=300, must-revalidate');
+header('Cache-Control: public, no-cache, must-revalidate');
 header('X-Content-Type-Options: nosniff');
 echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
 echo '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" ' .

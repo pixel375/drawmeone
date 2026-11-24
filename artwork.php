@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 require_once __DIR__ . '/app/artwork.php';
+header('Cache-Control: no-store');
 
 // Search-engine-readable detail pages are created ONLY for art that the
 // artist has explicitly published. Drafts and demo art never get pages.
@@ -69,7 +70,7 @@ $schema = json_encode([
 ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE |
    JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
 header('Content-Type: text/html; charset=utf-8');
-header('Cache-Control: public, max-age=300, must-revalidate');
+header('Cache-Control: public, no-cache, must-revalidate');
 header('X-Content-Type-Options: nosniff');
 header('X-Frame-Options: DENY');
 header('Referrer-Policy: strict-origin-when-cross-origin');

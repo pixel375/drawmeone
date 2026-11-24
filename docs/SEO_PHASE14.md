@@ -21,3 +21,9 @@ Implemented November 23–24, 2026.
 - [ ] Once real artist-approved drawings are published, check each page and sitemap image link in a browser and Google Search Console.
 - [ ] Consider optional descriptive titles or categories only with the artist's approval; do not require typed captions for batch uploads.
 - [ ] Replace public demo artwork only with approved real artist artwork. No new artwork was fabricated in this phase.
+
+## Phase 32 — Publication-aware caching and HTTP coverage
+
+Public images now require revalidation. A SHA-256 ETag allows unchanged published variants to return 304 without retransmitting image bytes, but only after checking the current published row and readable file. Private previews and missing/revoked responses use no-store. Public detail pages and the sitemap also require revalidation rather than remaining fresh for five minutes. This cannot revoke bytes downloaded earlier or forcibly invalidate old caches which still hold the former one-hour freshness policy.
+
+The disposable MariaDB HTTP test now exercises draft/published/unpublished detail pages and sitemap entries, escaped hostile synthetic alt text, conditional public image requests, and rejection of a previously valid ETag after unpublishing. The CI-only router permits these two public endpoints in the isolated local test. No real artwork, production data or feature gates are changed. Initial verification pending.

@@ -25,6 +25,8 @@ $allowed = [
     '/api/admin/artworks.php',
     '/api/portfolio.php',
     '/api/artwork.php',
+    '/artwork.php',
+    '/sitemap.php',
     '/api/auth/verify.php',
     '/api/auth/reset-confirm.php',
     '/api/auth/me.php',

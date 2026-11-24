@@ -19,10 +19,12 @@ function art_assert(bool $yes, string $name): void {
     echo "PASS: " . $name . "\n";
 }
 function art_http(string $route, ?string $cookie = null, ?string $csrf = null,
-    ?array $body = null, ?string $file = null, string $origin = 'https://drawmeone.com'): array {
+    ?array $body = null, ?string $file = null, string $origin = 'https://drawmeone.com',
+    ?string $ifNoneMatch = null): array {
     $handle = curl_init('http://127.0.0.1:18865' . $route);
     if ($handle === false) throw new RuntimeException('Missing localhost cURL');
     $headers = ['Accept: application/json'];
+    if ($ifNoneMatch !== null) $headers[] = 'If-None-Match: ' . $ifNoneMatch;
     $options = [
         CURLOPT_RETURNTRANSFER => true, CURLOPT_FOLLOWLOCATION => false,
         CURLOPT_HEADER => true, CURLOPT_TIMEOUT => 10, CURLOPT_CONNECTTIMEOUT_MS => 2000,
@@ -168,6 +170,12 @@ try {
         'draft_not_in_public_manifest');
     [$status]=art_http('/api/artwork.php?id='.$id.'&v=display');
     art_assert($status===404,'draft_public_image_denied');
+    [$status,,$html,$headers]=art_http('/artwork.php?id='.$id);
+    art_assert($status===404 && str_contains(strtolower($headers),'noindex') &&
+        str_contains(strtolower($headers),'no-store'),'draft_detail_denied_nostore');
+    [$status,,$xml]=art_http('/sitemap.php');
+    art_assert($status===200 && !str_contains($xml,'artwork.php?id='.$id),
+        'draft_absent_from_image_sitemap');
     [$status]=art_http('/api/admin/artwork-preview.php?id='.$id.'&v=thumb');
     art_assert($status===401,'anonymous_draft_preview_denied');
     [$status,$json,$bytes,$headers]=art_http(
@@ -204,6 +212,31 @@ try {
         str_contains(strtolower($headers),'image/webp') &&
         substr($bytes,0,4)==='RIFF' && substr($bytes,8,4)==='WEBP',
         'public_published_thumbnail_loads');
+    art_assert(str_contains(strtolower($headers),'no-cache') &&
+        str_contains(strtolower($headers),'must-revalidate') &&
+        preg_match('/^ETag:\s*("[a-f0-9]{64}")\s*$/mi',$headers,$matches)===1,
+        'public_image_requires_revalidation_with_etag');
+    $etag=$matches[1];
+    [$status,,$cached]=art_http('/api/artwork.php?id='.$id.'&v=thumb',
+        ifNoneMatch:$etag);
+    art_assert($status===304 && $cached==='','published_image_conditional_get');
+    [$status,,$changed]=art_http('/api/artwork.php?id='.$id.'&v=thumb',
+        ifNoneMatch:'"not-current"');
+    art_assert($status===200 && $changed===$bytes,'different_etag_returns_image');
+    // Synthetic hostile metadata is escaped in HTML and JSON-LD.
+    $label='CI drawing <script>alert("test")</script> & sample';
+    $db->prepare('UPDATE dmo_portfolio_artworks SET alt_text=:label WHERE id=:id')
+        ->execute(['label'=>$label,'id'=>$id]);
+    [$status,,$html,$headers]=art_http('/artwork.php?id='.$id);
+    art_assert($status===200 && str_contains($html,'https://drawmeone.com/artwork.php?id='.$id) &&
+        str_contains($html,'&lt;script&gt;') && !str_contains($html,'<script>alert(') &&
+        str_contains($html,'"@type":"ImageObject"') &&
+        str_contains(strtolower($headers),'no-cache'),'published_detail_safe_html_and_schema');
+    [$status,,$xml,$headers]=art_http('/sitemap.php');
+    art_assert($status===200 && str_contains($xml,'<loc>https://drawmeone.com/artwork.php?id='.$id.'</loc>') &&
+        str_contains($xml,'id='.$id.'&amp;v=display') &&
+        str_contains(strtolower($headers),'application/xml') &&
+        str_contains(strtolower($headers),'no-cache'),'published_image_sitemap_escaped_and_revalidated');
     [$status]=art_http('/api/artwork.php?id='.$id.'&v=original');
     art_assert($status===404,'unrecognized_public_variant_denied');
     [$status,$result]=art_http('/api/admin/artworks.php',$token,$csrf,
@@ -224,6 +257,16 @@ try {
         'unpublished_drawing_removed_from_public_manifest');
     [$status]=art_http('/api/artwork.php?id='.$id.'&v=display');
     art_assert($status===404,'unpublished_public_file_revoked');
+    [$status,,$body,$headers]=art_http('/api/artwork.php?id='.$id.'&v=thumb',
+        ifNoneMatch:$etag);
+    art_assert($status===404 && $body==='' && str_contains(strtolower($headers),'no-store'),
+        'unpublished_image_rejects_previous_etag');
+    [$status,,$html,$headers]=art_http('/artwork.php?id='.$id);
+    art_assert($status===404 && str_contains(strtolower($headers),'noindex'),
+        'unpublished_detail_revoked');
+    [$status,,$xml]=art_http('/sitemap.php');
+    art_assert($status===200 && !str_contains($xml,'artwork.php?id='.$id),
+        'unpublished_removed_from_image_sitemap');
     [$status,$json,$bytes,$headers]=art_http(
         '/api/admin/artwork-preview.php?id='.$id.'&v=thumb',$token);
     art_assert($status===200,'unpublished_artwork_still_private_artist_preview');
