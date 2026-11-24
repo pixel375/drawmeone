@@ -1,5 +1,10 @@
 "use strict";
-const {chromium}=require("playwright");
+const playwright = require("playwright");
+const engine = process.env.DMO_BROWSER_ENGINE || "chromium";
+if (!["chromium", "firefox", "webkit"].includes(engine)) {
+  throw new Error("Unsupported DMO_BROWSER_ENGINE: " + engine);
+}
+const browserType = playwright[engine];
 const assert=require("node:assert/strict");
 const base="http://127.0.0.1:18868";
 const TOKEN="a".repeat(64);
@@ -201,7 +206,7 @@ async function confirmReset(browser,condition) {
   }finally{await page.close();}
 }
 (async()=>{
-  const browser=await chromium.launch({headless:true});
+  const browser=await browserType.launch({headless:true});
   try {
     for(const width of [320,390,768])await closed(browser,width);
     await registrationClosedButLoginReady(browser);

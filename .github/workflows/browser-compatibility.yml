@@ -1,0 +1,79 @@
+name: DrawMeOne Browser Compatibility — Firefox and WebKit
+
+# Local, synthetic browser contracts only; no live account or SSH access.
+on:
+  push:
+    branches: [main]
+    paths:
+      - '*.html'
+      - '*.js'
+      - '*.css'
+      - 'assets/**'
+      - 'data/**'
+      - 'studio-admin/**'
+      - 'api/**'
+      - 'app/**'
+      - 'tests/browser_*.cjs'
+      - '.github/workflows/browser-compatibility.yml'
+  pull_request:
+    paths:
+      - '*.html'
+      - '*.js'
+      - '*.css'
+      - 'assets/**'
+      - 'data/**'
+      - 'studio-admin/**'
+      - 'api/**'
+      - 'app/**'
+      - 'tests/browser_*.cjs'
+      - '.github/workflows/browser-compatibility.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  compatibility:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        engine: [firefox, webkit]
+    env:
+      DMO_BROWSER_ENGINE: ${{ matrix.engine }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pinned browser automation
+        run: |
+          npm install --no-audit --no-fund --no-package-lock --no-save playwright@1.56.1
+          npx playwright install --with-deps "$DMO_BROWSER_ENGINE"
+      - name: Run browser contracts against local PHP
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          php -S 127.0.0.1:18868 -t . > /tmp/dmo-browser-php.log 2>&1 &
+          pid=$!
+          trap 'kill "$pid" 2>/dev/null || true' EXIT
+          for attempt in {1..30}; do
+            if curl -fsS --max-time 2 http://127.0.0.1:18868/index.html >/dev/null; then break; fi
+            sleep 1
+          done
+          curl -fsS --max-time 4 http://127.0.0.1:18868/index.html >/dev/null
+          echo "Testing browser engine: $DMO_BROWSER_ENGINE"
+          failed=0
+          for script in browser_smoke browser_admin_smoke browser_commission_smoke browser_onboarding_smoke; do
+            if ! node "tests/$script.cjs"; then
+              echo "::error::${DMO_BROWSER_ENGINE}: ${script} failed"
+              failed=1
+            fi
+          done
+          exit "$failed"
+      - name: Save engine-specific screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dmo-browser-${{ matrix.engine }}-screenshots
+          path: test-results/*.png
+          if-no-files-found: ignore
+          retention-days: 7

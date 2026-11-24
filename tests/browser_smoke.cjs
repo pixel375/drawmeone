@@ -1,5 +1,10 @@
 "use strict";
-const { chromium } = require("playwright");
+const playwright = require("playwright");
+const engine = process.env.DMO_BROWSER_ENGINE || "chromium";
+if (!["chromium", "firefox", "webkit"].includes(engine)) {
+  throw new Error("Unsupported DMO_BROWSER_ENGINE: " + engine);
+}
+const browserType = playwright[engine];
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
@@ -186,7 +191,7 @@ async function checkClosedWorkflows(browser) {
 }
 
 (async () => {
-  const browser = await chromium.launch({ headless: true });
+  const browser = await browserType.launch({ headless: true });
   try {
     for (const site of ["studio","archive","journal","cinema"]) {
       for (const viewport of [

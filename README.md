@@ -10,6 +10,8 @@ Chromium browser QA covers all four public designs, all six Artist Desk tabs, sy
 
 The [latest successful read-only Hostinger verification](https://github.com/pixel375/drawmeone/actions/runs/45487199976) checked deployment, private storage, mail formatting, and closed account/request gates.
 
+Additional [Firefox and WebKit compatibility QA](docs/BROWSER_COMPATIBILITY_PHASE30.md) runs the same four functional browser suites in separate engine jobs; first results are pending. Chromium remains the accessibility baseline.
+
 **Outstanding before opening to customers:** genuine rights-cleared published artwork, owner-approved Terms/Privacy and policies, controlled real-account onboarding/Turnstile tests, independently held encrypted off-site backup and recovery key, and provider-verified payments. **No test success alone enables public business operations.**
 
 ---
