@@ -424,12 +424,19 @@ See `docs/ART_DIRECTION.md` and `docs/COMMISSION_PRODUCT_SPEC.md`.
 - [x] Verify fake two-customer order/quote/message ownership, internal-note confidentiality and unpaid order amount using actual SQL.
 - [x] Test actual HTTP session/CSRF/origin behavior with anonymous and authenticated synthetic customers.
 - [x] Test complete synthetic artist draft → publish quote → customer acceptance → separate unpaid order with rejection of cross-customer actions, browser price override, duplicate acceptance/order, and closed-thread messaging.
-- [x] All integration gates passed in Actions run 45417101951; no Hostinger data or real payments touched.
+- [x] All integration gates passed in Actions run 45418706387; disposable fixtures are reset between HTTP suites and the artist's active-order count is asserted. No Hostinger data or real payments touched.
 - [ ] Controlled customer registration/verification/forgot password/Turnstile and image upload QA against a dedicated private pilot environment before launch.
 
 ## v2.9 — 2026-11-24: Safe public inquiries and HTTP hardening
 
 - [x] Replace no-contact dead end on homepage and closed commissions page with direct `support@drawmeone.com` general inquiry links. Clarify that email is not an accepted order or payment.
 - [x] Add Apache deny rules for internal tests, operational docs and workflows in the deployed repository.
-- [ ] Confirm through live read-only SSH diagnostics that the contact link is visible and internal paths are HTTP-denied.
+- [x] Live read-only SSH diagnostic confirmed the contact link is visible and internal paths are HTTP-denied (run 45417924628).
 - [ ] Finalize owner-approved legal/business terms and publish real artwork before public order intake.
+
+## v2.9.1 — 2026-11-24: Accurate artist order counts and isolated CI fixtures
+
+- [x] Fix Artist Desk active-order tally to include `awaiting_arrangement`, `in_progress` and `ready_for_delivery` alongside legacy workflow statuses.
+- [x] Expose no payment verification simply because an order is awaiting arrangements; payment counts remain driven only by actual pending payment records.
+- [x] Reset **only the disposable localhost CI database** between HTTP suites, so earlier synthetic orders don't contaminate downstream count tests.
+- [x] Verify the real authenticated admin overview count over local HTTP with one synthetic unpaid order (Actions run 45418706387).
