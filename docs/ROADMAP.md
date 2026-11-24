@@ -538,4 +538,5 @@ See `docs/ART_DIRECTION.md` and `docs/COMMISSION_PRODUCT_SPEC.md`.
 - [x] Restrict public email verification to pending, unverified customer roles and consume all other outstanding verification links after success.
 - [x] Add disposable database tests for pending-admin verification rejection and parallel-link invalidation (full integration run 45465632043).
 - [x] Add Chromium tests for closed auth gates, synthetically enabled signup, resend verification, login/logout, verification links, reset-request and password-reset errors/success at narrow and wider screen widths (browser run 45465658442).
+- [x] Read-only Hostinger verification confirmed account signup/recovery v15/v13 assets, PHP syntax and closed customer gates (run 45465970997).
 - [ ] Controlled real account/SMTP/Turnstile pilot only with approved policies and safeguards. Production customer registration, new commission intake and payments stay disabled.
