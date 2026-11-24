@@ -355,3 +355,17 @@ See `docs/ART_DIRECTION.md` and `docs/COMMISSION_PRODUCT_SPEC.md`.
 - [ ] Customer acceptance/decline and order state transitions only after confirmed owner-approved terms.
 - [ ] Verifiable payment providers and manual payment validation with clear refund rules.
 - [ ] Mobile/desktop visual polish on real approved artworks, art-specific SEO pages and final public design.
+
+
+## v2.2 — 2026-11-23: Artist-released quote review and customer decisions
+
+- [x] Add policy-gated artist-only `POST /api/admin/quote-send.php`, releasing only the latest valid unaccepted draft to the verified owner of the corresponding commission request. Review windows are 1–30 days; older pending offers become superseded in one transaction.
+- [x] Add secure private quote visibility in `GET /api/request.php`: only released/accepted/declined/superseded quotes and their itemized lines; draft quotes and internal notes remain hidden.
+- [x] Add authenticated customer `POST /api/quote-response.php` with quote ownership, current request-policy revision acknowledgement, accepted/declined state, expiry, CSRF and rate limits. Acceptance is audited; quote totals are never supplied by the browser.
+- [x] Add artist release and customer review/explicit decision controls with accessible responsive layouts and text-only rendering.
+- [x] No order, payment record, automatic email, checkout, automatic paid status or copyright-transfer action occurs in this phase.
+- [x] Add quote security smoke tests and PHP/JS CI coverage.
+- [ ] End-to-end pilot with real controlled verified customer, expiration, replay/reused decision, CSRF, cross-account access, concurrent acceptance and quote-version tests. Do not enable the feature until these tests and owner-approved policies pass.
+- [ ] A separate future commercial implementation must create orders *after* agreed terms and use provider-verified payment status, not a browser success redirect.
+
+**New private switches (all default OFF):** `DMO_QUOTE_DELIVERY_ENABLED`, `DMO_QUOTE_RESPONSES_ENABLED`. Both require existing customer auth and the approved Terms/Privacy/policy revision gates; artist release additionally requires `DMO_REQUEST_ADMIN_WRITES_ENABLED`.
