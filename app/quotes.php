@@ -34,6 +34,7 @@ function dmo_quote_can_respond(array $quote, bool $serviceReady, string $request
         && hash_equals(dmo_requests_policy_version(), $requestPolicy)
         && ($quote['status'] ?? null) === 'sent'
         && isset($quote['sent_at']) && $quote['sent_at'] !== null
+        && isset($quote['validity_ends_at']) && $quote['validity_ends_at'] !== null
         && (int) ($quote['is_expired'] ?? 1) === 0;
 }
 
@@ -70,6 +71,7 @@ function dmo_quote_customer_rows(PDO $db, int $requestId, string $requestPolicy)
         $q['is_expired'] = (bool) $q['is_expired'];
         $q['can_respond'] = !$accepted && dmo_quote_can_respond(
             ['status' => $q['status'], 'sent_at' => $q['sent_at'],
+             'validity_ends_at' => $q['validity_ends_at'],
              'is_expired' => $q['is_expired'] ? 1 : 0],
             dmo_quote_response_enabled(), $requestPolicy
         );
