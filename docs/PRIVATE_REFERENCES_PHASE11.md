@@ -33,3 +33,6 @@ No public upload or customer signup is activated by this phase. The first true r
 ## Deletion support
 
 `POST /api/reference-delete.php` requires a verified owning customer, HTTPS/same-origin JSON, CSRF token, an exact request reference and integer attachment ID, plus enabled policy and upload gates. It denies cross-customer deletion and reads. On success, the attachment database row is removed before private WebP files are unlinked. If file cleanup cannot finish, no authenticated endpoint can retrieve the orphan; the API reports `storage_cleanup_complete=false` and logs a sanitized warning. Orphan cleanup/retention still needs an operational pass before launch.
+
+### Privacy: removal after upload closure
+An authenticated customer can remove their own existing private references even if new uploads are disabled or their request is closed. Removal requires the private schema and a verified customer session, but **not** the new-upload feature switch or policy approval flags; uploads remain gated. The system will not retain public access to a deleted attachment record.
