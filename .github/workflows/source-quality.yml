@@ -1,0 +1,56 @@
+name: DrawMeOne Source Quality — PHP and JavaScript
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'app/**'
+      - 'api/**'
+      - 'studio-admin/**'
+      - '*.js'
+      - '*.html'
+      - 'tests/**'
+      - '.github/workflows/source-quality.yml'
+  pull_request:
+    paths:
+      - 'app/**'
+      - 'api/**'
+      - 'studio-admin/**'
+      - '*.js'
+      - '*.html'
+      - 'tests/**'
+      - '.github/workflows/source-quality.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: PHP 8.2+ syntax, JS syntax and mail-format smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check installed runtimes
+        run: |
+          php --version
+          node --version
+      - name: Check all PHP syntax
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          while IFS= read -r -d '' file; do
+            php -l "$file" >/dev/null || { echo "::error file=$file::PHP syntax invalid"; exit 1; }
+          done < <(find app api studio-admin tests -type f -name '*.php' -print0)
+          php -l backend-status.php >/dev/null
+          echo "PHP_SYNTAX=PASS"
+      - name: Check all JavaScript syntax
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          while IFS= read -r -d '' file; do
+            node --check "$file" || { echo "::error file=$file::JavaScript syntax invalid"; exit 1; }
+          done < <(find . -maxdepth 3 -type f -name '*.js' -not -path './node_modules/*' -print0)
+          echo "JS_SYNTAX=PASS"
+      - name: Mail formatting regression
+        run: php tests/mail_smoke.php
