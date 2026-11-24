@@ -2,6 +2,15 @@
 declare(strict_types=1);
 require_once dirname(__DIR__) . '/app/references.php';
 
+final class DmoReferenceRejection extends RuntimeException
+{
+    public function __construct(public int $httpStatus, public string $publicError)
+    {
+        parent::__construct('Reference request rejected.');
+    }
+}
+
+
 if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
     header('Allow: POST');
     dmo_json(405, ['ok' => false, 'error' => 'method_not_allowed']);
@@ -84,7 +93,7 @@ try {
             if (!is_array($current) ||
                 !dmo_messages_request_open((string) $current['status'])) {
                 $db->rollBack();
-                dmo_json(409, ['ok' => false, 'error' => 'request_closed']);
+                throw new DmoReferenceRejection(409, 'request_closed');
             }
             $count = $db->prepare(
                 'SELECT COUNT(*) FROM dmo_request_attachments WHERE request_id = :id'
@@ -92,7 +101,7 @@ try {
             $count->execute(['id' => $request['id']]);
             if ((int) $count->fetchColumn() >= DMO_REFERENCE_MAX_ITEMS) {
                 $db->rollBack();
-                dmo_json(409, ['ok' => false, 'error' => 'reference_limit_reached']);
+                throw new DmoReferenceRejection(409, 'reference_limit_reached');
             }
             if (!dmo_auth_rate_limit(
                 $db, 'reference-upload-ip', '', 16, 60
@@ -100,7 +109,7 @@ try {
                 $db, 'reference-upload-user', (string) $customer['user_id'], 12, 60
             )) {
                 $db->rollBack();
-                dmo_json(429, ['ok' => false, 'error' => 'too_many_uploads']);
+                throw new DmoReferenceRejection(429, 'too_many_uploads');
             }
             $insert = $db->prepare(
                 'INSERT INTO dmo_request_attachments ' .
@@ -142,6 +151,8 @@ try {
         }
         throw $error;
     }
+ } catch (DmoReferenceRejection $error) {
+    dmo_json($error->httpStatus, ['ok' => false, 'error' => $error->publicError]);
 } catch (Throwable $error) {
     dmo_log_problem($error, 'customer reference upload');
     dmo_json(503, ['ok' => false, 'error' => 'reference_service_unavailable']);
