@@ -5,8 +5,8 @@ require_once __DIR__ . '/requests.php';
 require_once __DIR__ . '/references.php';
 
 /**
- * Phase 6: admin-only review. External messages, quote sending, payments and
- * customer intake remain DISABLED and have no action handlers here.
+ * Admin review helpers. Quote release and customer responses are independent,
+ * policy-gated endpoints; no action here creates orders or payments.
  */
 function dmo_workflow_writes_enabled(): bool
 {
@@ -93,7 +93,7 @@ function dmo_workflow_load(PDO $db, int $id): ?array
 
     $quotesQuery = $db->prepare(
         'SELECT id, version_number, currency, total_minor, scope_description, ' .
-        'revision_allowance, validity_ends_at, status, sent_at, created_at ' .
+        'revision_allowance, validity_ends_at, status, sent_at, accepted_at, created_at ' .
         'FROM dmo_quotes WHERE request_id = :id ' .
         'ORDER BY version_number DESC LIMIT 30'
     );
