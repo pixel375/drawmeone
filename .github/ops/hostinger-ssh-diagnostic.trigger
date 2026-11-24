@@ -1,1 +1,1 @@
-2026-11-24 Phase 30/31 read-only production verification: gallery.js v13 published fallback and duplicate handling; Artist Desk panel.css v25 native checkbox sizing; existing closed launch gates and private storage diagnostics. No writes or secrets.
+2026-11-24 Phase 35 read-only verify Artist Desk panel.js v25 session reset, commission search/pagination and prior publication/gallery controls; no production writes.

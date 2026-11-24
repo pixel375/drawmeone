@@ -306,7 +306,7 @@ jobs:
             echo "mobile_artist_desk=stale_or_missing_mobile_layout"
             exit 1
           }
-          [[ "$desk_page" == *'panel.js?v=24'* ]] &&
+          [[ "$desk_page" == *'panel.js?v=25'* ]] &&
           [[ "$desk_page" == *'id="artwork-filter"'* ]] &&
           [[ "$desk_page" == *'id="artwork-unpublish-selected"'* ]] || {
             echo "artist_artwork_library=stale_html"
@@ -316,13 +316,22 @@ jobs:
             echo "artist_artwork_library=stale_css"
             exit 1
           }
-          desk_js=$(curl -fsSL --max-time 15 "https://drawmeone.com/studio-admin/panel.js?v=24")
+          desk_js=$(curl -fsSL --max-time 15 "https://drawmeone.com/studio-admin/panel.js?v=25")
           [[ "$desk_js" == *'artwork-unpublish-selected'* ]] &&
           [[ "$desk_js" == *'No artworks match this view.'* ]] || {
             echo "artist_artwork_library=stale_js"
             exit 1
           }
           echo "artist_artwork_library=deployed"
+          [[ "$desk_page" == *'id="request-list-query"'* ]] &&
+          [[ "$desk_page" == *'id="request-list-next"'* ]] &&
+          [[ "$desk_js" == *'requestListGeneration'* ]] &&
+          [[ "$desk_js" == *'function freshSignIn(reason)'* ]] &&
+          [[ "$desk_js" == *'event.persisted'* ]] || {
+            echo "artist_request_session_controls=stale_assets"
+            exit 1
+          }
+          echo "artist_request_session_controls=deployed"
           [[ "$desk_css" == *'select:focus-visible,textarea:focus-visible'* ]] &&
           [[ "$desk_page" == *'id="main" tabindex="-1"'* ]] || {
             echo "artist_keyboard_focus=stale_assets"

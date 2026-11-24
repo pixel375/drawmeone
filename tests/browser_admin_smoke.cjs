@@ -356,6 +356,52 @@ async function verifyRequestList(browser) {
   }finally{await page.close();}
 }
 
+async function verifyFreshAdminSignIn(browser) {
+  for(const expire of [false,true]){
+    const page=await browser.newPage({viewport:{width:390,height:844},reducedMotion:"reduce"});
+    const posts=[];await simulateBackend(page,posts);
+    let expireNow=false;
+    let logoutCount=0;
+    await page.route("https://challenges.cloudflare.com/turnstile/**",route=>route.fulfill({
+      status:200,contentType:"application/javascript",
+      body:"window.turnstile={render:function(sel){document.querySelector(sel).textContent='Synthetic CAPTCHA ready';return 1;},reset:function(){},getResponse:function(){return '';}};"
+    }));
+    await page.route("**/api/admin/overview.php*",route=>route.fulfill({
+      status:expireNow?401:200,contentType:"application/json",
+      body:JSON.stringify(expireNow?{ok:false}:mockAdmin["overview.php"])
+    }));
+    await page.route("**/api/admin/logout.php*",route=>{
+      logoutCount++;
+      assert.equal(route.request().method(),"POST");
+      return route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({ok:true,status:"signed_out"})});
+    });
+    try{
+      await page.goto(base+"/studio-admin/index.php",{waitUntil:"domcontentloaded"});
+      await page.locator("#workspace").waitFor({state:"visible"});
+      await page.locator("#launch-checks .launch-check").first().waitFor();
+      assert.match(await page.locator("#welcome-admin").innerText(),/Synthetic QA Artist/);
+      // Sentinel marks the previous document; it cannot survive fresh navigation.
+      await page.evaluate(()=>{document.body.dataset.privateSessionSentinel="old";});
+      if(expire){
+        expireNow=true;
+        await page.locator("#launch-refresh").click();
+      }else{
+        await page.locator("#logout-button").click();
+      }
+      await page.locator("#sign-in").waitFor({state:"visible",timeout:15000});
+      await page.waitForFunction(()=>document.querySelector("#login-button")?.disabled===false);
+      assert.equal(await page.locator("#workspace").isVisible(),false);
+      assert.equal(await page.locator("body").getAttribute("data-private-session-sentinel"),null);
+      assert(!await page.locator("#welcome-admin").textContent().then(s=>s.includes("Synthetic QA Artist")));
+      assert.match(await page.locator("#login-message").innerText(),expire?/session has expired/:/Signed out/);
+      assert.equal(new URL(page.url()).searchParams.has("session"),false);
+      assert.equal(logoutCount,expire?0:1);
+      assert.deepEqual(posts,[]);
+      console.log("PASS: fresh artist sign-in after "+(expire?"expiry":"logout")+", private DOM discarded and CAPTCHA initialized");
+    }finally{await page.close();}
+  }
+}
+
 async function verifyClosedDesk(browser) {
   const page=await browser.newPage({viewport:{width:390,height:844}});
   await page.route("**/api/admin/status.php*",route=>route.fulfill({
@@ -382,6 +428,7 @@ async function verifyClosedDesk(browser) {
     await verifyBulkArtworkChoices(browser);
     await verifyRequestIsolation(browser);
     await verifyRequestList(browser);
+    await verifyFreshAdminSignIn(browser);
     console.log("ADMIN_BROWSER_SMOKE=PASS");
   } finally {await browser.close();}
 })().catch(error=>{

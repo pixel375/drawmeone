@@ -1504,12 +1504,34 @@
     if (name === "artwork") artworksLoad().catch(() => showError("Artwork unavailable."));
   }
 
-  function sessionExpired() {
+  let leavingSession = false;
+  function freshSignIn(reason) {
+    if (leavingSession) return;
+    leavingSession = true;
     csrf = "";
-    show("sign-in");
-    $("login-message").textContent = "Your session has expired. Please sign in again.";
-    if (window.turnstile && widget !== null) window.turnstile.reset(widget);
+    // Invalidate pending reads, immediately hide private content, then replace
+    // the whole document so no previous session's DOM or JS state is reused.
+    ++requestLoadGeneration;
+    ++requestListGeneration;
+    $("workspace").hidden = true;
+    const url = new URL(location.href);
+    url.search = "";
+    url.hash = "";
+    url.searchParams.set("session", reason);
+    location.replace(url.href);
   }
+
+  function sessionExpired() {
+    freshSignIn("expired");
+  }
+
+  // A browser history restoration must not reveal an old private workspace.
+  window.addEventListener("pagehide", () => {
+    $("workspace").hidden = true;
+  });
+  window.addEventListener("pageshow", event => {
+    if (event.persisted) location.reload();
+  });
 
   async function checkSession() {
     try {
@@ -1613,12 +1635,9 @@
 
   $("logout-button").addEventListener("click", async () => {
     try {
-      const { response } = await post("logout.php", {}, csrf);
-      if (!response.ok) throw new Error("logout_failed");
-      csrf = "";
-      show("sign-in");
-      $("login-message").textContent = "Signed out.";
-      if (window.turnstile && widget !== null) window.turnstile.reset(widget);
+      const { response, data } = await post("logout.php", {}, csrf);
+      if (!response.ok || data.ok !== true) throw new Error("logout_failed");
+      freshSignIn("signed-out");
     } catch (_) {
       showError("Could not sign out. Please retry or close your browser.");
     }
@@ -1638,8 +1657,19 @@
         return;
       }
       siteKey = data.turnstile_site_key;
-      if (await checkSession()) return;
+      const url = new URL(location.href);
+      const reason = url.searchParams.get("session");
+      const fresh = reason === "expired" || reason === "signed-out";
+      if (fresh) {
+        url.searchParams.delete("session");
+        history.replaceState(null, "", url.href);
+      }
+      if (!fresh && await checkSession()) return;
       show("sign-in");
+      if (fresh) {
+        $("login-message").textContent = reason === "expired"
+          ? "Your session has expired. Please sign in again." : "Signed out.";
+      }
       enableCaptcha(siteKey);
     } catch (_) {
       $("closed-status").textContent =
