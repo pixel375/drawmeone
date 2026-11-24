@@ -132,7 +132,7 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
           </section>
           <section class="request-workpanel">
             <h4>Versioned quote drafts</h4>
-            <p class="small">These are internal drafts only. No quote will be sent, accepted, or charged.</p>
+            <p class="small">Draft quotes stay internal. Releasing a reviewed quote to the customer's private account is separately gated. No automatic payment.</p>
             <div id="request-quotes" class="request-quote-history"></div>
             <form id="request-quote-form" class="request-quote-form">
               <label for="quote-currency">Currency</label>
