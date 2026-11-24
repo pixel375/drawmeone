@@ -52,6 +52,7 @@ jobs:
           curl -fsS --max-time 4 http://127.0.0.1:18868/index.html >/dev/null
           node tests/browser_smoke.cjs
           node tests/browser_admin_smoke.cjs
+          node tests/browser_commission_smoke.cjs
       - name: Save browser QA screenshots
         if: always()
         uses: actions/upload-artifact@v4
