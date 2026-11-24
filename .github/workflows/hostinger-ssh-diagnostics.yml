@@ -82,6 +82,18 @@ jobs:
           php -l "$site/tests/mail_dns_check.php" >/dev/null
           php "$site/tests/mail_dns_check.php"
           echo "PHP syntax: PASS"
+          if command -v mariadb-dump >/dev/null 2>&1 || command -v mysqldump >/dev/null 2>&1; then
+            echo "backup_sql_dump_cli=yes"
+          else
+            echo "backup_sql_dump_cli=no"
+          fi
+          if command -v tar >/dev/null 2>&1; then
+            echo "backup_tar_cli=yes"
+          else
+            echo "backup_tar_cli=no"
+          fi
+          php -r 'echo "backup_sodium=" . (extension_loaded("sodium") ? "yes" : "no") . "\\n";'
+          php -r 'echo "backup_openssl=" . (extension_loaded("openssl") ? "yes" : "no") . "\\n";'
           php -r '
           require $argv[1]."/app/artwork.php";
           require_once $argv[1]."/app/requests.php";
