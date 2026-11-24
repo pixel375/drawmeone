@@ -206,6 +206,13 @@ try {
         ],$csrfAdmin);
     qa_positive($code===409,'duplicate_order_confirmation_rejected');
 
+    [$code,$overview]=qa_http('/api/admin/overview.php',
+        $tokenAdmin,'__Host-dmo_admin');
+    qa_positive($code===200 &&
+        ($overview['counts']['active_orders']??null)===1 &&
+        ($overview['counts']['payments_to_verify']??null)===0,
+        'artist_dashboard_counts_unpaid_order_without_fake_payment');
+
     [$code,$customerDetail]=qa_http('/api/request.php?ref='.urlencode($referenceA),$tokenA);
     qa_positive($code===200 && count($customerDetail['orders']??[])===1 &&
         ($customerDetail['orders'][0]['payment_status']??'')==='unverified' &&
