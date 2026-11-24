@@ -51,7 +51,8 @@ jobs:
             "$SSH_USER@$SSH_HOST" \
             'php -l "$HOME/domains/drawmeone.com/public_html/app/cli-backup.php" >/dev/null &&
              php "$HOME/domains/drawmeone.com/public_html/app/cli-backup.php" run &&
-             php "$HOME/domains/drawmeone.com/public_html/app/cli-backup.php" verify-latest'
+             php "$HOME/domains/drawmeone.com/public_html/app/cli-backup.php" verify-latest &&
+             php "$HOME/domains/drawmeone.com/public_html/app/cli-backup.php" restore-check'
       - name: Report sanitized backup outcome
         if: always()
         env:
