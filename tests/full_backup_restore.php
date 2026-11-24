@@ -208,6 +208,30 @@ try {
         'invalid_candidate_cannot_replace_verified_backup');
     drill_exec([PHP_BINARY,$script,'verify-latest']);
     drill_exec([PHP_BINARY,$script,'restore-check']);
+    $cipherExport=$workspace.'/ciphertext-only-export.bak';
+    $process=proc_open([PHP_BINARY,$script,'export-latest'],
+        [0=>['pipe','r'],1=>['file',$cipherExport,'w'],
+         2=>['file','/dev/null','w']],$pipes,null,null,
+        ['bypass_shell'=>true]);
+    if(!is_resource($process)) throw new RuntimeException('Cannot run CI encrypted export');
+    if(isset($pipes[0])) fclose($pipes[0]);
+    $exportExit=proc_close($process);
+    drill_assert($exportExit===0 && is_file($cipherExport) &&
+        hash_file('sha256',$cipherExport)===hash_file('sha256',$candidates[0]) &&
+        substr((string)file_get_contents($cipherExport,false,null,0,6),0,6)==='DMOBK2',
+        'verified_export_contains_exact_ciphertext_only');
+    unlink($cipherExport);
+    // Stale files must never be exported as a misleading recoverable copy.
+    touch($candidates[0],time()-40*3600);
+    $staleDenied=false;
+    try {
+        drill_exec([PHP_BINARY,$script,'export-latest']);
+    } catch (RuntimeException $expectedError) {
+        $staleDenied=true;
+    } finally {
+        touch($candidates[0]);
+    }
+    drill_assert($staleDenied,'stale_ciphertext_export_rejected');
     $recoveryKey = file_get_contents($workspace.'/drawmeone-backup-recovery.key');
     if (!is_string($recoveryKey) ||
         strlen($recoveryKey)!==SODIUM_CRYPTO_SECRETSTREAM_XCHACHA20POLY1305_KEYBYTES) {
