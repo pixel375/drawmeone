@@ -190,6 +190,58 @@ async function verifyArtistDesk(browser, width) {
     throw error;
   } finally {await context.close();}
 }
+async function verifyBulkArtworkChoices(browser) {
+  const context=await browser.newContext({viewport:{width:390,height:844}});
+  const page=await context.newPage();
+  const posts=[];
+  await simulateBackend(page,posts);
+  // Synthetic admin backend enables ONLY UI buttons; every POST is still rejected.
+  await page.route("**/api/admin/artworks.php*",route=>{
+    if(route.request().method()!=="GET"){
+      posts.push(route.request().url());
+      return route.fulfill({
+        status:503,contentType:"application/json",
+        body:JSON.stringify({ok:false,error:"ci_mutations_forbidden"})
+      });
+    }
+    return route.fulfill({
+      status:200,contentType:"application/json",
+      body:JSON.stringify({...mockAdmin["artworks.php"],write_enabled:true})
+    });
+  });
+  try {
+    await page.goto(base+"/studio-admin/index.php",{waitUntil:"domcontentloaded"});
+    await page.locator("#workspace").waitFor({state:"visible"});
+    await page.locator('[data-view="artwork"]').click();
+    await page.locator("#artwork-list .artwork-library-card").first().waitFor();
+    const publish=page.locator("#artwork-publish-selected");
+    const unpublish=page.locator("#artwork-unpublish-selected");
+    assert.equal(await publish.isEnabled(),false);
+    assert.equal(await unpublish.isEnabled(),false);
+    await page.locator("#artwork-select-all").check();
+    assert.equal(await publish.isEnabled(),true,
+      "selected draft can be bulk published");
+    assert.equal(await unpublish.isEnabled(),true,
+      "selected published work can be bulk unpublished");
+    await page.locator("#artwork-filter").selectOption("draft");
+    assert.equal(await publish.isEnabled(),false,"filter clears old draft selection");
+    assert.equal(await unpublish.isEnabled(),false);
+    await page.locator("#artwork-list .artwork-select").check();
+    assert.equal(await publish.isEnabled(),true);
+    assert.equal(await unpublish.isEnabled(),false);
+    await page.locator("#artwork-filter").selectOption("published");
+    await page.locator("#artwork-list .artwork-select").check();
+    assert.equal(await publish.isEnabled(),false);
+    assert.equal(await unpublish.isEnabled(),true);
+    page.once("dialog",dialog=>{
+      assert.match(dialog.message(),/Remove 1 selected drawings from the public gallery/);
+      dialog.dismiss();
+    });
+    await unpublish.click();
+    assert.deepEqual(posts,[],"dismissed bulk unpublish made no API changes");
+    console.log("PASS: safe publish/unpublish bulk selection and filtered status");
+  } finally {await context.close();}
+}
 async function verifyClosedDesk(browser) {
   const page=await browser.newPage({viewport:{width:390,height:844}});
   await page.route("**/api/admin/status.php*",route=>route.fulfill({
@@ -213,6 +265,7 @@ async function verifyClosedDesk(browser) {
   try {
     for(const width of [320,390,768,1440]) await verifyArtistDesk(browser,width);
     await verifyClosedDesk(browser);
+    await verifyBulkArtworkChoices(browser);
     console.log("ADMIN_BROWSER_SMOKE=PASS");
   } finally {await browser.close();}
 })().catch(error=>{
