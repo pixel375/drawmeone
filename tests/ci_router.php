@@ -23,6 +23,9 @@ $allowed = [
     '/api/auth/verify.php',
     '/api/auth/reset-confirm.php',
     '/api/auth/me.php',
+    '/api/request-attachment.php',
+    '/api/reference.php',
+    '/api/reference-delete.php',
 ];
 if (!in_array($uri, $allowed, true)) {
     http_response_code(404);
