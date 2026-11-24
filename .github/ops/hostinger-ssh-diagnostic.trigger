@@ -1,1 +1,1 @@
-2026-11-24 v3.6 read-only Hostinger check: lint deployed app/backup-health.php and cli-backup.php encrypted-only exporter, verify Artist Desk strict local-backup metadata readiness, existing mail/quote/order security, public contact and closed customer/payment gates. Never export ciphertext/key or write user records.
+v3.7 Nov 24 read-only Hostinger check: public commission form history search, status filters and cache-busted assets v24; keep registration/intake disabled; verify prior email, private reference, quote, order and backup health checks. No customer writes.
