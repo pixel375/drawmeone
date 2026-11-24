@@ -149,3 +149,19 @@ function dmo_requests_snapshot(array $row): string
             null : (int) $row['estimate_max_minor'],
     ], JSON_THROW_ON_ERROR);
 }
+
+/** Onsite messages can be enabled without reopening new commission intake. */
+function dmo_messages_enabled(): bool
+{
+    return dmo_auth_configured() &&
+        dmo_config('DMO_CUSTOMER_MESSAGING_ENABLED') === '1';
+}
+
+/** Closed requests remain readable but do not accept further messages. */
+function dmo_messages_request_open(string $status): bool
+{
+    return !in_array($status, [
+        'cancelled', 'canceled', 'rejected', 'declined', 'completed',
+        'closed', 'archived', 'refunded',
+    ], true);
+}
