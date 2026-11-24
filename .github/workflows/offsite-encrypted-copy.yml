@@ -19,27 +19,27 @@ jobs:
     timeout-minutes: 25
     environment: hostinger-diagnostics
     env:
-      SSH_HOST: \${{ vars.HOSTINGER_HOST }}
-      SSH_PORT: \${{ vars.HOSTINGER_PORT }}
-      SSH_USER: \${{ vars.HOSTINGER_USER }}
-      SSH_PRIVATE_KEY: \${{ secrets.HOSTINGER_SSH_PRIVATE_KEY }}
-      SSH_KNOWN_HOSTS: \${{ secrets.HOSTINGER_KNOWN_HOSTS }}
-      OFFSITE_RCLONE_CONFIG: \${{ secrets.DMO_OFFSITE_RCLONE_CONFIG }}
-      OFFSITE_RCLONE_DEST: \${{ vars.DMO_OFFSITE_RCLONE_DEST }}
+      SSH_HOST: ${{ vars.HOSTINGER_HOST }}
+      SSH_PORT: ${{ vars.HOSTINGER_PORT }}
+      SSH_USER: ${{ vars.HOSTINGER_USER }}
+      SSH_PRIVATE_KEY: ${{ secrets.HOSTINGER_SSH_PRIVATE_KEY }}
+      SSH_KNOWN_HOSTS: ${{ secrets.HOSTINGER_KNOWN_HOSTS }}
+      OFFSITE_RCLONE_CONFIG: ${{ secrets.DMO_OFFSITE_RCLONE_CONFIG }}
+      OFFSITE_RCLONE_DEST: ${{ vars.DMO_OFFSITE_RCLONE_DEST }}
     steps:
       - uses: actions/checkout@v4
       - name: Validate configured independent destination
         shell: bash
         run: |
           set -Eeuo pipefail
-          [[ -n "\${OFFSITE_RCLONE_CONFIG:-}" && -n "\${OFFSITE_RCLONE_DEST:-}" ]] || {
+          [[ -n "${OFFSITE_RCLONE_CONFIG:-}" && -n "${OFFSITE_RCLONE_DEST:-}" ]] || {
             echo "::error::Offsite destination is not configured; no copy attempted."
             exit 1
           }
-          [[ "\${SSH_HOST:-}" =~ ^[A-Za-z0-9.-]+$ ]] || exit 1
-          [[ "\${SSH_USER:-}" =~ ^[A-Za-z0-9_-]+$ ]] || exit 1
-          [[ "\${SSH_PORT:-}" =~ ^[0-9]{1,5}$ ]] && (( SSH_PORT >= 1 && SSH_PORT <= 65535 )) || exit 1
-          [[ -n "\${SSH_PRIVATE_KEY:-}" && -n "\${SSH_KNOWN_HOSTS:-}" ]] || exit 1
+          [[ "${SSH_HOST:-}" =~ ^[A-Za-z0-9.-]+$ ]] || exit 1
+          [[ "${SSH_USER:-}" =~ ^[A-Za-z0-9_-]+$ ]] || exit 1
+          [[ "${SSH_PORT:-}" =~ ^[0-9]{1,5}$ ]] && (( SSH_PORT >= 1 && SSH_PORT <= 65535 )) || exit 1
+          [[ -n "${SSH_PRIVATE_KEY:-}" && -n "${SSH_KNOWN_HOSTS:-}" ]] || exit 1
           bash -n ops/offsite-upload.sh
       - name: Install rclone
         run: |
@@ -59,7 +59,7 @@ jobs:
           ssh-keygen -y -P '' -f "$temp/ssh-key" >/dev/null
           export LOCAL_ENCRYPTED_SNAPSHOT="$temp/encrypted-only.bak"
           export OFFSITE_RCLONE_CONFIG_PATH="$temp/rclone.conf"
-          export OFFSITE_OBJECT_NAME="dmo-$(date -u +%Y%m%dT%H%M%SZ)-\${GITHUB_RUN_ID}.bak"
+          export OFFSITE_OBJECT_NAME="dmo-$(date -u +%Y%m%dT%H%M%SZ)-${GITHUB_RUN_ID}.bak"
           # The Hostinger CLI authenticates the encrypted bytes before streaming.
           # stdout is redirected to a 0600 temporary file, never GitHub logs.
           ssh -T -o BatchMode=yes -o LogLevel=ERROR -o ConnectTimeout=20 \
