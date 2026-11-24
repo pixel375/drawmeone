@@ -309,3 +309,9 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-off
   .lab-prototype-links>span{grid-column:1/-1}
   .lab-prototype-links a{font-size:10px;padding:9px 7px;justify-content:space-between}
 }
+
+/* Search-indexable drawing page link, shown only for real published DB artwork. */
+.portfolio-lightbox .lightbox-bottom{gap:clamp(9px,2.8vw,24px);flex-wrap:nowrap}
+.portfolio-lightbox .lightbox-detail-link{font-size:12px;color:#f5d7ce;border-bottom:1px solid #f5d7ce;text-decoration:none;white-space:nowrap}
+.portfolio-lightbox .lightbox-detail-link:hover{text-decoration:none;color:white;border-color:white}
+@media(max-width:380px){.portfolio-lightbox .lightbox-detail-link{font-size:10px}}
