@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 require_once dirname(__DIR__) . '/app/references.php';
+require_once dirname(__DIR__) . '/app/quotes.php';
 dmo_reject_non_get();
 
 try {
@@ -13,7 +14,7 @@ try {
     $stmt = $db->prepare(
         'SELECT r.id, r.public_ref, r.subject_type, r.brief, ' .
         'r.preferred_contact, r.preferred_deadline, r.status, ' .
-        'r.submitted_at, r.updated_at, t.name AS tier_name ' .
+        'r.submitted_at, r.updated_at, r.policy_version, t.name AS tier_name ' .
         'FROM dmo_commission_requests r ' .
         'LEFT JOIN dmo_commission_tiers t ON t.id = r.tier_id ' .
         'WHERE r.public_ref = :ref AND r.customer_id = :customer LIMIT 1'
@@ -48,6 +49,9 @@ try {
     $canUpload = dmo_refs_enabled($db) &&
         dmo_messages_request_open((string) $request['status']) &&
         count($references) < DMO_REFERENCE_MAX_ITEMS;
+    $quotes = dmo_quote_customer_rows(
+        $db, (int) $request['id'], (string) $request['policy_version']
+    );
     unset($request['id']);
     dmo_json(200, [
         'ok' => true,
@@ -59,7 +63,8 @@ try {
         'messages' => array_reverse($messages->fetchAll()),
         'can_reply' => dmo_messages_enabled() &&
             dmo_messages_request_open((string) $request['status']),
-        'quotes_visible' => false,
+        'quotes' => $quotes,
+        'quotes_visible' => count($quotes) > 0,
         'payments_enabled' => false,
     ]);
 } catch (Throwable $error) {
