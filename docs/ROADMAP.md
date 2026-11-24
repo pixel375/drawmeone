@@ -510,3 +510,11 @@ See `docs/ART_DIRECTION.md` and `docs/COMMISSION_PRODUCT_SPEC.md`.
 - [x] Verify latest production backup with 4 retained private encrypted snapshots and 10 image files inspected (run 45445427769).
 - [x] Track independent destination and separate recovery-key custody as [GitHub issue #1](https://github.com/pixel375/drawmeone/issues/1).
 - [ ] Select and approve independent storage, configure private rclone credentials/destination, verify a real encrypted transfer and separately held key, then enable recurring off-site transfer and full independent restore drills.
+
+## v3.7 — 2026-11-24: Customer request history and real-browser test coverage
+
+- [x] Add signed-in private request search by reference, drawing category/package and status, with All / Active / Completed or closed filters and clear counts.
+- [x] Replace raw request-status values with understandable customer-facing labels on history cards and request details; do not persist private query or briefs in browser storage.
+- [x] Guard concurrent history refreshes so late stale responses cannot replace current results.
+- [x] Add synthetic customer Chromium coverage for closed-intake existing history, quote/order display and disabled private messaging/uploads; plus open-intake form compatibility and idempotency on an intercepted test API.
+- [ ] Controlled real customer browser/SMTP/Turnstile pilot before opening registration or any live commission intake.
