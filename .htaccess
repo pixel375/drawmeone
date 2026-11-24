@@ -12,3 +12,9 @@
     Require all denied
   </FilesMatch>
 </IfModule>
+
+# Dynamically expose published artwork URLs to search engines.
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteRule ^sitemap\.xml$ sitemap.php [END]
+</IfModule>
