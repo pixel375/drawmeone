@@ -56,3 +56,4 @@ jobs:
         run: |
           php tests/mail_smoke.php
           php tests/private_reference_smoke.php
+          php tests/quote_smoke.php
