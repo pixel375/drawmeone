@@ -329,6 +329,25 @@ jobs:
             exit 1
           }
           echo "artist_keyboard_focus=deployed"
+          [[ "$desk_css" == *'input:not([type=checkbox]):not([type=radio])'* ]] &&
+          [[ "$desk_css" == *'flex:0 0 18px;accent-color:var(--accent)'* ]] || {
+            echo "artist_checkbox_sizing=stale_css"
+            exit 1
+          }
+          echo "artist_checkbox_sizing=deployed"
+          gallery_page=$(curl -fsSL --max-time 15 "https://drawmeone.com/")
+          [[ "$gallery_page" == *'gallery.js?v=13'* ]] || {
+            echo "published_gallery=stale_html"
+            exit 1
+          }
+          gallery_js=$(curl -fsSL --max-time 15 "https://drawmeone.com/gallery.js?v=13")
+          [[ "$gallery_js" == *'if (!unique.has(item.src)) unique.set(item.src,item)'* ]] &&
+          [[ "$gallery_js" == *'if (!hosted.length) throw issue'* ]] &&
+          [[ "$gallery_js" == *'delete big.dataset.fallback'* ]] || {
+            echo "published_gallery=stale_js"
+            exit 1
+          }
+          echo "published_gallery=deployed"
           echo "mobile_artist_desk=deployed"
           # Public commission intake remains closed, but its signed-in history
           # assets must include the new browser-only filters and status labels.

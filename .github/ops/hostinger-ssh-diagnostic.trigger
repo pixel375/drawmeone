@@ -1,1 +1,1 @@
-2026-11-24 v4.1 production read-only accessibility verification: Artist Desk panel.css?v=23 focus-visible select/textarea; focusable main on commission/Artist Desk; public homepage contrast and skip links; retain disabled registration/new request/payments plus mail, backup and private reference checks. No secrets or writes.
+2026-11-24 Phase 30/31 read-only production verification: gallery.js v13 published fallback and duplicate handling; Artist Desk panel.css v25 native checkbox sizing; existing closed launch gates and private storage diagnostics. No writes or secrets.
