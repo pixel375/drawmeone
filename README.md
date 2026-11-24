@@ -2,13 +2,13 @@
 
 The live [DrawMeOne website](https://drawmeone.com) includes a protected Artist's Desk, four responsive portfolio layouts, themes, optimized private/public artwork handling and general inquiries through `support@drawmeone.com`. SMTP is configured. Public customer registration, new commission submissions, quote/order release and payments remain separately gated until launch approvals are complete.
 
-**Latest areas:** [Artist Desk gallery publishing](docs/ARTWORK_PUBLISH_QA_PHASE22.md), [full encrypted backup recovery](docs/FULL_RECOVERY_QA_PHASE23.md), [backup monitoring and independent storage preparation](docs/BACKUP_MONITORING_PHASE24.md), and [customer request-history usability and browser QA](docs/COMMISSION_HISTORY_QA_PHASE25.md). Earlier backend, policy, authentication, messaging and private image milestones are in the [roadmap](docs/ROADMAP.md).
+**Latest areas:** [Artist Desk gallery publishing](docs/ARTWORK_PUBLISH_QA_PHASE22.md), [full encrypted backup recovery](docs/FULL_RECOVERY_QA_PHASE23.md), [backup monitoring and independent storage preparation](docs/BACKUP_MONITORING_PHASE24.md), and [customer request-history usability](docs/COMMISSION_HISTORY_QA_PHASE25.md), and [quote review and request-detail reliability](docs/QUOTE_DETAIL_QA_PHASE26.md). Earlier backend, policy, authentication, messaging and private image milestones are in the [roadmap](docs/ROADMAP.md).
 
-The disposable database integration suite tests synthetic customers, artist actions, quote/order safeguards, image conversion, and independent encrypted restoration. [Latest passing full integration run](https://github.com/pixel375/drawmeone/actions/runs/45460675729).
+The disposable database integration suite tests synthetic customers, artist actions, quote/order safeguards, image conversion, and independent encrypted restoration. [Latest passing full integration run](https://github.com/pixel375/drawmeone/actions/runs/45462290888).
 
-Chromium browser QA covers all four public designs, all six Artist Desk tabs, plus a synthetic signed-in customer commission workspace at desktop/tablet/mobile sizes. [Latest passing browser suite](https://github.com/pixel375/drawmeone/actions/runs/45460675677).
+Chromium browser QA covers all four public designs, all six Artist Desk tabs, plus a synthetic signed-in customer commission workspace at desktop/tablet/mobile sizes. [Latest passing browser suite](https://github.com/pixel375/drawmeone/actions/runs/45462290911).
 
-The [latest successful read-only Hostinger verification](https://github.com/pixel375/drawmeone/actions/runs/45460914646) checked deployment, private storage, mail formatting, and closed account/request gates.
+The [latest successful read-only Hostinger verification](https://github.com/pixel375/drawmeone/actions/runs/45462408843) checked deployment, private storage, mail formatting, and closed account/request gates.
 
 **Outstanding before opening to customers:** genuine rights-cleared published artwork, owner-approved Terms/Privacy and policies, controlled real-account onboarding/Turnstile tests, independently held encrypted off-site backup and recovery key, and provider-verified payments. **No test success alone enables public business operations.**
 
