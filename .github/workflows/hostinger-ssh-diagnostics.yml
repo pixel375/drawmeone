@@ -65,7 +65,7 @@ jobs:
           [[ -d "$site" && -f "$site/app/cli-admin.php" && -f "$site/app/bootstrap.php" ]] || {
             echo "Expected DrawMeOne PHP deployment is missing"; exit 1;
           }
-          for file in app/bootstrap.php app/auth.php app/mailer.php app/admin.php app/cli-admin.php app/cli-mail-config.php app/cli-smtp-probe.php app/commission-workflow.php app/quotes.php app/artwork.php app/requests.php app/references.php app/cli-migrate-references.php api/request-status.php api/requests.php api/request.php api/request-message.php api/quote-response.php api/request-attachment.php api/reference.php api/reference-delete.php api/auth/resend-verification.php api/admin/login.php api/admin/email.php api/admin/request.php api/admin/request-actions.php api/admin/quote-send.php api/portfolio.php api/artwork.php api/admin/artworks.php api/admin/artwork-preview.php api/admin/artwork-upload.php; do
+          for file in artwork.php sitemap.php app/bootstrap.php app/auth.php app/mailer.php app/admin.php app/cli-admin.php app/cli-mail-config.php app/cli-smtp-probe.php app/commission-workflow.php app/quotes.php app/artwork.php app/requests.php app/references.php app/cli-migrate-references.php api/request-status.php api/requests.php api/request.php api/request-message.php api/quote-response.php api/request-attachment.php api/reference.php api/reference-delete.php api/auth/resend-verification.php api/admin/login.php api/admin/email.php api/admin/request.php api/admin/request-actions.php api/admin/quote-send.php api/portfolio.php api/artwork.php api/admin/artworks.php api/admin/artwork-preview.php api/admin/artwork-upload.php; do
             for attempt in 1 2 3 4 5 6; do
               [[ -f "$site/$file" ]] && break
               sleep 3
@@ -171,9 +171,11 @@ jobs:
             exit(1);
           }
           ' "$site"
-          for check in portfolio request-status commission-page customer-requests customer-message customer-quote customer-attachment customer-reference auth-resend admin-quote admin-artworks admin-preview admin-mail; do
+          for check in portfolio sitemap artwork-page request-status commission-page customer-requests customer-message customer-quote customer-attachment customer-reference auth-resend admin-quote admin-artworks admin-preview admin-mail; do
             case "$check" in
               portfolio) url="https://drawmeone.com/api/portfolio.php" ;;
+              sitemap) url="https://drawmeone.com/sitemap.xml" ;;
+              artwork-page) url="https://drawmeone.com/artwork.php?id=1" ;;
               request-status) url="https://drawmeone.com/api/request-status.php" ;;
               commission-page) url="https://drawmeone.com/commission.html" ;;
               customer-requests) url="https://drawmeone.com/api/requests.php" ;;
@@ -190,6 +192,12 @@ jobs:
             status=$(curl -sSL --max-time 12 -o /dev/null -w '%{http_code}' "$url" || true)
             echo "http_${check}=$status"
           done
+          if curl -fsSL --max-time 12 https://drawmeone.com/sitemap.xml | grep -q 'xmlns:image='; then
+            echo "dynamic_artwork_sitemap=yes"
+          else
+            echo "dynamic_artwork_sitemap=no"
+            exit 1
+          fi
           echo "READ_ONLY_DIAGNOSTIC_COMPLETED"
           REMOTE
       - name: Report diagnostic status back to GitHub commit
