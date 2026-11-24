@@ -19,7 +19,7 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
 <meta name="robots" content="noindex,nofollow">
 <meta name="theme-color" content="#151317">
 <title>Artist's Desk · Draw Me One</title>
-<link rel="stylesheet" href="./panel.css?v=22">
+<link rel="stylesheet" href="./panel.css?v=23">
 <script defer src="./panel.js?v=22"></script>
 </head>
 <body>
@@ -29,7 +29,7 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
   <span class="desk-tag">ARTIST'S DESK</span>
   <a class="return" href="../index.html">← Return to portfolio</a>
 </header>
-<main id="main">
+<main id="main" tabindex="-1">
   <section id="closed" class="welcome">
     <span class="overline">BACKEND / ARTIST ACCESS</span>
     <h1>Where the work<br><em>comes together.</em></h1>
