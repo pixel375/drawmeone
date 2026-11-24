@@ -17,7 +17,7 @@ Verified: [successful synthetic HTTP lifecycle run](https://github.com/pixel375/
 
 ## Public contact and private source hardening (v2.9)
 
-- The homepage and closed commissions page offer a **mailto:support@drawmeone.com** general inquiry link. The mailbox's inbound/outbound delivery had been separately verified. No form is submitted, no registration is enabled, and no email constitutes an order or payment authorization.
+- The homepage and closed commissions page offer a **mailto:support@drawmeone.com** general inquiry link. The mailbox's inbound/outbound delivery had been separately verified. No form is submitted, no registration is enabled, and no email constitutes an order or payment authorization. The closed-commission panel is visible by default for visitors with JavaScript disabled or temporarily broken, and the existing client script hides it when an authenticated request workspace is available.
 - Added independent Apache HTTP-denial files to `tests/`, `docs/` and `.github/`, complementing existing `app/` and `database/` protections. These source files are not public website endpoints.
 - The [live read-only SSH diagnostic](https://github.com/pixel375/drawmeone/actions/runs/45417924628) confirmed internal paths are not HTTP-200, public contact is visible, and guarded requests/quotes/orders remain closed. A temporary failed diagnostic was caused by curl's early-exit grep under `pipefail`; the diagnostic was corrected and rerun successfully.
 
