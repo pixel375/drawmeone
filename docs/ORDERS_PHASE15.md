@@ -54,3 +54,7 @@ Customer replies and selected reference files are reset when switching or closin
 ## Phase 37 — Historical catalog labels
 
 Request submission already stores tier and addon snapshots. Artist and customer list/detail reads now use the saved name rather than silently changing older request descriptions after catalog renames. A shared bounded PHP parser exposes only a validated name, falls back to the live catalog label for legacy/missing/malformed snapshots, and removes raw JSON from response rows. Quote amounts, existing records and policy gates remain untouched. The disposable HTTP integration tests seed renamed catalog items with historical labels and verify all four views plus legacy fallback and customer isolation. CI pending.
+
+## Phase 38 — Customer history pagination
+
+Authenticated customer GET /api/requests.php now accepts a bounded positive page number (40 rows and one-row lookahead) and continues enforcing the session's customer ID. The UI appends older requests with deduplication by public reference, preserves existing filters and labels them as applying to loaded rows until all pages are loaded, supports retry after an older-page failure, and resets to the newest page on refresh. Offset pages may shift when new rows appear; duplicate rows are suppressed and refreshing starts again. No private brief or snapshot JSON is exposed. Disposable HTTP tests exercise ownership, page boundaries, invalid/anonymous access; browser tests cover retry, filters, deduplication, mobile overflow and refresh. Initial CI/live verification pending.

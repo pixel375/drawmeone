@@ -14,18 +14,29 @@ try {
     $customer = (int) $session['user_id'];
 
     if ($method === 'GET') {
+        $pageText = $_GET['page'] ?? '1';
+        if (!is_string($pageText) || !preg_match('/^[1-9][0-9]{0,3}$/D', $pageText)) {
+            dmo_json(422, ['ok'=>false,'error'=>'invalid_history_page']);
+        }
+        $page = (int) $pageText;
+        $size = 40;
+        $offset = ($page - 1) * $size;
         $stmt = $db->prepare(
             'SELECT r.public_ref, r.subject_type, r.status, ' .
             'r.submitted_at, r.preferred_deadline, r.tier_snapshot_json, t.name AS tier_name ' .
             'FROM dmo_commission_requests r ' .
             'LEFT JOIN dmo_commission_tiers t ON t.id = r.tier_id ' .
             'WHERE r.customer_id = :customer ' .
-            'ORDER BY r.submitted_at DESC, r.id DESC LIMIT 40'
+            'ORDER BY r.submitted_at DESC, r.id DESC LIMIT 41 OFFSET ' . $offset
         );
         $stmt->execute(['customer' => $customer]);
+        $rows = $stmt->fetchAll();
+        $hasMore = count($rows) > $size;
+        if ($hasMore) array_pop($rows);
         dmo_json(200, [
             'ok' => true,
-            'requests' => array_map('dmo_requests_historical_tier', $stmt->fetchAll()),
+            'requests' => array_map('dmo_requests_historical_tier', $rows),
+            'page' => $page, 'page_size' => $size, 'has_more' => $hasMore && $page < 9999,
             'new_requests_open' => dmo_requests_open(),
         ]);
     }

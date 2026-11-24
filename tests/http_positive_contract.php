@@ -200,6 +200,20 @@ try {
     qa_positive($code===200 && count($second['requests'])===2 && $second['has_more']===false &&
         array_intersect(array_column($first['requests'],'id'),array_column($second['requests'],'id'))===[],
         'admin_list_next_page_no_duplicates');
+    [$code,$first]=qa_http('/api/requests.php?page=1',$tokenA);
+    qa_positive($code===200 && count($first['requests'])===40 &&
+        $first['has_more']===true && $first['page']===1,'customer_history_first_page');
+    [$code,$second]=qa_http('/api/requests.php?page=2',$tokenA);
+    qa_positive($code===200 && count($second['requests'])===2 && $second['has_more']===false &&
+        array_intersect(array_column($first['requests'],'public_ref'),array_column($second['requests'],'public_ref'))===[] &&
+        !in_array($referenceB,array_column(array_merge($first['requests'],$second['requests']),'public_ref'),true),
+        'customer_history_pages_no_overlap_or_other_customer');
+    [$code,$other]=qa_http('/api/requests.php?page=2',$tokenB);
+    qa_positive($code===200 && $other['requests']===[],'other_customer_cannot_page_into_first_customer_history');
+    [$code]=qa_http('/api/requests.php?page=0',$tokenA);
+    qa_positive($code===422,'invalid_customer_history_page');
+    [$code]=qa_http('/api/requests.php?page=2');
+    qa_positive($code===401,'anonymous_history_page_denied');
     $delete=$db->prepare('DELETE FROM dmo_commission_requests WHERE id=:id');
     foreach($extraIds as $extraId)$delete->execute(['id'=>$extraId]);
 

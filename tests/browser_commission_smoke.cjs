@@ -408,6 +408,41 @@ async function customerDraftAndSessionIsolation(browser) {
   }finally{await page.close();}
 }
 
+async function verifyOlderCustomerHistory(browser) {
+  const page=await browser.newPage({viewport:{width:320,height:844},reducedMotion:"reduce"});
+  const test=await installMocks(page,{signedIn:true,open:false});
+  let failOlder=true;
+  const pages=[];
+  await page.route("**/api/requests.php?*",route=>{
+    const n=Number(new URL(route.request().url()).searchParams.get("page"));
+    pages.push(n);
+    if(n===2&&failOlder){failOlder=false;return answer(route,{ok:false},503);}
+    return answer(route,{ok:true,page:n,has_more:n===1,requests:n===1?[requests[0],requests[1]]:[requests[1],requests[2]]});
+  });
+  try{
+    await page.goto(base+"/commission.html",{waitUntil:"domcontentloaded"});
+    const older=page.locator("#request-history-older");
+    await older.waitFor({state:"visible"});
+    await page.locator("#request-history-filter").selectOption("closed");
+    assert.match(await page.locator("#my-request-list").innerText(),/Load older requests/);
+    await older.click();
+    await page.waitForFunction(()=>document.querySelector("#request-history-feedback")?.textContent.includes("Could not load"));
+    assert.equal(await older.isEnabled(),true);
+    await older.click();
+    await page.waitForFunction(()=>document.querySelector("#my-request-list")?.textContent.includes("Completed"));
+    assert.equal(await older.isVisible(),false);
+    await page.locator("#request-history-filter").selectOption("all");
+    assert.equal(await page.locator("#my-request-list .request-list-item").count(),3);
+    await page.locator("#refresh-requests").click();
+    await older.waitFor({state:"visible"});
+    assert.equal(await page.locator("#my-request-list .request-list-item").count(),2);
+    assert.deepEqual(pages,[1,2,2,1]);
+    await checkOverflow(page,"customer history older pages");
+    assert.deepEqual(test.posts,[]);
+    console.log("PASS: customer older history, retry, deduplication and refresh at 320px");
+  }finally{await page.close();}
+}
+
 async function openWithoutLogin(browser) {
   const page=await browser.newPage({viewport:{width:390,height:844}});
   await installMocks(page,{signedIn:false,open:true});
@@ -430,6 +465,7 @@ async function openWithoutLogin(browser) {
     await readonlyQuoteStatuses(browser);
     await detailRaceAndRecovery(browser);
     await customerDraftAndSessionIsolation(browser);
+    await verifyOlderCustomerHistory(browser);
     console.log("COMMISSION_BROWSER_SMOKE=PASS");
   } finally {await browser.close();}
 })().catch(err=>{console.error(err.stack||String(err));process.exitCode=1;});

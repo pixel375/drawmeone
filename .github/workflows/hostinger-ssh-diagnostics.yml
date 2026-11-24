@@ -361,14 +361,14 @@ jobs:
           # Public commission intake remains closed, but its signed-in history
           # assets must include the new browser-only filters and status labels.
           commission_page=$(curl -fsSL --max-time 15 "https://drawmeone.com/commission.html")
-          [[ "$commission_page" == *'commission.js?v=26'* ]] &&
-          [[ "$commission_page" == *'commission.css?v=25'* ]] &&
+          [[ "$commission_page" == *'commission.js?v=27'* ]] &&
+          [[ "$commission_page" == *'commission.css?v=26'* ]] &&
           [[ "$commission_page" == *'id="request-history-search"'* ]] &&
           [[ "$commission_page" == *'id="request-history-filter"'* ]] || {
             echo "customer_history=stale_html"
             exit 1
           }
-          commission_js=$(curl -fsSL --max-time 15 "https://drawmeone.com/commission.js?v=26")
+          commission_js=$(curl -fsSL --max-time 15 "https://drawmeone.com/commission.js?v=27")
           [[ "$commission_js" == *'function renderRequestHistory()'* ]] &&
           [[ "$commission_js" == *'readableRequestStatus(r.status)'* ]] &&
           [[ "$commission_js" == *'requestsFetchSequence'* ]] || {
@@ -395,6 +395,12 @@ jobs:
           }
           echo "customer_session_controls=deployed"
           echo "customer_quote_detail=deployed"
+          [[ "$commission_page" == *'id="request-history-older"'* ]] &&
+          [[ "$commission_js" == *'historyHasMore'* ]] || {
+            echo "customer_history_pagination=stale_assets"
+            exit 1
+          }
+          echo "customer_history_pagination=deployed"
           echo "customer_history=deployed"
           # v3.9 registration remains closed, but verify the versioned
           # customer signup and recovery assets are deployed safely.

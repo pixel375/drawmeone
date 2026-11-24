@@ -9,8 +9,8 @@
 <meta name="description" content="Request an original custom drawing through Draw Me One when commissions open.">
 <title>Commission a drawing · Draw Me One</title>
 <link rel="icon" href="./favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="./commission.css?v=25">
-<script defer src="./commission.js?v=26"></script>
+<link rel="stylesheet" href="./commission.css?v=26">
+<script defer src="./commission.js?v=27"></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
@@ -130,6 +130,10 @@
       </div>
       <div id="my-request-list" class="request-list">
         <p class="small">Loading your requests…</p>
+      </div>
+      <div class="request-history-more">
+        <button type="button" id="request-history-older" class="text-button" hidden>Load older requests</button>
+        <p id="request-history-feedback" class="small" role="status" aria-live="polite"></p>
       </div>
       <section id="my-request-detail" class="request-detail" hidden>
         <div class="detail-heading">

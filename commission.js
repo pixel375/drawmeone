@@ -197,7 +197,7 @@
     });
     target.replaceChildren();
     $("request-history-count").textContent = rows.length
-      ? "Showing " + matches.length + " of " + rows.length + " recent requests"
+      ? "Showing " + matches.length + " of " + rows.length + (historyHasMore ? " loaded requests · Older requests available" : " requests")
       : "No requests yet";
     if (!rows.length) {
       target.append(renderText("p",
@@ -206,7 +206,7 @@
     }
     if (!matches.length) {
       target.append(renderText("p",
-        "No requests match these filters. Try another status or reference.","small"));
+        historyHasMore ? "No loaded requests match. Load older requests to search further." : "No requests match these filters. Try another status or reference.","small"));
       return;
     }
     for (const item of matches) {
@@ -231,31 +231,64 @@
   }
 
   let requestsFetchSequence = 0;
-  async function loadMyRequests() {
+  let historyPage = 0;
+  let historyHasMore = false;
+  let historyBusy = false;
+  function syncHistoryControls() {
+    $("request-history-older").hidden = !historyHasMore;
+    $("request-history-older").disabled = historyBusy;
+  }
+  async function loadMyRequests(older = false) {
+    const append = older === true;
+    if (leavingSession || (append && (historyBusy || !historyHasMore))) return;
     const sequence = ++requestsFetchSequence;
+    const page = append ? historyPage + 1 : 1;
     const target = $("my-request-list");
-    target.replaceChildren(renderText("p","Loading your requests…","small"));
-    $("request-history-count").textContent = "Refreshing request history…";
+    historyBusy = true;
+    if (!append) {
+      historyHasMore = false;
+      historyPage = 0;
+      state.requests = [];
+      target.replaceChildren(renderText("p","Loading your requests…","small"));
+    }
+    syncHistoryControls();
+    $("request-history-feedback").textContent = "";
+    $("request-history-count").textContent = append ? "Loading older requests…" : "Refreshing request history…";
     try {
-      const {response, body} = await getJSON("./api/requests.php");
+      const {response, body} = await getJSON("./api/requests.php?page=" + page);
       if (response.status === 401) return customerSessionExpired();
       if (sequence !== requestsFetchSequence) return;
-      if (!response.ok || !body.ok || !Array.isArray(body.requests)) {
+      if (!response.ok || !body.ok || !Array.isArray(body.requests) ||
+          (body.page !== undefined && body.page !== page)) {
         throw new Error("Requests unavailable");
       }
-      state.requests = body.requests.filter(item =>
+      const rows = body.requests.filter(item =>
         typeof item.public_ref === "string" &&
         /^DMO-[0-9a-f]{20}$/.test(item.public_ref)
       );
+      const merged = new Map((append ? state.requests : []).map(item=>[item.public_ref,item]));
+      for (const row of rows) merged.set(row.public_ref,row);
+      state.requests = [...merged.values()];
+      historyPage = page;
+      historyHasMore = body.has_more === true;
       renderRequestHistory();
     } catch (_) {
       if (sequence !== requestsFetchSequence) return;
-      $("request-history-count").textContent = "Could not refresh request history";
-      target.replaceChildren(
-        renderText("p","Couldn't load your requests. Try refreshing.","small")
-      );
+      if (append) {
+        renderRequestHistory();
+        $("request-history-feedback").textContent = "Could not load older requests. Try again.";
+      } else {
+        $("request-history-count").textContent = "Could not refresh request history";
+        target.replaceChildren(renderText("p","Couldn't load your requests. Try refreshing.","small"));
+      }
+    } finally {
+      if (sequence === requestsFetchSequence) {
+        historyBusy = false;
+        syncHistoryControls();
+      }
     }
   }
+  $("request-history-older").addEventListener("click", () => loadMyRequests(true));
   $("request-history-search").addEventListener("input", renderRequestHistory);
   $("request-history-filter").addEventListener("change", renderRequestHistory);
 
