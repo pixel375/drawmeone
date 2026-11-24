@@ -107,6 +107,9 @@ async function closedPage(browser,url,width) {
       await home(browser,site,390);
       await home(browser,site,1440);
     }
+    for(const site of Object.values(preset)) {
+      await home(browser,site,1440,"light");
+    }
     await home(browser,"studio",390,"light");
     for(const file of ["/commission.html","/account.html","/password-reset.html"]){
       await closedPage(browser,file,390);
