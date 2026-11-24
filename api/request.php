@@ -1,6 +1,6 @@
 <?php
 declare(strict_types=1);
-require_once dirname(__DIR__) . '/app/requests.php';
+require_once dirname(__DIR__) . '/app/references.php';
 dmo_reject_non_get();
 
 try {
@@ -43,11 +43,17 @@ try {
         'ORDER BY m.id DESC LIMIT 40'
     );
     $messages->execute(['id' => $request['id']]);
+    $references = dmo_refs_metadata($db, (int) $request['id']);
+    $canUpload = dmo_refs_enabled($db) &&
+        dmo_messages_request_open((string) $request['status']) &&
+        count($references) < DMO_REFERENCE_MAX_ITEMS;
     unset($request['id']);
     dmo_json(200, [
         'ok' => true,
         'request' => $request,
         'addons' => $names,
+        'references' => $references,
+        'can_upload_references' => $canUpload,
         'messages' => array_reverse($messages->fetchAll()),
         'can_reply' => dmo_messages_enabled() &&
             dmo_messages_request_open((string) $request['status']),
