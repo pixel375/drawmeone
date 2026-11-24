@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
 require_once dirname(__DIR__, 2) . '/app/admin.php';
+require_once dirname(__DIR__, 2) . '/app/orders.php';
+require_once dirname(__DIR__, 2) . '/app/references.php';
 dmo_reject_non_get();
 
 try {
@@ -20,8 +22,68 @@ try {
     foreach ($queries as $name => $sql) {
         $counts[$name] = (int) $db->query($sql)->fetchColumn();
     }
+    // Administrative launch readiness: safe booleans and counts only.
+    // No secret values, environment paths, user data or private file names.
+    $published = (int) $db->query(
+        "SELECT COUNT(*) FROM dmo_portfolio_artworks WHERE visibility = 'published'"
+    )->fetchColumn();
+    $privateEnv = dmo_private_env_path();
+    $recentBackup = false;
+    if ($privateEnv !== null) {
+        $backupRoot = dirname($privateEnv) . '/drawmeone-encrypted-backups';
+        foreach (glob($backupRoot . '/dmo-*.bak') ?: [] as $archive) {
+            if (is_file($archive) && !is_link($archive) &&
+                preg_match('/\/dmo-[0-9]{8}T[0-9]{6}Z-[a-f0-9]{8}\.bak$/D', $archive) &&
+                (int) filemtime($archive) > time() - 36 * 3600) {
+                $recentBackup = true;
+                break;
+            }
+        }
+    }
+    $policyReady = dmo_quote_policy_ready();
+    $readiness = [
+        ['key' => 'mail', 'label' => 'Transactional email',
+         'status' => dmo_mail_ready() ? 'ready' : 'blocked',
+         'detail' => 'Required for verification and password reset'],
+        ['key' => 'artwork', 'label' => 'Published portfolio',
+         'status' => $published > 0 ? 'ready' : 'blocked',
+         'detail' => $published . ' published drawings'],
+        ['key' => 'policy', 'label' => 'Approved Terms and Privacy',
+         'status' => $policyReady ? 'ready' : 'blocked',
+         'detail' => 'Requires owner-approved published legal documents and policy version'],
+        ['key' => 'accounts', 'label' => 'Customer accounts',
+         'status' => dmo_auth_configured() &&
+            dmo_config('DMO_REGISTRATION_ENABLED') === '1' ? 'ready' : 'blocked',
+         'detail' => 'Registration stays closed until controlled account QA'],
+        ['key' => 'requests', 'label' => 'Commission submissions',
+         'status' => dmo_requests_open() ? 'ready' : 'blocked',
+         'detail' => 'Requires verified accounts and approved policies'],
+        ['key' => 'messaging', 'label' => 'Private messaging',
+         'status' => dmo_messages_enabled() ? 'ready' : 'blocked',
+         'detail' => 'Artist/customer messages behind independent access gates'],
+        ['key' => 'references', 'label' => 'Customer reference uploads',
+         'status' => dmo_refs_enabled($db) ? 'ready' : 'blocked',
+         'detail' => 'Private images and customer ownership checks'],
+        ['key' => 'quotes', 'label' => 'Quote release and acceptance',
+         'status' => dmo_quote_delivery_enabled() &&
+             dmo_quote_response_enabled() ? 'ready' : 'blocked',
+         'detail' => 'Requires both independent quote switches'],
+        ['key' => 'orders', 'label' => 'Order confirmation',
+         'status' => dmo_orders_admin_enabled() ? 'ready' : 'blocked',
+         'detail' => 'Only unpaid/unverified order creation is implemented'],
+        ['key' => 'backup', 'label' => 'Recent encrypted local backup',
+         'status' => $recentBackup ? 'ready' : 'blocked',
+         'detail' => 'Most recent snapshot must be under 36 hours old'],
+        ['key' => 'offsite', 'label' => 'Independent off-site recovery',
+         'status' => 'planned',
+         'detail' => 'Off-site copy and separately stored recovery key not configured'],
+        ['key' => 'payments', 'label' => 'Verified payment processing',
+         'status' => 'planned',
+         'detail' => 'No provider verification or automated charges implemented'],
+    ];
     dmo_json(200, [
         'ok' => true,
+        'readiness' => $readiness,
         'counts' => $counts,
         'readonly' => true,
         'data_is_live' => true,
