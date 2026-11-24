@@ -1,1 +1,1 @@
-v3.0 November 24 auth recovery hardening: check real Hostinger deployed PHP syntax, closed GET recovery endpoints, SMTP smoke, quote/order gates, and public site. Read-only; no account or payment writes.
+v3.1 Nov 24 final read-only Hostinger inspection: private tests/docs denied, customer registration still disabled, reset endpoints method-gated, account/order safeguards and public contact intact. CI verified reference uploads in isolation; no live upload attempted.
