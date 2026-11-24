@@ -65,21 +65,27 @@ jobs:
           [[ -d "$site" && -f "$site/app/cli-admin.php" && -f "$site/app/bootstrap.php" ]] || {
             echo "Expected DrawMeOne PHP deployment is missing"; exit 1;
           }
-          for file in artwork.php sitemap.php app/bootstrap.php app/auth.php app/mailer.php app/admin.php app/cli-admin.php app/cli-mail-config.php app/cli-smtp-probe.php app/commission-workflow.php app/quotes.php app/orders.php app/artwork.php app/requests.php app/references.php app/cli-migrate-references.php api/request-status.php api/requests.php api/request.php api/request-message.php api/quote-response.php api/request-attachment.php api/reference.php api/reference-delete.php api/auth/resend-verification.php api/admin/login.php api/admin/email.php api/admin/request.php api/admin/request-actions.php api/admin/quote-send.php api/admin/order-create.php api/portfolio.php api/artwork.php api/admin/artworks.php api/admin/artwork-preview.php api/admin/artwork-upload.php; do
-            for attempt in 1 2 3 4 5 6; do
-              [[ -f "$site/$file" ]] && break
+          for file in artwork.php sitemap.php app/bootstrap.php app/auth.php app/mailer.php app/admin.php app/cli-admin.php app/cli-mail-config.php app/cli-smtp-probe.php app/commission-workflow.php app/quotes.php app/orders.php app/artwork.php app/requests.php app/references.php app/cli-migrate-references.php api/request-status.php api/requests.php api/request.php api/request-message.php api/quote-response.php api/request-attachment.php api/reference.php api/reference-delete.php api/auth/resend-verification.php api/admin/login.php api/admin/email.php api/admin/request.php api/admin/request-actions.php api/admin/quote-send.php api/admin/order-create.php api/portfolio.php api/artwork.php api/admin/artworks.php api/admin/artwork-preview.php api/admin/artwork-upload.php;; do
+            valid=no
+            for attempt in 1 2 3 4 5 6 7 8 9 10; do
+              if [[ -f "$site/$file" ]] && php -l "$site/$file" >/dev/null 2>&1; then
+                valid=yes
+                break
+              fi
               sleep 3
             done
-            [[ -f "$site/$file" ]] || { echo "Deployment file missing: $file"; exit 1; }
-            php -l "$site/$file" >/dev/null || { echo "PHP syntax invalid: $file"; exit 1; }
+            [[ "$valid" == "yes" ]] || { echo "Deployment file unavailable or PHP syntax invalid: $file"; exit 1; }
           done
           for test in mail_smoke.php quote_smoke.php order_smoke.php private_reference_smoke.php mail_dns_check.php; do
-            for attempt in 1 2 3 4 5 6; do
-              [[ -f "$site/tests/$test" ]] && break
+            valid=no
+            for attempt in 1 2 3 4 5 6 7 8 9 10; do
+              if [[ -f "$site/tests/$test" ]] && php -l "$site/tests/$test" >/dev/null 2>&1; then
+                valid=yes
+                break
+              fi
               sleep 3
             done
-            [[ -f "$site/tests/$test" ]] || { echo "Deployment test missing: $test"; exit 1; }
-            php -l "$site/tests/$test" >/dev/null
+            [[ "$valid" == "yes" ]] || { echo "Deployment test unavailable or invalid: $test"; exit 1; }
           done
           php "$site/tests/mail_smoke.php"
           php "$site/tests/quote_smoke.php"
