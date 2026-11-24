@@ -167,7 +167,7 @@ h1 em,h2 em{font-style:normal;color:var(--accent)}
 .lab-controls{display:grid;grid-template-columns:1.3fr 1.7fr 1fr auto;align-items:end;gap:14px}
 .lab-group{min-width:0}
 .lab-group .lab-button-group{justify-content:space-between}
-.lab-label small{font-size:9px;letter-spacing:0;text-transform:none;font-weight:500;opacity:.7}
+.lab-label small{font-size:10px;letter-spacing:0;text-transform:none;font-weight:600;opacity:1;color:var(--ink)}
 .lab-button-group button{padding:9px 9px;flex:1;white-space:nowrap}
 .lab-site-group .lab-button-group button{padding-left:10px;padding-right:10px}
 .lab-mode-group .lab-button-group button{flex:0 0 auto;min-width:32px}
@@ -361,6 +361,6 @@ h1 em,h2 em{font-style:normal;color:var(--accent)}
   .lab-site-group .lab-button-group button{padding:8px 7px}
   .lab-theme-group .lab-button-group button{padding:8px 6px}
   .lab-group{flex:unset}
-  .lab-label small{font-size:8px}
+  .lab-label small{font-size:10px}
   .gallery-more{padding-top:19px}
 }
