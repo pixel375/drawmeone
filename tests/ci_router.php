@@ -20,6 +20,9 @@ $allowed = [
     '/api/admin/request.php',
     '/api/admin/request-actions.php',
     '/api/admin/quote-send.php',
+    '/api/auth/verify.php',
+    '/api/auth/reset-confirm.php',
+    '/api/auth/me.php',
 ];
 if (!in_array($uri, $allowed, true)) {
     http_response_code(404);
