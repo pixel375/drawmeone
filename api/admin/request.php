@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 require_once dirname(__DIR__, 2) . '/app/commission-workflow.php';
+require_once dirname(__DIR__, 2) . '/app/quotes.php';
 dmo_reject_non_get();
 
 try {
@@ -15,7 +16,8 @@ try {
         'ok' => true,
         'detail' => $detail,
         'admin_writes_enabled' => dmo_workflow_writes_enabled(),
-        'quote_sending_enabled' => false,
+        'quote_sending_enabled' => dmo_quote_delivery_enabled() &&
+            dmo_messages_request_open((string) $detail['request']['status']),
         'customer_messaging_enabled' => dmo_workflow_messaging_enabled() &&
             dmo_messages_request_open((string) $detail['request']['status']),
     ]);
