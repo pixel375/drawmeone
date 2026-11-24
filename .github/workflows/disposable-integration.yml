@@ -56,6 +56,14 @@ jobs:
       DMO_ORDER_ADMIN_ENABLED: '0'
     steps:
       - uses: actions/checkout@v4
+      - name: Fail early on malformed PHP test scripts
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          while IFS= read -r -d '' file; do
+            php -l "$file" >/dev/null || { echo "::error file=$file::PHP test syntax invalid"; exit 1; }
+          done < <(find tests -maxdepth 1 -type f -name '*.php' -print0)
+          echo "INTEGRATION_TEST_PHP_SYNTAX=PASS"
       - name: Install MariaDB client and PHP MySQL extension
         run: |
           sudo apt-get update -qq
