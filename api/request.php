@@ -49,7 +49,8 @@ try {
         'request' => $request,
         'addons' => $names,
         'messages' => array_reverse($messages->fetchAll()),
-        'can_reply' => false,
+        'can_reply' => dmo_messages_enabled() &&
+            dmo_messages_request_open((string) $request['status']),
         'quotes_visible' => false,
         'payments_enabled' => false,
     ]);
