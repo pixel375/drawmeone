@@ -44,13 +44,16 @@ small{display:block;color:var(--muted);font-size:11px;line-height:1.6;margin-top
 .info-list{font-size:12px;color:var(--muted);margin-top:28px}
 footer{border-top:1px solid var(--line);padding-top:20px;margin-top:28px;font-size:11px;color:var(--muted)}
 [hidden]{display:none!important}
+.skip-link{position:absolute;left:14px;top:-90px;z-index:1000;padding:10px 16px;background:var(--accent);color:#21191c;border-radius:7px;font-weight:800;text-decoration:none}
+.skip-link:focus{top:10px}
 button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 </style>
 <script defer src="./account.js?v=15"></script>
 </head>
 <body>
+<a class="skip-link" href="#main">Skip to main content</a>
 <header><a class="brand" href="./index.html">drawmeone<span>.</span></a><a href="./index.html">← Back to drawings</a></header>
-<main>
+<main id="main" tabindex="-1">
 <span class="eyebrow">A LITTLE ART. A LOT OF HEART.</span>
 <h1>Your own<br><em>creative corner.</em></h1>
 <p class="lead">Your future place for commission requests, private conversations, and completed artwork.</p>
