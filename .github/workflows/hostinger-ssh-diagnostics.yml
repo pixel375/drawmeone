@@ -351,6 +351,34 @@ jobs:
           }
           echo "customer_quote_detail=deployed"
           echo "customer_history=deployed"
+          # v3.9 registration remains closed, but verify the versioned
+          # customer signup and recovery assets are deployed safely.
+          customer_page=$(curl -fsSL --max-time 15 "https://drawmeone.com/account.html")
+          [[ "$customer_page" == *'account.js?v=15'* ]] &&
+          [[ "$customer_page" == *'id="signup-password-confirm"'* ]] || {
+            echo "customer_onboarding_assets=stale_signup"
+            exit 1
+          }
+          customer_js=$(curl -fsSL --max-time 15 "https://drawmeone.com/account.js?v=15")
+          [[ "$customer_js" == *'signupPasswordConfirm.setCustomValidity'* ]] &&
+          [[ "$customer_js" == *'Too many sign-in attempts'* ]] || {
+            echo "customer_onboarding_assets=stale_signup_script"
+            exit 1
+          }
+          recover_page=$(curl -fsSL --max-time 15 "https://drawmeone.com/password-reset.html")
+          [[ "$recover_page" == *'password-reset.js?v=13'* ]] &&
+          [[ "$recover_page" == *'id="reset-request-another"'* ]] &&
+          [[ "$recover_page" == *'id="reset-back-to-signin"'* ]] || {
+            echo "customer_onboarding_assets=stale_recovery"
+            exit 1
+          }
+          recover_js=$(curl -fsSL --max-time 15 "https://drawmeone.com/password-reset.js?v=13")
+          [[ "$recover_js" == *'response.status === 422'* ]] &&
+          [[ "$recover_js" == *'requestAnother.hidden=false'* ]] || {
+            echo "customer_onboarding_assets=stale_recovery_script"
+            exit 1
+          }
+          echo "customer_onboarding_assets=deployed"
           echo "READ_ONLY_DIAGNOSTIC_COMPLETED"
           REMOTE
       - name: Report diagnostic status back to GitHub commit
