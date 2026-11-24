@@ -9,8 +9,8 @@
 <meta name="description" content="Request an original custom drawing through Draw Me One when commissions open.">
 <title>Commission a drawing · Draw Me One</title>
 <link rel="icon" href="./favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="./commission.css?v=18">
-<script defer src="./commission.js?v=21"></script>
+<link rel="stylesheet" href="./commission.css?v=22">
+<script defer src="./commission.js?v=22"></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
@@ -137,6 +137,12 @@
             <progress id="detail-reference-progress" value="0" max="1" hidden></progress>
             <p id="detail-reference-feedback" class="small" role="status" aria-live="polite"></p>
           </form>
+        </section>
+        <section id="detail-quote-section" class="detail-quote-section" hidden>
+          <h4>Quotes from the artist</h4>
+          <p class="small">Review the exact drawing scope, currency, total and expiration. A quote is not an invoice. No online payment is collected here.</p>
+          <div id="detail-quotes" class="detail-quotes"></div>
+          <p id="detail-quote-feedback" role="status" aria-live="polite" class="small"></p>
         </section>
         <div id="detail-messages" class="detail-messages"></div>
         <form id="detail-reply-form" class="detail-reply-form" hidden>
