@@ -1,0 +1,78 @@
+name: DrawMeOne Disposable Database Integration
+
+# Runs only against an ephemeral MariaDB container; never contacts Hostinger.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'app/**'
+      - 'api/**'
+      - 'database/**'
+      - 'tests/integration_contract.php'
+      - '.github/workflows/disposable-integration.yml'
+  pull_request:
+    paths:
+      - 'app/**'
+      - 'api/**'
+      - 'database/**'
+      - 'tests/integration_contract.php'
+      - '.github/workflows/disposable-integration.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    services:
+      mariadb:
+        image: mariadb:11.4
+        env:
+          MARIADB_ROOT_PASSWORD: ephemeral_ci_root_only
+          MARIADB_DATABASE: drawmeone_ci
+          MARIADB_USER: ci_user
+          MARIADB_PASSWORD: ephemeral_ci_password_only
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd "healthcheck.sh --connect --innodb_initialized"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 15
+    env:
+      DMO_CI_INTEGRATION: '1'
+      DB_HOST: 127.0.0.1
+      DB_NAME: drawmeone_ci
+      DB_USER: ci_user
+      DB_PASS: ephemeral_ci_password_only
+      DMO_REQUEST_POLICY_VERSION: qa-policy-v1
+      DMO_APP_KEY: disposable-ci-key-not-valid-for-production-very-long
+      DMO_AUTH_ENABLED: '0'
+      DMO_REGISTRATION_ENABLED: '0'
+      DMO_REQUESTS_ENABLED: '0'
+      DMO_QUOTE_DELIVERY_ENABLED: '0'
+      DMO_QUOTE_RESPONSES_ENABLED: '0'
+      DMO_ORDER_ADMIN_ENABLED: '0'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install MariaDB client and PHP MySQL extension
+        run: |
+          sudo apt-get update -qq
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq mariadb-client php-mysql >/dev/null
+          php -m | grep -Fx pdo_mysql >/dev/null
+      - name: Import actual committed schema into throwaway database
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          export MYSQL_PWD="$DB_PASS"
+          for n in {1..30}; do
+            if mariadb -h "$DB_HOST" -u "$DB_USER" "$DB_NAME" -e 'SELECT 1' >/dev/null 2>&1; then break; fi
+            sleep 2
+          done
+          gzip -dc database/001_initial_schema.sql.gz | mariadb -h "$DB_HOST" -u "$DB_USER" "$DB_NAME"
+          mariadb -h "$DB_HOST" -u "$DB_USER" "$DB_NAME" < database/002_auth_rate_limits.sql
+          mariadb -h "$DB_HOST" -u "$DB_USER" "$DB_NAME" < database/003_private_references.sql
+          echo "DISPOSABLE_SCHEMA=READY"
+      - name: Run ownership, privacy and quote/order persistence contract
+        run: php tests/integration_contract.php
