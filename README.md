@@ -1,12 +1,16 @@
 # Draw Me One — Current development status (November 24, 2026)
 
-The live site at [drawmeone.com](https://drawmeone.com) has a protected Artist's Desk, design controls, bulk artwork management, an optimized gallery and a general-inquiry email link. SMTP is configured and verified. Customer registration and commission intake remain deliberately disabled pending approved Terms/Privacy and controlled onboarding tests. No automatic payments are available.
+The live [DrawMeOne website](https://drawmeone.com) includes a protected Artist's Desk, four responsive portfolio layouts, themes, optimized private/public artwork handling and general inquiries through `support@drawmeone.com`. SMTP is configured. Public customer registration, new commission submissions, quote/order release and payments remain separately gated until launch approvals are complete.
 
-**Latest implemented phases:** [Private messaging and reference images](docs/MESSAGING_PHASE10.md), [quote review](docs/ROADMAP.md), [unpaid order tracking](docs/ORDERS_PHASE15.md), [encrypted local backups](docs/ENCRYPTED_BACKUPS_PHASE13.md), [launch-readiness dashboard](docs/LAUNCH_READINESS_PHASE16.md), [disposable MariaDB/HTTP integration tests](docs/QA_PHASE17.md), [account recovery hardening](docs/AUTH_RECOVERY_QA_PHASE18.md), and [private image upload tests](docs/REFERENCE_QA_PHASE19.md), [Artist Desk mobile QA](docs/ARTIST_DESK_QA_PHASE21.md), [gallery publishing and bulk controls](docs/ARTWORK_PUBLISH_QA_PHASE22.md), and [full backup recovery testing](docs/FULL_RECOVERY_QA_PHASE23.md), and [automatic backup monitoring and off-site preparation](docs/BACKUP_MONITORING_PHASE24.md).
+**Latest areas:** [Artist Desk gallery publishing](docs/ARTWORK_PUBLISH_QA_PHASE22.md), [full encrypted backup recovery](docs/FULL_RECOVERY_QA_PHASE23.md), [backup monitoring and independent storage preparation](docs/BACKUP_MONITORING_PHASE24.md), and [customer request-history usability and browser QA](docs/COMMISSION_HISTORY_QA_PHASE25.md). Earlier backend, policy, authentication, messaging and private image milestones are in the [roadmap](docs/ROADMAP.md).
 
-The integration suite exercises synthetic customers and artist actions end-to-end and is required on relevant backend changes. [Chromium browser QA](docs/BROWSER_QA_PHASE20.md) also covers all four design layouts at desktop, tablet and mobile widths, including gallery interaction, theme persistence and the closed commission/account pages. [Latest passing full integration run](https://github.com/pixel375/drawmeone/actions/runs/45440098692). Live Hostinger diagnostics verified that protected internal files are denied and public contact is visible. [Latest successful live verification](https://github.com/pixel375/drawmeone/actions/runs/45445310687).
+The disposable database integration suite tests synthetic customers, artist actions, quote/order safeguards, image conversion, and independent encrypted restoration. [Latest passing full integration run](https://github.com/pixel375/drawmeone/actions/runs/45460675729).
 
-**Still required:** real approved portfolio drawings, owner-approved business/privacy policies, private customer onboarding pilot, independent offsite backup/key custody with restore drill, and provider-verified payment processing. Do not enable feature switches on the strength of CI alone.
+Chromium browser QA covers all four public designs, all six Artist Desk tabs, plus a synthetic signed-in customer commission workspace at desktop/tablet/mobile sizes. [Latest passing browser suite](https://github.com/pixel375/drawmeone/actions/runs/45460675677).
+
+The [latest successful read-only Hostinger verification](https://github.com/pixel375/drawmeone/actions/runs/45460914646) checked deployment, private storage, mail formatting, and closed account/request gates.
+
+**Outstanding before opening to customers:** genuine rights-cleared published artwork, owner-approved Terms/Privacy and policies, controlled real-account onboarding/Turnstile tests, independently held encrypted off-site backup and recovery key, and provider-verified payments. **No test success alone enables public business operations.**
 
 ---
 
