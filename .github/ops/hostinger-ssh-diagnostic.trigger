@@ -1,1 +1,1 @@
-DrawMeOne v2.1 final safe recheck after deployment has stabilized: PHP, uploaded reference table, admin auth safety, customer upload/remove/preview routes and mail readiness.
+2026-11-23 v2.2 production quote route and source regression, plus safe backup tooling availability: no customer data or secrets exported.
