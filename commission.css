@@ -114,3 +114,9 @@ footer{border-top:1px solid var(--line);display:flex;gap:18px;justify-content:sp
 .customer-order-card{border:1px solid var(--line);background:var(--input);padding:15px;border-radius:9px;margin-top:13px}
 .customer-order-card strong,.customer-order-card small{display:block}
 .customer-order-card p{overflow-wrap:anywhere}
+
+/* Give visitors a useful no-account contact path while intake is closed. */
+.closed-actions{display:flex;align-items:center;flex-wrap:wrap;gap:12px;margin-top:20px}
+.closed-actions .primary-link{margin:0}
+.closed-actions .text-button{min-height:49px;display:inline-flex;align-items:center;justify-content:center}
+@media(max-width:540px){.closed-actions{flex-direction:column;align-items:stretch}.closed-actions a{width:100%}}
