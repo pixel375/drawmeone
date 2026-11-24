@@ -12,7 +12,8 @@
   const dialog = document.getElementById("portfolio-lightbox");
   const big = document.getElementById("lightbox-image");
   const count = document.getElementById("lightbox-counter");
-  if (![gallery,notice,empty,error,more,moreButton,remaining,progress,dialog,big,count].every(Boolean)) return;
+  const pageLink = document.getElementById("lightbox-detail-link");
+  if (![gallery,notice,empty,error,more,moreButton,remaining,progress,dialog,big,count,pageLink].every(Boolean)) return;
 
   const realImage = /^(?:assets\/portfolio\/[a-z0-9][a-z0-9/_-]*\.(?:avif|webp|png|jpe?g)|api\/artwork\.php\?id=[1-9][0-9]{0,17}&v=display)$/i;
   const optimizedThumb = /^api\/artwork\.php\?id=[1-9][0-9]{0,17}&v=thumb$/i;
@@ -41,6 +42,10 @@
     big.src=entries[activeIndex].src;
     big.alt=imageAlt(entries[activeIndex]);
     count.textContent=(activeIndex+1)+" / "+entries.length;
+    const match=/^api\/artwork\.php\?id=([1-9][0-9]{0,17})&v=display$/.exec(entries[activeIndex].src);
+    pageLink.hidden=!match;
+    if(match) pageLink.href="./artwork.php?id="+match[1];
+    else pageLink.removeAttribute("href");
   }
   function openAt(index,button) {
     lastFocused=button;showAt(index);
