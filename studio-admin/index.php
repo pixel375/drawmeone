@@ -113,6 +113,11 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
             <p class="small">No reference images.</p>
           </div>
         </section>
+        <section class="request-brief" aria-label="Accepted quote order confirmation">
+          <h4>Order progress</h4>
+          <p class="small">An accepted quote requires separate artist confirmation. Confirming an order does not verify or collect payment.</p>
+          <div id="request-orders"><p class="small">No confirmed order.</p></div>
+        </section>
         <div class="request-columns">
           <section class="request-workpanel">
             <h4>Conversation & internal notes</h4>
