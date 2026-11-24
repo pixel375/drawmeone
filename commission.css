@@ -76,3 +76,9 @@ h4{margin:14px 0 8px}
 footer{border-top:1px solid var(--line);display:flex;gap:18px;justify-content:space-between;padding:25px 0 50px;font-size:11px;color:var(--muted)}
 @media(max-width:930px){.workspace{grid-template-columns:1fr}.history-panel{order:-1}.submit-row{justify-content:flex-start}}
 @media(max-width:620px){main,.site-head{width:calc(100% - 32px)}.site-head{min-height:65px}.wordmark{font-size:23px}.page-heading{padding-top:48px}.field-row{grid-template-columns:1fr;gap:0}.request-form-panel,.history-panel{padding:19px}.submit-row{flex-direction:column;align-items:stretch}.submit-row .small{max-width:none}.submit-row .primary-button{width:100%}.request-list-item{flex-wrap:wrap}.request-list-item button{width:100%}footer{flex-direction:column}}
+
+.detail-reply-form{margin:20px 0;padding:17px;border:1px solid var(--line);background:var(--input);border-radius:9px}
+.detail-reply-form label{display:block;font-size:12px;font-weight:800;margin-bottom:10px}
+.detail-reply-form textarea{display:block;width:100%;background:var(--bg);border:1px solid var(--line);border-radius:8px;color:var(--ink);padding:13px;resize:vertical;min-height:100px;line-height:1.6}
+.detail-reply-form button{margin:13px 0 0}
+.detail-reply-form .small{margin-bottom:0;white-space:pre-wrap}
