@@ -485,3 +485,14 @@ See `docs/ART_DIRECTION.md` and `docs/COMMISSION_PRODUCT_SPEC.md`.
 - [x] Add safe bulk unpublish with explicit confirmation, no image deletion, feature-gated buttons and selection clearing when filters change.
 - [x] Expand Chromium admin checks for draft/published counts, filter behavior and cancelled bulk actions.
 - [ ] Controlled artist-authenticated upload of genuine rights-cleared artwork on Hostinger; review real images before publishing and verify independent offsite media recovery.
+
+## v3.5 — 2026-11-24: Full encrypted backup recovery verification
+
+- [x] Add disposable source and separate restore MariaDB schemas to the CI workflow, with guardrails against production database access.
+- [x] Generate synthetic artist and customer-reference WebP files and verify full CLI backup/encryption, independent decryption, tar extraction, restored SQL import and DB-to-media correspondence.
+- [x] First independent full recovery run passed (Actions run 45439549783).
+- [x] Require fresh encrypted candidates to pass isolated archive restore-check **before** promotion or pruning previously verified backups.
+- [x] Add corrupted-candidate regression: damage a synthetic private image, reject snapshot and preserve last good encrypted backup byte-for-byte.
+- [x] Add fast standalone PHP test lint before costly CI dependency installation.
+- [ ] Configure a truly independent off-site encrypted snapshot destination and separately retain the recovery key; no production backup has been copied to a third-party provider.
+- [ ] Carry out a controlled production-derived restore on independent infrastructure once destination and access protections are established.
