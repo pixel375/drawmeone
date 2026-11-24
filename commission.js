@@ -440,7 +440,7 @@
       renderCustomerQuotes(body.quotes || [], ref, r.policy_version || "");
       renderCustomerOrders(body.orders || []);
       showFact("detail-ref",r.public_ref);
-      showFact("detail-status",r.status);
+      showFact("detail-status",readableRequestStatus(r.status));
       showFact("detail-type",labels[r.subject_type] || r.subject_type);
       const addons = Array.isArray(body.addons) ? body.addons : [];
       showFact("detail-options",
