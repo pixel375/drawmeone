@@ -4,6 +4,7 @@
   const state = {
     service: null, auth: null, catalog: null, account: null, csrf: "",
     sending: false, pendingKey: null, selectedRef: null, messageBusy: false,
+    uploadBusy: false,
   };
   const labels = {
     original_character: "Original character (OC)",
@@ -169,6 +170,8 @@
     panel.hidden = false;
     $("detail-reply-form").hidden = true;
     $("detail-reply-send").disabled = true;
+    $("detail-reference-form").hidden = true;
+    $("detail-reference-list").replaceChildren();
     showFact("detail-ref","Loading " + ref + "...");
     panel.scrollIntoView({behavior:"smooth",block:"start"});
     try {
@@ -181,6 +184,29 @@
       $("detail-reply-form").hidden = !canReply;
       $("detail-reply-disabled").hidden = canReply;
       $("detail-reply-send").disabled = !canReply || state.messageBusy;
+      const references = Array.isArray(body.references) ? body.references : [];
+      const referenceRoot = $("detail-reference-list");
+      referenceRoot.replaceChildren();
+      for (const reference of references) {
+        if (!Number.isSafeInteger(reference.id) || reference.id < 1) continue;
+        const frame = document.createElement("a");
+        frame.href = "./api/reference.php?id=" + reference.id + "&variant=display";
+        frame.target = "_blank";
+        frame.rel = "noopener noreferrer";
+        frame.setAttribute("aria-label", "Open private reference image");
+        const image = document.createElement("img");
+        image.src = "./api/reference.php?id=" + reference.id + "&variant=thumb";
+        image.alt = "Private reference image";
+        image.loading = "lazy";
+        frame.append(image);
+        referenceRoot.append(frame);
+      }
+      if (!references.length) {
+        referenceRoot.append(renderText("p","No reference images attached yet.","small"));
+      }
+      $("detail-reference-form").hidden = body.can_upload_references !== true;
+      $("detail-reference-upload").disabled = body.can_upload_references !== true ||
+        state.uploadBusy;
       const r = body.request || {};
       showFact("detail-ref",r.public_ref);
       showFact("detail-status",r.status);
@@ -211,6 +237,59 @@
   $("detail-close").addEventListener("click",() => {
     state.selectedRef = null;
     $("my-request-detail").hidden = true;
+  });
+
+
+  $("detail-reference-form").addEventListener("submit", async event => {
+    event.preventDefault();
+    const ref = state.selectedRef;
+    if (!ref || state.uploadBusy || !state.csrf) return;
+    const files = Array.from($("detail-reference-files").files || []);
+    if (!files.length || files.length > 8 ||
+        files.some(file => file.size > 4 * 1024 * 1024 || file.size < 1 ||
+          !["image/jpeg","image/png","image/webp"].includes(file.type))) {
+      $("detail-reference-feedback").textContent =
+        "Choose up to eight JPEG, PNG or WebP images, maximum 4 MB each.";
+      return;
+    }
+    const progress = $("detail-reference-progress");
+    state.uploadBusy = true;
+    $("detail-reference-upload").disabled = true;
+    progress.hidden = false;
+    progress.max = files.length; progress.value = 0;
+    try {
+      for (const file of files) {
+        const payload = new FormData();
+        payload.append("ref", ref);
+        payload.append("reference", file);
+        const response = await fetch("./api/request-attachment.php", {
+          method:"POST", credentials:"same-origin", cache:"no-store",
+          headers:{"X-DMO-CSRF":state.csrf},body:payload,
+        });
+        const data = await response.json();
+        if (!response.ok || !data.ok) {
+          $("detail-reference-feedback").textContent =
+            "Upload stopped (" + (data.error || response.status) +
+            "). Earlier images may already have uploaded. Refresh to check before retrying.";
+          await openDetail(ref);
+          return;
+        }
+        progress.value += 1;
+        $("detail-reference-feedback").textContent =
+          "Uploaded " + progress.value + " of " + files.length + " reference images.";
+      }
+      $("detail-reference-files").value = "";
+      await openDetail(ref);
+      $("detail-reference-feedback").textContent =
+        "Private reference images saved. They are visible only to you and the artist.";
+    } catch (_) {
+      $("detail-reference-feedback").textContent =
+        "Connection lost. Check the reference list before retrying.";
+    } finally {
+      state.uploadBusy = false;
+      progress.hidden = true;
+      $("detail-reference-upload").disabled = $("detail-reference-form").hidden;
+    }
   });
 
   $("detail-reply-form").addEventListener("submit", async event => {
