@@ -19,8 +19,8 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
 <meta name="robots" content="noindex,nofollow">
 <meta name="theme-color" content="#151317">
 <title>Artist's Desk · Draw Me One</title>
-<link rel="stylesheet" href="./panel.css?v=18">
-<script defer src="./panel.js?v=19"></script>
+<link rel="stylesheet" href="./panel.css?v=20">
+<script defer src="./panel.js?v=20"></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to dashboard</a>
@@ -82,7 +82,18 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
         <article><span>PAYMENTS TO CHECK</span><strong id="stat-payments">—</strong><small>Require manual verification</small></article>
         <article><span>MESSAGE ACTIVITY</span><strong id="stat-messages">—</strong><small>Last seven days, not an unread count</small></article>
       </div>
-      <p class="small">Commission submission and payment processing are still disabled. The empty workspace is normal until real orders are accepted.</p>
+      <p class="small">Activity reflects actual records. No placeholder orders, customers or payments are created.</p>
+      <section class="launch-overview" aria-labelledby="launch-overview-title">
+        <div class="launch-overview-heading">
+          <div>
+            <h3 id="launch-overview-title">Launch readiness</h3>
+            <p class="small">A live summary of current configuration and remaining requirements. These indicators do not enable any feature.</p>
+          </div>
+          <button type="button" class="quiet" id="launch-refresh">Refresh readiness</button>
+        </div>
+        <p id="launch-status" class="small" role="status" aria-live="polite">Checking launch requirements…</p>
+        <div id="launch-checks" class="launch-checks"></div>
+      </section>
     </section>
 
     <section data-panel="requests" class="content-panel" hidden>
