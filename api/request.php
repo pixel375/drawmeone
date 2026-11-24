@@ -52,6 +52,10 @@ try {
     $quotes = dmo_quote_customer_rows(
         $db, (int) $request['id'], (string) $request['policy_version']
     );
+    if (!dmo_messages_request_open((string) $request['status'])) {
+        foreach ($quotes as &$quoted) $quoted['can_respond'] = false;
+        unset($quoted);
+    }
     unset($request['id']);
     dmo_json(200, [
         'ok' => true,
