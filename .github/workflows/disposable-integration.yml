@@ -94,3 +94,14 @@ jobs:
         run: php tests/ci_reset.php
       - name: Test artist artwork draft, publish, private preview and unpublish
         run: php tests/http_artwork_contract.php
+      - name: Create isolated recovery database and reset source fixtures
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          mariadb -h 127.0.0.1 -u root --password=ephemeral_ci_root_only -e "
+            CREATE DATABASE drawmeone_restore_ci CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+            GRANT ALL PRIVILEGES ON drawmeone_restore_ci.* TO 'ci_user'@'%';
+          "
+          php tests/ci_reset.php
+      - name: Independently restore encrypted backup into a different database
+        run: php tests/full_backup_restore.php
