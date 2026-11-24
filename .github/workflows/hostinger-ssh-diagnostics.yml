@@ -324,6 +324,24 @@ jobs:
           }
           echo "artist_artwork_library=deployed"
           echo "mobile_artist_desk=deployed"
+          # Public commission intake remains closed, but its signed-in history
+          # assets must include the new browser-only filters and status labels.
+          commission_page=$(curl -fsSL --max-time 15 "https://drawmeone.com/commission.html")
+          [[ "$commission_page" == *'commission.js?v=24'* ]] &&
+          [[ "$commission_page" == *'commission.css?v=24'* ]] &&
+          [[ "$commission_page" == *'id="request-history-search"'* ]] &&
+          [[ "$commission_page" == *'id="request-history-filter"'* ]] || {
+            echo "customer_history=stale_html"
+            exit 1
+          }
+          commission_js=$(curl -fsSL --max-time 15 "https://drawmeone.com/commission.js?v=24")
+          [[ "$commission_js" == *'function renderRequestHistory()'* ]] &&
+          [[ "$commission_js" == *'readableRequestStatus(r.status)'* ]] &&
+          [[ "$commission_js" == *'requestsFetchSequence'* ]] || {
+            echo "customer_history=stale_script"
+            exit 1
+          }
+          echo "customer_history=deployed"
           echo "READ_ONLY_DIAGNOSTIC_COMPLETED"
           REMOTE
       - name: Report diagnostic status back to GitHub commit
