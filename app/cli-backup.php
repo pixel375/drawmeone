@@ -494,6 +494,11 @@ try {
                 if (!dmo_backup_verify($temporary, $key)) {
                     throw new RuntimeException('Backup encryption verification failed.');
                 }
+                // Validate the exact newly encrypted snapshot by decrypting
+                // and inspecting it in isolated private scratch storage.
+                // Do this BEFORE promoting the snapshot or pruning older,
+                // known-good backups. Failed recovery must never rotate them.
+                dmo_backup_restore_check($temporary, $key, $root);
                 $destination = $root . '/' . $name;
                 if (!rename($temporary, $destination)) {
                     throw new RuntimeException('Backup promotion failed.');
@@ -503,6 +508,7 @@ try {
                 // Keep the seven newest encrypted local snapshots.
                 $all = dmo_backup_list($root);
                 foreach (array_slice($all, 7) as $old) @unlink($old);
+                echo "new_archive_restore_checked=yes\n";
                 echo "encrypted_backup_created=yes\n";
                 echo "encrypted_backup_verified=yes\n";
                 echo "encrypted_backup_count=" . count(dmo_backup_list($root)) . "\n";
