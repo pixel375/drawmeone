@@ -3,6 +3,7 @@ declare(strict_types=1);
 require_once dirname(__DIR__, 2) . '/app/admin.php';
 require_once dirname(__DIR__, 2) . '/app/orders.php';
 require_once dirname(__DIR__, 2) . '/app/references.php';
+require_once dirname(__DIR__, 2) . '/app/backup-health.php';
 dmo_reject_non_get();
 
 try {
@@ -28,19 +29,7 @@ try {
     $published = (int) $db->query(
         "SELECT COUNT(*) FROM dmo_portfolio_artworks WHERE visibility = 'published'"
     )->fetchColumn();
-    $privateEnv = dmo_private_env_path();
-    $recentBackup = false;
-    if ($privateEnv !== null) {
-        $backupRoot = dirname($privateEnv) . '/drawmeone-encrypted-backups';
-        foreach (glob($backupRoot . '/dmo-*.bak') ?: [] as $archive) {
-            if (is_file($archive) && !is_link($archive) &&
-                preg_match('/\/dmo-[0-9]{8}T[0-9]{6}Z-[a-f0-9]{8}\.bak$/D', $archive) &&
-                (int) filemtime($archive) > time() - 36 * 3600) {
-                $recentBackup = true;
-                break;
-            }
-        }
-    }
+    $localBackup = dmo_backup_local_health();
     $policyReady = dmo_quote_policy_ready();
     $readiness = [
         ['key' => 'mail', 'label' => 'Transactional email',
@@ -72,9 +61,11 @@ try {
         ['key' => 'orders', 'label' => 'Order confirmation',
          'status' => dmo_orders_admin_enabled() ? 'ready' : 'blocked',
          'detail' => 'Only unpaid/unverified order creation is implemented'],
-        ['key' => 'backup', 'label' => 'Recent encrypted local backup',
-         'status' => $recentBackup ? 'ready' : 'blocked',
-         'detail' => 'Most recent snapshot must be under 36 hours old'],
+        ['key' => 'backup', 'label' => 'Encrypted local backup',
+         'status' => $localBackup['ready'] ? 'ready' : 'blocked',
+         'detail' => $localBackup['ready']
+             ? $localBackup['count'] . ' private snapshot(s); latest under 36 hours. Metadata check only'
+             : 'Backup freshness, file permissions or recovery-key presence needs attention'],
         ['key' => 'offsite', 'label' => 'Independent off-site recovery',
          'status' => 'planned',
          'detail' => 'Off-site copy and separately stored recovery key not configured'],
