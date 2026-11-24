@@ -251,6 +251,19 @@ jobs:
             exit 1
           }
           echo "alternate_contact_layouts=3"
+          # Verify mobile Artist Desk stylesheet was deployed and cache-busted.
+          desk_page=$(curl -fsSL --max-time 15 "https://drawmeone.com/studio-admin/index.php")
+          [[ "$desk_page" == *'panel.css?v=21'* ]] || {
+            echo "mobile_artist_desk=stale_stylesheet_reference"
+            exit 1
+          }
+          desk_css=$(curl -fsSL --max-time 15 "https://drawmeone.com/studio-admin/panel.css?v=21")
+          [[ "$desk_css" == *'v3.3: All six Artist Desk sections'* ]] &&
+          [[ "$desk_css" == *'grid-template-columns:repeat(3,minmax(0,1fr))'* ]] || {
+            echo "mobile_artist_desk=stale_or_missing_mobile_layout"
+            exit 1
+          }
+          echo "mobile_artist_desk=deployed"
           echo "READ_ONLY_DIAGNOSTIC_COMPLETED"
           REMOTE
       - name: Report diagnostic status back to GitHub commit
