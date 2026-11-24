@@ -1,9 +1,11 @@
 name: DrawMeOne — Encrypted Private Backup
 
 # Only fixed backup commands via pinned SSH; no arbitrary script inputs.
-# The first production run is triggered by a marker. Daily scheduling is
-# deliberately added only after that controlled first run passes.
+# First controlled encrypted backup succeeded on 2026-11-24.
+# Daily local snapshot rotation; independent offsite backup remains separate.
 on:
+  schedule:
+    - cron: '17 8 * * *'
   push:
     branches: [main]
     paths: ['.github/ops/private-backup.trigger']
