@@ -409,11 +409,18 @@
     $(id).textContent = value === undefined || value === null || value === "" ?
       "Not specified" : String(value);
   }
+  let detailRequestSequence = 0;
   async function openDetail(ref) {
     if (typeof ref !== "string" || !/^DMO-[0-9a-f]{20}$/.test(ref)) return;
+    const sequence = ++detailRequestSequence;
     state.selectedRef = ref;
     const panel = $("my-request-detail");
     panel.hidden = false;
+    panel.setAttribute("aria-busy","true");
+    $("detail-content").hidden = true;
+    $("detail-load-status").hidden = false;
+    $("detail-load-status").textContent = "Loading private request details…";
+    $("detail-refresh").disabled = true;
     $("detail-reply-form").hidden = true;
     $("detail-reply-send").disabled = true;
     $("detail-reference-form").hidden = true;
@@ -429,8 +436,11 @@
       const {response,body} = await getJSON(
         "./api/request.php?ref=" + encodeURIComponent(ref)
       );
-      if (!response.ok || !body.ok) throw new Error("Request unavailable");
-      if (state.selectedRef !== ref) return;
+      if (sequence !== detailRequestSequence || state.selectedRef !== ref) return;
+      if (!response.ok || !body.ok ||
+          body.request?.public_ref !== ref) {
+        throw new Error("Request unavailable");
+      }
       const canReply = body.can_reply === true && !!state.csrf;
       $("detail-reply-form").hidden = !canReply;
       $("detail-reply-disabled").hidden = canReply;
@@ -493,15 +503,31 @@
           root.append(item);
         }
       }
+      $("detail-content").hidden = false;
+      $("detail-load-status").hidden = true;
     } catch (_) {
+      if (sequence !== detailRequestSequence || state.selectedRef !== ref) return;
       showFact("detail-ref","Unable to retrieve this request.");
+      $("detail-load-status").textContent =
+        "This request could not be loaded. Check your connection and try Refresh details.";
+    } finally {
+      if (sequence === detailRequestSequence && state.selectedRef === ref) {
+        $("detail-refresh").disabled = state.quoteBusy;
+        panel.removeAttribute("aria-busy");
+      }
     }
   }
 
   $("refresh-requests").addEventListener("click",loadMyRequests);
+  $("detail-refresh").addEventListener("click", () => {
+    if (state.selectedRef && !state.quoteBusy) openDetail(state.selectedRef);
+  });
   $("detail-close").addEventListener("click",() => {
+    detailRequestSequence++;
     state.selectedRef = null;
     $("my-request-detail").hidden = true;
+    $("detail-content").hidden = true;
+    $("detail-load-status").hidden = true;
   });
 
 
