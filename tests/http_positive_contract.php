@@ -208,6 +208,18 @@ try {
 
     [$code,$overview]=qa_http('/api/admin/overview.php',
         $tokenAdmin,'__Host-dmo_admin');
+    if (!($code===200 &&
+        ($overview['counts']['active_orders']??null)===1 &&
+        ($overview['counts']['payments_to_verify']??null)===0)) {
+        // Only fixed status/counters. Never print customer details or private payloads.
+        echo "CI_OVERVIEW_HTTP=" . $code . "\\n";
+        echo "CI_OVERVIEW_ACTIVE=" .
+            json_encode($overview['counts']['active_orders']??null) . "\\n";
+        echo "CI_OVERVIEW_PAYMENTS=" .
+            json_encode($overview['counts']['payments_to_verify']??null) . "\\n";
+        echo "CI_OVERVIEW_ERROR=" .
+            json_encode($overview['error']??null) . "\\n";
+    }
     qa_positive($code===200 &&
         ($overview['counts']['active_orders']??null)===1 &&
         ($overview['counts']['payments_to_verify']??null)===0,
