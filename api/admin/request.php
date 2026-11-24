@@ -16,7 +16,8 @@ try {
         'detail' => $detail,
         'admin_writes_enabled' => dmo_workflow_writes_enabled(),
         'quote_sending_enabled' => false,
-        'customer_messaging_enabled' => false,
+        'customer_messaging_enabled' => dmo_workflow_messaging_enabled() &&
+            dmo_messages_request_open((string) $detail['request']['status']),
     ]);
 } catch (Throwable $error) {
     dmo_log_problem($error, 'admin commission detail');
