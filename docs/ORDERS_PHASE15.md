@@ -34,3 +34,7 @@ DMO_REQUEST_TERMS_APPROVED=0
 - [ ] Publish artist-approved Terms/Privacy and commercial policies before enabling order confirmation or charge collection.
 
 Customer registration, commission submissions, payments and order confirmation are **not** activated by this implementation.
+
+## Phase 33 — Artist request isolation
+
+The admin request detail now clears unsaved note/message/quote drafts when switching requests or closing details, clears previous customer data before fetching new details, and uses a monotonic request generation to ignore late replies even when revisiting the same ID. Failed reads leave a blank, disabled detail rather than showing another customer's information. Switching/closing is blocked while a request mutation is in flight; same-request refresh preserves unsaved fields. Input controls are disabled during loading and mutation. Browser tests use synthetic customers and assert no POSTs, cross-request draft isolation, failed loads and late response isolation. This deliberately discards unsaved edits when changing request; no server mutation or payment logic changes. Initial CI verification pending.

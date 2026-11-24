@@ -186,6 +186,7 @@
   // Admin-only commission review. All user-controlled content is inserted with
   // textContent, never innerHTML. No public messages or quote sending here.
   let selectedRequestId = null;
+  let requestLoadGeneration = 0;
   let requestWriteEnabled = false;
   let requestMessagingEnabled = false;
   let quoteDeliveryEnabled = false;
@@ -282,7 +283,7 @@
         copy.className = "quiet request-open";
         copy.textContent = "Use as starting point for new version";
         copy.addEventListener("click", () => {
-          if (!requestWriteEnabled) return;
+          if (!requestWriteEnabled || requestBusy) return;
           $("quote-currency").value = quote.currency === "USD" ? "USD" : "CAD";
           $("quote-scope").value = quote.scope_description || "";
           $("quote-revisions").value = String(quote.revision_allowance);
@@ -437,6 +438,16 @@
   }
 
   function updateRequestButtons() {
+    $("request-detail-close").disabled = requestBusy;
+    for (const field of $("request-note-form").querySelectorAll("textarea")) {
+      field.disabled = !requestWriteEnabled || requestBusy;
+    }
+    for (const field of $("request-message-form").querySelectorAll("textarea")) {
+      field.disabled = !requestMessagingEnabled || requestBusy;
+    }
+    for (const field of $("request-quote-form").querySelectorAll("input,textarea,select")) {
+      field.disabled = !requestWriteEnabled || requestBusy;
+    }
     $("request-note-save").disabled = !requestWriteEnabled || requestBusy ||
       selectedRequestId === null;
     $("request-message-send").disabled = !requestMessagingEnabled || requestBusy ||
@@ -446,26 +457,57 @@
     $("quote-add-line").disabled = !requestWriteEnabled || requestBusy;
   }
 
+  function resetRequestDrafts() {
+    $("request-note-form").reset();
+    $("request-message-form").reset();
+    $("request-quote-form").reset();
+    $("quote-lines").replaceChildren();
+    addQuoteLine();
+  }
+
+  function clearRequestContent() {
+    for (const id of ["request-detail-ref","request-detail-title","request-customer",
+      "request-tier","request-contact","request-deadline","request-brief-text"]) {
+      requestText(id, "—");
+    }
+    for (const id of ["request-thread","request-quotes","request-references","request-orders"]) {
+      $(id).replaceChildren();
+    }
+  }
+
   async function openRequest(id) {
     const parsed = Number(id);
     if (!Number.isSafeInteger(parsed) || parsed < 1) return;
+    if (requestBusy && selectedRequestId !== parsed) return;
+    const generation = ++requestLoadGeneration;
+    const switching = selectedRequestId !== parsed;
     selectedRequestId = parsed;
     requestWriteEnabled = false;
     requestMessagingEnabled = false;
     quoteDeliveryEnabled = false;
     orderCreationEnabled = false;
     $("request-message-form").hidden = true;
+    if (switching) resetRequestDrafts();
+    clearRequestContent();
     updateRequestButtons();
     $("request-detail").hidden = false;
     requestText("request-detail-status", "Loading complete request...");
     $("request-detail").scrollIntoView({behavior:"smooth",block:"start"});
-    const {response, data} = await get("request.php?id=" + encodeURIComponent(parsed));
+    let response, data;
+    try {
+      ({response, data} = await get("request.php?id=" + encodeURIComponent(parsed)));
+    } catch (_) {
+      if (generation === requestLoadGeneration) {
+        requestText("request-detail-status", "Unable to load request. Select it again to retry.");
+      }
+      return;
+    }
+    if (generation !== requestLoadGeneration || selectedRequestId !== parsed) return;
     if (response.status === 401) return sessionExpired();
     if (!response.ok || !data.ok || !data.detail) {
       requestText("request-detail-status", "Unable to load request: HTTP " + response.status);
       return;
     }
-    if (selectedRequestId !== parsed) return;
     const item = data.detail;
     const info = item.request || {};
     requestWriteEnabled = data.admin_writes_enabled === true;
@@ -496,12 +538,16 @@
   }
 
   $("request-detail-close").addEventListener("click", () => {
+    if (requestBusy) return;
+    ++requestLoadGeneration;
     selectedRequestId = null;
     requestWriteEnabled = false;
     requestMessagingEnabled = false;
     quoteDeliveryEnabled = false;
     orderCreationEnabled = false;
     $("request-detail").hidden = true;
+    resetRequestDrafts();
+    clearRequestContent();
     updateRequestButtons();
   });
 

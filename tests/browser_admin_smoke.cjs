@@ -255,6 +255,71 @@ async function verifyBulkArtworkChoices(browser) {
     console.log("PASS: safe publish/unpublish bulk selection and filtered status");
   } finally {await context.close();}
 }
+async function verifyRequestIsolation(browser) {
+  const page=await browser.newPage({viewport:{width:390,height:844},reducedMotion:"reduce"});
+  const posts=[];
+  await simulateBackend(page,posts);
+  const fixture=id=>({id,public_ref:"CI-"+id,status:"submitted",
+    customer_name:"Synthetic customer "+id,brief:"Synthetic brief "+id});
+  const response=id=>({ok:true,admin_writes_enabled:true,customer_messaging_enabled:true,
+    quote_sending_enabled:false,order_creation_enabled:false,
+    detail:{request:fixture(id),addons:[],messages:[],quotes:[],references:[],orders:[]}});
+  const reply=(route,data,status=200)=>route.fulfill({status,contentType:"application/json",
+    body:JSON.stringify(data)});
+  let slow=null;
+  await page.route("**/api/admin/requests.php*",route=>reply(route,
+    {ok:true,requests:[fixture(41),fixture(42),fixture(43)]}));
+  await page.route("**/api/admin/request.php?*",async route=>{
+    const id=Number(new URL(route.request().url()).searchParams.get("id"));
+    if(id===43)return reply(route,{ok:false},503);
+    if(id===41&&slow){
+      const hold=slow;
+      await hold.promise;
+      await reply(route,response(id));
+      hold.finished=true;
+      return;
+    }
+    return reply(route,response(id));
+  });
+  try{
+    await page.goto(base+"/studio-admin/index.php",{waitUntil:"domcontentloaded"});
+    await page.locator("#workspace").waitFor({state:"visible"});
+    await page.locator('[data-view="requests"]').click();
+    const buttons=page.locator("#request-list .request-open");
+    await buttons.nth(0).click();
+    await page.waitForFunction(()=>document.querySelector("#request-note-save")?.disabled===false);
+    await page.locator("#request-note-body").fill("Do not leak private note A");
+    await page.locator("#request-message-body").fill("Do not leak customer message A");
+    await page.locator("#quote-scope").fill("Do not leak quote A");
+    await page.locator(".quote-line-description").first().fill("Private quote item A");
+    await buttons.nth(1).click();
+    await page.waitForFunction(()=>document.querySelector("#request-detail-title")?.textContent.includes("#42"));
+    for(const selector of ["#request-note-body","#request-message-body","#quote-scope",".quote-line-description"]){
+      assert.equal(await page.locator(selector).first().inputValue(),"","previous request draft cleared: "+selector);
+    }
+    await buttons.nth(2).click();
+    await page.waitForFunction(()=>document.querySelector("#request-detail-status")?.textContent.includes("HTTP 503"));
+    assert.equal(await page.locator("#request-customer").innerText(),"—");
+    assert.equal(await page.locator("#request-note-save").isEnabled(),false);
+    let release;slow={promise:new Promise(resolve=>{release=resolve}),finished:false};
+    await buttons.nth(0).click();
+    await buttons.nth(1).click();
+    await page.waitForFunction(()=>document.querySelector("#request-detail-title")?.textContent.includes("#42"));
+    release();
+    for(let i=0;i<100&&!slow.finished;i++)await new Promise(resolve=>setTimeout(resolve,10));
+    assert(slow.finished,"delayed response delivered");
+    await page.waitForTimeout(100);
+    assert.match(await page.locator("#request-detail-title").innerText(),/#42/);
+    await page.locator("#request-note-body").fill("Draft B");
+    await page.locator("#request-detail-close").click();
+    assert.equal(await page.locator("#request-detail").isVisible(),false);
+    await buttons.nth(1).click();
+    await page.waitForFunction(()=>document.querySelector("#request-note-save")?.disabled===false);
+    assert.equal(await page.locator("#request-note-body").inputValue(),"");
+    assert.deepEqual(posts,[]);
+    console.log("PASS: artist request draft isolation, stale responses and failed detail loading");
+  }finally{await page.close();}
+}
 async function verifyClosedDesk(browser) {
   const page=await browser.newPage({viewport:{width:390,height:844}});
   await page.route("**/api/admin/status.php*",route=>route.fulfill({
@@ -279,6 +344,7 @@ async function verifyClosedDesk(browser) {
     for(const width of [320,390,768,1440]) await verifyArtistDesk(browser,width);
     await verifyClosedDesk(browser);
     await verifyBulkArtworkChoices(browser);
+    await verifyRequestIsolation(browser);
     console.log("ADMIN_BROWSER_SMOKE=PASS");
   } finally {await browser.close();}
 })().catch(error=>{
