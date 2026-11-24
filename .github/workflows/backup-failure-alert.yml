@@ -33,6 +33,13 @@ jobs:
           [[ "$REPO" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]] || exit 1
           [[ "$RUN_ID" =~ ^[0-9]+$ ]] || exit 1
           [[ "$RUN_CONCLUSION" =~ ^[a-z_]+$ ]] || exit 1
+          # Do not resolve a newer failure using an older, delayed success
+          # event; only the latest *completed* backup run may change the issue.
+          latest=$(gh api "repos/$REPO/actions/workflows/hostinger-private-backup.yml/runs?status=completed&per_page=1" --jq '.workflow_runs[0].id // empty')
+          if [[ "$latest" != "$RUN_ID" ]]; then
+            echo "backup_alert=older_completed_run_ignored"
+            exit 0
+          fi
           title="[DrawMeOne Ops] Daily encrypted backup failed"
           url="https://github.com/$REPO/actions/runs/$RUN_ID"
           current=$(gh api "repos/$REPO/issues?state=open&per_page=100"             --jq '[.[] | select(.pull_request == null and .title == "[DrawMeOne Ops] Daily encrypted backup failed") | .number][0] // empty')
