@@ -468,3 +468,11 @@ See `docs/ART_DIRECTION.md` and `docs/COMMISSION_PRODUCT_SPEC.md`.
 - [x] Check account, commission and password recovery closed states plus the no-JavaScript general inquiry fallback.
 - [x] Browser QA fully passed on GitHub Actions run 45430891562; collect short-retention screenshot artifacts.
 - [ ] Safari/iOS QA and controlled authenticated artist/customer browser testing, including actual production upload/download and Turnstile; no feature gates opened.
+
+## v3.3 — 2026-11-24: Artist Desk mobile navigation and guarded browser QA
+
+- [x] Replace the horizontally scrolling admin menu on mobile with an always-visible three-column tab grid (two columns on extra-small screens).
+- [x] Add automated Chromium checks of all six Artist Desk tabs at 320/390/768/1440 px, including overview counters, launch readiness, zero horizontal overflow and accessible selected-tab state.
+- [x] Confirm that upload/publish, package edit/publish, theme edit/publish and SMTP test actions remain disabled when the private server gates are off; reject all simulated writes.
+- [x] Confirm the closed admin workspace stays hidden, all browser checks pass and sanitized screenshots are saved to ephemeral Actions artifacts (run 45434167222).
+- [ ] Actual authenticated mobile-device QA with a controlled account before customer launch.
