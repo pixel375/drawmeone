@@ -108,3 +108,9 @@ footer{border-top:1px solid var(--line);display:flex;gap:18px;justify-content:sp
 .customer-quote-actions{display:flex;gap:10px;flex-wrap:wrap}
 .customer-quote-actions button{flex:1;min-width:135px}
 @media(max-width:620px){.customer-quote-actions{flex-direction:column}.customer-quote-actions button{width:100%}}
+
+.detail-order-section{border:1px solid var(--line);border-radius:12px;margin:20px 0;padding:18px}
+.detail-order-section h4{margin-top:0}
+.customer-order-card{border:1px solid var(--line);background:var(--input);padding:15px;border-radius:9px;margin-top:13px}
+.customer-order-card strong,.customer-order-card small{display:block}
+.customer-order-card p{overflow-wrap:anywhere}
