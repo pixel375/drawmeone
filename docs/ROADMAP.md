@@ -451,3 +451,11 @@ See `docs/ART_DIRECTION.md` and `docs/COMMISSION_PRODUCT_SPEC.md`.
 - [x] Confirm full test suite success on GitHub Actions run 45427127474.
 - [ ] Controlled live SMTP/Turnstile signup, verification resend, login and reset notification delivery pilot with owner-approved policies.
 - [ ] No public account or payment switches enabled.
+
+## v3.1 — 2026-11-24: Disposable WebP/private reference upload tests
+
+- [x] Add PHP GD image-processing dependency in disposable MariaDB CI and a synthetic PNG-only test fixture.
+- [x] Exercise actual authenticated multipart upload, CSRF and ownership rejection, private WebP thumbnail/display conversion, and outside-webroot storage.
+- [x] Verify owner-only image reads with no-store headers, cross-account and anonymous access denial, owner-only deletion, DB/file cleanup and completed-request write protection.
+- [x] Full disposable suite passed (Actions run 45427818462). Customer upload remains disabled on Hostinger.
+- [ ] Test real browser reference upload flow and live private disk permissions in a controlled pilot before enabling any public customer reference feature.
