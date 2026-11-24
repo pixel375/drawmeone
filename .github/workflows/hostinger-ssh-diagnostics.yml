@@ -108,7 +108,8 @@ jobs:
             // Table metadata only; never read or print private customer records.
             foreach ([
               "dmo_request_attachments", "dmo_attachments", "dmo_messages",
-              "dmo_conversations", "dmo_quotes", "dmo_commission_requests"
+              "dmo_conversations", "dmo_quotes", "dmo_commission_requests",
+              "dmo_orders", "dmo_payments", "dmo_deliverables"
             ] as $tableName) {
               $present = $db->prepare(
                 "SELECT COUNT(*) FROM information_schema.TABLES " .
