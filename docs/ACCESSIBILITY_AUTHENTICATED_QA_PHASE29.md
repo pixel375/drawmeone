@@ -25,3 +25,14 @@ The pinned axe-core Chromium test suite now includes authenticated **synthetic**
 The authenticated pages are mocked in a local browser; no real customer records, live artist notes, quote response, private files or payments are accessed. The existing real-HTTP disposable MariaDB suites remain separate. Real device testing with screen readers, very large text, independent off-site backup and legal/customer launch approvals remain outstanding.
 
 Automated accessibility tests catch many common defects, but human evaluation and actual assistive-technology testing are still needed before claiming compliance.
+
+## Final verified runs
+
+- [Chromium authenticated accessibility run 45487112228](https://github.com/pixel375/drawmeone/actions/runs/45487112228) — **SUCCESS**, `ACCESSIBILITY_BROWSER_SMOKE=PASS`. All six Artist Desk panels at 320px and 1440px, authenticated customer history and request quote at both sizes, reflow checks at 320px, both protected skip-link focus tests, and the existing public/closed site browser tests passed. These scans reported **zero axe rule-category violations for each authenticated panel examined**.
+- [Disposable MariaDB integration run 45487112163](https://github.com/pixel375/drawmeone/actions/runs/45487112163) — **SUCCESS**, preserving quote, session, customer ownership, media and recovery tests.
+- [Source quality run 45487112277](https://github.com/pixel375/drawmeone/actions/runs/45487112277) — **SUCCESS**, including PHP/JS syntax and existing security checks.
+- [Read-only production Hostinger diagnostics 45487199976](https://github.com/pixel375/drawmeone/actions/runs/45487199976) — **SUCCESS** with `artist_keyboard_focus=deployed`, `customer_keyboard_focus=deployed`, and `READ_ONLY_DIAGNOSTIC_COMPLETED`. Public registration, new commission intake and payment collection were not enabled.
+
+## Protecting the Artist Desk CSP
+
+The first expanded browser run correctly refused to execute the inline axe script under Artist Desk's restrictive `Content-Security-Policy: script-src 'self'`. The test now intercepts a **local, same-origin test-only URL** to deliver pinned axe code during CI, without changing deployed CSP or exposing the script in production. This kept the security policy strict while allowing authenticated scans.
