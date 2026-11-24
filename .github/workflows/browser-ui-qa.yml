@@ -36,7 +36,7 @@ jobs:
       - name: Install pinned Chromium automation
         run: |
           node --version
-          npm install --no-audit --no-fund --no-package-lock --no-save playwright@1.56.1
+          npm install --no-audit --no-fund --no-package-lock --no-save playwright@1.56.1 axe-core@4.10.3
           npx playwright install --with-deps chromium
       - name: Run local PHP webroot and test layouts
         shell: bash
@@ -54,11 +54,14 @@ jobs:
           node tests/browser_admin_smoke.cjs
           node tests/browser_commission_smoke.cjs
           node tests/browser_onboarding_smoke.cjs
+          node tests/browser_accessibility_smoke.cjs
       - name: Save browser QA screenshots
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: dmo-browser-ui-screenshots
-          path: test-results/*.png
+          path: |
+            test-results/*.png
+            test-results/accessibility-report.json
           if-no-files-found: ignore
           retention-days: 7
