@@ -160,6 +160,15 @@ async function authenticatedAdmin(browser,width) {
     await page.goto(base+"/studio-admin/index.php",{waitUntil:"domcontentloaded"});
     await page.locator("#workspace").waitFor({state:"visible",timeout:15000});
     await page.locator("#launch-checks .launch-check").first().waitFor();
+    if(width===320){
+      await page.keyboard.press("Tab");
+      assert.equal(await page.evaluate(()=>document.activeElement?.classList.contains("skip")),
+        true,"artist keyboard starts at Skip to dashboard");
+      await page.keyboard.press("Enter");
+      assert.equal(await page.evaluate(()=>document.activeElement?.id),"main",
+        "Artist Desk skip link moves keyboard focus into main");
+      console.log("PASS: authenticated Artist Desk skip-to-main keyboard focus");
+    }
     for(const name of ["overview","requests","messages","artwork","packages","settings"]){
       await page.locator('[data-view="'+name+'"]').click();
       await page.locator('[data-panel="'+name+'"]').waitFor({state:"visible"});
@@ -233,6 +242,15 @@ async function authenticatedCustomer(browser,width) {
     await page.goto(base+"/commission.html",{waitUntil:"domcontentloaded"});
     await page.locator("#my-request-list .request-list-item").first()
       .waitFor({state:"visible",timeout:15000});
+    if(width===320){
+      await page.keyboard.press("Tab");
+      assert.equal(await page.evaluate(()=>document.activeElement?.classList.contains("skip")),
+        true,"customer keyboard starts at Skip to content");
+      await page.keyboard.press("Enter");
+      assert.equal(await page.evaluate(()=>document.activeElement?.id),"main",
+        "customer skip link moves keyboard focus into main");
+      console.log("PASS: authenticated customer skip-to-main keyboard focus");
+    }
     await checkAxe(page,"authenticated-customer-history-"+width);
     await page.locator("#my-request-list .request-list-item button").first().click();
     await page.locator("#detail-content").waitFor({state:"visible"});
