@@ -1,1 +1,1 @@
-DrawMeOne v1.9.1 verification resend deployment check 2026-11-23: lint new guarded endpoint; confirm mail remains configured, customer intake closed, admin endpoints protected.
+DrawMeOne v2.0 gated messaging and route allowlist check 2026-11-23. Read-only PHP syntax, auth guards, mail readiness and attachment-related schema metadata only.
