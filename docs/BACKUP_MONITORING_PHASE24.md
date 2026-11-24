@@ -22,3 +22,9 @@ Implemented November 24, 2026. These changes **do not** enable public customer r
 An encrypted backup stored elsewhere is only useful if the separately protected recovery key also survives Hostinger loss. **Current status: local backup verified; independent off-site archive NOT configured; separately held production recovery key NOT confirmed.** This remains [launch blocker #1](https://github.com/pixel375/drawmeone/issues/1).
 
 No backup bytes, customer records, recovery keys or off-site provider credentials have been added to GitHub code, Issues or artifacts. The validated local Hostinger backups and seven-copy retention remain unchanged.
+
+## Production verification — November 24
+
+The upgraded Hostinger backup command completed successfully in [run 45445427769](https://github.com/pixel375/drawmeone/actions/runs/45445427769): it verified a newly encrypted snapshot, performed the pre-promotion isolated recovery check, retained **4** local encrypted snapshots and inspected **10** private WebP files. `offsite_backup=not_configured` remains explicit.
+
+The newly registered [backup-incident monitor run 45445471845](https://github.com/pixel375/drawmeone/actions/runs/45445471845) completed with `backup_alert=healthy` following this successful production backup. A real failure was **not** induced against production; failure-side issue creation is implemented but not exercised with real production outages.
