@@ -16,10 +16,15 @@ try {
     }
     $db->beginTransaction();
     try {
+        // Only active, email-verified CUSTOMER accounts can use public
+        // recovery links, even if a token for another role somehow exists.
         $stmt = $db->prepare(
-            'SELECT id, user_id FROM dmo_auth_tokens WHERE token_hash = :hash ' .
-            "AND purpose = 'reset_password' AND consumed_at IS NULL " .
-            'AND expires_at > UTC_TIMESTAMP() LIMIT 1 FOR UPDATE'
+            'SELECT t.id, t.user_id, u.email FROM dmo_auth_tokens t ' .
+            'JOIN dmo_users u ON u.id = t.user_id WHERE t.token_hash = :hash ' .
+            "AND t.purpose = 'reset_password' AND t.consumed_at IS NULL " .
+            "AND t.expires_at > UTC_TIMESTAMP() AND u.role = 'customer' " .
+            "AND u.account_status = 'active' AND u.email_verified_at IS NOT NULL " .
+            'LIMIT 1 FOR UPDATE'
         );
         $stmt->execute(['hash' => hash('sha256', $token)]);
         $record = $stmt->fetch();
@@ -59,6 +64,20 @@ try {
     } catch (Throwable $error) {
         $db->rollBack();
         throw $error;
+    }
+    // This notification is intentionally sent AFTER commit. A mail outage
+    // must never roll back a completed reset or suggest the old password works.
+    try {
+        $message = "The password for your Draw Me One account was changed.\\n\\n" .
+            "If you made this change, no action is required. If you did not, " .
+            "contact support@drawmeone.com promptly. Existing sessions " .
+            "have been signed out.\\n";
+        if (!dmo_auth_send_email((string) $record['email'],
+            'Draw Me One account password changed', $message)) {
+            error_log('[DrawMeOne] Password-change notification not accepted.');
+        }
+    } catch (Throwable $notificationError) {
+        error_log('[DrawMeOne] Password-change notification unavailable.');
     }
     dmo_auth_cookie('', time() - 3600);
     dmo_json(200, ['ok' => true, 'status' => 'password_updated']);
