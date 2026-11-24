@@ -3,6 +3,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/admin.php';
 require_once __DIR__ . '/requests.php';
 require_once __DIR__ . '/references.php';
+require_once __DIR__ . '/orders.php';
 
 /**
  * Admin review helpers. Quote release and customer responses are independent,
@@ -121,6 +122,7 @@ function dmo_workflow_load(PDO $db, int $id): ?array
         'messages' => $thread,
         'quotes' => $quotes,
         'references' => dmo_refs_metadata($db, $id),
+        'orders' => dmo_orders_customer_rows($db, $id),
     ];
 }
 
