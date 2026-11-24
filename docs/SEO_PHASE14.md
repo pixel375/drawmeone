@@ -17,7 +17,7 @@ Implemented November 23–24, 2026.
 
 ## Verification and remaining work
 
-- [ ] Confirm deployment returns /sitemap.xml as dynamic XML (including xmlns:image) and 404 for unpublished artwork.
+- [x] Live Hostinger check succeeded (Action run 45319307505): /sitemap.xml HTTP 200 with the dynamically generated image namespace; /artwork.php?id=1 HTTP 404 while no artworks are published.
 - [ ] Once real artist-approved drawings are published, check each page and sitemap image link in a browser and Google Search Console.
 - [ ] Consider optional descriptive titles or categories only with the artist's approval; do not require typed captions for batch uploads.
 - [ ] Replace public demo artwork only with approved real artist artwork. No new artwork was fabricated in this phase.
