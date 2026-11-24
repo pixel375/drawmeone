@@ -1,3 +1,15 @@
+# Draw Me One — Current development status (November 24, 2026)
+
+The live site at [drawmeone.com](https://drawmeone.com) has a protected Artist's Desk, design controls, bulk artwork management, an optimized gallery and a general-inquiry email link. SMTP is configured and verified. Customer registration and commission intake remain deliberately disabled pending approved Terms/Privacy and controlled onboarding tests. No automatic payments are available.
+
+**Latest implemented phases:** [Private messaging and reference images](docs/MESSAGING_PHASE10.md), [quote review](docs/ROADMAP.md), [unpaid order tracking](docs/ORDERS_PHASE15.md), [encrypted local backups](docs/ENCRYPTED_BACKUPS_PHASE13.md), [launch-readiness dashboard](docs/LAUNCH_READINESS_PHASE16.md) and [disposable MariaDB/HTTP integration tests](docs/QA_PHASE17.md).
+
+The integration suite exercises synthetic customers and artist actions end-to-end and is required on relevant backend changes. [Latest passing full integration run](https://github.com/pixel375/drawmeone/actions/runs/45418706387). Live Hostinger diagnostics verified that protected internal files are denied and public contact is visible. [Latest successful live verification](https://github.com/pixel375/drawmeone/actions/runs/45417924628).
+
+**Still required:** real approved portfolio drawings, owner-approved business/privacy policies, private customer onboarding pilot, independent offsite backup/key custody with restore drill, and provider-verified payment processing. Do not enable feature switches on the strength of CI alone.
+
+---
+
 ## v1.9 — TLS SMTP mail readiness and policy drafts (customer accounts still closed)
 
 Added an explicit TLS SMTP transport for transactional verification/recovery mail, a private Hostinger configuration workflow, and a rate-limited administrator-only test-email control in Artist's Desk → Website settings. Passwords stay in private Hostinger configuration and GitHub Actions Secrets, not source code. The commission Terms and Privacy draft is **for review only**; customer login/registration/intake remain disabled. See [SMTP setup](docs/MAIL_PHASE9.md) and [draft policies](docs/CUSTOMER_POLICIES_DRAFT.md).
