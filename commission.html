@@ -9,8 +9,8 @@
 <meta name="description" content="Request an original custom drawing through Draw Me One when commissions open.">
 <title>Commission a drawing · Draw Me One</title>
 <link rel="icon" href="./favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="./commission.css?v=24">
-<script defer src="./commission.js?v=24"></script>
+<link rel="stylesheet" href="./commission.css?v=25">
+<script defer src="./commission.js?v=25"></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
@@ -134,8 +134,13 @@
       <section id="my-request-detail" class="request-detail" hidden>
         <div class="detail-heading">
           <h3 id="detail-ref">Request</h3>
-          <button type="button" id="detail-close" class="text-button">Close</button>
+          <div class="detail-heading-actions">
+            <button type="button" id="detail-refresh" class="text-button">Refresh details</button>
+            <button type="button" id="detail-close" class="text-button">Close</button>
+          </div>
         </div>
+        <p id="detail-load-status" class="small" role="status" aria-live="polite" hidden></p>
+        <div id="detail-content" hidden>
         <dl class="request-facts">
           <div><dt>Status</dt><dd id="detail-status"></dd></div>
           <div><dt>Drawing type</dt><dd id="detail-type"></dd></div>
@@ -177,6 +182,7 @@
         </form>
         <p class="small" id="detail-reply-disabled">Private replies are not available yet. Your history remains readable.</p>
         <p class="small">Quote acceptance, order confirmation and any payment arrangements are separate steps.</p>
+        </div>
       </section>
     </section>
   </div>
