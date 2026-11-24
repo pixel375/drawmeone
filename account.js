@@ -11,6 +11,11 @@
   const loginTab = $("tab-login");
   const signupTab = $("tab-signup");
   const resendForm = $("resend-form");
+  const signupPassword = $("signup-password");
+  const signupPasswordConfirm = $("signup-password-confirm");
+  for (const field of [signupPassword, signupPasswordConfirm]) {
+    field.addEventListener("input", () => signupPasswordConfirm.setCustomValidity(""));
+  }
   const widgets = {};
   let csrf = "";
   let status = null;
@@ -126,10 +131,19 @@
       });
       $("login-password").value = "";
       resetCaptcha("login");
-      if(response.ok && body.ok && await currentAccount()) return;
+      if (response.ok && body.ok) {
+        if (await currentAccount()) return;
+        message("Your sign-in was accepted, but your account details could not load. " +
+          "Refresh this page to check your session before signing in again.", true);
+        return;
+      }
       message(response.status===401 ?
         "Email/password not recognized, or the account is not verified." :
-        "Sign-in is unavailable. Please retry later.", true);
+        response.status===429 ?
+          "Too many sign-in attempts. Please try again later." :
+        response.status===422 ?
+          "Security verification was not accepted. Complete the security check and retry." :
+          "Sign-in is unavailable. Please retry later.", true);
     } catch (_) { message("Unable to sign in. Check your connection.", true); }
     finally { $("submit-login").disabled = false; }
   });
@@ -137,6 +151,17 @@
   signupForm.addEventListener("submit", async (event) => {
     event.preventDefault();
     if(!status?.registration_available || !signupForm.reportValidity()) return;
+    const password = signupPassword.value;
+    if (password !== signupPasswordConfirm.value) {
+      signupPasswordConfirm.setCustomValidity("The passwords do not match.");
+      signupPasswordConfirm.reportValidity();
+      message("The passwords do not match. Please re-enter your confirmation.", true);
+      return;
+    }
+    if (new TextEncoder().encode(password).length > 128) {
+      message("Use a password of at most 128 bytes, including special characters.", true);
+      return;
+    }
     const captcha=captchaToken("signup");
     if(!captcha){message("Please complete the security check.",true);return;}
     $("submit-signup").disabled=true;
@@ -145,14 +170,19 @@
       const {response,body}=await request("./api/auth/signup.php",{
         display_name:$("signup-name").value,
         email:$("signup-email").value,
-        password:$("signup-password").value,
+        password,
         turnstile_token:captcha,
       });
-      $("signup-password").value="";
+      signupPassword.value="";
+      signupPasswordConfirm.value="";
       resetCaptcha("signup");
       message(response.ok && body.ok
         ? "If this email address is eligible, we'll send a verification link. Please check your inbox."
-        : "Account registration is unavailable. Please retry later.",
+        : response.status === 429
+          ? "Too many registration attempts. Please try again later."
+          : response.status === 422
+            ? "Registration details or the security check were not accepted. Please review the form."
+            : "Account registration is unavailable. Please retry later.",
         !(response.ok && body.ok));
     }catch(_){message("Unable to create an account. Please try later.",true);}
     finally{$("submit-signup").disabled=false;}
@@ -176,7 +206,9 @@
       const {response,body}=await request("./api/auth/verify.php",{token});
       state.textContent=response.ok && body.ok
         ? "Email confirmed. You can now sign in."
-        : "Verification link is expired or invalid. Please contact the artist for assistance.";
+        : response.status === 429
+          ? "Too many verification attempts. Please try again later."
+          : "This verification link has expired or was already used. If the account is still pending, request another link below.";
     }catch(_){
       state.textContent="Unable to verify your email at the moment.";
     }
@@ -191,7 +223,7 @@
       status=await response.json();
       if(!status.auth_available || !status.turnstile_site_key){
         state.textContent = verificationToken
-          ? "Email verification isn't available yet. Keep your email link and return when account access opens."
+          ? "Email verification isn't available yet. Reopen the original link from your email when account access becomes available."
           : "Registration and sign-in are not open yet. The artist is still preparing this feature.";
         return;
       }
