@@ -53,4 +53,6 @@ jobs:
           done < <(find . -maxdepth 3 -type f -name '*.js' -not -path './node_modules/*' -print0)
           echo "JS_SYNTAX=PASS"
       - name: Mail formatting regression
-        run: php tests/mail_smoke.php
+        run: |
+          php tests/mail_smoke.php
+          php tests/private_reference_smoke.php
