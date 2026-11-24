@@ -13,6 +13,7 @@ if (PHP_SAPI !== 'cli-server' ||
 $uri = (string) parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH);
 $allowed = [
     '/api/request.php',
+    '/api/requests.php',
     '/api/request-message.php',
     '/api/quote-response.php',
     '/api/admin/overview.php',

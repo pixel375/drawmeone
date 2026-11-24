@@ -48,7 +48,7 @@ function dmo_workflow_request(PDO $db, int $id): ?array
     $stmt = $db->prepare(
         'SELECT r.id, r.public_ref, r.subject_type, r.brief, r.status, ' .
         'r.preferred_contact, r.preferred_deadline, r.policy_version, ' .
-        'r.submitted_at, r.updated_at, r.tier_id, ' .
+        'r.submitted_at, r.updated_at, r.tier_id, r.tier_snapshot_json, ' .
         'u.display_name AS customer_name, u.email AS customer_email, ' .
         't.name AS tier_name FROM dmo_commission_requests r ' .
         'JOIN dmo_users u ON u.id = r.customer_id ' .
@@ -57,7 +57,7 @@ function dmo_workflow_request(PDO $db, int $id): ?array
     );
     $stmt->execute(['id' => $id]);
     $row = $stmt->fetch();
-    return is_array($row) ? $row : null;
+    return is_array($row) ? dmo_requests_historical_tier($row) : null;
 }
 
 function dmo_workflow_load(PDO $db, int $id): ?array
@@ -75,7 +75,8 @@ function dmo_workflow_load(PDO $db, int $id): ?array
     $extra = [];
     foreach ($addons->fetchAll() as $row) {
         // No unfiltered snapshot JSON is returned to the browser.
-        $extra[] = ['name' => $row['name']];
+        $name = dmo_requests_snapshot_name($row['addon_snapshot_json'], $row['name']);
+        if ($name !== null) $extra[] = ['name' => $name];
     }
 
     $messages = $db->prepare(

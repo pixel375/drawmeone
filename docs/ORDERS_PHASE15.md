@@ -50,3 +50,7 @@ Successful logout (server confirmation required) and authenticated API session e
 ## Phase 36 — Customer private workspace isolation
 
 Customer replies and selected reference files are reset when switching or closing a request. Previous brief and message content is cleared before the next detail loads. A common mutation guard prevents switching or closing while quote, message, reference upload or removal operations are active. A 401 from any private commission API hides the workspace, invalidates request generations and replaces the document with the account page. Persisted browser history reloads rather than restoring private content. Synthetic browser tests cover draft/file isolation and session expiry; real account onboarding and policy approval remain launch blockers. Initial CI pending.
+
+## Phase 37 — Historical catalog labels
+
+Request submission already stores tier and addon snapshots. Artist and customer list/detail reads now use the saved name rather than silently changing older request descriptions after catalog renames. A shared bounded PHP parser exposes only a validated name, falls back to the live catalog label for legacy/missing/malformed snapshots, and removes raw JSON from response rows. Quote amounts, existing records and policy gates remain untouched. The disposable HTTP integration tests seed renamed catalog items with historical labels and verify all four views plus legacy fallback and customer isolation. CI pending.

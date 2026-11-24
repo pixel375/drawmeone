@@ -126,6 +126,44 @@ try {
         usleep(100000);
     }
     qa_positive($ready,'local_positive_server_ready');
+    // Catalog edits must never change a previously submitted commission label.
+    $tierId=qa_seed($db,
+        "INSERT INTO dmo_commission_tiers
+         (slug,name,description,currency,sort_order,is_active)
+         VALUES ('ci-historical-tier','Renamed tier','CI fixture','CAD',0,0)",[]);
+    $addonId=qa_seed($db,
+        "INSERT INTO dmo_addons
+         (slug,name,description,currency,sort_order,is_active)
+         VALUES ('ci-historical-addon','Renamed addon','CI fixture','CAD',0,0)",[]);
+    $db->prepare('UPDATE dmo_commission_requests SET tier_id=:tier,tier_snapshot_json=:snapshot WHERE id=:id')
+        ->execute(['tier'=>$tierId,'id'=>$requestA,'snapshot'=>json_encode([
+            'id'=>$tierId,'name'=>'Original tier name','currency'=>'CAD',
+            'estimate_min_minor'=>1000,'private_test_marker'=>'never-expose-snapshot'
+        ],JSON_THROW_ON_ERROR)]);
+    $db->prepare('INSERT INTO dmo_request_addons (request_id,addon_id,addon_snapshot_json) VALUES (:request,:addon,:snapshot)')
+        ->execute(['request'=>$requestA,'addon'=>$addonId,'snapshot'=>json_encode([
+            'id'=>$addonId,'name'=>'Original addon name','private_test_marker'=>'never-expose-snapshot'
+        ],JSON_THROW_ON_ERROR)]);
+    [$code,$historic]=qa_http('/api/request.php?ref='.urlencode($referenceA),$tokenA);
+    qa_positive($code===200 && $historic['request']['tier_name']==='Original tier name' &&
+        $historic['addons']===['Original addon name'] &&
+        !str_contains(json_encode($historic,JSON_THROW_ON_ERROR),'never-expose-snapshot'),
+        'customer_detail_preserves_catalog_snapshot_labels');
+    [$code,$historic]=qa_http('/api/requests.php',$tokenA);
+    qa_positive($code===200 && count($historic['requests'])===1 &&
+        $historic['requests'][0]['tier_name']==='Original tier name' &&
+        !isset($historic['requests'][0]['tier_snapshot_json']),
+        'customer_history_preserves_snapshot_and_ownership');
+    [$code,$historic]=qa_http('/api/admin/request.php?id='.$requestA,$tokenAdmin,'__Host-dmo_admin');
+    qa_positive($code===200 && $historic['detail']['request']['tier_name']==='Original tier name' &&
+        $historic['detail']['addons']===[['name'=>'Original addon name']] &&
+        !str_contains(json_encode($historic,JSON_THROW_ON_ERROR),'never-expose-snapshot'),
+        'artist_detail_preserves_catalog_snapshot_labels');
+    $db->prepare('UPDATE dmo_commission_requests SET tier_id=:tier,tier_snapshot_json=NULL WHERE id=:id')
+        ->execute(['tier'=>$tierId,'id'=>$requestB]);
+    [$code,$legacy]=qa_http('/api/request.php?ref='.urlencode($referenceB),$tokenB);
+    qa_positive($code===200 && $legacy['request']['tier_name']==='Renamed tier',
+        'legacy_request_uses_current_label_when_snapshot_missing');
     [$code]=qa_http('/api/admin/requests.php');
     qa_positive($code===401,'anonymous_admin_request_search_denied');
     [$code]=qa_http('/api/admin/requests.php',$tokenA,'__Host-dmo_admin');
@@ -133,7 +171,9 @@ try {
     [$code,$found]=qa_http('/api/admin/requests.php?q='.urlencode($referenceA),
         $tokenAdmin,'__Host-dmo_admin');
     qa_positive($code===200 && count($found['requests']??[])===1 &&
-        $found['requests'][0]['public_ref']===$referenceA,'admin_search_reference');
+        $found['requests'][0]['public_ref']===$referenceA &&
+        $found['requests'][0]['tier_name']==='Original tier name' &&
+        !isset($found['requests'][0]['tier_snapshot_json']),'admin_search_reference_and_historical_label');
     [$code,$found]=qa_http('/api/admin/requests.php?q=Test%20B&filter=review',
         $tokenAdmin,'__Host-dmo_admin');
     qa_positive($code===200 && count($found['requests']??[])===1 &&

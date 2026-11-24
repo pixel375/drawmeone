@@ -16,7 +16,7 @@ try {
     if ($method === 'GET') {
         $stmt = $db->prepare(
             'SELECT r.public_ref, r.subject_type, r.status, ' .
-            'r.submitted_at, r.preferred_deadline, t.name AS tier_name ' .
+            'r.submitted_at, r.preferred_deadline, r.tier_snapshot_json, t.name AS tier_name ' .
             'FROM dmo_commission_requests r ' .
             'LEFT JOIN dmo_commission_tiers t ON t.id = r.tier_id ' .
             'WHERE r.customer_id = :customer ' .
@@ -25,7 +25,7 @@ try {
         $stmt->execute(['customer' => $customer]);
         dmo_json(200, [
             'ok' => true,
-            'requests' => $stmt->fetchAll(),
+            'requests' => array_map('dmo_requests_historical_tier', $stmt->fetchAll()),
             'new_requests_open' => dmo_requests_open(),
         ]);
     }

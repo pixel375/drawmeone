@@ -15,7 +15,7 @@ try {
     $stmt = $db->prepare(
         'SELECT r.id, r.public_ref, r.subject_type, r.brief, ' .
         'r.preferred_contact, r.preferred_deadline, r.status, ' .
-        'r.submitted_at, r.updated_at, r.policy_version, t.name AS tier_name ' .
+        'r.submitted_at, r.updated_at, r.policy_version, r.tier_snapshot_json, t.name AS tier_name ' .
         'FROM dmo_commission_requests r ' .
         'LEFT JOIN dmo_commission_tiers t ON t.id = r.tier_id ' .
         'WHERE r.public_ref = :ref AND r.customer_id = :customer LIMIT 1'
@@ -27,12 +27,17 @@ try {
         dmo_json(404, ['ok' => false, 'error' => 'request_not_found']);
     }
     $addons = $db->prepare(
-        'SELECT a.name FROM dmo_request_addons ra ' .
+        'SELECT a.name, ra.addon_snapshot_json FROM dmo_request_addons ra ' .
         'JOIN dmo_addons a ON a.id = ra.addon_id ' .
         'WHERE ra.request_id = :id ORDER BY a.sort_order, a.id LIMIT 8'
     );
     $addons->execute(['id' => $request['id']]);
-    $names = array_column($addons->fetchAll(), 'name');
+    $names = [];
+    foreach ($addons->fetchAll() as $row) {
+        $name = dmo_requests_snapshot_name($row['addon_snapshot_json'], $row['name']);
+        if ($name !== null) $names[] = $name;
+    }
+    $request = dmo_requests_historical_tier($request);
 
     // Internal artist notes are NEVER returned. Draft quotes are also private
     // until a future explicit quote-delivery workflow is implemented.

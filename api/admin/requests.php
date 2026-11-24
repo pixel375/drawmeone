@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 require_once dirname(__DIR__, 2) . '/app/admin.php';
+require_once dirname(__DIR__, 2) . '/app/requests.php';
 dmo_reject_non_get();
 
 try {
@@ -35,7 +36,7 @@ try {
     $stmt = $db->prepare(
         'SELECT r.id, r.public_ref, r.subject_type, r.status, ' .
         'r.preferred_contact, r.submitted_at, LEFT(r.brief, 500) AS brief_excerpt, ' .
-        'u.display_name AS customer_name, t.name AS tier_name ' .
+        'u.display_name AS customer_name, r.tier_snapshot_json, t.name AS tier_name ' .
         $from . $conditions . 'ORDER BY r.submitted_at DESC, r.id DESC LIMIT ' .
         ($size + 1) . ' OFFSET ' . $offset
     );
@@ -44,7 +45,7 @@ try {
     $hasMore = count($rows) > $size;
     if ($hasMore) array_pop($rows);
     dmo_json(200, [
-        'ok'=>true, 'requests'=>$rows, 'readonly'=>true,
+        'ok'=>true, 'requests'=>array_map('dmo_requests_historical_tier', $rows), 'readonly'=>true,
         'page'=>$page, 'page_size'=>$size, 'has_more'=>$hasMore && $page < 9999,
     ]);
 } catch (Throwable $error) {

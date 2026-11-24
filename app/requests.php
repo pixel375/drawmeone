@@ -150,6 +150,33 @@ function dmo_requests_snapshot(array $row): string
     ], JSON_THROW_ON_ERROR);
 }
 
+/**
+ * Historical catalog labels are immutable at submission. For legacy rows
+ * without usable snapshots, use the live label (which may be null).
+ * Never return the raw snapshot or estimates to the browser.
+ */
+function dmo_requests_snapshot_name(mixed $snapshot, mixed $fallback): ?string
+{
+    if (is_string($snapshot) && strlen($snapshot) <= 16384) {
+        $value = json_decode($snapshot, true, 8);
+        $name = is_array($value) ? ($value['name'] ?? null) : null;
+        if (is_string($name) && trim($name) !== '' && strlen($name) <= 480 &&
+            !preg_match('/[\x00-\x1f\x7f]/', $name)) {
+            return $name;
+        }
+    }
+    return is_string($fallback) && trim($fallback) !== '' ? $fallback : null;
+}
+
+function dmo_requests_historical_tier(array $row): array
+{
+    $row['tier_name'] = dmo_requests_snapshot_name(
+        $row['tier_snapshot_json'] ?? null, $row['tier_name'] ?? null
+    );
+    unset($row['tier_snapshot_json']);
+    return $row;
+}
+
 /** Onsite messages can be enabled without reopening new commission intake. */
 function dmo_messages_enabled(): bool
 {
