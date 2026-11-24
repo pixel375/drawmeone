@@ -91,3 +91,6 @@ footer{border-top:1px solid var(--line);display:flex;gap:18px;justify-content:sp
 #detail-reference-form label{display:block;font-size:12px;font-weight:700;margin-bottom:10px}
 #detail-reference-files{display:block;max-width:100%;margin-bottom:12px}
 #detail-reference-progress{display:block;width:100%;margin:10px 0}
+
+.reference-grid .reference-item{display:grid;gap:6px;align-content:start;min-width:0}
+.reference-grid .reference-item .text-button{min-height:35px;font-size:11px;padding:6px}
