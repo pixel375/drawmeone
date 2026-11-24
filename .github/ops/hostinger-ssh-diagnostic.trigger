@@ -1,1 +1,1 @@
-v2.9.1 2026-11-24 final live deployment regression: public email inquiry, internal file HTTP deny, commission no-JS fallback and protected quote/order endpoints. Read-only Hostinger inspection.
+v3.0 November 24 auth recovery hardening: check real Hostinger deployed PHP syntax, closed GET recovery endpoints, SMTP smoke, quote/order gates, and public site. Read-only; no account or payment writes.
