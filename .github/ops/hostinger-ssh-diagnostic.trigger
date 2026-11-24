@@ -1,1 +1,1 @@
-v3.2 2026-11-24 read-only live production verification: all 3 alternative site contact links via versioned concepts JS, original mailto, protected customer endpoints, PHP lint and private-source HTTP denial. No account/customer/payment writes.
+v3.3 Nov 24 read-only production check of live Artist Desk mobile CSS v21 and browser-tested six-tab grid; retain customer registration, commission intake, order/payment protections, public gallery and email health checks. No production writes.
