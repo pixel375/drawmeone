@@ -204,6 +204,41 @@
     }
   }
 
+
+  function renderCustomerOrders(orders) {
+    const root = $("detail-orders");
+    root.replaceChildren();
+    const records = Array.isArray(orders) ? orders : [];
+    $("detail-order-section").hidden = records.length === 0;
+    const labels = {
+      awaiting_arrangement:"Awaiting payment arrangements",
+      in_progress:"Artwork in progress",
+      ready_for_delivery:"Ready for delivery",
+      completed:"Completed",
+      cancelled:"Cancelled",
+    };
+    for (const order of records) {
+      const card = document.createElement("article");
+      card.className = "customer-order-card";
+      card.append(
+        renderText("strong","Order #" + order.id),
+        renderText("p","Status: " +
+          (labels[order.status] || "Under review")),
+        renderText("small","Quote total: " +
+          (money(order.total_minor,order.currency) || "Not available")),
+        renderText("small","Payment status: " +
+          (order.payment_status || "Not verified")),
+        renderText("small","Order recorded: " + (order.created_at || "Not available"))
+      );
+      if (order.payment_status === "unverified") {
+        card.append(renderText("p",
+          "Payment has not been verified. Please use the agreed contact method " +
+          "with the artist; this page is not a payment request.", "small"));
+      }
+      root.append(card);
+    }
+  }
+
   function renderCustomerQuotes(quotes, ref, policyVersion) {
     const root = $("detail-quotes");
     root.replaceChildren();
@@ -281,6 +316,8 @@
     $("detail-reference-list").replaceChildren();
     $("detail-quote-section").hidden = true;
     $("detail-quotes").replaceChildren();
+    $("detail-order-section").hidden = true;
+    $("detail-orders").replaceChildren();
     $("detail-quote-feedback").textContent = "";
     showFact("detail-ref","Loading " + ref + "...");
     panel.scrollIntoView({behavior:"smooth",block:"start"});
@@ -331,6 +368,7 @@
         state.uploadBusy;
       const r = body.request || {};
       renderCustomerQuotes(body.quotes || [], ref, r.policy_version || "");
+      renderCustomerOrders(body.orders || []);
       showFact("detail-ref",r.public_ref);
       showFact("detail-status",r.status);
       showFact("detail-type",labels[r.subject_type] || r.subject_type);
