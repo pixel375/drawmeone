@@ -83,6 +83,9 @@ async function horizontalOverflow(page) {
   return page.evaluate(() => ({
     available:document.documentElement.clientWidth,
     measured:document.documentElement.scrollWidth,
+    internalOverflow:[...document.querySelectorAll("body *")].filter(x=>
+      x.clientWidth>0 && x.scrollWidth>x.clientWidth+3 && getComputedStyle(x).overflowX==="visible"
+    ).slice(0,12).map(x=>({tag:x.tagName,id:x.id,client:x.clientWidth,scroll:x.scrollWidth})),
     culprits:[...document.querySelectorAll("body *")]
       .filter(x => {
         const rect=x.getBoundingClientRect();

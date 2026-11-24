@@ -182,7 +182,7 @@ footer{padding:28px 0 70px;border-top:1px solid var(--line);color:var(--muted);f
 .artwork-toolbar>div{border:1px solid var(--line);border-radius:12px;background:var(--surface);padding:clamp(17px,2.6vw,25px);min-width:0}
 .artwork-toolbar strong{display:block;font-size:15px}
 .artwork-toolbar .small{font-size:11px;line-height:1.6;color:var(--muted);margin:12px 0}
-.artwork-toolbar input[type=file]{font:inherit;font-size:12px;max-width:100%;margin:13px 0}
+.artwork-toolbar input[type=file]{display:block;font:inherit;font-size:12px;width:100%;min-width:0;max-width:100%;overflow:hidden;text-overflow:ellipsis;padding:8px;margin:13px 0}
 .artwork-toolbar input[type=file]::file-selector-button{font:inherit;background:var(--bg);border:1px solid var(--line);color:var(--ink);padding:9px 12px;border-radius:7px;margin-right:10px}
 .artwork-toolbar-actions{display:flex;gap:10px;flex-wrap:wrap}
 .artwork-toolbar-actions button,.artwork-bulk>button{min-height:44px}
@@ -205,8 +205,8 @@ footer{padding:28px 0 70px;border-top:1px solid var(--line);color:var(--muted);f
 .artwork-sort input{width:100%;min-width:0;background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:10px;font:inherit;font-size:12px}
 .artwork-sort input:focus-visible{outline:2px solid var(--accent)}
 @media(max-width:1050px){.artwork-library-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-width:720px){.artwork-toolbar{grid-template-columns:1fr}.artwork-library-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.artwork-library-card>img{height:185px}}
-@media(max-width:490px){.artwork-library-grid{grid-template-columns:1fr}.artwork-library-card>img{height:260px}.artwork-toolbar-actions button{flex:1}}
+@media(max-width:720px){.artwork-toolbar{grid-template-columns:minmax(0,1fr)}.artwork-library-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.artwork-library-card>img{height:185px}}
+@media(max-width:490px){.artwork-library-grid{grid-template-columns:minmax(0,1fr)}.artwork-library-card>img{height:260px}.artwork-toolbar-actions button{flex:1}}
 
 /* Private transactional mail diagnostic panel (no recipient input or credentials). */
 .mail-check{margin-top:28px;border:1px solid var(--line);border-radius:12px;background:var(--surface);padding:clamp(19px,3vw,28px);display:grid;gap:16px}
@@ -270,3 +270,11 @@ footer{padding:28px 0 70px;border-top:1px solid var(--line);color:var(--muted);f
 .artwork-batch-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:11px}
 .artwork-batch-actions button{min-height:44px}
 @media(max-width:650px){.artwork-library-filters{align-items:stretch;flex-direction:column}.artwork-library-filters label{justify-content:space-between}.artwork-library-filters select{max-width:65%}.artwork-batch-actions{flex-direction:column}.artwork-batch-actions button{width:100%}}
+
+/* Keep native file controls and long labels inside the artwork cards on narrow WebKit viewports. */
+@media(max-width:490px){
+  .artwork-toolbar input[type=file]::file-selector-button{padding:8px 5px;margin-right:4px;font-size:11px}
+  .artwork-toolbar-actions button,.artwork-batch-actions button{min-width:0;max-width:100%;white-space:normal;overflow-wrap:anywhere}
+  .artwork-card-info{min-width:0;grid-template-columns:minmax(0,1fr)}
+  .artwork-sort{grid-template-columns:minmax(0,1fr) auto}
+}
