@@ -75,6 +75,8 @@ jobs:
           done
           php -l "$site/tests/mail_smoke.php" >/dev/null
           php -l "$site/tests/private_reference_smoke.php" >/dev/null
+          php -l "$site/tests/quote_smoke.php" >/dev/null
+          php "$site/tests/quote_smoke.php"
           php "$site/tests/private_reference_smoke.php"
           php "$site/tests/mail_smoke.php"
           php -l "$site/tests/mail_dns_check.php" >/dev/null
