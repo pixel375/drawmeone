@@ -78,5 +78,7 @@ jobs:
         run: php tests/integration_contract.php
       - name: Test real HTTP authorization on the disposable database
         run: php tests/http_contract.php
+      - name: Remove synthetic records before the next HTTP suite
+        run: php tests/ci_reset.php
       - name: Test complete positive quote and unpaid-order workflow over HTTP
         run: php tests/http_positive_contract.php
