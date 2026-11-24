@@ -1,0 +1,35 @@
+name: DrawMeOne — Offsite Encrypted Transfer QA
+
+# Local-only rclone alias backend; never reaches an external destination.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'ops/offsite-upload.sh'
+      - 'tests/offsite_upload_smoke.sh'
+      - '.github/workflows/offsite-transfer-qa.yml'
+  pull_request:
+    paths:
+      - 'ops/offsite-upload.sh'
+      - 'tests/offsite_upload_smoke.sh'
+      - '.github/workflows/offsite-transfer-qa.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  local-offsite-simulator:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Lint guarded transfer scripts
+        run: |
+          bash -n ops/offsite-upload.sh
+          bash -n tests/offsite_upload_smoke.sh
+      - name: Install transfer utility
+        run: |
+          sudo apt-get update -qq
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq rclone >/dev/null
+      - name: Simulate remote encrypted transport, readback and rejection
+        run: bash tests/offsite_upload_smoke.sh
