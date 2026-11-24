@@ -90,3 +90,7 @@ jobs:
         run: php tests/ci_reset.php
       - name: Test private image upload, WebP conversion, isolation and removal
         run: php tests/http_reference_contract.php
+      - name: Reset disposable records for artist portfolio QA
+        run: php tests/ci_reset.php
+      - name: Test artist artwork draft, publish, private preview and unpublish
+        run: php tests/http_artwork_contract.php
