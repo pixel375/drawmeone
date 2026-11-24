@@ -13,7 +13,7 @@ try {
 
     $action = $input['action'] ?? null;
     $requestId = dmo_workflow_id($input['request_id'] ?? null);
-    if (!in_array($action, ['add_private_note', 'create_quote_draft'], true)) {
+    if (!in_array($action, ['add_private_note', 'create_quote_draft', 'send_customer_message'], true)) {
         dmo_json(422, ['ok' => false, 'error' => 'unsupported_action']);
     }
 
@@ -21,11 +21,16 @@ try {
     // exits with an uncommitted transaction.
     $note = null;
     $quote = null;
-    if ($action === 'add_private_note') {
+    if ($action === 'add_private_note' || $action === 'send_customer_message') {
         if (array_diff(array_keys($input), ['action', 'request_id', 'body']) !== []) {
             dmo_json(422, ['ok' => false, 'error' => 'unexpected_fields']);
         }
-        $note = dmo_workflow_text($input['body'] ?? null, 5000, 1);
+        $note = dmo_workflow_text($input['body'] ?? null,
+            $action === 'send_customer_message' ? 3000 : 5000,
+            $action === 'send_customer_message' ? 2 : 1);
+        if ($action === 'send_customer_message' && !dmo_workflow_messaging_enabled()) {
+            dmo_json(503, ['ok' => false, 'error' => 'customer_messaging_disabled']);
+        }
     } else {
         if (array_diff(array_keys($input), [
             'action', 'request_id', 'currency', 'scope',
@@ -49,7 +54,24 @@ try {
             dmo_json(404, ['ok' => false, 'error' => 'request_not_found']);
         }
 
-        if ($action === 'add_private_note') {
+        if ($action === 'add_private_note' || $action === 'send_customer_message') {
+            if ($action === 'send_customer_message') {
+                $statusQuery = $db->prepare(
+                    'SELECT status FROM dmo_commission_requests WHERE id = :id LIMIT 1'
+                );
+                $statusQuery->execute(['id' => $requestId]);
+                if (!dmo_messages_request_open((string) $statusQuery->fetchColumn())) {
+                    $db->rollBack();
+                    dmo_json(409, ['ok' => false, 'error' => 'conversation_closed']);
+                }
+                if (!dmo_auth_rate_limit($db, 'artist-reply',
+                    (string) $admin['user_id'], 20, 60) ||
+                    !dmo_auth_rate_limit($db, 'artist-reply-request',
+                        (string) $requestId, 12, 60)) {
+                    $db->rollBack();
+                    dmo_json(429, ['ok' => false, 'error' => 'too_many_messages']);
+                }
+            }
             $lookup = $db->prepare(
                 'SELECT id FROM dmo_conversations WHERE request_id = :id LIMIT 1'
             );
@@ -72,16 +94,20 @@ try {
                 'conversation' => $conversationId,
                 'admin' => (int) $admin['user_id'],
                 'body' => $note,
+                'internal' => $action === 'add_private_note' ? 1 : 0,
             ]);
             $messageId = (int) $db->lastInsertId();
             dmo_workflow_audit(
                 $db, (int) $admin['user_id'], $requestId,
-                'request.private_note_created', ['message_id' => $messageId]
+                $action === 'add_private_note' ?
+                    'request.private_note_created' : 'request.customer_message_sent',
+                ['message_id' => $messageId]
             );
             $db->commit();
             dmo_json(201, [
                 'ok' => true, 'message_id' => $messageId,
-                'visibility' => 'internal_only',
+                'visibility' => $action === 'add_private_note' ?
+                    'internal_only' : 'customer_visible',
             ]);
         }
 
