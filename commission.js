@@ -199,7 +199,19 @@
         image.alt = "Private reference image";
         image.loading = "lazy";
         frame.append(image);
-        referenceRoot.append(frame);
+        const item = document.createElement("div");
+        item.className = "reference-item";
+        item.append(frame);
+        if (body.can_manage_references === true) {
+          const remove = document.createElement("button");
+          remove.type = "button";
+          remove.className = "text-button";
+          remove.textContent = "Remove";
+          remove.setAttribute("aria-label", "Remove this private reference image");
+          remove.addEventListener("click", () => deleteReference(ref, reference.id));
+          item.append(remove);
+        }
+        referenceRoot.append(item);
       }
       if (!references.length) {
         referenceRoot.append(renderText("p","No reference images attached yet.","small"));
@@ -239,6 +251,35 @@
     $("my-request-detail").hidden = true;
   });
 
+
+
+  async function deleteReference(ref, attachment_id) {
+    if (!state.csrf || state.selectedRef !== ref ||
+        !Number.isSafeInteger(attachment_id) || attachment_id < 1) return;
+    if (!window.confirm("Remove this private reference image from the request?")) return;
+    $("detail-reference-feedback").textContent = "Removing reference image…";
+    try {
+      const response = await fetch("./api/reference-delete.php", {
+        method:"POST", credentials:"same-origin", cache:"no-store",
+        headers:{"Content-Type":"application/json","X-DMO-CSRF":state.csrf},
+        body:JSON.stringify({ref,attachment_id}),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.ok) {
+        $("detail-reference-feedback").textContent =
+          "Reference couldn't be removed (" + (data.error || response.status) + ").";
+        return;
+      }
+      await openDetail(ref);
+      $("detail-reference-feedback").textContent =
+        data.storage_cleanup_complete
+          ? "Reference removed from your request."
+          : "Reference removed from your request; private file cleanup is pending.";
+    } catch (_) {
+      $("detail-reference-feedback").textContent =
+        "Connection interrupted. Refresh your references before retrying.";
+    }
+  }
 
   $("detail-reference-form").addEventListener("submit", async event => {
     event.preventDefault();
