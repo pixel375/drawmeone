@@ -59,7 +59,7 @@ jobs:
       - name: Install MariaDB client and PHP MySQL extension
         run: |
           sudo apt-get update -qq
-          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq mariadb-client php-mysql php-curl >/dev/null
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq mariadb-client php-mysql php-curl php-gd >/dev/null
           php -m | grep -Fx pdo_mysql >/dev/null
       - name: Import actual committed schema into throwaway database
         shell: bash
@@ -86,3 +86,7 @@ jobs:
         run: php tests/ci_reset.php
       - name: Exercise email verification, token expiry and password recovery
         run: php tests/http_auth_contract.php
+      - name: Reset disposable records before private image QA
+        run: php tests/ci_reset.php
+      - name: Test private image upload, WebP conversion, isolation and removal
+        run: php tests/http_reference_contract.php
