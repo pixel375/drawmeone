@@ -156,7 +156,7 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
     </section>
 
     <section data-panel="messages" class="content-panel" hidden>
-      <div class="section-intro"><h2>Messages</h2><p>Recent conversation activity, including internal notes. Read-only for this phase.</p></div>
+      <div class="section-intro"><h2>Messages</h2><p>Recent conversation activity, including internal notes. Open a request to read details and reply when customer messaging is enabled.</p></div>
       <div id="message-list" class="record-list"><p class="small">Loading messages…</p></div>
     </section>
 
