@@ -154,7 +154,9 @@ function dmo_requests_snapshot(array $row): string
 function dmo_messages_enabled(): bool
 {
     return dmo_auth_configured() &&
-        dmo_config('DMO_CUSTOMER_MESSAGING_ENABLED') === '1';
+        dmo_config('DMO_CUSTOMER_MESSAGING_ENABLED') === '1' &&
+        dmo_config('DMO_PRIVACY_PUBLISHED') === '1' &&
+        dmo_config('DMO_REQUEST_TERMS_APPROVED') === '1';
 }
 
 /** Closed requests remain readable but do not accept further messages. */
