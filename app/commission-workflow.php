@@ -2,6 +2,7 @@
 declare(strict_types=1);
 require_once __DIR__ . '/admin.php';
 require_once __DIR__ . '/requests.php';
+require_once __DIR__ . '/references.php';
 
 /**
  * Phase 6: admin-only review. External messages, quote sending, payments and
@@ -119,6 +120,7 @@ function dmo_workflow_load(PDO $db, int $id): ?array
         'addons' => $extra,
         'messages' => $thread,
         'quotes' => $quotes,
+        'references' => dmo_refs_metadata($db, $id),
     ];
 }
 
