@@ -19,8 +19,8 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
 <meta name="robots" content="noindex,nofollow">
 <meta name="theme-color" content="#151317">
 <title>Artist's Desk · Draw Me One</title>
-<link rel="stylesheet" href="./panel.css?v=21">
-<script defer src="./panel.js?v=20"></script>
+<link rel="stylesheet" href="./panel.css?v=22">
+<script defer src="./panel.js?v=22"></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to dashboard</a>
@@ -194,10 +194,23 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
         <div class="artwork-bulk">
           <strong>Artwork visibility</strong>
           <p class="small">Only published artwork appears in the public gallery. Drafts are never served through the public image API.</p>
-          <label class="artwork-select-label"><input type="checkbox" id="artwork-select-all"> Select all displayed drafts</label>
-          <button type="button" class="quiet" id="artwork-publish-selected" disabled>Publish selected drafts</button>
+          <label class="artwork-select-label"><input type="checkbox" id="artwork-select-all"> Select all displayed</label>
+          <div class="artwork-batch-actions">
+            <button type="button" class="quiet" id="artwork-publish-selected" disabled>Publish selected drafts</button>
+            <button type="button" class="quiet" id="artwork-unpublish-selected" disabled>Unpublish selected drawings</button>
+          </div>
           <p id="artwork-library-status" role="status" class="small"></p>
         </div>
+      </div>
+      <div class="artwork-library-filters">
+        <label for="artwork-filter">View artworks
+          <select id="artwork-filter">
+            <option value="all">All drawings</option>
+            <option value="draft">Private drafts</option>
+            <option value="published">Published drawings</option>
+          </select>
+        </label>
+        <span id="artwork-visible-count" class="small" role="status" aria-live="polite"></span>
       </div>
       <div id="artwork-list" class="artwork-library-grid" aria-label="Uploaded artwork">Loading artwork library…</div>
     </section>
