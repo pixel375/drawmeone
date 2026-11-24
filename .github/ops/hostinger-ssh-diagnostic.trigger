@@ -1,1 +1,1 @@
-v3.7 Nov 24 read-only Hostinger check: public commission form history search, status filters and cache-busted assets v24; keep registration/intake disabled; verify prior email, private reference, quote, order and backup health checks. No customer writes.
+v3.8 2026-11-24 read-only production check: request detail refresh/loading and quote acknowledgement UI assets v25; ensure no user/quote/order writes, no new registration or commission/payment flags; preserve Hostinger backup, mail and private file diagnostics.
