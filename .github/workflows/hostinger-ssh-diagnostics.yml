@@ -66,6 +66,11 @@ jobs:
             echo "Expected DrawMeOne PHP deployment is missing"; exit 1;
           }
           for file in app/bootstrap.php app/auth.php app/mailer.php app/admin.php app/cli-admin.php app/cli-mail-config.php app/cli-smtp-probe.php app/commission-workflow.php app/artwork.php app/requests.php app/references.php app/cli-migrate-references.php api/request-status.php api/requests.php api/request.php api/request-message.php api/request-attachment.php api/reference.php api/reference-delete.php api/auth/resend-verification.php api/admin/login.php api/admin/email.php api/admin/request.php api/admin/request-actions.php api/portfolio.php api/artwork.php api/admin/artworks.php api/admin/artwork-preview.php api/admin/artwork-upload.php; do
+            for attempt in 1 2 3 4 5 6; do
+              [[ -f "$site/$file" ]] && break
+              sleep 3
+            done
+            [[ -f "$site/$file" ]] || { echo "Deployment file missing: $file"; exit 1; }
             php -l "$site/$file" >/dev/null || { echo "PHP syntax invalid: $file"; exit 1; }
           done
           php -l "$site/tests/mail_smoke.php" >/dev/null
@@ -78,6 +83,7 @@ jobs:
           php -r '
           require $argv[1]."/app/artwork.php";
           require_once $argv[1]."/app/requests.php";
+          require_once $argv[1]."/app/references.php";
           try {
             $db = dmo_database();
             // Table metadata only; never read or print private customer records.
@@ -93,13 +99,13 @@ jobs:
               if (!(int) $present->fetchColumn()) continue;
               foreach ($db->query("SHOW COLUMNS FROM `" . $tableName . "`") as $column) {
                 echo "schema_column=" . $tableName . "." . $column["Field"] .
-                  ":" . $column["Type"] . "\\n";
+                  ":" . $column["Type"] . "\n";
               }
             }
             echo "private_reference_schema_ready=" .
               (dmo_refs_schema_ready($db) ? "yes" : "no") . "\n";
             echo "customer_messaging_flag=" .
-              (dmo_messages_enabled() ? "open" : "closed") . "\\n";
+              (dmo_messages_enabled() ? "open" : "closed") . "\n";
             $stmt = $db->query(
                 "SELECT COUNT(*) AS total, " .
                 "SUM(CASE WHEN account_status = '\''active'\'' AND email_verified_at IS NOT NULL THEN 1 ELSE 0 END) AS eligible " .
