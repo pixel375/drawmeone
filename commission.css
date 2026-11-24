@@ -94,3 +94,17 @@ footer{border-top:1px solid var(--line);display:flex;gap:18px;justify-content:sp
 
 .reference-grid .reference-item{display:grid;gap:6px;align-content:start;min-width:0}
 .reference-grid .reference-item .text-button{min-height:35px;font-size:11px;padding:6px}
+
+.detail-quote-section{margin:22px 0;padding:16px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.detail-quotes{display:grid;gap:15px}
+.customer-quote-card{padding:17px;border:1px solid var(--line);border-radius:12px;background:var(--input);overflow-wrap:anywhere}
+.customer-quote-card>strong{display:block;font-size:16px}
+.customer-quote-card p{white-space:pre-wrap;overflow-wrap:anywhere}
+.customer-quote-card small{display:block}
+.customer-quote-card ul{margin:13px 0;padding-left:22px}
+.customer-quote-card li{margin:6px 0}
+.customer-quote-confirm{display:flex;gap:11px;align-items:flex-start;padding:13px;border:1px solid var(--line);border-radius:8px;margin:17px 0;font-size:12px}
+.customer-quote-confirm input{accent-color:var(--accent);flex-shrink:0;margin-top:3px}
+.customer-quote-actions{display:flex;gap:10px;flex-wrap:wrap}
+.customer-quote-actions button{flex:1;min-width:135px}
+@media(max-width:620px){.customer-quote-actions{flex-direction:column}.customer-quote-actions button{width:100%}}
