@@ -8,6 +8,7 @@ const base="http://127.0.0.1:18868";
 const out=path.join(process.cwd(),"test-results");
 fs.mkdirSync(out,{recursive:true});
 const axePath=require.resolve("axe-core/axe.min.js");
+const axeSource=fs.readFileSync(axePath,"utf8");
 const tags=["wcag2a","wcag2aa","wcag21a","wcag21aa"];
 const failures=[], allViolations=[];
 const preset={
@@ -27,7 +28,15 @@ async function mocks(page) {
     route=>route.abort());
 }
 async function checkAxe(page,label) {
-  await page.addScriptTag({path:axePath});
+  // Respect the Artist Desk's strict script-src 'self' policy. Playwright's
+  // inline addScriptTag(path) is correctly blocked by that CSP, so serve
+  // axe from an intercepted local same-origin URL only inside CI.
+  if(!(await page.evaluate(()=>!!window.axe))){
+    await page.route("**/__dmo_ci_axe.min.js",route=>route.fulfill({
+      status:200,contentType:"application/javascript",body:axeSource
+    }));
+    await page.addScriptTag({url:base+"/__dmo_ci_axe.min.js"});
+  }
   const result=await page.evaluate(async tags=>window.axe.run(document,{
     runOnly:{type:"tag",values:tags},
     rules:{"region":{enabled:false}}
