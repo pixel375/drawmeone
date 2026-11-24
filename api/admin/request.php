@@ -16,6 +16,8 @@ try {
         'ok' => true,
         'detail' => $detail,
         'admin_writes_enabled' => dmo_workflow_writes_enabled(),
+        'order_creation_enabled' => dmo_orders_admin_enabled() &&
+            dmo_messages_request_open((string) $detail['request']['status']),
         'quote_sending_enabled' => dmo_quote_delivery_enabled() &&
             dmo_messages_request_open((string) $detail['request']['status']),
         'customer_messaging_enabled' => dmo_workflow_messaging_enabled() &&
