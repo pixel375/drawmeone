@@ -1,1 +1,1 @@
-v2.7 final SSH read-only production verification after sync-aware PHP lint retries; inspect protected new order and launch readiness plus existing site endpoints.
+2026-11-23 v2.7 final retry after transient Hostinger SSH connection timeout, with multiple bounded attempts. No changes to live database or user accounts.
