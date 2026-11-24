@@ -9,8 +9,8 @@
 <meta name="description" content="Request an original custom drawing through Draw Me One when commissions open.">
 <title>Commission a drawing · Draw Me One</title>
 <link rel="icon" href="./favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="./commission.css?v=22">
-<script defer src="./commission.js?v=22"></script>
+<link rel="stylesheet" href="./commission.css?v=23">
+<script defer src="./commission.js?v=23"></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
@@ -144,6 +144,11 @@
           <div id="detail-quotes" class="detail-quotes"></div>
           <p id="detail-quote-feedback" role="status" aria-live="polite" class="small"></p>
         </section>
+        <section id="detail-order-section" class="detail-order-section" hidden>
+          <h4>My order progress</h4>
+          <p class="small">Order and payment status are displayed separately. The site does not automatically collect payment.</p>
+          <div id="detail-orders"></div>
+        </section>
         <div id="detail-messages" class="detail-messages"></div>
         <form id="detail-reply-form" class="detail-reply-form" hidden>
           <label for="detail-reply-body">Private message to the artist</label>
@@ -152,7 +157,7 @@
           <p id="detail-reply-feedback" class="small" role="status" aria-live="polite"></p>
         </form>
         <p class="small" id="detail-reply-disabled">Private replies are not available yet. Your history remains readable.</p>
-        <p class="small">Quote acceptance and online payments are not available yet.</p>
+        <p class="small">Quote acceptance, order confirmation and any payment arrangements are separate steps.</p>
       </section>
     </section>
   </div>
