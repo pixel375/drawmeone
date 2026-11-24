@@ -57,7 +57,7 @@ try {
             dmo_json(409, ['ok' => false, 'error' => 'request_policy_or_status_changed']);
         }
         $quoteLookup = $db->prepare(
-            'SELECT id, status, sent_at, ' .
+            'SELECT id, status, sent_at, validity_ends_at, ' .
             'CASE WHEN validity_ends_at IS NOT NULL AND ' .
             'validity_ends_at <= UTC_TIMESTAMP() THEN 1 ELSE 0 END AS is_expired ' .
             'FROM dmo_quotes WHERE id = :id AND request_id = :request LIMIT 1 FOR UPDATE'
