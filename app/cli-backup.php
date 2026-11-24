@@ -5,8 +5,8 @@ require_once __DIR__ . '/references.php';
 // Private encrypted, local-only operational backups. No HTTP entry point,
 // no arbitrary paths/commands/SQL and no secrets in output or GitHub.
 if (PHP_SAPI !== 'cli' || count($argv) !== 2 ||
-    !in_array($argv[1], ['run', 'verify-latest', 'restore-check'], true)) {
-    fwrite(STDERR, "Usage: php app/cli-backup.php run|verify-latest|restore-check\n");
+    !in_array($argv[1], ['run', 'verify-latest', 'restore-check', 'export-latest'], true)) {
+    fwrite(STDERR, "Usage: php app/cli-backup.php run|verify-latest|restore-check|export-latest\n");
     exit(2);
 }
 umask(0077);
@@ -459,7 +459,38 @@ try {
     }
     try {
         $key = dmo_backup_key($argv[1] === 'run');
-        if ($argv[1] === 'restore-check') {
+        if ($argv[1] === 'export-latest') {
+            // Dedicated ciphertext-only SSH/SFTP transport. Never emit SQL,
+            // private media in the clear, backup keys, or path metadata.
+            $snapshots = dmo_backup_list($root);
+            if (!$snapshots) throw new RuntimeException('No encrypted recovery snapshot.');
+            $newest = $snapshots[0];
+            $age = time() - (int) filemtime($newest);
+            if ($age < -300 || $age > 36 * 3600) {
+                throw new RuntimeException('Latest encrypted snapshot is not recent.');
+            }
+            if (!dmo_backup_verify($newest, $key)) {
+                throw new RuntimeException('Encrypted export verification failed.');
+            }
+            $input = @fopen($newest, 'rb');
+            $output = @fopen('php://stdout', 'wb');
+            if (!is_resource($input) || !is_resource($output)) {
+                if (is_resource($input)) fclose($input);
+                throw new RuntimeException('Encrypted export stream unavailable.');
+            }
+            try {
+                $expected = @filesize($newest);
+                $written = stream_copy_to_stream($input, $output);
+                if (!is_int($expected) || $expected < 256 ||
+                    !is_int($written) || $expected !== $written) {
+                    throw new RuntimeException('Encrypted export incomplete.');
+                }
+                fflush($output);
+            } finally {
+                fclose($input);
+                fclose($output);
+            }
+        } elseif ($argv[1] === 'restore-check') {
             $snapshots = dmo_backup_list($root);
             if (!$snapshots) throw new RuntimeException('No recovery snapshot available.');
             $inspection = dmo_backup_restore_check($snapshots[0], $key, $root);
