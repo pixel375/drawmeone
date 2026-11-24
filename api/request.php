@@ -44,8 +44,9 @@ try {
     );
     $messages->execute(['id' => $request['id']]);
     $references = dmo_refs_metadata($db, (int) $request['id']);
-    $canUpload = dmo_refs_enabled($db) &&
-        dmo_messages_request_open((string) $request['status']) &&
+    $canManageReferences = dmo_refs_enabled($db) &&
+        dmo_messages_request_open((string) $request['status']);
+    $canUpload = $canManageReferences &&
         count($references) < DMO_REFERENCE_MAX_ITEMS;
     unset($request['id']);
     dmo_json(200, [
@@ -54,6 +55,7 @@ try {
         'addons' => $names,
         'references' => $references,
         'can_upload_references' => $canUpload,
+        'can_manage_references' => $canManageReferences,
         'messages' => array_reverse($messages->fetchAll()),
         'can_reply' => dmo_messages_enabled() &&
             dmo_messages_request_open((string) $request['status']),
