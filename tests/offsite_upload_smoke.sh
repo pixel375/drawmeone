@@ -33,5 +33,10 @@ if bash ops/offsite-upload.sh > /dev/null 2>&1; then
   echo 'FAIL: plaintext snapshot accepted'
   exit 1
 fi
-echo 'PASS: traversal and plaintext snapshots rejected'
+export OFFSITE_OBJECT_NAME="../../invalid.bak"
+if bash ops/offsite-upload.sh > /dev/null 2>&1; then
+  echo 'FAIL: unsafe destination filename accepted'
+  exit 1
+fi
+echo 'PASS: traversal, unsafe filename and plaintext snapshots rejected'
 echo 'OFFSITE_LOCAL_SMOKE=PASS'
