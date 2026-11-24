@@ -372,6 +372,42 @@ async function openIntake(browser) {
     console.log("PASS: synthetic signed-in commission form, tier/addon compatibility, single idempotent POST");
   } finally {await context.close();}
 }
+async function customerDraftAndSessionIsolation(browser) {
+  const page=await browser.newPage({viewport:{width:390,height:844},reducedMotion:"reduce"});
+  const test=await installMocks(page,{signedIn:true,open:false});
+  let expired=false;
+  await page.route("**/api/request.php?*",route=>{
+    const ref=new URL(route.request().url()).searchParams.get("ref");
+    return expired ? answer(route,{ok:false,error:"customer_login_required"},401)
+      : answer(route,{...detail(ref),can_reply:true,can_upload_references:true});
+  });
+  try{
+    await page.goto(base+"/commission.html",{waitUntil:"domcontentloaded"});
+    const button=ref=>page.locator('#my-request-list button[aria-label$="'+ref+'"]');
+    await button(A).click();
+    await page.locator("#detail-reply-form").waitFor({state:"visible"});
+    await page.locator("#detail-reply-body").fill("Synthetic private message A");
+    await page.locator("#detail-reference-files").setInputFiles({
+      name:"synthetic.png",mimeType:"image/png",buffer:Buffer.from("synthetic fixture")
+    });
+    await button(B).click();
+    await page.waitForFunction(ref=>document.querySelector("#detail-ref")?.textContent===ref,B);
+    assert.equal(await page.locator("#detail-reply-body").inputValue(),"");
+    assert.equal(await page.locator("#detail-reference-files").evaluate(el=>el.files.length),0);
+    await page.locator("#detail-reply-body").fill("Synthetic private message B");
+    await page.locator("#detail-close").click();
+    await button(B).click();
+    await page.waitForFunction(ref=>document.querySelector("#detail-ref")?.textContent===ref,B);
+    assert.equal(await page.locator("#detail-reply-body").inputValue(),"");
+    expired=true;
+    await page.locator("#detail-refresh").click();
+    await page.waitForURL("**/account.html");
+    assert.equal(await page.locator("#customer-workspace").count(),0);
+    assert.deepEqual(test.posts,[]);
+    console.log("PASS: customer draft/reference isolation and expired session exits private document");
+  }finally{await page.close();}
+}
+
 async function openWithoutLogin(browser) {
   const page=await browser.newPage({viewport:{width:390,height:844}});
   await installMocks(page,{signedIn:false,open:true});
@@ -393,6 +429,7 @@ async function openWithoutLogin(browser) {
     await quoteSuccessWithoutPayment(browser);
     await readonlyQuoteStatuses(browser);
     await detailRaceAndRecovery(browser);
+    await customerDraftAndSessionIsolation(browser);
     console.log("COMMISSION_BROWSER_SMOKE=PASS");
   } finally {await browser.close();}
 })().catch(err=>{console.error(err.stack||String(err));process.exitCode=1;});

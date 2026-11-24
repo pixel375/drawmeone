@@ -4,7 +4,7 @@
   const state = {
     service: null, auth: null, catalog: null, account: null, csrf: "",
     sending: false, pendingKey: null, selectedRef: null, messageBusy: false,
-    uploadBusy: false, quoteBusy: false, requests: [],
+    uploadBusy: false, quoteBusy: false, deleteBusy: false, requests: [],
   };
   const labels = {
     original_character: "Original character (OC)",
@@ -19,6 +19,35 @@
     });
     const body = await response.json();
     return {response, body};
+  }
+  let leavingSession = false;
+  function customerSessionExpired() {
+    if (leavingSession) return;
+    leavingSession = true;
+    state.account = null;
+    state.csrf = "";
+    state.selectedRef = null;
+    state.requests = [];
+    ++requestsFetchSequence;
+    ++detailRequestSequence;
+    $("customer-workspace").hidden = true;
+    location.replace("./account.html");
+  }
+  window.addEventListener("pagehide", () => {
+    $("customer-workspace").hidden = true;
+  });
+  window.addEventListener("pageshow", event => {
+    if (event.persisted) location.reload();
+  });
+  function detailMutationBusy() {
+    return state.messageBusy || state.uploadBusy || state.quoteBusy || state.deleteBusy;
+  }
+  function clearDetailDrafts() {
+    $("detail-reply-body").value = "";
+    $("detail-reference-files").value = "";
+    $("detail-reference-feedback").textContent = "";
+    $("detail-reply-feedback").textContent = "";
+    $("detail-reference-progress").hidden = true;
   }
   function displayStatus(text, error = false) {
     const node = $("request-status");
@@ -209,6 +238,7 @@
     $("request-history-count").textContent = "Refreshing request history…";
     try {
       const {response, body} = await getJSON("./api/requests.php");
+      if (response.status === 401) return customerSessionExpired();
       if (sequence !== requestsFetchSequence) return;
       if (!response.ok || !body.ok || !Array.isArray(body.requests)) {
         throw new Error("Requests unavailable");
@@ -241,7 +271,7 @@
   }
 
   async function respondToQuote(ref, quoteId, policyVersion, decision, checkbox) {
-    if (state.quoteBusy || state.selectedRef !== ref || !state.csrf ||
+    if (detailMutationBusy() || state.selectedRef !== ref || !state.csrf ||
         !Number.isSafeInteger(quoteId) || quoteId < 1) return;
     if (decision === "accept" && !checkbox?.checked) {
       $("detail-quote-feedback").textContent =
@@ -264,6 +294,7 @@
           acknowledge_quote:decision === "accept",
         }),
       });
+      if (response.status === 401) return customerSessionExpired();
       const body = await response.json();
       if (state.selectedRef !== ref) return;
       if (!response.ok || !body.ok) {
@@ -413,12 +444,18 @@
   let detailRequestSequence = 0;
   async function openDetail(ref) {
     if (typeof ref !== "string" || !/^DMO-[0-9a-f]{20}$/.test(ref)) return;
+    if (leavingSession || (detailMutationBusy() && state.selectedRef !== ref)) return;
     const sequence = ++detailRequestSequence;
+    if (state.selectedRef !== ref) clearDetailDrafts();
     state.selectedRef = ref;
     const panel = $("my-request-detail");
     panel.hidden = false;
     panel.setAttribute("aria-busy","true");
     $("detail-content").hidden = true;
+    for (const id of ["detail-status","detail-type","detail-options","detail-contact","detail-deadline","detail-brief"]) {
+      $(id).textContent = "";
+    }
+    $("detail-messages").replaceChildren();
     $("detail-load-status").hidden = false;
     $("detail-load-status").textContent = "Loading private request details…";
     $("detail-refresh").disabled = true;
@@ -437,6 +474,7 @@
       const {response,body} = await getJSON(
         "./api/request.php?ref=" + encodeURIComponent(ref)
       );
+      if (response.status === 401) return customerSessionExpired();
       if (sequence !== detailRequestSequence || state.selectedRef !== ref) return;
       if (!response.ok || !body.ok ||
           body.request?.public_ref !== ref) {
@@ -521,9 +559,11 @@
 
   $("refresh-requests").addEventListener("click",loadMyRequests);
   $("detail-refresh").addEventListener("click", () => {
-    if (state.selectedRef && !state.quoteBusy) openDetail(state.selectedRef);
+    if (state.selectedRef && !detailMutationBusy()) openDetail(state.selectedRef);
   });
   $("detail-close").addEventListener("click",() => {
+    if (detailMutationBusy()) return;
+    clearDetailDrafts();
     detailRequestSequence++;
     state.selectedRef = null;
     $("my-request-detail").hidden = true;
@@ -534,9 +574,10 @@
 
 
   async function deleteReference(ref, attachment_id) {
-    if (!state.csrf || state.selectedRef !== ref ||
+    if (detailMutationBusy() || !state.csrf || state.selectedRef !== ref ||
         !Number.isSafeInteger(attachment_id) || attachment_id < 1) return;
     if (!window.confirm("Remove this private reference image from the request?")) return;
+    state.deleteBusy = true;
     $("detail-reference-feedback").textContent = "Removing reference image…";
     try {
       const response = await fetch("./api/reference-delete.php", {
@@ -544,6 +585,7 @@
         headers:{"Content-Type":"application/json","X-DMO-CSRF":state.csrf},
         body:JSON.stringify({ref,attachment_id}),
       });
+      if (response.status === 401) return customerSessionExpired();
       const data = await response.json();
       if (!response.ok || !data.ok) {
         $("detail-reference-feedback").textContent =
@@ -558,13 +600,15 @@
     } catch (_) {
       $("detail-reference-feedback").textContent =
         "Connection interrupted. Refresh your references before retrying.";
+    } finally {
+      state.deleteBusy = false;
     }
   }
 
   $("detail-reference-form").addEventListener("submit", async event => {
     event.preventDefault();
     const ref = state.selectedRef;
-    if (!ref || state.uploadBusy || !state.csrf) return;
+    if (!ref || detailMutationBusy() || !state.csrf) return;
     const files = Array.from($("detail-reference-files").files || []);
     if (!files.length || files.length > 8 ||
         files.some(file => file.size > 4 * 1024 * 1024 || file.size < 1 ||
@@ -587,6 +631,7 @@
           method:"POST", credentials:"same-origin", cache:"no-store",
           headers:{"X-DMO-CSRF":state.csrf},body:payload,
         });
+        if (response.status === 401) return customerSessionExpired();
         const data = await response.json();
         if (!response.ok || !data.ok) {
           $("detail-reference-feedback").textContent =
@@ -616,7 +661,7 @@
   $("detail-reply-form").addEventListener("submit", async event => {
     event.preventDefault();
     const ref = state.selectedRef;
-    if (!ref || state.messageBusy || !$("detail-reply-form").reportValidity() ||
+    if (!ref || detailMutationBusy() || !$("detail-reply-form").reportValidity() ||
         !state.csrf) return;
     const body = $("detail-reply-body").value.trim();
     if (body.length < 2 || body.length > 3000) return;
@@ -629,6 +674,7 @@
         headers:{"Content-Type":"application/json","X-DMO-CSRF":state.csrf},
         body:JSON.stringify({ref,body}),
       });
+      if (response.status === 401) return customerSessionExpired();
       const data = await response.json();
       if (!response.ok || !data.ok) {
         $("detail-reply-feedback").textContent = response.status === 429
@@ -685,6 +731,7 @@
         headers:{"Content-Type":"application/json","X-DMO-CSRF":state.csrf},
         body:JSON.stringify(payload),
       });
+      if (response.status === 401) return customerSessionExpired();
       const body = await response.json();
       if (response.ok && body.ok) {
         try { sessionStorage.removeItem("dmo_request_pending_key"); } catch (_) {}
