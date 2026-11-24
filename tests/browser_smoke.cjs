@@ -58,7 +58,9 @@ async function checkPage(browser, site, viewport) {
   page.on("pageerror", err => errors.push(err.message));
   try {
     await context.addInitScript(pref => {
-      localStorage.setItem("dmo-preview-settings", JSON.stringify(pref));
+      if (!localStorage.getItem("dmo-preview-settings")) {
+        localStorage.setItem("dmo-preview-settings", JSON.stringify(pref));
+      }
     }, {
       site, design: "noir", mode: "dark",
       layout: site === "cinema" ? "rows" : site === "archive" ? "mosaic" : "masonry",
