@@ -46,7 +46,7 @@ footer{border-top:1px solid var(--line);padding-top:20px;margin-top:28px;font-si
 [hidden]{display:none!important}
 button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 </style>
-<script defer src="./account.js?v=13"></script>
+<script defer src="./account.js?v=14"></script>
 </head>
 <body>
 <header><a class="brand" href="./index.html">drawmeone<span>.</span></a><a href="./index.html">← Back to drawings</a></header>
@@ -88,6 +88,17 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-off
     <div id="captcha-signup" class="turnstile-slot"></div>
     <button type="submit" id="submit-signup" class="primary" disabled>Create account</button>
   </form>
+  <div id="resend-wrap" hidden>
+    <button type="button" id="toggle-resend" style="border:0;background:transparent;color:var(--accent);padding:12px 0;text-decoration:underline;cursor:pointer">Didn't get a verification email?</button>
+    <form id="resend-form" hidden>
+      <h2>Send another link.</h2>
+      <p>Enter the email address you used to register. For privacy, we won't reveal whether an account exists.</p>
+      <label for="resend-email">Email</label>
+      <input id="resend-email" type="email" maxlength="254" autocomplete="email" required>
+      <div id="captcha-resend" class="turnstile-slot"></div>
+      <button type="submit" id="submit-resend" class="primary" disabled>Resend verification email</button>
+    </form>
+  </div>
   <p id="form-notice" class="notice" role="status" aria-live="polite" hidden></p>
   <small>Commission bookings remain closed. Account access does not yet mean orders can be placed.</small>
 </section>
