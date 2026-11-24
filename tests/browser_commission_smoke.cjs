@@ -219,6 +219,48 @@ async function quoteDecisionGuards(browser) {
     console.log("PASS: acknowledgement required, failed quote response restores controls");
   } finally {await page.close();}
 }
+async function quoteSuccessWithoutPayment(browser) {
+  const page=await browser.newPage({viewport:{width:390,height:844}});
+  await installMocks(page,{signedIn:true,open:false});
+  let accepted=false,decisionCount=0;
+  await page.route("**/api/request.php*",route=>{
+    const result=detail(A);
+    if(accepted) {
+      result.quotes[0].status="accepted";
+      result.quotes[0].can_respond=false;
+    }
+    return answer(route,result);
+  });
+  await page.route("**/api/quote-response.php",route=>{
+    const submitted=route.request().postDataJSON();
+    assert.equal(submitted.quote_id,19);
+    assert.equal(submitted.decision,"accept");
+    assert.equal(submitted.acknowledge_quote,true);
+    assert.equal(submitted.policy_version,"qa-policy-2026");
+    decisionCount++;
+    accepted=true;
+    return answer(route,{
+      ok:true,quote_id:19,status:"accepted",
+      order_created:false,payment_collected:false
+    });
+  });
+  try {
+    await page.goto(base+"/commission.html",{waitUntil:"domcontentloaded"});
+    await page.locator('#my-request-list button[aria-label$="'+A+'"]').click();
+    await page.locator("#detail-content").waitFor({state:"visible"});
+    await page.locator(".customer-quote-confirm input").check();
+    page.once("dialog",dialog=>dialog.accept());
+    await page.locator('[data-quote-action="accept"]').click();
+    await page.waitForFunction(()=>
+      document.querySelector(".customer-quote-status")?.textContent === "Accepted");
+    assert.equal(decisionCount,1,"one confirmed synthetic quote acceptance");
+    assert.equal(await page.locator("#detail-quotes button").count(),0,
+      "accepted quote becomes read-only");
+    assert.match(await page.locator("#detail-quote-feedback").innerText(),
+      /No order or payment has been created/);
+    console.log("PASS: confirmed quote acceptance updates display without payment or new order");
+  } finally {await page.close();}
+}
 async function readonlyQuoteStatuses(browser) {
   const page=await browser.newPage({viewport:{width:390,height:844}});
   await installMocks(page,{signedIn:true,open:false});
@@ -343,6 +385,7 @@ async function openWithoutLogin(browser) {
     await openIntake(browser);
     await openWithoutLogin(browser);
     await quoteDecisionGuards(browser);
+    await quoteSuccessWithoutPayment(browser);
     await readonlyQuoteStatuses(browser);
     await detailRaceAndRecovery(browser);
     console.log("COMMISSION_BROWSER_SMOKE=PASS");
