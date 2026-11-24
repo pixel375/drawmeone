@@ -65,10 +65,12 @@ jobs:
           [[ -d "$site" && -f "$site/app/cli-admin.php" && -f "$site/app/bootstrap.php" ]] || {
             echo "Expected DrawMeOne PHP deployment is missing"; exit 1;
           }
-          for file in app/bootstrap.php app/auth.php app/mailer.php app/admin.php app/cli-admin.php app/cli-mail-config.php app/cli-smtp-probe.php app/commission-workflow.php app/artwork.php app/requests.php api/request-status.php api/requests.php api/request.php api/request-message.php api/auth/resend-verification.php api/admin/login.php api/admin/email.php api/admin/request.php api/admin/request-actions.php api/portfolio.php api/artwork.php api/admin/artworks.php api/admin/artwork-preview.php api/admin/artwork-upload.php; do
+          for file in app/bootstrap.php app/auth.php app/mailer.php app/admin.php app/cli-admin.php app/cli-mail-config.php app/cli-smtp-probe.php app/commission-workflow.php app/artwork.php app/requests.php app/references.php app/cli-migrate-references.php api/request-status.php api/requests.php api/request.php api/request-message.php api/request-attachment.php api/reference.php api/auth/resend-verification.php api/admin/login.php api/admin/email.php api/admin/request.php api/admin/request-actions.php api/portfolio.php api/artwork.php api/admin/artworks.php api/admin/artwork-preview.php api/admin/artwork-upload.php; do
             php -l "$site/$file" >/dev/null || { echo "PHP syntax invalid: $file"; exit 1; }
           done
           php -l "$site/tests/mail_smoke.php" >/dev/null
+          php -l "$site/tests/private_reference_smoke.php" >/dev/null
+          php "$site/tests/private_reference_smoke.php"
           php "$site/tests/mail_smoke.php"
           php -l "$site/tests/mail_dns_check.php" >/dev/null
           php "$site/tests/mail_dns_check.php"
@@ -94,6 +96,8 @@ jobs:
                   ":" . $column["Type"] . "\\n";
               }
             }
+            echo "private_reference_schema_ready=" .
+              (dmo_refs_schema_ready($db) ? "yes" : "no") . "\n";
             echo "customer_messaging_flag=" .
               (dmo_messages_enabled() ? "open" : "closed") . "\\n";
             $stmt = $db->query(
@@ -142,13 +146,15 @@ jobs:
             exit(1);
           }
           ' "$site"
-          for check in portfolio request-status commission-page customer-requests customer-message auth-resend admin-artworks admin-preview admin-mail; do
+          for check in portfolio request-status commission-page customer-requests customer-message customer-attachment customer-reference auth-resend admin-artworks admin-preview admin-mail; do
             case "$check" in
               portfolio) url="https://drawmeone.com/api/portfolio.php" ;;
               request-status) url="https://drawmeone.com/api/request-status.php" ;;
               commission-page) url="https://drawmeone.com/commission.html" ;;
               customer-requests) url="https://drawmeone.com/api/requests.php" ;;
               customer-message) url="https://drawmeone.com/api/request-message.php" ;;
+              customer-attachment) url="https://drawmeone.com/api/request-attachment.php" ;;
+              customer-reference) url="https://drawmeone.com/api/reference.php?id=1" ;;
               auth-resend) url="https://drawmeone.com/api/auth/resend-verification.php" ;;
               admin-artworks) url="https://drawmeone.com/api/admin/artworks.php" ;;
               admin-mail) url="https://drawmeone.com/api/admin/email.php" ;;
