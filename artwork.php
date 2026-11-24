@@ -43,7 +43,9 @@ function dmo_artwork_page_escape(string $value): string
 }
 $label = trim((string) ($work['alt_text'] ?? ''));
 if ($label === '') $label = 'Original drawing by Draw Me One';
-$label = mb_substr($label, 0, 260, 'UTF-8');
+$label = function_exists('mb_substr')
+    ? mb_substr($label, 0, 260, 'UTF-8')
+    : substr($label, 0, 260);
 $artworkId = (int) $work['id'];
 $width = max(1, (int) $work['pixel_width']);
 $height = max(1, (int) $work['pixel_height']);
