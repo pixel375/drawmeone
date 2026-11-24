@@ -85,10 +85,18 @@ try {
                 $conversationId = $db->lastInsertId();
             }
 
+            $messageCount = $db->prepare(
+                'SELECT COUNT(*) FROM dmo_messages WHERE conversation_id = :id'
+            );
+            $messageCount->execute(['id' => $conversationId]);
+            if ((int) $messageCount->fetchColumn() >= 500) {
+                $db->rollBack();
+                dmo_json(409, ['ok' => false, 'error' => 'conversation_limit']);
+            }
             $stmt = $db->prepare(
                 'INSERT INTO dmo_messages ' .
                 '(conversation_id, sender_id, body, is_internal) ' .
-                'VALUES (:conversation, :admin, :body, 1)'
+                'VALUES (:conversation, :admin, :body, :internal)'
             );
             $stmt->execute([
                 'conversation' => $conversationId,
