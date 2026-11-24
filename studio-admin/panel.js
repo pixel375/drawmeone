@@ -193,6 +193,29 @@
     }
   }
 
+  function renderRequestReferences(records) {
+    const root = $("request-references");
+    root.replaceChildren();
+    if (!Array.isArray(records) || !records.length) {
+      root.append(textNode("p", "No reference images attached.", "small"));
+      return;
+    }
+    for (const item of records) {
+      if (!Number.isSafeInteger(item.id) || item.id < 1) continue;
+      const frame = document.createElement("a");
+      frame.href = "../api/reference.php?id=" + item.id + "&variant=display";
+      frame.target = "_blank";
+      frame.rel = "noopener noreferrer";
+      frame.setAttribute("aria-label", "View customer reference image privately");
+      const img = document.createElement("img");
+      img.src = "../api/reference.php?id=" + item.id + "&variant=thumb";
+      img.alt = "Private customer reference";
+      img.loading = "lazy";
+      frame.append(img);
+      root.append(frame);
+    }
+  }
+
   function renderQuotes(records) {
     const root = $("request-quotes");
     root.replaceChildren();
@@ -289,6 +312,7 @@
     requestText("request-brief-text", info.brief || "");
     renderThread(item.messages);
     renderQuotes(item.quotes);
+    renderRequestReferences(item.references);
     requestText("request-detail-status", requestWriteEnabled
       ? "Admin draft editing available. Nothing is sent to the customer."
       : "Viewing only. Private note and quote creation are disabled on the server.");
