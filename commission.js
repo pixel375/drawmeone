@@ -4,7 +4,7 @@
   const state = {
     service: null, auth: null, catalog: null, account: null, csrf: "",
     sending: false, pendingKey: null, selectedRef: null, messageBusy: false,
-    uploadBusy: false,
+    uploadBusy: false, quoteBusy: false,
   };
   const labels = {
     original_character: "Original character (OC)",
@@ -159,6 +159,113 @@
     }
   }
 
+
+  async function respondToQuote(ref, quoteId, policyVersion, decision, checkbox) {
+    if (state.quoteBusy || state.selectedRef !== ref || !state.csrf ||
+        !Number.isSafeInteger(quoteId) || quoteId < 1) return;
+    if (decision === "accept" && !checkbox?.checked) {
+      $("detail-quote-feedback").textContent =
+        "Read the quote and confirm the acknowledgement before accepting.";
+      return;
+    }
+    if (!window.confirm(decision === "accept"
+        ? "Confirm agreement with this exact quoted scope and price? No payment is collected."
+        : "Decline this quote? You can ask the artist about a different version.")) return;
+    state.quoteBusy = true;
+    $("detail-quote-feedback").textContent = "Recording your decision securely…";
+    for (const button of $("detail-quotes").querySelectorAll("button")) button.disabled = true;
+    try {
+      const response = await fetch("./api/quote-response.php", {
+        method:"POST", credentials:"same-origin", cache:"no-store",
+        headers:{"Content-Type":"application/json","X-DMO-CSRF":state.csrf},
+        body:JSON.stringify({
+          ref,quote_id:quoteId,decision,policy_version:policyVersion,
+          acknowledge_quote:decision === "accept",
+        }),
+      });
+      const body = await response.json();
+      if (!response.ok || !body.ok) {
+        $("detail-quote-feedback").textContent =
+          response.status === 409
+            ? "This quote is no longer available for a decision. Refresh the request."
+            : "Could not record decision (" + (body.error || response.status) + ").";
+        return;
+      }
+      await openDetail(ref);
+      $("detail-quote-feedback").textContent =
+        decision === "accept"
+          ? "Your agreement to the quote was recorded. No order or payment has been created."
+          : "You declined this quote. Contact the artist if you'd like a revised offer.";
+    } catch (_) {
+      $("detail-quote-feedback").textContent =
+        "Connection interrupted. Refresh the quote status before trying again.";
+    } finally {
+      state.quoteBusy = false;
+    }
+  }
+
+  function renderCustomerQuotes(quotes, ref, policyVersion) {
+    const root = $("detail-quotes");
+    root.replaceChildren();
+    $("detail-quote-section").hidden = !Array.isArray(quotes) || !quotes.length;
+    if (!Array.isArray(quotes)) return;
+    for (const quote of quotes) {
+      if (!Number.isSafeInteger(quote.id) || quote.id < 1) continue;
+      const card = document.createElement("article");
+      card.className = "customer-quote-card";
+      card.append(
+        renderText("strong", "Quote v" + quote.version_number + " · " +
+          (quote.status || "review")),
+        renderText("p", quote.scope_description || ""),
+        renderText("small", "Total: " +
+          (money(quote.total_minor,quote.currency) || "Unavailable") +
+          " · Included revisions: " + quote.revision_allowance),
+        renderText("small", "Valid until: " +
+          (quote.validity_ends_at || "not specified") + " UTC")
+      );
+      const lines = document.createElement("ul");
+      for (const line of quote.lines || []) {
+        lines.append(renderText("li",
+          (line.description || "") + " — " +
+          (money(line.amount_minor,quote.currency) || "—")));
+      }
+      card.append(lines);
+      if (quote.is_expired && quote.status === "sent") {
+        card.append(renderText("small",
+          "This quote has expired. Contact the artist for an updated offer."));
+      }
+      if (quote.can_respond === true) {
+        const label = document.createElement("label");
+        label.className = "customer-quote-confirm";
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        const span = renderText("span",
+          "I have read this quote and agree to its exact scope, price and revisions. " +
+          "Payment and any order confirmation will be handled separately.");
+        label.append(checkbox,span);
+        const actions = document.createElement("div");
+        actions.className = "customer-quote-actions";
+        const accept = document.createElement("button");
+        accept.type = "button";
+        accept.className = "primary-button";
+        accept.textContent = "Accept quoted terms";
+        accept.addEventListener("click",()=>respondToQuote(
+          ref,quote.id,policyVersion,"accept",checkbox
+        ));
+        const decline = document.createElement("button");
+        decline.type = "button";
+        decline.className = "text-button";
+        decline.textContent = "Decline quote";
+        decline.addEventListener("click",()=>respondToQuote(
+          ref,quote.id,policyVersion,"decline",null
+        ));
+        actions.append(accept,decline);
+        card.append(label,actions);
+      }
+      root.append(card);
+    }
+  }
+
   function showFact(id, value) {
     $(id).textContent = value === undefined || value === null || value === "" ?
       "Not specified" : String(value);
@@ -172,6 +279,9 @@
     $("detail-reply-send").disabled = true;
     $("detail-reference-form").hidden = true;
     $("detail-reference-list").replaceChildren();
+    $("detail-quote-section").hidden = true;
+    $("detail-quotes").replaceChildren();
+    $("detail-quote-feedback").textContent = "";
     showFact("detail-ref","Loading " + ref + "...");
     panel.scrollIntoView({behavior:"smooth",block:"start"});
     try {
@@ -220,6 +330,7 @@
       $("detail-reference-upload").disabled = body.can_upload_references !== true ||
         state.uploadBusy;
       const r = body.request || {};
+      renderCustomerQuotes(body.quotes || [], ref, r.policy_version || "");
       showFact("detail-ref",r.public_ref);
       showFact("detail-status",r.status);
       showFact("detail-type",labels[r.subject_type] || r.subject_type);
