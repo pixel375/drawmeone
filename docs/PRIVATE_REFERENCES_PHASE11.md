@@ -20,7 +20,7 @@ DMO_REQUEST_TERMS_APPROVED=0
 The upload feature also requires the installed migration. New intake `DMO_REQUESTS_ENABLED` is independent; a registered owner of an existing open request can add references when uploads are deliberately enabled, without reopening public submissions.
 
 ## Prelaunch verification checklist
-- [ ] Verify schema migration on live Hostinger and source/SSH lint.
+- [x] Apply migration through pinned SSH on Hostinger; Action run 45307970833 completed successfully, confirming `private_reference_schema_ready=yes` and `customer_service_unchanged=closed`.
 - [ ] Create a controlled verified customer test account, upload JPEG/PNG/WebP cases and confirm proper orientation and private thumbnails.
 - [ ] Test oversized/corrupt/SVG payload rejection, file count cap, CSRF/origin, rate limiting and blocked MIME/dimensions.
 - [ ] Attempt cross-customer and unauthenticated access to both variants; verify they return denial and do not expose the file.
@@ -28,3 +28,8 @@ The upload feature also requires the installed migration. New intake `DMO_REQUES
 - [ ] Publish approved policies and decide retention/deletion/consent before enabling uploads.
 
 No public upload or customer signup is activated by this phase. The first true reference uploads must only use user-owned or licensed images.
+
+
+## Deletion support
+
+`POST /api/reference-delete.php` requires a verified owning customer, HTTPS/same-origin JSON, CSRF token, an exact request reference and integer attachment ID, plus enabled policy and upload gates. It denies cross-customer deletion and reads. On success, the attachment database row is removed before private WebP files are unlinked. If file cleanup cannot finish, no authenticated endpoint can retrieve the orphan; the API reports `storage_cleanup_complete=false` and logs a sanitized warning. Orphan cleanup/retention still needs an operational pass before launch.
