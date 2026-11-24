@@ -136,7 +136,8 @@ async function verifyArtistDesk(browser, width) {
       } else if(name==="messages"){
         await page.locator("#message-list .empty-state").waitFor();
       } else if(name==="artwork"){
-        await page.locator("#artwork-library-status").waitFor();
+        await page.locator("#artwork-list .artwork-library-card").first()
+          .waitFor({state:"visible",timeout:12000});
         assert.equal(await page.locator("#artwork-upload").isEnabled(),false,
           "uploads disabled");
         assert.equal(await page.locator("#artwork-publish-selected").isEnabled(),false,
