@@ -20,6 +20,7 @@ try {
             'ON u.id = t.user_id WHERE t.token_hash = :hash ' .
             "AND t.purpose = 'verify_email' AND t.consumed_at IS NULL " .
             "AND t.expires_at > UTC_TIMESTAMP() AND u.account_status = 'pending_verification' " .
+            "AND u.role = 'customer' AND u.email_verified_at IS NULL " .
             'LIMIT 1 FOR UPDATE'
         );
         $stmt->execute(['hash' => hash('sha256', $token)]);
@@ -32,9 +33,12 @@ try {
             "UPDATE dmo_users SET account_status = 'active', " .
             "email_verified_at = UTC_TIMESTAMP() WHERE id = :id"
         )->execute(['id' => $record['user_id']]);
+        // All pending verification links for the now-active account are
+        // obsolete, including previously issued resend links.
         $db->prepare(
-            'UPDATE dmo_auth_tokens SET consumed_at = UTC_TIMESTAMP() WHERE id = :id'
-        )->execute(['id' => $record['id']]);
+            "UPDATE dmo_auth_tokens SET consumed_at = UTC_TIMESTAMP() " .
+            "WHERE user_id = :user AND purpose = 'verify_email' AND consumed_at IS NULL"
+        )->execute(['user' => $record['user_id']]);
         $db->prepare(
             "INSERT INTO dmo_audit_log (actor_id, action, entity_type, entity_id) " .
             "VALUES (:id, 'account.email_verified', 'user', :entity_id)"
