@@ -154,7 +154,7 @@ async function signedInClosed(browser,width) {
     await page.locator("#detail-quote-section").waitFor({state:"visible"});
     assert.equal(await page.locator("#detail-status").innerText(),"Awaiting artist review");
     assert.match(await page.locator("#detail-brief").innerText(),/synthetic artwork brief/);
-    assert.match(await page.locator("#detail-quotes").innerText(),/CA\$125\.00/);
+    assert.match(await page.locator("#detail-quotes").innerText(),/\$125\.00/);
     assert.match(await page.locator("#detail-orders").innerText(),/Payment has not been verified/);
     assert.equal(await page.locator("#detail-reference-form").isVisible(),false);
     assert.equal(await page.locator("#detail-reply-form").isVisible(),false);
