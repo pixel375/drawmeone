@@ -3,7 +3,7 @@
   const $ = id => document.getElementById(id);
   const state = {
     service: null, auth: null, catalog: null, account: null, csrf: "",
-    sending: false, pendingKey: null,
+    sending: false, pendingKey: null, selectedRef: null, messageBusy: false,
   };
   const labels = {
     original_character: "Original character (OC)",
@@ -164,8 +164,11 @@
   }
   async function openDetail(ref) {
     if (typeof ref !== "string" || !/^DMO-[0-9a-f]{20}$/.test(ref)) return;
+    state.selectedRef = ref;
     const panel = $("my-request-detail");
     panel.hidden = false;
+    $("detail-reply-form").hidden = true;
+    $("detail-reply-send").disabled = true;
     showFact("detail-ref","Loading " + ref + "...");
     panel.scrollIntoView({behavior:"smooth",block:"start"});
     try {
@@ -173,6 +176,11 @@
         "./api/request.php?ref=" + encodeURIComponent(ref)
       );
       if (!response.ok || !body.ok) throw new Error("Request unavailable");
+      if (state.selectedRef !== ref) return;
+      const canReply = body.can_reply === true && !!state.csrf;
+      $("detail-reply-form").hidden = !canReply;
+      $("detail-reply-disabled").hidden = canReply;
+      $("detail-reply-send").disabled = !canReply || state.messageBusy;
       const r = body.request || {};
       showFact("detail-ref",r.public_ref);
       showFact("detail-status",r.status);
@@ -201,7 +209,46 @@
 
   $("refresh-requests").addEventListener("click",loadMyRequests);
   $("detail-close").addEventListener("click",() => {
+    state.selectedRef = null;
     $("my-request-detail").hidden = true;
+  });
+
+  $("detail-reply-form").addEventListener("submit", async event => {
+    event.preventDefault();
+    const ref = state.selectedRef;
+    if (!ref || state.messageBusy || !$("detail-reply-form").reportValidity() ||
+        !state.csrf) return;
+    const body = $("detail-reply-body").value.trim();
+    if (body.length < 2 || body.length > 3000) return;
+    state.messageBusy = true;
+    $("detail-reply-send").disabled = true;
+    $("detail-reply-feedback").textContent = "Sending private message…";
+    try {
+      const response = await fetch("./api/request-message.php",{
+        method:"POST",credentials:"same-origin",cache:"no-store",
+        headers:{"Content-Type":"application/json","X-DMO-CSRF":state.csrf},
+        body:JSON.stringify({ref,body}),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.ok) {
+        $("detail-reply-feedback").textContent = response.status === 429
+          ? "Too many messages. Please retry later."
+          : (data.error === "conversation_closed"
+            ? "This request is no longer accepting messages."
+            : "Message could not be sent. Please try again.");
+        return;
+      }
+      $("detail-reply-body").value = "";
+      await openDetail(ref);
+      $("detail-reply-feedback").textContent =
+        "Message saved privately for the artist. No email was sent.";
+    } catch (_) {
+      $("detail-reply-feedback").textContent =
+        "Connection interrupted. Refresh the conversation before retrying.";
+    } finally {
+      state.messageBusy = false;
+      $("detail-reply-send").disabled = $("detail-reply-form").hidden;
+    }
   });
 
   $("request-form").addEventListener("submit",async event => {
