@@ -1,0 +1,61 @@
+name: DrawMeOne Browser UI QA — Chromium
+
+# Self-contained localhost browser validation: no real customer accounts,
+# no Hostinger SSH credentials and no payment-provider interaction.
+on:
+  push:
+    branches: [main]
+    paths:
+      - '*.html'
+      - '*.js'
+      - '*.css'
+      - 'assets/**'
+      - 'data/**'
+      - 'tests/browser_smoke.cjs'
+      - '.github/workflows/browser-ui-qa.yml'
+  pull_request:
+    paths:
+      - '*.html'
+      - '*.js'
+      - '*.css'
+      - 'assets/**'
+      - 'data/**'
+      - 'tests/browser_smoke.cjs'
+      - '.github/workflows/browser-ui-qa.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  chromium:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pinned Chromium automation
+        run: |
+          node --version
+          npm install --no-audit --no-fund --no-package-lock --no-save playwright@1.56.1
+          npx playwright install --with-deps chromium
+      - name: Run local PHP webroot and test layouts
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          php -S 127.0.0.1:18868 -t . > /tmp/dmo-browser-php.log 2>&1 &
+          pid=$!
+          trap 'kill "$pid" 2>/dev/null || true' EXIT
+          for attempt in {1..30}; do
+            if curl -fsS --max-time 2 http://127.0.0.1:18868/index.html >/dev/null; then break; fi
+            sleep 1
+          done
+          curl -fsS --max-time 4 http://127.0.0.1:18868/index.html >/dev/null
+          node tests/browser_smoke.cjs
+      - name: Save browser QA screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dmo-browser-ui-screenshots
+          path: test-results/*.png
+          if-no-files-found: ignore
+          retention-days: 7
