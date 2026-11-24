@@ -459,3 +459,12 @@ See `docs/ART_DIRECTION.md` and `docs/COMMISSION_PRODUCT_SPEC.md`.
 - [x] Verify owner-only image reads with no-store headers, cross-account and anonymous access denial, owner-only deletion, DB/file cleanup and completed-request write protection.
 - [x] Full disposable suite passed (Actions run 45427818462). Customer upload remains disabled on Hostinger.
 - [ ] Test real browser reference upload flow and live private disk permissions in a controlled pilot before enabling any public customer reference feature.
+
+## v3.2 — 2026-11-24: Chromium browser QA and direct-contact consistency
+
+- [x] Repair missing general-inquiry contact links in all three alternate site architectures (Atelier, Edition, Signature); all four designs now provide email and commission information without enabling bookings or payments.
+- [x] Add Playwright/Chromium browser checks on Ubuntu 24.04 covering all four site layouts at desktop 1440 px, tablet 768 px and mobile 390 px.
+- [x] Test local browser gallery rendering and sample attribution, horizontal overflow, script exceptions, layout/mode/logo persistence, lightbox keyboard navigation and Load more.
+- [x] Check account, commission and password recovery closed states plus the no-JavaScript general inquiry fallback.
+- [x] Browser QA fully passed on GitHub Actions run 45430891562; collect short-retention screenshot artifacts.
+- [ ] Safari/iOS QA and controlled authenticated artist/customer browser testing, including actual production upload/download and Turnstile; no feature gates opened.
