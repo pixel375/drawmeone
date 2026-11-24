@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 require_once __DIR__ . '/admin.php';
+require_once __DIR__ . '/requests.php';
 
 /**
  * Phase 6: admin-only review. External messages, quote sending, payments and
@@ -9,6 +10,11 @@ require_once __DIR__ . '/admin.php';
 function dmo_workflow_writes_enabled(): bool
 {
     return dmo_config('DMO_REQUEST_ADMIN_WRITES_ENABLED') === '1';
+}
+
+function dmo_workflow_messaging_enabled(): bool
+{
+    return dmo_workflow_writes_enabled() && dmo_messages_enabled();
 }
 
 function dmo_workflow_id(mixed $value): int
