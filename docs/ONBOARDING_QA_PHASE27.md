@@ -38,3 +38,7 @@ The suite covers:
 ## Outstanding before launch
 
 Real SMTP, Turnstile and account onboarding must be tested with a controlled authorized customer account only when policies and launch gates are ready. Approved Terms/Privacy, genuine artist portfolio, independently protected off-site backups/recovery key, and payment-provider verification remain outstanding. These tests do not authorize enabling public features.
+
+## Production rollout verification
+
+[Read-only Hostinger diagnostics run 45465970997](https://github.com/pixel375/drawmeone/actions/runs/45465970997) **passed**. The live response confirmed `customer_onboarding_assets=deployed` with account JS v15, recovery JS v13, signup confirmation, and new recovery links. All auth PHP syntax, mail, quotes, orders, private-reference and local backup-health checks passed; `customer_registration_flag=disabled` and `customer_request_intake=closed`. No real account, reset, email or payment operation was performed.
