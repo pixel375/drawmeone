@@ -441,3 +441,13 @@ See `docs/ART_DIRECTION.md` and `docs/COMMISSION_PRODUCT_SPEC.md`.
 - [x] Expose no payment verification simply because an order is awaiting arrangements; payment counts remain driven only by actual pending payment records.
 - [x] Reset **only the disposable localhost CI database** between HTTP suites, so earlier synthetic orders don't contaminate downstream count tests.
 - [x] Verify the real authenticated admin overview count over local HTTP with one synthetic unpaid order (Actions run 45418706387).
+
+## v3.0 — 2026-11-24: Verified email and password recovery safety
+
+- [x] Add real HTTP integration tests for account activation, expiry/replay of verification links, session authorization, password-reset expiry/replay, password rehash and multi-device session invalidation using only CI-local MariaDB and synthetic accounts.
+- [x] Consume **all** outstanding password-reset tokens after successful reset; block reuse of parallel links.
+- [x] Restrict public password-reset confirmation to active, verified customer accounts, not administrator accounts.
+- [x] Attempt a password-change notification after committing the reset; delivery failure does not roll back success.
+- [x] Confirm full test suite success on GitHub Actions run 45427127474.
+- [ ] Controlled live SMTP/Turnstile signup, verification resend, login and reset notification delivery pilot with owner-approved policies.
+- [ ] No public account or payment switches enabled.
