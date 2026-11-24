@@ -160,6 +160,13 @@ async function signedInClosed(browser,width) {
     assert.equal(await page.locator("#detail-reply-form").isVisible(),false);
     assert.equal(await page.locator("#detail-quote-section button").count(),2);
     assert.equal(await page.locator("#detail-quote-section input[type=checkbox]").count(),1);
+    assert.equal(await page.locator('[data-quote-action="accept"]').isDisabled(),true,
+      "quote acceptance disabled until acknowledged");
+    assert.equal(await page.locator('[data-quote-action="decline"]').isEnabled(),true,
+      "quote can still be declined separately");
+    await page.locator("#detail-refresh").click();
+    await page.locator("#detail-content").waitFor({state:"visible"});
+    assert.match(await page.locator("#detail-quote-section").innerText(),/Awaiting your decision/);
     assert(!await page.locator("body").innerText().then(x=>x.includes("Fake hidden internal note")));
     await page.locator("#detail-close").click();
     assert.equal(await page.locator("#my-request-detail").isVisible(),false);
@@ -177,6 +184,108 @@ async function signedInClosed(browser,width) {
     }
     console.log("PASS: signed-in closed-intake history, filters, private detail, quote/order display at "+width+"px");
   } finally {await context.close();}
+}
+async function quoteDecisionGuards(browser) {
+  const page=await browser.newPage({viewport:{width:390,height:844}});
+  const test=await installMocks(page,{signedIn:true,open:false});
+  try {
+    await page.goto(base+"/commission.html",{waitUntil:"domcontentloaded"});
+    await page.locator('#my-request-list button[aria-label$="'+A+'"]')
+      .waitFor({state:"visible"});
+    await page.locator('#my-request-list button[aria-label$="'+A+'"]').click();
+    await page.locator("#detail-content").waitFor({state:"visible"});
+    const accept=page.locator('[data-quote-action="accept"]');
+    const decline=page.locator('[data-quote-action="decline"]');
+    assert.equal(await accept.isDisabled(),true);
+    await page.locator(".customer-quote-confirm input").check();
+    assert.equal(await accept.isEnabled(),true,"acknowledgement enables Accept");
+    page.once("dialog",dialog=>dialog.accept());
+    await accept.click();
+    await page.waitForFunction(()=>
+      document.querySelector("#detail-quote-feedback")?.textContent
+        ?.includes("Could not record decision"));
+    assert.equal(await accept.isEnabled(),true,"failed quote response restores Accept");
+    assert.equal(await decline.isEnabled(),true,"failed quote response restores Decline");
+    assert.equal(test.posts.length,1,"one mocked quote decision intercepted");
+    assert.equal(test.posts[0].endpoint,"/api/quote-response.php");
+    assert.equal(test.posts[0].body.quote_id,19);
+    assert.equal(test.posts[0].body.acknowledge_quote,true);
+    assert.equal(test.posts[0].body.decision,"accept");
+    await page.locator("#detail-close").click();
+    await page.locator('#my-request-list button[aria-label$="'+A+'"]').click();
+    await page.locator("#detail-content").waitFor({state:"visible"});
+    assert.equal(await page.locator('[data-quote-action="accept"]').isDisabled(),true,
+      "reopened quote requires fresh acknowledgement");
+    console.log("PASS: acknowledgement required, failed quote response restores controls");
+  } finally {await page.close();}
+}
+async function readonlyQuoteStatuses(browser) {
+  const page=await browser.newPage({viewport:{width:390,height:844}});
+  await installMocks(page,{signedIn:true,open:false});
+  await page.route("**/api/request.php*",route=>{
+    const result=detail(A);
+    result.quotes=[
+      {...result.quotes[0],id:20,version_number:2,is_expired:true,
+       can_respond:true,status:"sent"},
+      {...result.quotes[0],id:19,version_number:1,status:"superseded",
+       can_respond:true,is_expired:false},
+    ];
+    return answer(route,result);
+  });
+  try {
+    await page.goto(base+"/commission.html",{waitUntil:"domcontentloaded"});
+    await page.locator('#my-request-list button[aria-label$="'+A+'"]').click();
+    await page.locator("#detail-content").waitFor({state:"visible"});
+    assert.equal(await page.locator(".customer-quote-card").count(),2);
+    assert.match(await page.locator("#detail-quotes").innerText(),/Expired/);
+    assert.match(await page.locator("#detail-quotes").innerText(),/Replaced by a newer quote/);
+    assert.equal(await page.locator("#detail-quotes button").count(),0,
+      "expired/superseded quotes cannot be accepted or declined");
+    console.log("PASS: historical and expired quote statuses remain read-only");
+  } finally {await page.close();}
+}
+async function detailRaceAndRecovery(browser) {
+  const page=await browser.newPage({viewport:{width:390,height:844}});
+  await installMocks(page,{signedIn:true,open:false});
+  let delayed=true;
+  await page.route("**/api/request.php*",async route=>{
+    const ref=new URL(route.request().url()).searchParams.get("ref");
+    if(ref===A && delayed){
+      delayed=false;
+      await new Promise(resolve=>setTimeout(resolve,950));
+    }
+    return answer(route,detail(ref));
+  });
+  try {
+    await page.goto(base+"/commission.html",{waitUntil:"domcontentloaded"});
+    await page.locator('#my-request-list button[aria-label$="'+A+'"]').waitFor();
+    await page.locator('#my-request-list button[aria-label$="'+A+'"]').click();
+    assert.equal(await page.locator("#detail-content").isVisible(),false,
+      "no old request data displayed during loading");
+    await page.locator('#my-request-list button[aria-label$="'+B+'"]').click();
+    await page.locator("#detail-content").waitFor({state:"visible"});
+    assert.equal(await page.locator("#detail-ref").innerText(),B);
+    await page.waitForTimeout(1050);
+    assert.equal(await page.locator("#detail-ref").innerText(),B,
+      "slower request A cannot replace selected request B");
+    assert.equal(await page.locator("#detail-quote-section").isVisible(),false,
+      "request B must not inherit quote A");
+    // A transient server failure may be recovered by the refresh control.
+    let fail=true;
+    await page.route("**/api/request.php*",route=>{
+      if(fail){fail=false;return answer(route,{ok:false,error:"unavailable"},503);}
+      return answer(route,detail(B));
+    });
+    await page.locator("#detail-refresh").click();
+    await page.locator("#detail-load-status").waitFor({state:"visible"});
+    assert.match(await page.locator("#detail-load-status").innerText(),/could not be loaded/i);
+    assert.equal(await page.locator("#detail-content").isVisible(),false,
+      "failed request does not show stale private detail");
+    await page.locator("#detail-refresh").click();
+    await page.locator("#detail-content").waitFor({state:"visible"});
+    assert.equal(await page.locator("#detail-ref").innerText(),B);
+    console.log("PASS: out-of-order detail responses isolated; refresh recovers failures");
+  } finally {await page.close();}
 }
 async function openIntake(browser) {
   const context=await browser.newContext({
@@ -231,6 +340,9 @@ async function openWithoutLogin(browser) {
     for(const width of [320,390,768,1440]) await signedInClosed(browser,width);
     await openIntake(browser);
     await openWithoutLogin(browser);
+    await quoteDecisionGuards(browser);
+    await readonlyQuoteStatuses(browser);
+    await detailRaceAndRecovery(browser);
     console.log("COMMISSION_BROWSER_SMOKE=PASS");
   } finally {await browser.close();}
 })().catch(err=>{console.error(err.stack||String(err));process.exitCode=1;});
