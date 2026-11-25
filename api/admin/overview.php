@@ -7,6 +7,7 @@ require_once dirname(__DIR__, 2) . '/app/backup-health.php';
 require_once dirname(__DIR__, 2) . '/app/notifications.php';
 require_once dirname(__DIR__, 2) . '/app/deliveries.php';
 require_once dirname(__DIR__, 2) . '/app/payments.php';
+require_once dirname(__DIR__, 2) . '/app/integrity.php';
 dmo_reject_non_get();
 
 try {
@@ -39,7 +40,13 @@ try {
     )->fetchColumn();
     $localBackup = dmo_backup_local_health();
     $policyReady = dmo_quote_policy_ready();
+    $integrity=dmo_integrity_records($db);
+    $integrityIssues=array_sum($integrity);
     $readiness = [
+        ['key'=>'integrity','label'=>'Order and payment record consistency','status'=>$integrityIssues===0?'ready':'blocked',
+         'detail'=>$integrityIssues===0?'No inconsistencies detected in current database checks; file checks run separately':$integrityIssues.' failed record checks require operator review'],
+        ['key'=>'review_schema','label'=>'Artwork review schema','status'=>dmo_review_schema_ready($db)?'ready':'blocked','detail'=>'Required for optional proof approval and included revisions'],
+        ['key'=>'review','label'=>'Customer proof review','status'=>dmo_review_enabled($db)?'ready':'blocked','detail'=>'Optional watermarked proof and quote-based revision allowances'],
         ['key' => 'mail', 'label' => 'Transactional email',
          'status' => dmo_mail_ready() ? 'ready' : 'blocked',
          'detail' => 'Required for verification and password reset'],
@@ -72,7 +79,7 @@ try {
         ['key'=>'fulfillment','label'=>'Paid order production and delivery','status'=>dmo_fulfillment_enabled($db)?'ready':'blocked','detail'=>'Requires reconciled full payment and approved delivery terms'],
         ['key'=>'delivery_drafts','label'=>'Private artwork staging',
          'status'=>dmo_delivery_staging_enabled($db)?'ready':'blocked',
-         'detail'=>'Artist-only draft storage; customer release not implemented'],
+         'detail'=>'Private staging, separate explicit final release'],
         ['key' => 'notifications', 'label' => 'Customer email notices',
          'status' => dmo_notifications_enabled() ? 'ready' : 'blocked',
          'detail' => 'Optional artist-triggered notices to verified email-preferring customers; no automated sends'],
@@ -89,12 +96,13 @@ try {
          'detail'=>'Requires independently checked receiving-account records and separate owner approval'],
         ['key' => 'payments', 'label' => 'Verified payment processing',
          'status' => 'planned',
-         'detail' => 'No provider verification or automated charges implemented'],
+         'detail' => 'Manual reconciliation implemented; automated provider verification not implemented'],
     ];
     dmo_json(200, [
         'ok' => true,
         'readiness' => $readiness,
         'counts' => $counts,
+        'integrity' => ['checks'=>$integrity,'issue_count'=>$integrityIssues,'scope'=>'database_only'],
         'readonly' => true,
         'data_is_live' => true,
     ]);

@@ -84,6 +84,18 @@
       $(name).textContent = Number.isSafeInteger(value) && value >= 0
         ? value.toLocaleString() : "—";
     }
+    const integrity=$("integrity-checks");integrity.replaceChildren();
+    const checksMap=data.integrity?.checks;
+    const labels={order_quote_mismatch:"Order / accepted quote mismatch",paid_without_evidence:"Paid orders without eligible evidence",paid_order_exception_conflict:"Paid flag conflicts with payment hold or refund",duplicate_verified_payment:"Multiple verified payments per order",multiple_orders:"Multiple orders per request",draft_order_mismatch:"Draft attached to unrelated request",delivery_missing_draft:"Missing or inconsistent delivery record",delivery_state_mismatch:"Released artwork with incomplete order",completed_without_delivery:"Completed order without deliverable",review_draft_mismatch:"Pending or approved proof without matching draft",review_pending_multiple:"Multiple pending proofs",review_allowance_exceeded:"Included revision allowance exceeded",delivery_approval_mismatch:"Released drawing differs from approved proof"};
+    if(checksMap&&typeof checksMap==="object"&&Object.keys(checksMap).length){
+      $("integrity-status").textContent=data.integrity.issue_count===0?"No database inconsistencies detected.":String(data.integrity.issue_count)+" failed checks require review.";
+      for(const [key,value] of Object.entries(checksMap)){
+        if(!Number.isSafeInteger(value)||value<0)continue;
+        const card=document.createElement("article");card.className="launch-check";
+        card.append(textNode("strong",labels[key]||key.replaceAll("_"," ")),textNode("p",value===0?"No issues":value+" affected record(s)","small"));
+        integrity.append(card);
+      }
+    }else $("integrity-status").textContent="Database consistency results unavailable.";
     const list = $("launch-checks");
     list.replaceChildren();
     const checks = Array.isArray(data.readiness) ? data.readiness : [];

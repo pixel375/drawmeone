@@ -26,3 +26,7 @@ The dashboard is **informational only**: it contains no controls to enable custo
 ## Remaining launch blockers
 
 The artist must approve legally accurate Terms and Privacy text, commercial copyright/licensing/refund rules and actual artwork before public business operations begin. Controlled real-account tests and independent off-site backup are also pending. Automated payment verification is not implemented.
+
+## Operational integrity follow-up
+
+The readiness dashboard now separately reports read-only database consistency checks for order/quote, verified payments, financial holds, delivery linkage and review allowances/approval binding. Daily SSH diagnostics scan private media for missing/unsafe files and invalid WebP headers, and verify delivery file sizes and SHA-256. The bounded scan reports incomplete coverage as a failure rather than implying full verification. No raw records or filenames enter CI logs. These checks detect inconsistencies, not automatically repair or change them. Independent off-site recovery, policy approvals and real-account onboarding remain launch blockers.

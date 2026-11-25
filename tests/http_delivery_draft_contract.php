@@ -322,6 +322,20 @@ try {
     $db->prepare("UPDATE dmo_orders SET payment_status='paid' WHERE id=:id")->execute(['id'=>$order]);
     [$code]=ref_http('/api/delivery.php?id='.$delivery,$cookieA);
     ref_assert($code===404,'download_rechecks_current_payment_state');
+    require_once dirname(__DIR__).'/app/integrity.php';
+    $issues=dmo_integrity_records($db);
+    ref_assert($issues['paid_without_evidence']===1 && $issues['paid_order_exception_conflict']===1,'integrity_detects_paid_flag_conflicting_with_refund');
+    $db->prepare("UPDATE dmo_orders SET payment_status='unverified' WHERE id=:id")->execute(['id'=>$order]);
+    ref_assert(array_sum(dmo_integrity_records($db))===0,'consistent_refunded_order_passes_integrity');
+    $media=dmo_integrity_media($db);
+    ref_assert($media['deliveries']['checked']===2 && $media['deliveries']['invalid']===0 && $media['deliveries']['complete'],'integrity_checks_private_delivery_bytes');
+    $limited=dmo_integrity_media($db,1);
+    ref_assert($limited['deliveries']['checked']===1 && !$limited['deliveries']['complete'],'bounded_scan_does_not_claim_full_coverage');
+    $key=$db->query("SELECT storage_key FROM dmo_delivery_drafts WHERE id=".(int)$finalId)->fetchColumn();
+    $file=dmo_delivery_file($key);$contents=file_get_contents($file);
+    file_put_contents($file,'corrupted CI image');
+    ref_assert(dmo_integrity_media($db)['deliveries']['invalid']===1,'integrity_detects_corrupt_private_file');
+    file_put_contents($file,$contents);
     echo "DISPOSABLE_DELIVERY_DRAFTS=PASS\n";
 } catch(Throwable $error){
     fwrite(STDERR,"DISPOSABLE_DELIVERY_DRAFTS=FAIL ".$error->getMessage()."\n");exit(1);

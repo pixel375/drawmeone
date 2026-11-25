@@ -19,8 +19,8 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
 <meta name="robots" content="noindex,nofollow">
 <meta name="theme-color" content="#151317">
 <title>Artist's Desk · Draw Me One</title>
-<link rel="stylesheet" href="./panel.css?v=34">
-<script defer src="./panel.js?v=36"></script>
+<link rel="stylesheet" href="./panel.css?v=35">
+<script defer src="./panel.js?v=37"></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to dashboard</a>
@@ -96,6 +96,7 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
         </div>
         <p id="launch-status" class="small" role="status" aria-live="polite">Checking launch requirements…</p>
         <div id="launch-checks" class="launch-checks"></div>
+        <details class="integrity-details"><summary>Order and payment consistency details</summary><p class="small" id="integrity-status" role="status">Not checked yet.</p><div id="integrity-checks" class="launch-checks"></div><p class="small">Database checks only. Daily private-file integrity diagnostics are separate; a clean result is not a complete recovery guarantee.</p></details>
       </section>
     </section>
 
