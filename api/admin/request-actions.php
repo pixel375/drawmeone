@@ -119,14 +119,15 @@ try {
         }
 
         if ($action === 'set_order_deadline') {
-            $order=$db->prepare('SELECT id,status,payment_status,agreed_deadline FROM dmo_orders ' .
-                'WHERE id=:order_id AND request_id=:request_id LIMIT 1 FOR UPDATE');
+            $order=$db->prepare('SELECT o.id,o.status,o.payment_status,o.agreed_deadline,' . dmo_order_exception_sql() . ' AS exception_action FROM dmo_orders o ' .
+                'WHERE o.id=:order_id AND o.request_id=:request_id LIMIT 1 FOR UPDATE');
             $order->execute(['order_id'=>$orderId,'request_id'=>$requestId]);
             $row=$order->fetch(PDO::FETCH_ASSOC);
             if (!is_array($row)) {
                 $db->rollBack();
                 dmo_json(404,['ok'=>false,'error'=>'order_not_found']);
             }
+            $row['payment_status']=dmo_order_exception_status($row['exception_action'])??$row['payment_status'];
             $previous=dmo_orders_date_value($row['agreed_deadline']);
             if (!dmo_messages_request_open((string)$currentStatus) ||
                 !dmo_orders_deadline_editable($row) || $previous !== $input['expected_deadline']) {

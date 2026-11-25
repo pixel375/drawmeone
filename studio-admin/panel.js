@@ -607,22 +607,32 @@
       if(payment==="on_hold")card.append(textNode("p","Payment on hold. Production and downloads are blocked.","small"));
       if(payment==="refunded")card.append(textNode("p","Full external refund recorded. No refund was sent by this website.","small"));
       if(exceptionsEnabled&&["paid","on_hold"].includes(payment)){
+        const form=document.createElement("form");form.className="payment-evidence-form";
+        const decisionLabel=textNode("label","Financial exception");const choice=document.createElement("select");
         const actions=payment==="paid"?[["hold","Place payment hold"],["refund","Record completed external refund"]]:[["restore","Restore settled payment"],["refund","Record completed external refund"]];
-        for(const [decision,label] of actions){
-          const button=textNode("button",label,"quiet");button.type="button";
-          button.addEventListener("click",()=>{
-            if(requestBusy)return;
-            let reason=decision==="restore"?"settled":"full_external_refund";
-            if(decision==="hold"){
-              const selected=window.prompt("Reason: dispute, reversal, or reconciliation_error","dispute");
-              if(!["dispute","reversal","reconciliation_error"].includes(selected))return;
-              reason=selected;
-            }
-            const message=decision==="hold"?"Place an access hold? This blocks artwork delivery, but does not move money.":decision==="restore"?"Confirm you checked the receiving account and the full original payment is settled again?":"Confirm the full original amount has ALREADY been refunded externally? This website does not issue a refund. This record is final.";
-            if(!window.confirm(message))return;
-            reconcilePayment({action:"set_payment_exception",order_id:order.id,decision,reason,expected_state:payment,confirm_external_check:true});
-          });card.append(button);
+        for(const [value,label] of actions)choice.append(new Option(label,value));
+        decisionLabel.append(choice);
+        const reasonLabel=textNode("label","Reason for hold");const reasonSelect=document.createElement("select");
+        for(const [value,label] of [["dispute","Payment dispute"],["reversal","Payment reversal"],["reconciliation_error","Reconciliation error"]])reasonSelect.append(new Option(label,value));
+        reasonLabel.append(reasonSelect);
+        const ack=document.createElement("label");ack.className="order-date-ack";
+        const check=document.createElement("input");check.type="checkbox";check.required=true;
+        const description=textNode("span","");ack.append(check,description);
+        const save=textNode("button","Record financial exception","quiet");save.type="submit";
+        function updateExceptionForm(){
+          reasonLabel.hidden=choice.value!=="hold";check.checked=false;
+          description.textContent=choice.value==="hold"?"I checked the external payment record. Access should be paused.":choice.value==="restore"?"I checked the receiving account. The original full payment is settled again.":"I confirmed the original full payment has already been refunded externally. This website will not issue a refund.";
         }
+        choice.addEventListener("change",updateExceptionForm);reasonSelect.addEventListener("change",()=>{check.checked=false;});
+        form.append(decisionLabel,reasonLabel,ack,save);updateExceptionForm();
+        form.addEventListener("submit",event=>{
+          event.preventDefault();if(requestBusy||!check.checked)return;
+          const decision=choice.value;
+          const reason=decision==="hold"?reasonSelect.value:decision==="restore"?"settled":"full_external_refund";
+          const message=decision==="hold"?"Pause future artwork access?":decision==="restore"?"Restore access after confirmed settlement?":"Record a completed external full refund? This record is final and moves no money.";
+          if(!window.confirm(message))return;
+          reconcilePayment({action:"set_payment_exception",order_id:order.id,decision,reason,expected_state:payment,confirm_external_check:true});
+        });card.append(form);
       }
       const pending=rows.find(p=>p.status==="pending_verification");
       if(enabled&&order.status==="awaiting_arrangement"&&order.payment_status==="unverified"){

@@ -593,6 +593,47 @@ async function verifyDeliveryDraftManagement(browser) {
   }finally{await page.close();}
 }
 
+async function verifyFinancialException(browser) {
+  const page=await browser.newPage({viewport:{width:320,height:844},reducedMotion:"reduce"});
+  const posts=[];await simulateBackend(page,posts);
+  const request={id:106,status:"completed",public_ref:"CI-106",workflow_stage:"completed"};
+  const order={id:107,status:"completed",payment_status:"paid",total_minor:3000,currency:"CAD"};
+  const records=[{id:108,order_id:107,method:"bank_transfer",currency:"CAD",amount_minor:3000,status:"verified"}];
+  const answer=(route,data)=>route.fulfill({status:200,contentType:"application/json",body:JSON.stringify(data)});
+  await page.route("**/api/admin/requests.php*",route=>answer(route,{ok:true,requests:[request]}));
+  await page.route("**/api/admin/request.php?*",route=>answer(route,{ok:true,payment_exceptions_enabled:true,payment_records:records,detail:{request,orders:[order],quotes:[],messages:[],references:[],addons:[]}}));
+  await page.route("**/api/admin/request-actions.php*",route=>{
+    const body=route.request().postDataJSON();
+    assert.equal(body.action,"set_payment_exception");assert.equal(body.order_id,107);assert.equal(body.request_id,106);assert.equal(body.confirm_external_check,true);
+    assert.equal(body.expected_state,order.payment_status);
+    order.payment_status=body.decision==="hold"?"on_hold":body.decision==="restore"?"paid":"refunded";
+    return answer(route,{ok:true,payment_status:order.payment_status,money_moved:false});
+  });
+  try{
+    await page.goto(base+"/studio-admin/index.php",{waitUntil:"domcontentloaded"});
+    await page.locator("#workspace").waitFor({state:"visible"});
+    await page.locator('[data-view="requests"]').click();
+    await page.locator("#request-list .request-open").first().click();
+    const form=page.locator("#request-payment-records form");
+    await form.getByRole("checkbox").check();
+    page.once("dialog",dialog=>dialog.accept());
+    await form.getByRole("button",{name:"Record financial exception"}).click();
+    await page.waitForFunction(()=>document.querySelector("#request-payment-records")?.textContent.includes("Payment on hold"));
+    await form.getByRole("checkbox").check();
+    page.once("dialog",dialog=>dialog.accept());
+    await form.getByRole("button",{name:"Record financial exception"}).click();
+    await page.waitForFunction(()=>document.querySelector("#request-detail-status")?.textContent.includes("recorded: paid"));
+    await form.locator("select").first().selectOption("refund");
+    await form.getByRole("checkbox").check();
+    page.once("dialog",dialog=>dialog.accept());
+    await form.getByRole("button",{name:"Record financial exception"}).click();
+    await page.waitForFunction(()=>document.querySelector("#request-payment-records")?.textContent.includes("Full external refund recorded"));
+    assert.equal(await form.count(),0);
+    assert.deepEqual(posts,[]);
+    console.log("PASS: financial hold, restore and full external refund UI");
+  }finally{await page.close();}
+}
+
 async function verifyClosedDesk(browser) {
   const page=await browser.newPage({viewport:{width:390,height:844}});
   await page.route("**/api/admin/status.php*",route=>route.fulfill({
@@ -625,6 +666,7 @@ async function verifyClosedDesk(browser) {
     await verifyQuoteFollowup(browser);
     await verifyCustomerNotice(browser);
     await verifyDeliveryDraftManagement(browser);
+    await verifyFinancialException(browser);
     console.log("ADMIN_BROWSER_SMOKE=PASS");
   } finally {await browser.close();}
 })().catch(error=>{
