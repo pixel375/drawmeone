@@ -36,6 +36,13 @@ try {
         dmo_json(401, ['ok' => false, 'error' => 'invalid_credentials']);
     }
 
+    $db->beginTransaction();
+    $locked=$db->prepare("SELECT password_hash,role,account_status,email_verified_at FROM dmo_users WHERE id=:id FOR UPDATE");
+    $locked->execute(['id'=>$user['id']]);$current=$locked->fetch(PDO::FETCH_ASSOC);
+    if(!is_array($current)||$current['role']!=='customer'||$current['account_status']!=='active'||$current['email_verified_at']===null||
+        !hash_equals($user['password_hash'],$current['password_hash'])){
+        $db->rollBack();dmo_json(401,['ok'=>false,'error'=>'invalid_credentials']);
+    }
     if (password_needs_rehash($user['password_hash'],
         defined('PASSWORD_ARGON2ID') ? PASSWORD_ARGON2ID : PASSWORD_DEFAULT)) {
         $newHash = password_hash($password,
@@ -45,13 +52,16 @@ try {
                 ->execute(['hash' => $newHash, 'id' => $user['id']]);
         }
     }
-    dmo_auth_issue_session($db, (int) $user['id']);
+    $sessionToken=dmo_auth_issue_session($db, (int) $user['id'],false);
     $db->prepare(
         "INSERT INTO dmo_audit_log (actor_id, action, entity_type, entity_id) " .
         "VALUES (:id, 'account.login', 'user', :entity_id)"
     )->execute(['id' => $user['id'], 'entity_id' => $user['id']]);
+    $db->commit();
+    dmo_auth_cookie($sessionToken,time()+7*86400);
     dmo_json(200, ['ok' => true, 'status' => 'signed_in']);
 } catch (Throwable $error) {
+    if(isset($db)&&$db->inTransaction())$db->rollBack();
     dmo_log_problem($error, 'login');
     dmo_json(503, ['ok' => false, 'error' => 'account_service_unavailable']);
 }

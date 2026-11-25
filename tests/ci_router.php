@@ -36,6 +36,8 @@ $allowed = [
     '/api/auth/verify.php',
     '/api/auth/reset-confirm.php',
     '/api/auth/me.php',
+    '/api/auth/logout.php',
+    '/api/auth/security.php',
     '/api/request-attachment.php',
     '/api/reference.php',
     '/api/reference-delete.php',

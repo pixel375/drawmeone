@@ -26,7 +26,7 @@ function auth_insert(PDO $db,string $sql,array $args): int
     return (int)$db->lastInsertId();
 }
 function auth_request(string $path,?array $payload=null,?string $cookie=null,
-    string $origin='https://drawmeone.com'): array
+    string $origin='https://drawmeone.com',?string $csrf=null): array
 {
     $ch=curl_init('http://127.0.0.1:18863'.$path);
     if ($ch===false) throw new RuntimeException('HTTP test client unavailable');
@@ -44,6 +44,7 @@ function auth_request(string $path,?array $payload=null,?string $cookie=null,
         $headers[]='Content-Type: application/json';
         $headers[]='Origin: '.$origin;
     }
+    if($csrf!==null)$headers[]='X-DMO-CSRF: '.$csrf;
     $options[CURLOPT_HTTPHEADER]=$headers;
     curl_setopt_array($ch,$options);
     $result=curl_exec($ch);
@@ -227,6 +228,42 @@ try {
         'all_outstanding_password_reset_links_consumed');
     auth_check((int)$db->query('SELECT COUNT(*) FROM dmo_payments')->fetchColumn()===0,
         'auth_tests_created_no_payments');
+    $a=auth_session($db,$pending);$b=auth_session($db,$pending);
+    $csrf=dmo_auth_csrf(hash('sha256',$a));
+    $revoke=['action'=>'revoke_other_sessions','current_password'=>$newPassword];
+    [$code]=auth_request('/api/auth/security.php',$revoke,$a);
+    auth_check($code===403,'session_revocation_requires_csrf');
+    [$code]=auth_request('/api/auth/security.php',$revoke,$a,'https://evil.invalid',$csrf);
+    auth_check($code===403,'security_wrong_origin_rejected');
+    [$code]=auth_request('/api/auth/security.php',array_replace($revoke,['current_password'=>'wrong-password']),$a,'https://drawmeone.com',$csrf);
+    auth_check($code===403,'security_requires_current_password');
+    [$code,$result]=auth_request('/api/auth/security.php',$revoke,$a,'https://drawmeone.com',$csrf);
+    auth_check($code===200&&$result['sessions_revoked']===1,'other_sessions_revoked');
+    [$code,$me]=auth_request('/api/auth/me.php',null,$a);
+    auth_check($me['authenticated']===true&&$me['active_sessions']===1,'current_session_preserved');
+    [$code,$me]=auth_request('/api/auth/me.php',null,$b);
+    auth_check($me['authenticated']===false,'other_device_revoked');
+    $b=auth_session($db,$pending);
+    $staleReset=bin2hex(random_bytes(32));auth_reset_token($db,$pending,$staleReset);
+    $changed='New-CI-password-for-account-security';
+    $payload=['action'=>'change_password','current_password'=>$newPassword,'new_password'=>$changed];
+    [$code]=auth_request('/api/auth/security.php',array_replace($payload,['new_password'=>$newPassword]),$a,'https://drawmeone.com',$csrf);
+    auth_check($code===422,'same_password_change_rejected');
+    [$code,$result]=auth_request('/api/auth/security.php',$payload,$a,'https://drawmeone.com',$csrf);
+    auth_check($code===200&&$result['requires_sign_in']===true&&$result['sessions_revoked']===2,'password_change_revokes_all_devices');
+    foreach([$a,$b] as $token){
+        [$code,$me]=auth_request('/api/auth/me.php',null,$token);
+        auth_check($me['authenticated']===false,'changed_password_session_invalid');
+    }
+    [$code]=auth_request('/api/auth/reset-confirm.php',['token'=>$staleReset,'password'=>$newPassword]);
+    auth_check($code===422,'password_change_invalidates_recovery_link');
+    [$code,$me]=auth_request('/api/auth/me.php',null,$otherSession);
+    auth_check($me['authenticated']===true,'security_preserves_other_customer');
+    $newSession=auth_session($db,$pending);
+    [$code,$out]=auth_request('/api/auth/logout.php',[],$newSession,'https://drawmeone.com',dmo_auth_csrf(hash('sha256',$newSession)));
+    auth_check($code===200&&$out['status']==='signed_out','logout_revokes_session');
+    [$code,$me]=auth_request('/api/auth/me.php',null,$newSession);
+    auth_check($me['authenticated']===false,'signed_out_session_invalid');
     echo "DISPOSABLE_AUTH_HTTP=PASS\n";
 } catch(Throwable $error) {
     fwrite(STDERR,'DISPOSABLE_AUTH_HTTP=FAIL ('.get_class($error).

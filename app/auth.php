@@ -222,7 +222,7 @@ function dmo_auth_cookie(string $token, int $until): void
     ]);
 }
 
-function dmo_auth_issue_session(PDO $db, int $userId): void
+function dmo_auth_issue_session(PDO $db, int $userId, bool $setCookie=true): string
 {
     $token = bin2hex(random_bytes(32));
     $stmt = $db->prepare(
@@ -233,7 +233,8 @@ function dmo_auth_issue_session(PDO $db, int $userId): void
         'user_id' => $userId,
         'session_hash' => hash('sha256', $token),
     ]);
-    dmo_auth_cookie($token, time() + 7 * 86400);
+    if($setCookie)dmo_auth_cookie($token, time() + 7 * 86400);
+    return $token;
 }
 
 function dmo_auth_current_session(PDO $db): ?array

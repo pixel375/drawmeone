@@ -6,7 +6,7 @@ dmo_auth_json_request();
 try {
     $db = dmo_database();
     $session = dmo_auth_current_session($db);
-    if ($session !== null) {
+    if ($session !== null && $session['role']==='customer') {
         dmo_auth_verify_csrf($session);
         $db->prepare('DELETE FROM dmo_sessions WHERE id = :id')
             ->execute(['id' => $session['session_id']]);
