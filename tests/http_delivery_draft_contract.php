@@ -256,6 +256,8 @@ try {
     ref_assert(dmo_notification_target($db,$requestA,'proof',$reviewId)!==null,'proof_notice_target_eligible');
     [$code,$queue]=ref_http('/api/admin/requests.php?filter=proof_waiting',$artistCookie);
     ref_assert($code===200&&in_array($requestA,array_map('intval',array_column($queue['requests'],'id')),true),'pending_proof_work_queue');
+    [$code,$history]=ref_http('/api/requests.php',$cookieA);
+    ref_assert($code===200&&in_array($refA,$history['attention']['proofs'],true),'customer_attention_pending_proof');
     ref_assert(dmo_notification_target($db,$requestB,'proof',$reviewId)===null,'proof_notice_cross_request_denied');
     [$code,$noticeDetail]=ref_http('/api/admin/request.php?id='.$requestA,$artistCookie);
     ref_assert($code===200&&count(array_filter($noticeDetail['notification_options'],fn($n)=>$n['kind']==='proof'&&$n['event_id']===$reviewId))===1,'proof_notice_listed');
@@ -302,6 +304,8 @@ try {
     ref_assert($code===201 && $result['status']==='completed' && $result['customer_visible']===true,'final_release_completes_order');
     $delivery=$result['delivery_id'];
     ref_assert(dmo_notification_target($db,$requestA,'delivery',$delivery)!==null,'completed_delivery_notice_eligible');
+    [$code,$history]=ref_http('/api/requests.php',$cookieA);
+    ref_assert($code===200&&in_array($refA,$history['attention']['deliveries'],true),'customer_attention_available_delivery');
     ref_assert(dmo_notification_target($db,$requestB,'delivery',$delivery)===null,'delivery_notice_cross_request_denied');
     [$code,$data]=ref_http('/api/request.php?ref='.$refA,$cookieA);
     ref_assert($code===200 && count($data['deliveries'])===1 && $data['deliveries'][0]['id']===$delivery && !isset($data['deliveries'][0]['storage_key']),'owner_sees_safe_delivery_metadata');
@@ -321,6 +325,8 @@ try {
     [$code]=ref_http('/api/admin/request-actions.php',$artistCookie,$hold,$artistCsrf);
     ref_assert($code===200,'artist_records_payment_hold');
     ref_assert(dmo_notification_target($db,$requestA,'delivery',$delivery)===null,'payment_hold_blocks_delivery_notice');
+    [$code,$history]=ref_http('/api/requests.php',$cookieA);
+    ref_assert($code===200&&!in_array($refA,$history['attention']['deliveries'],true),'customer_attention_hold_blocks_delivery');
     [$code]=ref_http('/api/delivery.php?id='.$delivery,$cookieA);
     ref_assert($code===404,'hold_revokes_future_download');
     [$code,$data]=ref_http('/api/request.php?ref='.$refA,$cookieA);

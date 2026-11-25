@@ -1,1 +1,1 @@
-Retest notice formatting and artist work queues after correcting smoke fixture.
+Verify customer commission update shortcuts and current assets; read-only.

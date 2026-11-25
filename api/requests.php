@@ -2,6 +2,7 @@
 declare(strict_types=1);
 require_once dirname(__DIR__) . '/app/requests.php';
 require_once dirname(__DIR__).'/app/catalog.php';
+require_once dirname(__DIR__).'/app/customer-attention.php';
 
 $method = $_SERVER['REQUEST_METHOD'] ?? '';
 if (!in_array($method, ['GET','POST'], true)) {
@@ -39,6 +40,7 @@ try {
             'requests' => array_map('dmo_requests_list_summary', $rows),
             'page' => $page, 'page_size' => $size, 'has_more' => $hasMore && $page < 9999,
             'new_requests_open' => dmo_intake_public_state($db)['requests_open'],
+            'attention' => $page===1?dmo_customer_attention($db,$customer):null,
         ]);
     }
 

@@ -237,6 +237,25 @@
     }
   }
 
+  function renderCustomerAttention(attention){
+    const root=$("customer-attention"),list=$("customer-attention-items");
+    list.replaceChildren();root.hidden=true;
+    if(!attention||typeof attention!=="object"||leavingSession)return;
+    const labels={quotes:"Review quote",proofs:"Review artwork proof",invoices:"Review payment arrangements",deliveries:"View finished artwork"};
+    for(const [key,label] of Object.entries(labels)){
+      const refs=Array.isArray(attention[key])?attention[key].filter(ref=>typeof ref==="string"&&/^DMO-[0-9a-f]{20}$/.test(ref)).slice(0,10):[];
+      for(const ref of new Set(refs)){
+        const card=document.createElement("article"),description=document.createElement("div");
+        description.append(renderText("strong",label),renderText("small",ref));
+        const button=renderText("button","View details","text-button");button.type="button";
+        button.setAttribute("aria-label",label+" for "+ref);
+        button.addEventListener("click",()=>openDetail(ref));
+        card.append(description,button);list.append(card);
+      }
+    }
+    root.hidden=list.childElementCount===0;
+  }
+
   let requestsFetchSequence = 0;
   let historyPage = 0;
   let historyHasMore = false;
@@ -256,6 +275,7 @@
       historyHasMore = false;
       historyPage = 0;
       state.requests = [];
+      renderCustomerAttention(null);
       target.replaceChildren(renderText("p","Loading your requests…","small"));
     }
     syncHistoryControls();
@@ -278,6 +298,7 @@
       state.requests = [...merged.values()];
       historyPage = page;
       historyHasMore = body.has_more === true;
+      if(!append)renderCustomerAttention(body.attention);
       renderRequestHistory();
     } catch (_) {
       if (sequence !== requestsFetchSequence) return;

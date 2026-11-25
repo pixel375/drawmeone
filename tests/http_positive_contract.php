@@ -301,6 +301,10 @@ try {
         ($offer['quotes'][0]['can_respond']??false)===true &&
         count($offer['quotes'][0]['lines']??[])===2,
         'customer_receives_itemized_live_offer');
+    [$code,$history]=qa_http('/api/requests.php',$tokenA);
+    qa_positive($code===200&&in_array($referenceA,$history['attention']['quotes'],true),'customer_attention_contains_live_quote');
+    [$code,$history]=qa_http('/api/requests.php',$tokenB);
+    qa_positive($code===200&&!in_array($referenceA,$history['attention']['quotes'],true),'customer_attention_cross_account_denied');
 
     $notice=['action'=>'send_notification','request_id'=>$requestA,'kind'=>'quote','event_id'=>$quoteId,'confirm_send'=>true];
     [$code]=qa_http('/api/admin/request-actions.php',$tokenAdmin,'__Host-dmo_admin',$notice,$csrfAdmin);
@@ -347,6 +351,8 @@ try {
     [$code,$expired]=qa_http('/api/request.php?ref='.urlencode($referenceA),$tokenA);
     qa_positive($code===200 && $expired['request']['workflow_stage']==='quote_expired' &&
         $expired['quotes'][0]['can_respond']===false,'expired_offer_not_actionable');
+    [$code,$history]=qa_http('/api/requests.php',$tokenA);
+    qa_positive($code===200&&!in_array($referenceA,$history['attention']['quotes'],true),'customer_attention_excludes_expired_quote');
     [$code,$follow]=qa_http('/api/admin/requests.php?filter=quote_followup',$tokenAdmin,'__Host-dmo_admin');
     qa_positive($code===200 && count($follow['requests'])===1 &&
         $follow['requests'][0]['workflow_stage']==='quote_expired','expired_offer_in_followup_queue');

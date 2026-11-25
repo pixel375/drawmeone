@@ -9,8 +9,8 @@
 <meta name="description" content="Request an original custom drawing through Draw Me One when commissions open.">
 <title>Commission a drawing · Draw Me One</title>
 <link rel="icon" href="./favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="./commission.css?v=28">
-<script defer src="./commission.js?v=39"></script>
+<link rel="stylesheet" href="./commission.css?v=29">
+<script defer src="./commission.js?v=40"></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
@@ -112,6 +112,11 @@
         <h2>My commission requests</h2>
         <p class="small">Only your own requests are shown. Artist notes and unsent quotes stay private.</p>
       </div>
+      <section id="customer-attention" class="customer-attention" aria-labelledby="customer-attention-title" hidden>
+        <h3 id="customer-attention-title">Your commission updates</h3>
+        <p class="small">Recent available items across your history. Open details to confirm the latest status.</p>
+        <div id="customer-attention-items" class="customer-attention-items"></div>
+      </section>
       <div class="request-history-toolbar">
         <div class="request-history-filters">
           <label for="request-history-search">Find a request

@@ -512,6 +512,21 @@ async function verifyRequestWithdrawal(browser){
     console.log("PASS: customer withdraws unaccepted request");
   }finally{await page.close();}
 }
+async function verifyCustomerAttention(browser){
+  const page=await browser.newPage({viewport:{width:320,height:844}});
+  const mock=await installMocks(page,{signedIn:true,open:false});
+  await page.route("**/api/requests.php?*",route=>answer(route,{ok:true,requests:[requests[1]],attention:{quotes:[A],proofs:[],deliveries:[],invoices:[]}}));
+  try{
+    await page.goto(base+"/commission.html",{waitUntil:"domcontentloaded"});
+    await page.locator("#customer-attention").waitFor({state:"visible"});
+    assert.equal(await page.locator("#my-request-list button").count(),1);
+    await page.getByRole("button",{name:"Review quote for "+A}).click();
+    await page.waitForFunction(ref=>document.querySelector("#detail-ref")?.textContent.includes(ref),A);
+    await checkOverflow(page,"customer attention");
+    assert.deepEqual(mock.posts,[]);
+    console.log("PASS: attention shortcut opens older request without loading history");
+  }finally{await page.close();}
+}
 async function openWithoutLogin(browser) {
   const page=await browser.newPage({viewport:{width:390,height:844}});
   await installMocks(page,{signedIn:false,open:true});
@@ -538,6 +553,7 @@ async function openWithoutLogin(browser) {
     await verifyFullCustomerThread(browser);
     await verifyOrderHistoryStage(browser);
     await verifyRequestWithdrawal(browser);
+    await verifyCustomerAttention(browser);
     console.log("COMMISSION_BROWSER_SMOKE=PASS");
   } finally {await browser.close();}
 })().catch(err=>{console.error(err.stack||String(err));process.exitCode=1;});
