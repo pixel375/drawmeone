@@ -559,6 +559,29 @@ async function verifyOlderCustomerHistory(browser) {
   }finally{await page.close();}
 }
 
+async function verifyEntireCustomerHistory(browser){
+  const page=await browser.newPage({viewport:{width:320,height:844},reducedMotion:"reduce"});
+  await installMocks(page,{signedIn:true,open:false});
+  const queries=[];
+  await page.route("**/api/requests.php?*",route=>{
+    const params=new URL(route.request().url()).searchParams;queries.push(Object.fromEntries(params));
+    return answer(route,{ok:true,requests:params.has("q")?[requests[2]]:[requests[0]],has_more:!params.has("q")});
+  });
+  try{
+    await page.goto(base+"/commission.html",{waitUntil:"domcontentloaded"});
+    await page.locator("#request-history-older").waitFor({state:"visible"});
+    await page.locator("#request-history-search").fill(requests[2].public_ref);
+    await page.locator("#request-history-search-all").click();
+    await page.waitForFunction(()=>document.querySelector("#request-history-count")?.textContent.includes("Entire-history search: 1"));
+    assert.deepEqual(queries.at(-1),{page:"1",q:requests[2].public_ref,status:"all",sort:"recent"});
+    assert.equal(await page.locator("#my-request-list .request-list-item").count(),1);
+    await page.locator("#request-history-search").fill("");
+    await page.locator("#request-history-older").waitFor({state:"visible"});
+    assert.deepEqual(queries.at(-1),{page:"1"});
+    console.log("PASS: entire customer history search and quick-filter return");
+  }finally{await page.close();}
+}
+
 async function verifyFullCustomerThread(browser) {
   const page=await browser.newPage({viewport:{width:320,height:844},reducedMotion:"reduce"});
   const test=await installMocks(page,{signedIn:true,open:false});
@@ -687,6 +710,7 @@ async function openWithoutLogin(browser) {
     await customerDraftAndSessionIsolation(browser);
     await verifyReferenceRecovery(browser);
     await verifyOlderCustomerHistory(browser);
+    await verifyEntireCustomerHistory(browser);
     await verifyFullCustomerThread(browser);
     await verifyOrderHistoryStage(browser);
     await verifyRequestWithdrawal(browser);

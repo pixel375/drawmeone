@@ -206,7 +206,7 @@
 
   const closedRequestStatuses = new Set([
     "cancelled","canceled","rejected","declined","completed",
-    "closed","archived","refunded",
+    "closed","archived","refunded","payment_refunded",
   ]);
   const requestStatusLabels = {
     submitted:"Awaiting artist review",
@@ -245,7 +245,7 @@
     const rows = state.requests;
     const query = $("request-history-search").value.trim().toLocaleLowerCase();
     const filter = $("request-history-filter").value;
-    const matches = rows.filter(item => {
+    const matches = historyServerCriteria ? [...rows] : rows.filter(item => {
       const closed = closedRequestStatuses.has(item.workflow_stage || item.status);
       if (filter === "closed" && !closed) return false;
       if (filter === "active" && closed) return false;
@@ -255,18 +255,18 @@
       ].some(value => String(value || "").toLocaleLowerCase().includes(query));
     });
     const sort=$("request-history-sort").value;
-    if(sort==="oldest")matches.reverse();
-    if(sort==="deadline")matches.sort((a,b)=>{
+    if(!historyServerCriteria&&sort==="oldest")matches.reverse();
+    if(!historyServerCriteria&&sort==="deadline")matches.sort((a,b)=>{
       const date=item=>closedRequestStatuses.has(item.workflow_stage||item.status)?"9999-12-31":item.order_deadline||"9999-12-31";
       return date(a).localeCompare(date(b));
     });
     target.replaceChildren();
-    $("request-history-count").textContent = rows.length
+    $("request-history-count").textContent = historyServerCriteria ? "Entire-history search: "+rows.length+" matching request(s) loaded"+(historyHasMore?" · More matches available":"") : rows.length
       ? "Showing " + matches.length + " of " + rows.length + (historyHasMore ? " loaded requests · Older requests available" : " requests")
       : "No requests yet";
     if (!rows.length) {
       target.append(renderText("p",
-        "You don't have any commission requests yet.","small"));
+        historyServerCriteria?"No requests match this search. Try changing the reference, category, package or status.":"You don't have any commission requests yet.","small"));
       return;
     }
     if (!matches.length) {
@@ -319,8 +319,16 @@
   let historyPage = 0;
   let historyHasMore = false;
   let historyBusy = false;
+  let historyServerCriteria=null;
+  function historyControlsChanged(){
+    if(historyServerCriteria){historyServerCriteria=null;loadMyRequests();}else renderRequestHistory();
+  }
+  $("request-history-search-all").addEventListener("click",()=>{
+    historyServerCriteria={q:$("request-history-search").value.trim(),status:$("request-history-filter").value,sort:$("request-history-sort").value};loadMyRequests();
+  });
   function syncHistoryControls() {
     $("request-history-older").hidden = !historyHasMore;
+    $("request-history-older").textContent=historyServerCriteria?"Load more matches":"Load older requests";
     $("request-history-older").disabled = historyBusy;
   }
   async function loadMyRequests(older = false) {
@@ -341,9 +349,10 @@
     $("request-history-feedback").textContent = "";
     $("request-history-count").textContent = append ? "Loading older requests…" : "Refreshing request history…";
     try {
-      const {response, body} = await getJSON("./api/requests.php?page=" + page);
-      if (response.status === 401) return customerSessionExpired();
+      const params=new URLSearchParams({page:String(page),...(historyServerCriteria||{})});
+      const {response, body} = await getJSON("./api/requests.php?" + params);
       if (sequence !== requestsFetchSequence) return;
+      if (response.status === 401) return customerSessionExpired();
       if (!response.ok || !body.ok || !Array.isArray(body.requests) ||
           (body.page !== undefined && body.page !== page)) {
         throw new Error("Requests unavailable");
@@ -376,9 +385,9 @@
     }
   }
   $("request-history-older").addEventListener("click", () => loadMyRequests(true));
-  $("request-history-search").addEventListener("input", renderRequestHistory);
-  $("request-history-filter").addEventListener("change", renderRequestHistory);
-  $("request-history-sort").addEventListener("change", renderRequestHistory);
+  $("request-history-search").addEventListener("input", historyControlsChanged);
+  $("request-history-filter").addEventListener("change", historyControlsChanged);
+  $("request-history-sort").addEventListener("change", historyControlsChanged);
 
 
   function syncQuoteButtons() {

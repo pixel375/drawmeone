@@ -10,7 +10,7 @@
 <title>Commission a drawing · Draw Me One</title>
 <link rel="icon" href="./favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="./commission.css?v=29">
-<script defer src="./commission.js?v=51"></script>
+<script defer src="./commission.js?v=52"></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
@@ -130,7 +130,7 @@
         <div class="request-history-filters">
           <label for="request-history-search">Find a request
             <input id="request-history-search" type="search" maxlength="90" autocomplete="off"
-              placeholder="Reference, type or status">
+              placeholder="Reference, type, package or status">
           </label>
           <label for="request-history-filter">Status
             <select id="request-history-filter">
@@ -143,7 +143,9 @@
             <select id="request-history-sort"><option value="recent">Most recent</option><option value="deadline">Agreed date (active)</option><option value="oldest">Oldest first</option></select>
           </label>
         </div>
+        <button type="button" id="request-history-search-all" class="text-button">Search entire history</button>
         <button type="button" id="refresh-requests" class="text-button">Refresh requests</button>
+        <p class="small">Quick filters apply to loaded requests. Search entire history finds older matches by reference, type, package or stored workflow status.</p>
         <p id="request-history-count" class="small" role="status" aria-live="polite">Loading request history…</p>
       </div>
       <div id="my-request-list" class="request-list">
