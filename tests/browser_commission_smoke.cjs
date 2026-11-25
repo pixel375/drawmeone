@@ -376,6 +376,33 @@ async function openIntake(browser) {
     console.log("PASS: synthetic signed-in commission form, tier/addon compatibility, single idempotent POST");
   } finally {await context.close();}
 }
+async function verifySubmissionConflict(browser){
+  const page=await browser.newPage({viewport:{width:390,height:844}});
+  await installMocks(page,{signedIn:true,open:true});
+  const keys=[];
+  await page.route("**/api/requests.php",route=>{
+    if(route.request().method()==="GET")return answer(route,{ok:true,requests});
+    keys.push(route.request().postDataJSON().idempotency_key);
+    return keys.length<2?answer(route,{ok:false,error:"request_key_conflict",public_ref:A},409):answer(route,{ok:true,public_ref:B},201);
+  });
+  try{
+    await page.goto(base+"/commission.html",{waitUntil:"domcontentloaded"});
+    await page.locator("#request-submit").waitFor();
+    await page.waitForFunction(()=>document.querySelector("#request-submit")?.disabled===false);
+    const brief="A distinct synthetic commission idea with enough detail for review.";
+    await page.locator("#request-brief").fill(brief);
+    await page.locator("#request-ack").check();
+    await page.locator("#request-submit").click();
+    await page.locator("#request-new-key").waitFor({state:"visible"});
+    assert.equal(await page.locator("#request-brief").inputValue(),brief);
+    page.once("dialog",d=>d.accept());
+    await page.locator("#request-new-key").click();
+    await page.locator("#request-submit").click();
+    await page.waitForFunction(()=>document.querySelector("#request-feedback")?.textContent.includes("received for artist review"));
+    assert.equal(keys.length,2);assert.notEqual(keys[0],keys[1]);
+    console.log("PASS: conflicting request retry preserves brief until explicit separate submission");
+  }finally{await page.close();}
+}
 async function customerDraftAndSessionIsolation(browser) {
   const page=await browser.newPage({viewport:{width:390,height:844},reducedMotion:"reduce"});
   const test=await installMocks(page,{signedIn:true,open:false});
@@ -608,6 +635,7 @@ async function openWithoutLogin(browser) {
   try {
     for(const width of [320,390,768,1440]) await signedInClosed(browser,width);
     await openIntake(browser);
+    await verifySubmissionConflict(browser);
     await openWithoutLogin(browser);
     await quoteDecisionGuards(browser);
     await quoteSuccessWithoutPayment(browser);

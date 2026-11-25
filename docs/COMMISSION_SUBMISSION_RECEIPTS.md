@@ -1,0 +1,3 @@
+# Commission submission receipt safety
+
+New commission submissions record a keyed digest of the normalized payload in the existing audit receipt. Same-key, same-payload retries recover the original reference; a changed payload or legacy receipt without a digest returns a conflict without overwriting or creating a request. The customer form retains all content on conflict and offers an explicit separate-request action after review. Form controls are locked during submission, preserving preexisting disabled add-ons, and compatibility is refreshed after reset. No migration, payment, notification, gate or production data change. Browser and disposable HTTP contracts exercise conflict handling.

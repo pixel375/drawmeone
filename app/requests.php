@@ -131,6 +131,14 @@ function dmo_requests_validate(array $input): array
     ];
 }
 
+/** Bind a submission receipt to its normalized payload, without duplicating the brief in audit storage. */
+function dmo_request_payload_digest(array $request): string
+{
+    unset($request['key']);
+    sort($request['addon_ids'],SORT_NUMERIC);
+    return hash_hmac('sha256','commission-payload|'.json_encode($request,JSON_THROW_ON_ERROR),dmo_config('DMO_APP_KEY'));
+}
+
 /** Stable per-customer idempotency reference; protects against retry duplicates. */
 function dmo_requests_public_ref(int $customerId, string $key): string
 {

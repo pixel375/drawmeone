@@ -51,6 +51,7 @@ try {
     }
     $request = dmo_requests_validate($input);
     $ref = dmo_requests_public_ref($customer, $request['key']);
+    $payloadDigest=dmo_request_payload_digest($request);
     $db->beginTransaction();
     try {
         if(dmo_intake_control_enabled())dmo_intake_lock($db);
@@ -68,11 +69,24 @@ try {
         }
 
         $prior = $db->prepare(
-            'SELECT public_ref FROM dmo_commission_requests ' .
+            'SELECT id FROM dmo_commission_requests ' .
             'WHERE customer_id = :customer AND public_ref = :ref LIMIT 1'
         );
         $prior->execute(['customer' => $customer, 'ref' => $ref]);
-        if ($prior->fetchColumn() !== false) {
+        $priorId=$prior->fetchColumn();
+        if ($priorId !== false) {
+            $receipt=$db->prepare("SELECT JSON_UNQUOTE(JSON_EXTRACT(details_json,'$.payload_digest')) FROM dmo_audit_log
+                WHERE actor_id=:customer AND action='request.submitted' AND entity_type='commission_request' AND entity_id=:id ORDER BY id ASC LIMIT 1");
+            $receipt->execute(['customer'=>$customer,'id'=>$priorId]);
+            $digest=$receipt->fetchColumn();
+            if(!is_string($digest)||!preg_match('/^[a-f0-9]{64}$/D',$digest)){
+                $db->commit();
+                dmo_json(409,['ok'=>false,'error'=>'request_retry_unverified','public_ref'=>$ref]);
+            }
+            if(!hash_equals($digest,$payloadDigest)){
+                $db->commit();
+                dmo_json(409,['ok'=>false,'error'=>'request_key_conflict','public_ref'=>$ref]);
+            }
             $db->commit();
             dmo_json(200, ['ok' => true, 'public_ref' => $ref, 'already_submitted' => true]);
         }
@@ -197,7 +211,7 @@ try {
         $db->prepare(
             "INSERT INTO dmo_audit_log (actor_id, action, entity_type, entity_id, details_json) " .
             "VALUES (:actor, 'request.submitted', 'commission_request', :request,:details)"
-        )->execute(['actor' => $customer, 'request' => $requestId,'details'=>json_encode(['policy_version'=>$request['policy_version'],'policy_sha256'=>$request['policy_sha256']],JSON_THROW_ON_ERROR)]);
+        )->execute(['actor' => $customer, 'request' => $requestId,'details'=>json_encode(['policy_version'=>$request['policy_version'],'policy_sha256'=>$request['policy_sha256'],'payload_digest'=>$payloadDigest],JSON_THROW_ON_ERROR)]);
 
         $db->commit();
         dmo_json(201, [

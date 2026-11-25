@@ -906,6 +906,16 @@
     }
   });
 
+  function clearPendingRequestKey(){
+    state.pendingKey=null;
+    try{sessionStorage.removeItem("dmo_request_pending_key");}catch(_){}
+    $("request-new-key").hidden=true;
+  }
+  $("request-new-key").addEventListener("click",()=>{
+    if(state.sending||!window.confirm("Have you reviewed the earlier request? Use a new submission ID for a separate commission request?"))return;
+    clearPendingRequestKey();
+    feedback("A new request ID will be used. Your current form is preserved. Review it before submitting.");
+  });
   $("request-form").addEventListener("submit",async event => {
     event.preventDefault();
     if (state.sending || !state.service?.requests_open || !state.csrf) return;
@@ -933,6 +943,8 @@
     };
     const button = $("request-submit");
     state.sending = true;
+    const fields=[...form.querySelectorAll('input,select,textarea,button')].map(field=>[field,field.disabled]);
+    for(const [field] of fields)field.disabled=true;
     button.disabled = true;
     feedback("Submitting your request securely…");
     try {
@@ -944,11 +956,17 @@
       if (response.status === 401) return customerSessionExpired();
       const body = await response.json();
       if (response.ok && body.ok) {
-        try { sessionStorage.removeItem("dmo_request_pending_key"); } catch (_) {}
-        state.pendingKey = null;
+        clearPendingRequestKey();
         form.reset();
         feedback("Request " + body.public_ref +
           " received for artist review. No order or charge has been created.");
+        await loadMyRequests();
+        return;
+      }
+      if(response.status===409&&["request_key_conflict","request_retry_unverified"].includes(body.error)){
+        const ref=typeof body.public_ref==="string"&&/^DMO-[a-f0-9]{20}$/.test(body.public_ref)?body.public_ref:"the earlier request";
+        feedback("Submission not repeated. "+ref+" already exists, but this form could not be confirmed as the same submission. Review your request history before starting a separate request. Your form is preserved.",true);
+        $("request-new-key").hidden=false;
         await loadMyRequests();
         return;
       }
@@ -971,7 +989,9 @@
       feedback("Connection interrupted. Your form is preserved; retrying uses the same request ID to prevent duplicates.",true);
     } finally {
       state.sending = false;
-      button.disabled = !state.service?.requests_open;
+      for(const [field,disabled] of fields)field.disabled=disabled;
+      if(!leavingSession)$('request-tier').dispatchEvent(new Event('change'));
+      button.disabled = !state.service?.requests_open||leavingSession;
     }
   });
 

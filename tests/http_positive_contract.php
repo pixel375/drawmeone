@@ -709,6 +709,9 @@ try {
     qa_positive($code===200&&$saved['intake']['reason']==='paused','artist_can_pause_intake');
     [$code,$retry]=qa_http('/api/requests.php',$tokenA,'__Host-dmo_session',$payload,$csrfA);
     qa_positive($code===200&&$retry['already_submitted']===true&&$retry['public_ref']===$submitted['public_ref'],'idempotent_retry_survives_intake_pause');
+    $changed=$payload;$changed['brief']='Different synthetic brief for a separate artwork request.';
+    [$code,$conflict]=qa_http('/api/requests.php',$tokenA,'__Host-dmo_session',$changed,$csrfA);
+    qa_positive($code===409&&($conflict['error']??null)==='request_key_conflict'&&($conflict['public_ref']??null)===$submitted['public_ref'],'request_key_conflict_prevents_silent_loss_of_changed_brief');
     [$code,$history]=qa_http('/api/requests.php',$tokenA);
     qa_positive($code===200&&$history['new_requests_open']===false,'history_available_during_pause');
     $password='CI-positive-disposable-password!';
