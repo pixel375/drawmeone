@@ -21,6 +21,7 @@
     return {response, body};
   }
   let leavingSession = false;
+  const proofDrafts=new Map();
   function customerSessionExpired() {
     if (leavingSession) return;
     leavingSession = true;
@@ -28,6 +29,7 @@
     state.csrf = "";
     state.selectedRef = null;
     state.requests = [];
+    clearDetailDrafts();
     ++requestsFetchSequence;
     ++detailRequestSequence;
     renderCustomerAttention(null);
@@ -44,12 +46,32 @@
   function detailMutationBusy() {
     return state.messageBusy || state.uploadBusy || state.quoteBusy || state.deleteBusy;
   }
+  function detailDraftKinds(){
+    const kinds=[];
+    if($("detail-reply-body").value!=="")kinds.push("private message");
+    if($("detail-reference-files").files.length)kinds.push("selected reference images");
+    if([...proofDrafts.values()].some(value=>value!==""))kinds.push("proof revision feedback");
+    return kinds;
+  }
+  function updateDetailDraftWarning(){
+    const kinds=detailDraftKinds();
+    $("detail-drafts-warning").hidden=kinds.length===0;
+    $("detail-drafts-warning").textContent=kinds.length?"Not submitted: "+kinds.join(", ")+". These edits belong to this request only.":"";
+  }
+  function confirmDiscardDetailDrafts(){
+    const kinds=detailDraftKinds();
+    return !kinds.length||window.confirm("Discard your unsent "+kinds.join(", ")+" for this request?");
+  }
+  $("detail-reply-body").addEventListener("input",updateDetailDraftWarning);
+  $("detail-reference-files").addEventListener("change",updateDetailDraftWarning);
   function clearDetailDrafts() {
+    proofDrafts.clear();
     $("detail-reply-body").value = "";
     $("detail-reference-files").value = "";
     $("detail-reference-feedback").textContent = "";
     $("detail-reply-feedback").textContent = "";
     $("detail-reference-progress").hidden = true;
+    updateDetailDraftWarning();
   }
   function displayStatus(text, error = false) {
     const node = $("request-status");
@@ -392,6 +414,7 @@
 
   async function respondArtworkReview(id,decision,feedback,status,box){
     if(detailMutationBusy()||!state.selectedRef||!state.csrf)return;
+    if(decision==="approve"&&proofDrafts.get(id)&&!window.confirm("Discard your unsent revision feedback and approve this proof instead?"))return;
     if(!window.confirm(decision==="approve"?"Approve this exact proof for final delivery?":"Use one included revision from your accepted quote?"))return;
     const ref=state.selectedRef;state.quoteBusy=true;
     for(const field of box.querySelectorAll("button,textarea"))field.disabled=true;
@@ -402,9 +425,10 @@
       if(response.status===401)return customerSessionExpired();
       const data=await response.json();
       if(!response.ok||!data.ok){status.textContent="Decision not recorded ("+(data.error||response.status)+"). Refresh before retrying.";return;}
+      proofDrafts.delete(id);updateDetailDraftWarning();
       await openDetail(ref);await loadMyRequests();
     }catch(_){status.textContent="Decision not confirmed. Refresh before retrying.";}
-    finally{state.quoteBusy=false;for(const field of box.querySelectorAll("button,textarea"))field.disabled=false;}
+    finally{state.quoteBusy=false;$("detail-refresh").disabled=$("my-request-detail").hidden;syncQuoteButtons();for(const field of box.querySelectorAll("button,textarea"))field.disabled=false;}
   }
 
   function renderCustomerOrders(orders,deliveries=[],reviews=[],checkoutLinks=[]) {
@@ -462,7 +486,7 @@
           box.append(approve);
           if(review.revisions_used<review.revision_allowance){
             const form=document.createElement("form");const label=renderText("label","What should the artist change?");
-            const note=document.createElement("textarea");note.required=true;note.minLength=3;note.maxLength=500;label.append(note);
+            const note=document.createElement("textarea");note.required=true;note.minLength=3;note.maxLength=500;note.value=proofDrafts.get(latest.id)||"";note.addEventListener("input",()=>{if(note.value)proofDrafts.set(latest.id,note.value);else proofDrafts.delete(latest.id);updateDetailDraftWarning();});label.append(note);
             const revise=renderText("button","Request included revision","text-button");revise.type="submit";
             form.append(label,revise);form.addEventListener("submit",event=>{event.preventDefault();respondArtworkReview(latest.id,"revise",note.value.trim(),status,box);});
             box.append(form);
@@ -586,6 +610,7 @@
   async function openDetail(ref) {
     if (typeof ref !== "string" || !/^DMO-[0-9a-f]{20}$/.test(ref)) return;
     if (leavingSession || (detailMutationBusy() && state.selectedRef !== ref)) return;
+    if(state.selectedRef!==null&&state.selectedRef!==ref&&!confirmDiscardDetailDrafts())return;
     const sequence = ++detailRequestSequence;
     if (state.selectedRef !== ref) { clearDetailDrafts(); detailFullThread=false; }
     $("detail-thread-full").hidden = true;
@@ -697,6 +722,7 @@
       $("detail-summary").hidden=false;
       $("detail-content").hidden = false;
       $("detail-load-status").hidden = true;
+      updateDetailDraftWarning();
     } catch (_) {
       if (sequence !== detailRequestSequence || state.selectedRef !== ref) return;
       showFact("detail-ref","Unable to retrieve this request.");
@@ -720,7 +746,7 @@
     openDetail(state.selectedRef);
   });
   $("detail-close").addEventListener("click",() => {
-    if (detailMutationBusy()) return;
+    if (detailMutationBusy()||!confirmDiscardDetailDrafts()) return;
     clearDetailDrafts();
     detailRequestSequence++;
     state.selectedRef = null;
@@ -777,6 +803,7 @@
     }
     const progress = $("detail-reference-progress");
     state.uploadBusy = true;
+    $("detail-reference-files").disabled=true;
     $("detail-reference-upload").disabled = true;
     progress.hidden = false;
     progress.max = files.length; progress.value = 0;
@@ -811,6 +838,8 @@
         "Connection lost. Check the reference list before retrying.";
     } finally {
       state.uploadBusy = false;
+      $("detail-reference-files").disabled=false;
+      updateDetailDraftWarning();
       progress.hidden = true;
       $("detail-reference-upload").disabled = $("detail-reference-form").hidden;
     }
@@ -824,6 +853,7 @@
     const body = $("detail-reply-body").value.trim();
     if (body.length < 2 || body.length > 3000) return;
     state.messageBusy = true;
+    $("detail-reply-body").disabled=true;
     $("detail-reply-send").disabled = true;
     $("detail-reply-feedback").textContent = "Sending private message…";
     try {
@@ -851,6 +881,8 @@
         "Connection interrupted. Refresh the conversation before retrying.";
     } finally {
       state.messageBusy = false;
+      $("detail-reply-body").disabled=false;
+      updateDetailDraftWarning();
       $("detail-reply-send").disabled = $("detail-reply-form").hidden;
     }
   });

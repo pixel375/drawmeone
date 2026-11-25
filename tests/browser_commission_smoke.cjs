@@ -394,11 +394,20 @@ async function customerDraftAndSessionIsolation(browser) {
     await page.locator("#detail-reference-files").setInputFiles({
       name:"synthetic.png",mimeType:"image/png",buffer:Buffer.from("synthetic fixture")
     });
+    assert.match(await page.locator("#detail-drafts-warning").innerText(),/private message, selected reference images/);
+    page.once("dialog",d=>d.dismiss());
+    await button(B).click();
+    assert.equal(await page.locator("#detail-reply-body").inputValue(),"Synthetic private message A");
+    page.once("dialog",d=>d.accept());
     await button(B).click();
     await page.waitForFunction(ref=>document.querySelector("#detail-ref")?.textContent===ref,B);
     assert.equal(await page.locator("#detail-reply-body").inputValue(),"");
     assert.equal(await page.locator("#detail-reference-files").evaluate(el=>el.files.length),0);
     await page.locator("#detail-reply-body").fill("Synthetic private message B");
+    page.once("dialog",d=>d.dismiss());
+    await page.locator("#detail-close").click();
+    assert.equal(await page.locator("#my-request-detail").isVisible(),true);
+    page.once("dialog",d=>d.accept());
     await page.locator("#detail-close").click();
     await button(B).click();
     await page.waitForFunction(ref=>document.querySelector("#detail-ref")?.textContent===ref,B);

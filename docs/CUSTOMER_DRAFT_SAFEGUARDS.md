@@ -1,0 +1,3 @@
+# Customer commission editing safeguards
+
+Unsent messages, selected reference images and proof feedback are tracked only in the active request's browser memory. Changing request or closing the detail asks before discarding. Proof feedback survives same-request refresh and is cleared only after a confirmed decision or explicitly discarded navigation. Message and reference input are locked during submission to prevent losing newly typed content. Session expiry clears these drafts without a confirmation. No browser storage of customer content. Browser tests cover cancelled and confirmed navigation. No gates changed.
