@@ -14,6 +14,7 @@ require_once __DIR__ . '/cancellations.php';
 require_once __DIR__ . '/design.php';
 require_once __DIR__.'/catalog.php';
 require_once __DIR__.'/artist-queues.php';
+require_once __DIR__.'/config-review.php';
 
 /** Shared read-only dashboard data, with no customer identifiers or secrets. */
 function dmo_launch_overview(PDO $db): array
@@ -55,7 +56,9 @@ function dmo_launch_overview(PDO $db): array
     $designPublished=dmo_design_load($db,'published');
     $publicPresentation=dmo_design_presentation()==='published';
     $catalog=dmo_catalog_public($db);
+    $configuration=dmo_config_review();
     $readiness = [
+        ['key'=>'configuration_review','label'=>'Private configuration review','status'=>$configuration['issue_count']===0?'ready':'blocked','detail'=>$configuration['issue_count'].' configuration warning(s); review only, never launch approval'],
         ['key'=>'pricing','label'=>'Approved published estimates','status'=>dmo_catalog_approved()&&count($catalog['tiers'])>0?'ready':'blocked',
          'detail'=>count($catalog['tiers']).' valid public packages; custom quotes remain separate'],
         ['key'=>'public_design','label'=>'Published public presentation','status'=>$publicPresentation&&$designPublished['exists']?'ready':'blocked',
@@ -125,6 +128,7 @@ function dmo_launch_overview(PDO $db): array
         'intake' => $intake,
         'retention'=>$retention,
         'integrity' => ['checks'=>$integrity,'issue_count'=>$integrityIssues,'scope'=>'database_only'],
+        'configuration_review'=>$configuration,
         'launch_evidence'=>dmo_launch_evidence($readiness,$intake,$published,count($catalog['tiers'])),
         'readonly' => true,
         'data_is_live' => true,
@@ -137,7 +141,7 @@ function dmo_launch_evidence(array $readiness,array $intake,int $artworkCount,in
     $byKey=[];
     foreach($readiness as $check)$byKey[$check['key']]=$check;
     $spec=[
-        ['prepare','1. Preparation',['public_design','artwork','pricing','policy','backup','integrity'],[
+        ['prepare','1. Preparation',['public_design','artwork','pricing','policy','backup','integrity','configuration_review'],[
             'Confirm final artwork permissions, service scope, price currency, business policies and artist-approved branding.',
             'Complete independent encrypted backup custody and recovery outside the hosting account.']],
         ['onboarding','2. Controlled onboarding',['mail','accounts'],[

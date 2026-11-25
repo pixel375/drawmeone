@@ -979,6 +979,7 @@ try {
     qa_positive($code===200&&array_key_exists('available_addon_ids',$catalog['tiers'][0])&&$catalog['tiers'][0]['available_addon_ids']===null,'catalog_unrestricted_public_null');
     [$code,$report]=qa_http('/api/admin/overview.php',$tokenAdmin,'__Host-dmo_admin');
     $evidence=$report['launch_evidence']??null;
+    qa_positive($code===200&&$report['configuration_review']['mode']==='review_only'&&$report['configuration_review']['authorizes_launch']===false,'configuration_review_report_not_authorization');
     qa_positive($code===200&&is_array($evidence)&&$evidence['scope']==='configuration_only'&&$evidence['authorizes_launch']===false&&count($evidence['stages'])===6,'launch_configuration_report_not_authorization');
     qa_positive($evidence['published_package_count']===1&&$evidence['intake_open']===false,'launch_report_reflects_catalog_and_intake');
     foreach($evidence['stages'] as $stage)qa_positive(count($stage['external_evidence_required'])>0,'launch_stage_requires_external_evidence');

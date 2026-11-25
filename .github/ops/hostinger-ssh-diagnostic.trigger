@@ -1,1 +1,1 @@
-Verify private printable commission summary and unauthenticated denial.
+Verify read-only private configuration review and closed example defaults.

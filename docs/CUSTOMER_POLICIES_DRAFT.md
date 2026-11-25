@@ -1,6 +1,6 @@
 # Draw Me One — Customer Terms & Privacy Draft (NOT APPROVED)
 
-Drafted November 23, 2026. **For business-owner and legal review only.**
+Drafted November 23, 2026; technical scope updated November 25, 2026. **For business-owner and legal review only.**
 This is not published as the site's binding Terms of Service or Privacy Policy.
 Do not enable `DMO_REQUEST_TERMS_APPROVED`, `DMO_PRIVACY_PUBLISHED`
 or public commission intake based on this draft alone.
@@ -19,8 +19,7 @@ The quote will state the applicable currency, included revisions, scope,
 delivery format, any deposit, and total price before acceptance.
 
 **Creative brief and references:** Customers must submit artwork requests
-they are authorized to share. Private reference images will be introduced
-only after secure upload controls are built. Do not submit payment card numbers,
+they are authorized to share. Private reference image uploads are implemented with authenticated access and remain disabled until the corresponding service and policy approvals are in place. Do not submit payment card numbers,
 government identifiers, medical details or other sensitive information in
 request text.
 
@@ -46,8 +45,7 @@ and change requests should be communicated through the agreed contact method.
 this section before accepting any money.** Specify when a deposit is due,
 which payment processors are supported, cancellations before/after work
 begins, partial-work fees, refunds, chargebacks, and any non-waivable
-consumer rights. The current website does not automatically charge or
-process payments.
+consumer rights. The current website supports artist-issued external hosted invoice links and manually reconciled full-payment evidence when enabled; it does not itself charge cards or independently verify the provider. The unpaid cancellation workflow and external full-refund records are implemented but require approval. Partial refunds, deposits, automated charges and provider-side refund initiation are not implemented.
 
 **Disputes and legal scope:** **Owner to identify operating legal entity,
 jurisdiction, legal contact and governing law, subject to non-waivable
@@ -68,8 +66,7 @@ Jurisdiction of operation: **[confirm]**.
 - Commission requests: descriptions, selected options, deadlines, preferred
   contact and revision/quote history when available.
 - Messaging: correspondence between the artist and customer when enabled.
-- Artwork: approved portfolio uploads and, in a later phase, any private
-  references deliberately submitted by customers.
+- Artwork: approved portfolio uploads and private references deliberately submitted by customers when enabled; optimized proofs, revision feedback, and final artwork delivery records.
 
 **Purposes:** Verify accounts, handle commission inquiries, protect the
 service from abuse, communicate about orders, and deliver artwork when
@@ -97,9 +94,7 @@ unaccepted inquiries, completed orders, security logs, legal/accounting
 records and backups, along with deletion, export and correction procedures.
 Do not promise instant deletion where obligations or backup constraints apply.
 
-**Access and corrections:** Customers may request information about data held
-about them, corrections and deletion subject to applicable law and business
-record requirements. Provide a verified contact method and response process.
+**Access and corrections:** Customers may request information about data held about them, corrections and deletion subject to applicable law and business record requirements. The account supports a bounded JSON export of customer-visible structured records and manual case submission/history when enabled. Image bytes and other records requiring individual review are excluded from the self-service export. No automatic deletion occurs. Provide a verified contact method and response process.
 
 **Children and restricted requests:** **Owner must decide minimum age and
 parental consent requirements** before opening registrations. Collect no

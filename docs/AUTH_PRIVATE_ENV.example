@@ -99,3 +99,15 @@ DMO_CHECKOUT_TERMS_APPROVED=0
 # Explicit approval for pre-acceptance withdrawal and unpaid order cancellation.
 DMO_CANCELLATION_ENABLED=0
 DMO_CANCELLATION_TERMS_APPROVED=0
+
+DMO_ALLOW_PHP_MAIL=0
+DMO_PUBLIC_DESIGN_ENABLED=0
+DMO_REFERENCES_ENABLED=0
+DMO_CUSTOMER_MESSAGING_ENABLED=0
+DMO_QUOTE_DELIVERY_ENABLED=0
+DMO_QUOTE_RESPONSES_ENABLED=0
+DMO_ORDER_ADMIN_ENABLED=0
+DMO_ORDER_TERMS_APPROVED=0
+
+# All switches above remain closed in this example. Read-only review:
+# php app/cli-config-review.php check

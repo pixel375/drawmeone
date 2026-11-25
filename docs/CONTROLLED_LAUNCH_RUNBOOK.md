@@ -34,3 +34,8 @@ Owner approves readiness and explicitly opens selected gates. Intake starts paus
 ## Configuration evidence and release verification
 
 Artist's Desk now exposes six stage summaries and a downloadable configuration-only JSON report. CLI equivalent: `php app/cli-launch-readiness.php check` (safe fixed summaries) or `php app/cli-launch-readiness.php json` (same stage report). A zero exit status means the report was generated, not that the site is authorized to open. Actual owner/provider/onboarding/recovery evidence is not recorded or inferred by this report. Record and review those results separately. The report contains aggregate published artwork/package counts and intake state, never customer identities or secrets. Live diagnostics now wait for all expected public asset markers together within a bounded retry window before checking detailed assets, to account for auto-deploy lag. No private flags or operational records changed.
+
+
+## Private configuration review before opening
+
+Run the read-only `php app/cli-config-review.php check` (or `json`) and inspect reported fixed issue codes. It checks known boolean syntax, contradictory prerequisite switches, current authentication/mail/policy/checkout configuration, duplicate boolean definitions and private configuration file permissions. It never prints raw configuration values, paths or credentials and does not modify configuration. An issue may be intentional during staged preparation; resolve or document it before the relevant stage. A successful report is not authorization, nor evidence of SMTP delivery, provider verification, off-site recovery or customer onboarding. The policy draft has been updated to reflect implemented features but remains unapproved.
