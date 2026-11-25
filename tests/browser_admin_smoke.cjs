@@ -555,6 +555,44 @@ async function verifyCustomerNotice(browser) {
   }finally{await page.close();}
 }
 
+async function verifyDeliveryDraftManagement(browser) {
+  const page=await browser.newPage({viewport:{width:320,height:844},reducedMotion:"reduce"});
+  const posts=[];await simulateBackend(page,posts);
+  const row={id:96,status:"submitted",public_ref:"CI-96"};
+  const order={id:97,status:"awaiting_arrangement",payment_status:"unverified",total_minor:3000,currency:"CAD"};
+  let drafts=[];
+  const answer=(route,data)=>route.fulfill({status:200,contentType:"application/json",body:JSON.stringify(data)});
+  await page.route("**/api/admin/requests.php*",route=>answer(route,{ok:true,requests:[row]}));
+  await page.route("**/api/admin/request.php?*",route=>answer(route,{ok:true,delivery_staging_enabled:true,delivery_drafts:drafts,detail:{request:row,orders:[order],messages:[],quotes:[],references:[],addons:[]}}));
+  await page.route("**/api/admin/delivery-draft.php",route=>{
+    assert.equal(route.request().method(),"POST");
+    assert.match(route.request().headers()["content-type"],/multipart\/form-data/);
+    drafts=[{id:98,order_id:97,width:320,height:240,bytes:500,created_at:"2026-11-25"}];
+    return answer(route,{ok:true,draft_id:98,customer_visible:false});
+  });
+  await page.route("**/api/admin/request-actions.php*",route=>{
+    assert.deepEqual(route.request().postDataJSON(),{action:"remove_delivery_draft",request_id:96,draft_id:98,confirm_remove:true});
+    drafts=[];return answer(route,{ok:true,draft_removed:true,storage_cleanup_complete:true});
+  });
+  try{
+    await page.goto(base+"/studio-admin/index.php",{waitUntil:"domcontentloaded"});
+    await page.locator("#workspace").waitFor({state:"visible"});
+    await page.locator('[data-view="requests"]').click();
+    await page.locator("#request-list .request-open").first().click();
+    await page.locator(".delivery-draft-form input").setInputFiles({name:"fixture.png",mimeType:"image/png",buffer:Buffer.from("synthetic image fixture")});
+    await page.locator(".delivery-draft-form button").click();
+    await page.waitForFunction(()=>document.querySelector("#request-detail-status")?.textContent.includes("Artwork staged privately"));
+    assert.match(await page.getByRole("link",{name:"Open private preview"}).getAttribute("href"),/id=98&view=preview$/);
+    page.once("dialog",dialog=>dialog.accept());
+    await page.getByRole("button",{name:"Remove draft",exact:true}).click();
+    await page.waitForFunction(()=>document.querySelector("#request-detail-status")?.textContent.includes("Private draft removed"));
+    assert.equal(await page.getByRole("link",{name:"Open private preview"}).count(),0);
+    assert.match(await page.locator("#request-orders").innerText(),/unverified/);
+    assert.deepEqual(posts,[]);
+    console.log("PASS: private delivery staging, preview and removal UI");
+  }finally{await page.close();}
+}
+
 async function verifyClosedDesk(browser) {
   const page=await browser.newPage({viewport:{width:390,height:844}});
   await page.route("**/api/admin/status.php*",route=>route.fulfill({
@@ -586,6 +624,7 @@ async function verifyClosedDesk(browser) {
     await verifyOrderPlanning(browser);
     await verifyQuoteFollowup(browser);
     await verifyCustomerNotice(browser);
+    await verifyDeliveryDraftManagement(browser);
     console.log("ADMIN_BROWSER_SMOKE=PASS");
   } finally {await browser.close();}
 })().catch(error=>{

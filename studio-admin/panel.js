@@ -606,7 +606,18 @@
         textNode("small",draft.width+" × "+draft.height+" · "+draft.created_at));
       const link=textNode("a","Download private WebP draft","quiet");
       link.href="../api/admin/delivery-draft.php?id="+draft.id;
-      link.rel="noopener noreferrer";card.append(link);root.append(card);
+      link.rel="noopener noreferrer";
+      const preview=textNode("a","Open private preview","quiet");
+      preview.href=link.href+"&view=preview";preview.target="_blank";preview.rel="noopener noreferrer";
+      const actions=document.createElement("div");actions.className="delivery-draft-actions";
+      actions.append(preview,link);
+      if(enabled){
+        const remove=textNode("button","Remove draft","quiet");
+        remove.type="button";remove.disabled=requestBusy;
+        remove.addEventListener("click",()=>removeDeliveryDraft(draft.id));
+        actions.append(remove);
+      }
+      card.append(actions);root.append(card);
     }
     if(!enabled)return;
     for(const order of orders||[]){
@@ -627,12 +638,29 @@
       root.append(form);
     }
   }
+  async function removeDeliveryDraft(draftId){
+    if(requestBusy||selectedRequestId===null||!Number.isSafeInteger(draftId))return;
+    if(!window.confirm("Remove this private draft from the order? This cannot be undone here."))return;
+    const id=selectedRequestId;
+    requestBusy=true;updateRequestButtons();
+    try{
+      const {response,data}=await post("request-actions.php",{action:"remove_delivery_draft",request_id:id,draft_id:draftId,confirm_remove:true},csrf);
+      if(response.status===401)return sessionExpired();
+      if(!response.ok||!data.ok){requestText("request-detail-status","Draft removal not confirmed. Refresh before retrying.");return;}
+      await openRequest(id);
+      requestText("request-detail-status",data.storage_cleanup_complete===true
+        ?"Private draft removed. Order and payment status unchanged."
+        :"Draft access revoked; private file cleanup requires review.");
+    }catch(_){requestText("request-detail-status","Draft removal outcome uncertain. Refresh before retrying.");}
+    finally{requestBusy=false;updateRequestButtons();}
+  }
   async function stageDeliveryDraft(orderId,file){
     if(requestBusy||selectedRequestId===null)return;
     if(file.size>8*1024*1024){requestText("request-detail-status","Draft must be 8 MB or smaller.");return;}
     const id=selectedRequestId,body=new FormData();
     body.append("request_id",String(id));body.append("order_id",String(orderId));body.append("artwork",file);
     requestBusy=true;updateRequestButtons();
+    requestText("request-detail-status","Uploading and processing private artwork…");
     try{
       const response=await fetch("../api/admin/delivery-draft.php",{method:"POST",credentials:"same-origin",cache:"no-store",headers:{"X-DMO-CSRF":csrf},body});
       if(response.status===401)return sessionExpired();

@@ -1,1 +1,1 @@
-2026-11-25 customer transactional notices milestone: latest assets, quote regression corrections, unchanged launch gates. Read-only.
+2026-11-25 verify current private staging and removal assets plus prior notification milestone. Read-only.

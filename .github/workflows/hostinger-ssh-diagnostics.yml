@@ -296,17 +296,17 @@ jobs:
           echo "alternate_contact_layouts=3"
           # Verify mobile Artist Desk stylesheet was deployed and cache-busted.
           desk_page=$(curl -fsSL --max-time 15 "https://drawmeone.com/studio-admin/index.php")
-          [[ "$desk_page" == *'panel.css?v=30'* ]] || {
+          [[ "$desk_page" == *'panel.css?v=31'* ]] || {
             echo "mobile_artist_desk=stale_stylesheet_reference"
             exit 1
           }
-          desk_css=$(curl -fsSL --max-time 15 "https://drawmeone.com/studio-admin/panel.css?v=30")
+          desk_css=$(curl -fsSL --max-time 15 "https://drawmeone.com/studio-admin/panel.css?v=31")
           [[ "$desk_css" == *'v3.3: All six Artist Desk sections'* ]] &&
           [[ "$desk_css" == *'grid-template-columns:repeat(3,minmax(0,1fr))'* ]] || {
             echo "mobile_artist_desk=stale_or_missing_mobile_layout"
             exit 1
           }
-          [[ "$desk_page" == *'panel.js?v=30'* ]] &&
+          [[ "$desk_page" == *'panel.js?v=31'* ]] &&
           [[ "$desk_page" == *'id="artwork-filter"'* ]] &&
           [[ "$desk_page" == *'id="artwork-unpublish-selected"'* ]] || {
             echo "artist_artwork_library=stale_html"
@@ -316,7 +316,7 @@ jobs:
             echo "artist_artwork_library=stale_css"
             exit 1
           }
-          desk_js=$(curl -fsSL --max-time 15 "https://drawmeone.com/studio-admin/panel.js?v=30")
+          desk_js=$(curl -fsSL --max-time 15 "https://drawmeone.com/studio-admin/panel.js?v=31")
           [[ "$desk_js" == *'artwork-unpublish-selected'* ]] &&
           [[ "$desk_js" == *'No artworks match this view.'* ]] || {
             echo "artist_artwork_library=stale_js"
@@ -424,6 +424,12 @@ jobs:
             echo "customer_notices=stale_assets"
             exit 1
           }
+          [[ "$desk_page" == *'id="request-delivery-drafts"'* ]] &&
+          [[ "$desk_js" == *'function removeDeliveryDraft(draftId)'* ]] || {
+            echo "delivery_draft_management=stale_assets"
+            exit 1
+          }
+          echo "delivery_draft_management=deployed"
           echo "customer_notices=deployed"
           echo "quote_followup=deployed"
           echo "order_planning=deployed"

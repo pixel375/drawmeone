@@ -306,3 +306,5 @@ footer{padding:28px 0 70px;border-top:1px solid var(--line);color:var(--muted);f
 .notification-card button{min-height:44px;max-width:100%;white-space:normal;justify-self:start}
 
 .delivery-draft-form{display:grid;gap:8px;min-width:0;margin-top:12px}.delivery-draft-form label{display:grid;gap:6px;min-width:0}.delivery-draft-form input[type=file]{min-width:0;width:100%;max-width:100%}.delivery-draft-form button{min-height:44px;max-width:100%;white-space:normal}.delivery-draft-form p{margin:0}
+
+.delivery-draft-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}.delivery-draft-actions a,.delivery-draft-actions button{min-height:44px;max-width:100%;white-space:normal;display:inline-flex;align-items:center;overflow-wrap:anywhere}
