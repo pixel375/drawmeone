@@ -393,6 +393,11 @@ async function verifyRequestIsolation(browser) {
     await page.locator("#request-message-body").fill("Do not leak customer message A");
     await page.locator("#quote-scope").fill("Do not leak quote A");
     await page.locator(".quote-line-description").first().fill("Private quote item A");
+    assert.match(await page.locator("#request-drafts-warning").innerText(),/private note, customer message, quote/);
+    page.once("dialog",dialog=>{assert.match(dialog.message(),/Discard the unsaved/);dialog.dismiss();});
+    await buttons.nth(1).click();
+    assert.equal(await page.locator("#request-note-body").inputValue(),"Do not leak private note A");
+    page.once("dialog",dialog=>dialog.accept());
     await buttons.nth(1).click();
     await page.waitForFunction(()=>document.querySelector("#request-detail-title")?.textContent.includes("#42"));
     for(const selector of ["#request-note-body","#request-message-body","#quote-scope",".quote-line-description"]){
@@ -412,13 +417,32 @@ async function verifyRequestIsolation(browser) {
     await page.waitForTimeout(100);
     assert.match(await page.locator("#request-detail-title").innerText(),/#42/);
     await page.locator("#request-note-body").fill("Draft B");
+    page.once("dialog",dialog=>dialog.dismiss());
+    await page.locator("#request-detail-close").click();
+    assert.equal(await page.locator("#request-detail").isVisible(),true);
+    page.once("dialog",dialog=>dialog.accept());
     await page.locator("#request-detail-close").click();
     assert.equal(await page.locator("#request-detail").isVisible(),false);
     await buttons.nth(1).click();
     await page.waitForFunction(()=>document.querySelector("#request-note-save")?.disabled===false);
     assert.equal(await page.locator("#request-note-body").inputValue(),"");
     assert.deepEqual(posts,[]);
-    console.log("PASS: artist request draft isolation, stale responses and failed detail loading");
+    let saved=0;
+    await page.route("**/api/admin/request-actions.php*",route=>{
+      const body=route.request().postDataJSON();assert.equal(body.action,"create_quote_draft");assert.equal(body.request_id,42);
+      saved++;return reply(route,{ok:true,version:1});
+    });
+    await page.locator("#request-note-body").fill("Keep this separate note");
+    await page.locator("#quote-scope").fill("Synthetic quote scope for QA");
+    await page.locator(".quote-line-description").first().fill("Synthetic line");
+    await page.locator(".quote-line-price").first().fill("20.00");
+    page.once("dialog",dialog=>dialog.accept());
+    await page.locator("#quote-save").click();
+    await page.waitForFunction(()=>document.querySelector("#request-detail-status")?.textContent.includes("Draft quote version 1 saved"));
+    assert.equal(saved,1);
+    assert.equal(await page.locator("#quote-scope").inputValue(),"");
+    assert.equal(await page.locator("#request-note-body").inputValue(),"Keep this separate note");
+    console.log("PASS: artist request draft isolation, discard protection, quote reset and stale responses");
   }finally{await page.close();}
 }
 async function verifyRequestList(browser) {

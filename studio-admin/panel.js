@@ -305,7 +305,7 @@
   let requestCustomerId=null;
   function setRequestCustomer(id=null){
     if(requestBusy&&!leavingSession)return false;
-    if(id!==requestCustomerId||id!==null)closeRequestDetail();
+    if((id!==requestCustomerId||id!==null)&&!closeRequestDetail())return false;
     requestCustomerId=id;$("request-customer-scope").hidden=id===null;$("request-customer-label").textContent=id===null?"":"Commission history for customer #"+id;return true;
   }
   $("request-customer-clear").addEventListener("click",()=>{if(!setRequestCustomer())return;requestListPage=1;requests();});
@@ -556,6 +556,7 @@
         copy.textContent = "Use as starting point for new version";
         copy.addEventListener("click", () => {
           if (!quoteDraftAllowed || requestBusy) return;
+          if(quoteHasDraft()&&!window.confirm("Replace the unsaved quote with this saved version?"))return;
           $("quote-currency").value = quote.currency === "USD" ? "USD" : "CAD";
           $("quote-scope").value = quote.scope_description || "";
           $("quote-revisions").value = String(quote.revision_allowance);
@@ -1083,6 +1084,32 @@
     finally{requestBusy=false;updateRequestButtons();}
   }
 
+  function quoteHasDraft(){
+    return $("quote-scope").value!==""||$("quote-currency").value!=="CAD"||
+      $("quote-revisions").value!==$("quote-revisions").defaultValue||
+      $("quote-lines").childElementCount>1||
+      [...$("quote-lines").querySelectorAll("input")].some(input=>input.value!=="");
+  }
+  function requestDraftKinds(){
+    const kinds=[];
+    if($("request-note-body").value!=="")kinds.push("private note");
+    if($("request-message-body").value!=="")kinds.push("customer message");
+    if(quoteHasDraft())kinds.push("quote");
+    return kinds;
+  }
+  function updateRequestDraftIndicator(){
+    const kinds=requestDraftKinds();
+    $("request-drafts-warning").hidden=kinds.length===0||selectedRequestId===null;
+    $("request-drafts-warning").textContent=kinds.length?"Unsaved "+kinds.join(", ")+". These edits belong to this request only.":"";
+  }
+  function confirmDiscardRequestDrafts(){
+    const kinds=requestDraftKinds();
+    return kinds.length===0||window.confirm("Discard the unsaved "+kinds.join(", ")+" for this request?");
+  }
+  for(const id of ["request-note-form","request-message-form","request-quote-form"]){
+    $(id).addEventListener("input",updateRequestDraftIndicator);
+    $(id).addEventListener("change",updateRequestDraftIndicator);
+  }
   function updateRequestButtons() {
     $("request-detail-close").disabled = requestBusy;
     $("request-thread-full").disabled = requestBusy;
@@ -1108,15 +1135,20 @@
       selectedRequestId === null;
     $("quote-save").disabled = !quoteDraftAllowed || requestBusy ||
       selectedRequestId === null;
-    $("quote-add-line").disabled = !quoteDraftAllowed || requestBusy;
+    $("quote-add-line").disabled = !quoteDraftAllowed || requestBusy || $("quote-lines").childElementCount>=12;
+    for(const button of $("quote-lines").querySelectorAll("button"))button.disabled=!quoteDraftAllowed||requestBusy||$("quote-lines").childElementCount<=1;
+    updateRequestDraftIndicator();
   }
 
-  function resetRequestDrafts() {
-    $("request-note-form").reset();
-    $("request-message-form").reset();
+  function resetQuoteDraft(){
     $("request-quote-form").reset();
     $("quote-lines").replaceChildren();
     addQuoteLine();
+  }
+  function resetRequestDrafts() {
+    $("request-note-form").reset();
+    $("request-message-form").reset();
+    resetQuoteDraft();
   }
 
   function clearRequestContent() {
@@ -1133,8 +1165,9 @@
     const parsed = Number(id);
     if (!Number.isSafeInteger(parsed) || parsed < 1) return;
     if (requestBusy && selectedRequestId !== parsed) return;
-    const generation = ++requestLoadGeneration;
     const switching = selectedRequestId !== parsed;
+    if(switching&&selectedRequestId!==null&&!confirmDiscardRequestDrafts())return;
+    const generation = ++requestLoadGeneration;
     selectedRequestId = parsed;
     requestWriteEnabled = false;
     requestMessagingEnabled = false;
@@ -1241,7 +1274,7 @@
   });
 
   function closeRequestDetail(force=false) {
-    if (requestBusy&&!force) return false;
+    if (!force&&(requestBusy||!confirmDiscardRequestDrafts())) return false;
     ++requestLoadGeneration;
     selectedRequestId = null;
     reviewStatus = null;
@@ -1283,7 +1316,7 @@
     remove.textContent = "Remove";
     remove.setAttribute("aria-label","Remove quote line");
     remove.addEventListener("click", () => {
-      if (!requestWriteEnabled || requestBusy) return;
+      if (!quoteDraftAllowed || requestBusy) return;
       if (lines.childElementCount > 1) row.remove();
       updateQuotePreview();
     });
@@ -1320,11 +1353,13 @@
       valid && total <= 10000000
         ? "Draft total: " + formatQuoteMoney(total, $("quote-currency").value)
         : "Enter an amount for each line");
-    $("quote-add-line").disabled = !requestWriteEnabled || requestBusy ||
+    $("quote-add-line").disabled = !quoteDraftAllowed || requestBusy ||
       $("quote-lines").childElementCount >= 12;
+    for(const button of $("quote-lines").querySelectorAll("button"))button.disabled=!quoteDraftAllowed||requestBusy||$("quote-lines").childElementCount<=1;
+    updateRequestDraftIndicator();
   }
 
-  $("quote-add-line").addEventListener("click", () => addQuoteLine());
+  $("quote-add-line").addEventListener("click", () => {if(quoteDraftAllowed&&!requestBusy)addQuoteLine();});
   $("quote-currency").addEventListener("change", updateQuotePreview);
   addQuoteLine();
 
@@ -1403,7 +1438,7 @@
     const revision_allowance = Number($("quote-revisions").value);
     const lines = quoteFormLines();
     if (scope.length < 10 || scope.length > 5000 ||
-        !Number.isInteger(revision_allowance) ||
+        $("quote-revisions").value.trim()==="" || !Number.isInteger(revision_allowance) ||
         revision_allowance < 0 || revision_allowance > 25 || !lines ||
         lines.reduce((sum,line)=>sum+line.amount_minor,0) > 10000000) {
       requestText("request-detail-status", "Complete the scope, revisions and valid line prices.");
@@ -1424,6 +1459,7 @@
           "Draft not saved (" + (data.error || response.status) + ").");
         return;
       }
+      resetQuoteDraft();
       await openRequest(id);
       requestText("request-detail-status",
         "Draft quote version " + data.version + " saved privately. No customer contact.");
@@ -2435,7 +2471,7 @@
     ++packageGeneration;
     ++overviewGeneration;
     ++artworkGeneration;
-    artworkRecords=[];artworkWriteEnabled=false;$("artwork-list").replaceChildren();
+    artworkRecords=[];artworkDrafts.clear();artworkWriteEnabled=false;$("artwork-list").replaceChildren();
     renderLaunchEvidence(null);renderConfigurationReview(null);clearAdminSecurity();
     closeRequestDetail(true);clearPrivacyQueue();clearFinance();clearCustomers();setRequestCustomer();$("customer-query").value="";
     $("workspace").hidden = true;
