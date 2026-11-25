@@ -86,18 +86,26 @@ try {
     if($hasExpected&&(
         ($action==='set_order'&&(!is_int($input['expected'])||$input['expected']<-10000||$input['expected']>10000))||
         ($action==='set_alt'&&(!is_string($input['expected'])||strlen($input['expected'])>240||!preg_match('//u',$input['expected'])))||
-        !in_array($action,['set_order','set_alt'],true)
+        ($action==='set_featured'&&!is_bool($input['expected']))||
+        ($action==='set_visibility'&&!in_array($input['expected'],['draft','published'],true))||
+        !in_array($action,['set_order','set_alt','set_featured','set_visibility'],true)
     ))dmo_json(422,['ok'=>false,'error'=>'invalid_expected_artwork_value']);
     $db->beginTransaction();
     try {
-        $stmt = $db->prepare('SELECT visibility,sort_order,alt_text FROM dmo_portfolio_artworks WHERE id = :id FOR UPDATE');
+        $stmt = $db->prepare('SELECT visibility,sort_order,alt_text,is_featured FROM dmo_portfolio_artworks WHERE id = :id FOR UPDATE');
         $stmt->execute(['id' => $id]);
         $current=$stmt->fetch();
         if (!is_array($current)) {
             $db->rollBack();
             dmo_json(404, ['ok' => false, 'error' => 'artwork_not_found']);
         }
-        if($hasExpected&&$input['expected']!==($action==='set_order'?(int)$current['sort_order']:(string)($current['alt_text']??''))){
+        $previous=match($action){
+            'set_order'=>(int)$current['sort_order'],
+            'set_alt'=>(string)($current['alt_text']??''),
+            'set_featured'=>(bool)$current['is_featured'],
+            'set_visibility'=>$current['visibility'],
+        };
+        if($hasExpected&&$input['expected']!==$previous){
             $db->rollBack();dmo_json(409,['ok'=>false,'error'=>'artwork_field_changed']);
         }
         if($action==='set_visibility'&&$value==='published'&&!dmo_artwork_publishable($db,$id)){

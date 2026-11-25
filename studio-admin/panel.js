@@ -1564,8 +1564,10 @@
       return;
     }
     const filter = $("artwork-filter").value;
-    const matching=artworkRecords.filter(work=>filter==="all"||
-      (filter==="featured"?work.featured===true:filter==="missing_alt"?!String(work.alt||"").trim():work.visibility===filter));
+    const query=$("artwork-search").value.trim().toLocaleLowerCase();
+    const matching=artworkRecords.filter(work=>(filter==="all"||
+      (filter==="featured"?work.featured===true:filter==="missing_alt"?!String(work.alt||"").trim():work.visibility===filter))&&
+      (!query||String(work.id)===query.replace(/^#/,"")||String(work.alt||"").toLocaleLowerCase().includes(query)));
     const mode=$("artwork-sort-mode").value;
     if(mode==="gallery")matching.sort((a,b)=>Number(b.featured)-Number(a.featured)||a.sort_order-b.sort_order||b.id-a.id);
     if(mode==="oldest")matching.reverse();
@@ -1602,6 +1604,10 @@
       title.textContent = "Drawing #" + work.id;
       const state = document.createElement("small");
       state.textContent = work.visibility === "published" ? "PUBLIC GALLERY" : "PRIVATE DRAFT";
+      const dimensions=textNode("small",Number.isSafeInteger(work.width)&&Number.isSafeInteger(work.height)?work.width+" × "+work.height+" px":"Image dimensions unavailable");
+      const inspect=textNode("a","Inspect private full image","small");
+      inspect.href="../api/admin/artwork-preview.php?id="+work.id+"&v=display";
+      inspect.target="_blank";inspect.rel="noopener noreferrer";
       const select = document.createElement("input");
       select.type = "checkbox";
       select.className = "artwork-select";
@@ -1621,7 +1627,7 @@
       toggle.textContent = work.visibility === "published" ? "Unpublish" : "Publish";
       toggle.disabled = !artworkWriteEnabled || artworkBusy;
       toggle.addEventListener("click", () => updateArtwork(work.id,"set_visibility",{
-        visibility:work.visibility === "published" ? "draft" : "published",
+        visibility:work.visibility === "published" ? "draft" : "published",expected:work.visibility,
       }));
       const feature = document.createElement("button");
       feature.className = "quiet";
@@ -1629,7 +1635,7 @@
       feature.textContent = work.featured ? "★ Featured" : "☆ Feature";
       feature.disabled = !artworkWriteEnabled || artworkBusy;
       feature.addEventListener("click", () => updateArtwork(work.id,"set_featured",{
-        featured:!work.featured,
+        featured:!work.featured,expected:work.featured===true,
       }));
       actions.append(toggle,feature);
       const order = document.createElement("div");
@@ -1666,8 +1672,8 @@
       saveAlt.addEventListener("click",()=>{if(artworkDraftCanSave(work,"alt"))updateArtwork(work.id,"set_alt",{alt:alt.value.trim(),expected:work.alt||""});});
       accessibility.append(summary,alt,saveAlt);
       if(work.visibility==="published"){
-        const link=textNode("a","View public drawing","small");link.href="../artwork.php?id="+work.id;link.target="_blank";link.rel="noopener noreferrer";body.append(title,state,link,pick,actions,order,accessibility);
-      }else body.append(title,state,pick,actions,order,accessibility);
+        const link=textNode("a","View public drawing","small");link.href="../artwork.php?id="+work.id;link.target="_blank";link.rel="noopener noreferrer";body.append(title,state,dimensions,inspect,link,pick,actions,order,accessibility);
+      }else body.append(title,state,dimensions,inspect,pick,actions,order,accessibility);
       card.append(preview,body);
       target.append(card);
     }
@@ -1696,8 +1702,7 @@
 
   async function updateArtwork(id, action, payload) {
     if (!artworkWriteEnabled || artworkBusy) return;
-    if (action === "set_visibility" && payload.visibility === "published" &&
-        !window.confirm("Publish this drawing to the public portfolio?")) return;
+    if(action==="set_visibility"&&!window.confirm(payload.visibility==="published"?"Publish this drawing to the public portfolio?":"Remove this drawing from the public portfolio? The private artwork remains saved."))return;
     artworkBusy = true;
     artworkControls();
     try {
@@ -1726,6 +1731,7 @@
     if(!artworkBusy)artworksLoad();
   });
 
+  $("artwork-search").addEventListener("input",()=>{artworkPage=1;renderArtwork();});
   $("artwork-sort-mode").addEventListener("change",()=>{artworkPage=1;renderArtwork();});
   $("artwork-prev").addEventListener("click",()=>{artworkPage--;renderArtwork();});
   $("artwork-next").addEventListener("click",()=>{artworkPage++;renderArtwork();});
@@ -1767,6 +1773,7 @@
   $("artwork-unpublish-selected").addEventListener("click",()=>batchArtwork("draft"));
 
   $("artwork-files").addEventListener("change",()=>{
+    if(artworkPendingFiles.length&&!window.confirm("Replace the remaining upload selection with these new files?")){$("artwork-files").value="";return;}
     artworkPendingFiles=[];
     artworkControls();
     $("artwork-upload-message").textContent=$("artwork-files").files.length+" file(s) selected. Uploads remain private drafts.";

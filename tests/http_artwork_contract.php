@@ -285,6 +285,10 @@ try {
     [$status,$result]=art_http('/api/admin/artworks.php',$token,$csrf,
         ['id'=>$id,'action'=>'set_featured','featured'=>true]);
     art_assert($status===200,'featured_artwork_toggle_saved');
+    [$status,$conflict]=art_http('/api/admin/artworks.php',$token,$csrf,['id'=>$id,'action'=>'set_featured','featured'=>false,'expected'=>false]);
+    art_assert($status===409&&($conflict['error']??null)==='artwork_field_changed','stale_feature_toggle_rejected');
+    [$status,$conflict]=art_http('/api/admin/artworks.php',$token,$csrf,['id'=>$id,'action'=>'set_visibility','visibility'=>'draft','expected'=>'draft']);
+    art_assert($status===409&&($conflict['error']??null)==='artwork_field_changed','stale_visibility_toggle_rejected');
     [$status,$result]=art_http('/api/admin/artworks.php',$token,$csrf,
         ['id'=>$id,'action'=>'set_order','sort_order'=>-15]);
     art_assert($status===200,'artwork_sort_position_saved');

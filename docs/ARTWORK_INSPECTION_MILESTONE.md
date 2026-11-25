@@ -1,0 +1,3 @@
+# Artwork inspection and concurrency
+
+Artist Desk can search the loaded private library by exact drawing number (with optional #) or optional accessibility description, inspect the full authenticated display variant in a separate tab, and see its optimized dimensions without requiring titles. Single publish, unpublish and feature actions now send an expected prior value and are rejected if a newer session changed it. Unpublish requires explicit confirmation, and replacing unattempted upload files also requires confirmation. Old clients remain compatible. No artwork files or publication state were changed. Disposable HTTP checks cover stale feature and visibility conflicts.
