@@ -316,6 +316,14 @@
   let requestListQuery = "";
   let requestListFilter = "all";
   let requestListGeneration = 0;
+  let requestScheduleFrom="",requestScheduleTo="";
+  function isScheduleFilter(value){return ["scheduled","requested_dates"].includes(value);}
+  function syncScheduleFilter(reset=false){
+    const visible=isScheduleFilter($("request-list-filter").value);
+    $("request-schedule-range").hidden=!visible;
+    if(reset||!visible){$("request-schedule-from").value="";$("request-schedule-to").value="";requestScheduleFrom=requestScheduleTo="";}
+  }
+  $("request-list-filter").addEventListener("change",()=>syncScheduleFilter());
 
   function workflowLabel(stage) {
     const labels={submitted:"Awaiting review",clarification_needed:"Clarification needed",
@@ -341,6 +349,10 @@
       const query = new URLSearchParams({page:String(requestListPage),
         q:requestListQuery,filter:requestListFilter});
       if(requestCustomerId!==null)query.set("customer_id",String(requestCustomerId));
+      if(isScheduleFilter(requestListFilter)){
+        if(requestScheduleFrom)query.set("from_date",requestScheduleFrom);
+        if(requestScheduleTo)query.set("to_date",requestScheduleTo);
+      }
       ({response,data} = await get("requests.php?" + query));
     } catch (_) {
       if (generation === requestListGeneration) status.textContent = "Unable to load requests. Try Refresh.";
@@ -361,11 +373,16 @@
         ? "No requests match your search." : "No commission requests on this page.");
       return;
     }
+    let lastDate=null;
     for (const row of data.requests) {
+      if(isScheduleFilter(requestListFilter)){
+        const date=requestListFilter==="requested_dates"?String(row.preferred_deadline||"").slice(0,10):row.order_deadline;
+        if(date!==lastDate){list.append(textNode("h3",date||"Date unavailable","request-agenda-date"));lastDate=date;}
+      }
       record(list,
         (row.public_ref || "REQUEST") + " · " + workflowLabel(row.workflow_stage || row.status),
         row.customer_name || "Customer",
-        [row.tier_name || "Custom", row.subject_type || "", row.order_deadline ? "Agreed date: " + row.order_deadline : "", row.brief_excerpt || ""]
+        [row.tier_name || "Custom", row.subject_type || "", row.order_deadline ? "Agreed date: " + row.order_deadline : row.preferred_deadline ? "Requested date (not agreed): "+String(row.preferred_deadline).slice(0,10) : "", row.brief_excerpt || ""]
           .filter(Boolean).join(" · "),
         row.submitted_at || ""
       );
@@ -387,13 +404,17 @@
     requestListFilter=button.dataset.requestQueue;
     $("request-list-query").value="";
     $("request-list-filter").value=requestListFilter;
+    syncScheduleFilter(true);
     selectPanel("requests");
   }));
   $("request-list-filters").addEventListener("submit", event => {
     event.preventDefault();
     requestListPage = 1;
     requestListQuery = $("request-list-query").value.trim();
-    requestListFilter = $("request-list-filter").value;
+    const nextFilter=$("request-list-filter").value;
+    const from=isScheduleFilter(nextFilter)?$("request-schedule-from").value:"",to=isScheduleFilter(nextFilter)?$("request-schedule-to").value:"";
+    if(from&&to&&from>to){$("request-list-status").textContent="From date must not be after through date.";return;}
+    requestListFilter=nextFilter;requestScheduleFrom=from;requestScheduleTo=to;
     requests();
   });
   $("request-list-previous").addEventListener("click", () => {
@@ -2451,7 +2472,7 @@
         const card=document.createElement("article");card.className="notification-card";card.dataset.customerId=String(row.id);
         card.append(textNode("strong",row.display_name||"Customer"),textNode("p",row.email||"","small"),textNode("p","Account #"+row.id+" · "+String(row.account_status).replaceAll("_"," ")+" · "+(row.email_verified?"Email verified":"Email not verified"),"small"),textNode("p",row.request_count+" commission request(s)"+(row.last_request_at?" · Latest: "+row.last_request_at:""),"small"));
         const btn=textNode("button","View commission history","quiet");btn.type="button";btn.disabled=row.request_count===0;
-        btn.addEventListener("click",()=>{if(!setRequestCustomer(row.id))return;requestListPage=1;requestListQuery="";requestListFilter="all";$("request-list-query").value="";$("request-list-filter").value="all";selectPanel("requests");});card.append(btn);list.append(card);
+        btn.addEventListener("click",()=>{if(!setRequestCustomer(row.id))return;requestListPage=1;requestListQuery="";requestListFilter="all";$("request-list-query").value="";$("request-list-filter").value="all";syncScheduleFilter(true);selectPanel("requests");});card.append(btn);list.append(card);
       }
       customerCursor=Number.isSafeInteger(data.next_before)?data.next_before:null;next.hidden=customerCursor===null;status.textContent=list.children.length+" customer(s) loaded.";
     }catch(_){if(generation===customerGeneration){clearCustomers();next.disabled=false;status.textContent="Customer directory unavailable. Search again to retry.";}}
@@ -2498,7 +2519,7 @@
         card.append(textNode("strong",financeLabels[item.record_state]+" · "+financeAmount(item.amount_minor,item.currency)),
           textNode("p","Order #"+item.order_id+" · "+item.public_ref+" · "+String(item.method).replaceAll("_"," "),"small"),
           textNode("p","Recorded: "+item.created_at+(item.verified_at?" · Reviewed: "+item.verified_at:""),"small"));
-        const button=textNode("button","Open commission","quiet");button.type="button";button.addEventListener("click",()=>{if(!setRequestCustomer())return;requestListPage=1;requestListQuery="";requestListFilter="all";$("request-list-query").value="";$("request-list-filter").value="all";selectPanel("requests");openRequest(item.request_id);});card.append(button);$("finance-records").append(card);
+        const button=textNode("button","Open commission","quiet");button.type="button";button.addEventListener("click",()=>{if(!setRequestCustomer())return;requestListPage=1;requestListQuery="";requestListFilter="all";$("request-list-query").value="";$("request-list-filter").value="all";syncScheduleFilter(true);selectPanel("requests");openRequest(item.request_id);});card.append(button);$("finance-records").append(card);
       }
       financeCursor=Number.isSafeInteger(data.next_before)?data.next_before:null;
       financeReport={scope:"local_records_only",as_of:data.as_of,filter,currency};

@@ -346,3 +346,5 @@ footer{padding:28px 0 70px;border-top:1px solid var(--line);color:var(--muted);f
 
 /* Event descriptions are sentence case, unlike section labels. */
 .request-activity-list li>strong{text-transform:none;letter-spacing:normal;font-size:13px}
+
+.request-schedule-range{display:flex;gap:10px;flex-wrap:wrap;flex:1 1 100%;align-items:flex-end}.request-schedule-range[hidden]{display:none}.request-schedule-range label{flex:1 1 150px}.request-schedule-range p{flex-basis:100%;margin:0}.request-agenda-date{font-size:15px;margin:16px 0 2px;padding-bottom:6px;border-bottom:1px solid var(--line);color:var(--ink)}

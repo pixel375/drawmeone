@@ -19,8 +19,8 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
 <meta name="robots" content="noindex,nofollow">
 <meta name="theme-color" content="#151317">
 <title>Artist's Desk · Draw Me One</title>
-<link rel="stylesheet" href="./panel.css?v=48">
-<script defer src="./panel.js?v=75"></script>
+<link rel="stylesheet" href="./panel.css?v=49">
+<script defer src="./panel.js?v=76"></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to dashboard</a>
@@ -159,8 +159,9 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
           <input id="request-list-query" type="search" maxlength="80" placeholder="Search commissions">
         </label>
         <label for="request-list-filter">Request status
-          <select id="request-list-filter"><option value="all">All requests</option><option value="review">Needs review</option><option value="quote_waiting">Awaiting quote decision</option><option value="quote_followup">Quotes needing follow-up</option><option value="accepted">Accepted quote, no order</option><option value="orders">Active orders</option><option value="payment_review">Payments to reconcile</option><option value="payment_hold">Payment holds</option><option value="checkout_followup">Invoice follow-up</option><option value="due">Due soon or overdue</option><option value="reply_due">Customer reply needed</option><option value="overdue">Overdue</option><option value="upcoming">Due in next seven days</option><option value="revision_due">Revision requested</option><option value="proof_waiting">Proof awaiting customer</option><option value="needs_schedule">Active orders without agreed date</option><option value="paid_to_start">Paid orders awaiting production</option><option value="ready_to_deliver">Ready for delivery (paid)</option><option value="other">Other statuses</option></select>
+          <select id="request-list-filter"><option value="all">All requests</option><option value="review">Needs review</option><option value="quote_waiting">Awaiting quote decision</option><option value="quote_followup">Quotes needing follow-up</option><option value="accepted">Accepted quote, no order</option><option value="orders">Active orders</option><option value="payment_review">Payments to reconcile</option><option value="payment_hold">Payment holds</option><option value="checkout_followup">Invoice follow-up</option><option value="due">Due soon or overdue</option><option value="reply_due">Customer reply needed</option><option value="overdue">Overdue</option><option value="upcoming">Due in next seven days</option><option value="revision_due">Revision requested</option><option value="proof_waiting">Proof awaiting customer</option><option value="scheduled">Agreed delivery agenda</option><option value="requested_dates">Requested dates (not agreed)</option><option value="needs_schedule">Active orders without agreed date</option><option value="paid_to_start">Paid orders awaiting production</option><option value="ready_to_deliver">Ready for delivery (paid)</option><option value="other">Other statuses</option></select>
         </label>
+        <div id="request-schedule-range" class="request-schedule-range" hidden><label for="request-schedule-from">From date<input type="date" id="request-schedule-from" min="2000-01-01" max="2099-12-31"></label><label for="request-schedule-to">Through date<input type="date" id="request-schedule-to" min="2000-01-01" max="2099-12-31"></label><p class="small">Calendar dates, inclusive. Requested dates are not commitments.</p></div>
         <button type="submit" class="quiet">Search</button>
         <button type="button" class="quiet" id="request-list-refresh">Refresh</button>
       </form>

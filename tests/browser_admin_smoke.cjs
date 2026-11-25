@@ -519,8 +519,8 @@ async function verifyRequestList(browser) {
   await page.route("**/api/admin/requests.php*",route=>{
     const url=new URL(route.request().url());const q=url.searchParams.get("q");
     const n=Number(url.searchParams.get("page"));const filter=url.searchParams.get("filter");
-    queries.push({q,n,filter});
-    const row={id:n,public_ref:"CI-"+n,customer_name:q||"CI Customer",status:"submitted"};
+    queries.push({q,n,filter,...(url.searchParams.has('from_date')?{from:url.searchParams.get('from_date')}:{}),...(url.searchParams.has('to_date')?{to:url.searchParams.get('to_date')}:{})});
+    const row={id:n,public_ref:"CI-"+n,customer_name:q||"CI Customer",status:"submitted",order_deadline:"2027-01-10"};
     return route.fulfill({status:200,contentType:"application/json",
       body:JSON.stringify({ok:true,requests:[row],page:n,has_more:n===1})});
   });
@@ -545,6 +545,12 @@ async function verifyRequestList(browser) {
     await page.locator("#request-list-filters button[type=submit]").click();
     await page.waitForFunction(()=>document.querySelector("#request-list")?.textContent.includes("Synthetic name"));
     assert.deepEqual(queries.at(-1),{q:"Synthetic name",n:1,filter:"paid_to_start"});
+    await page.locator("#request-list-filter").selectOption("scheduled");
+    await page.locator("#request-schedule-from").fill("2027-01-01");await page.locator("#request-schedule-to").fill("2027-01-31");
+    await page.locator("#request-list-filters button[type=submit]").click();
+    await page.locator(".request-agenda-date").waitFor();
+    assert.deepEqual(queries.at(-1),{q:"Synthetic name",n:1,filter:"scheduled",from:"2027-01-01",to:"2027-01-31"});
+    assert.equal(await page.locator(".request-agenda-date").innerText(),"2027-01-10");
     const overflow=await horizontalOverflow(page);
     assert(overflow.measured<=overflow.available+3,JSON.stringify(overflow));
     assert.deepEqual(posts,[]);

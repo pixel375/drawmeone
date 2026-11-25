@@ -547,6 +547,16 @@ try {
     qa_positive($code===200 && count($queue['requests'])===1 &&
         $queue['requests'][0]['workflow_stage']==='awaiting_arrangement' &&
         $queue['requests'][0]['order_deadline']===$deadline,'due_order_queue_matches_actual_order');
+    [$code,$agenda]=qa_http('/api/admin/requests.php?filter=scheduled&from_date='.$deadline.'&to_date='.$deadline,$tokenAdmin,'__Host-dmo_admin');
+    qa_positive($code===200&&count($agenda['requests'])===1&&$agenda['requests'][0]['id']===$requestA,'agreed_agenda_inclusive_dates');
+    [$code,$agenda]=qa_http('/api/admin/requests.php?filter=scheduled&to_date=2000-01-01',$tokenAdmin,'__Host-dmo_admin');
+    qa_positive($code===200&&$agenda['requests']===[],'agreed_agenda_excludes_outside_range');
+    foreach(['filter=scheduled&from_date=2026-02-30','filter=scheduled&from_date=2027-01-01&to_date=2026-01-01','filter=all&from_date=2026-01-01'] as $query){
+        [$code]=qa_http('/api/admin/requests.php?'.$query,$tokenAdmin,'__Host-dmo_admin');
+        qa_positive($code===422,'invalid_schedule_query_rejected');
+    }
+    [$code,$agenda]=qa_http('/api/admin/requests.php?filter=requested_dates',$tokenAdmin,'__Host-dmo_admin');
+    qa_positive($code===200&&!in_array($requestA,array_column($agenda['requests'],'id'),true),'confirmed_order_not_in_requested_date_agenda');
     [$code,$history]=qa_http('/api/requests.php',$tokenA);
     qa_positive($code===200 && $history['requests'][0]['workflow_stage']==='awaiting_arrangement' &&
         $history['requests'][0]['order_deadline']===$deadline,'customer_history_reflects_order_not_initial_request_status');

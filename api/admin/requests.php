@@ -15,11 +15,13 @@ try {
     if (!is_string($search) || strlen($search) > 160 ||
         preg_match('/[\x00-\x1f\x7f]/', $search) ||
         !is_string($pageText) || !preg_match('/^[1-9][0-9]{0,3}$/D', $pageText) ||
-        !is_string($filter) || !in_array($filter, ['all','review','other','orders','quote_waiting','accepted','due','quote_followup','payment_review','payment_hold','checkout_followup','reply_due','overdue','upcoming','revision_due','proof_waiting','needs_schedule','paid_to_start','ready_to_deliver'], true)) {
+        !is_string($filter) || !in_array($filter, ['all','review','other','orders','quote_waiting','accepted','due','quote_followup','payment_review','payment_hold','checkout_followup','reply_due','overdue','upcoming','revision_due','proof_waiting','needs_schedule','paid_to_start','ready_to_deliver','scheduled','requested_dates'], true)) {
         dmo_json(422, ['ok'=>false,'error'=>'invalid_request_list_filter']);
     }
     $customer=$_GET['customer_id']??null;
     if($customer!==null&&(!is_string($customer)||!preg_match('/^[1-9][0-9]{0,17}$/D',$customer)))dmo_json(422,['ok'=>false,'error'=>'invalid_customer_filter']);
+    $fromDate=dmo_artist_schedule_date($_GET['from_date']??null);$toDate=dmo_artist_schedule_date($_GET['to_date']??null);
+    if(($fromDate!==null||$toDate!==null)&&(!in_array($filter,['scheduled','requested_dates'],true)||($fromDate!==null&&$toDate!==null&&$fromDate>$toDate)))dmo_json(422,['ok'=>false,'error'=>'invalid_schedule_range']);
     $search = trim($search);
     $page = (int) $pageText;
     $size = 40;
@@ -44,17 +46,21 @@ try {
     $queues=dmo_artist_queue_conditions($db);
     if(isset($queues[$filter]))$where[]='('.$queues[$filter].')';
     if ($filter === 'due') $where[] = $activeOrders . " AND o.agreed_deadline IS NOT NULL AND DATE(o.agreed_deadline)<=DATE_ADD(UTC_DATE(),INTERVAL 7 DAY)";
+    $dateColumn=$filter==='requested_dates'?'r.preferred_deadline':'o.agreed_deadline';
+    if($fromDate!==null){$where[]='DATE('.$dateColumn.')>=:from_date';$params['from_date']=$fromDate;}
+    if($toDate!==null){$where[]='DATE('.$dateColumn.')<=:to_date';$params['to_date']=$toDate;}
     $from = ' FROM dmo_commission_requests r JOIN dmo_users u ON u.id = r.customer_id ' .
         'LEFT JOIN dmo_commission_tiers t ON t.id = r.tier_id ' . dmo_requests_stage_joins();
     $conditions = $where === [] ? '' : 'WHERE ' . implode(' AND ', $where) . ' ';
     $sort = in_array($filter,['due','overdue','upcoming'],true) ? 'o.agreed_deadline ASC, r.id ASC' : 'r.submitted_at DESC, r.id DESC';
     if($filter==='reply_due')$sort="(SELECT MAX(m.id) FROM dmo_messages m JOIN dmo_conversations c ON c.id=m.conversation_id WHERE c.request_id=r.id AND m.is_internal=0) ASC,r.id ASC";
     if(in_array($filter,['needs_schedule','paid_to_start','ready_to_deliver','revision_due'],true))$sort='o.agreed_deadline IS NULL ASC,o.agreed_deadline ASC,r.submitted_at ASC,r.id ASC';
+    if(in_array($filter,['scheduled','requested_dates'],true))$sort=$dateColumn.' ASC,r.id ASC';
     // Limit and offset derive only from validated bounded integers.
     $offset = ($page - 1) * $size;
     $stmt = $db->prepare(
         'SELECT r.id, r.public_ref, r.subject_type, r.status, ' .
-        'r.preferred_contact, r.submitted_at, LEFT(r.brief, 500) AS brief_excerpt, ' .
+        'r.preferred_contact, r.preferred_deadline, r.submitted_at, LEFT(r.brief, 500) AS brief_excerpt, ' .
         'u.display_name AS customer_name, r.tier_snapshot_json, t.name AS tier_name, ' . dmo_requests_stage_columns() .
         $from . $conditions . 'ORDER BY ' . $sort . ' LIMIT ' .
         ($size + 1) . ' OFFSET ' . $offset

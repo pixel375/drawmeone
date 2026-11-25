@@ -32,6 +32,8 @@ function dmo_artist_queue_conditions(PDO $db): array
         'upcoming'=>$active." AND o.agreed_deadline IS NOT NULL AND DATE(o.agreed_deadline) BETWEEN UTC_DATE() AND DATE_ADD(UTC_DATE(),INTERVAL 7 DAY)",
         'revision_due'=>'1=0','proof_waiting'=>'1=0',
         'needs_schedule'=>$open.' AND '.$active.' AND o.agreed_deadline IS NULL',
+        'scheduled'=>$open.' AND '.$active.' AND o.agreed_deadline IS NOT NULL',
+        'requested_dates'=>$open.' AND o.id IS NULL AND r.preferred_deadline IS NOT NULL',
         'paid_to_start'=>$open." AND o.status='awaiting_arrangement'".$clear,
         'ready_to_deliver'=>$open." AND o.status='ready_for_delivery'".$clear,
     ];
@@ -42,4 +44,13 @@ function dmo_artist_queue_conditions(PDO $db): array
         }
     }
     return $conditions;
+}
+
+/** Validate calendar dates, without treating a requested date as agreed. */
+function dmo_artist_schedule_date(mixed $value): ?string
+{
+    if($value===null||$value==='')return null;
+    if(!is_string($value)||!preg_match('/^(20[0-9]{2})-([0-9]{2})-([0-9]{2})$/D',$value,$parts)||
+        !checkdate((int)$parts[2],(int)$parts[3],(int)$parts[1]))dmo_json(422,['ok'=>false,'error'=>'invalid_schedule_date']);
+    return $value;
 }
