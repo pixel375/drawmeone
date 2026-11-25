@@ -45,12 +45,12 @@ small{display:block;color:var(--muted);font-size:11px;line-height:1.6;margin-top
 footer{border-top:1px solid var(--line);padding-top:20px;margin-top:28px;font-size:11px;color:var(--muted)}
 [hidden]{display:none!important}
 .privacy-ack{display:flex;align-items:flex-start;gap:9px}.privacy-ack input{width:18px;min-height:18px;height:18px;flex:0 0 18px;margin:3px 0 0}#signup-policy-link{text-decoration:underline}
-#account-security{border-top:1px solid var(--line);padding-top:12px;min-width:0}#account-security summary{cursor:pointer;min-height:44px;font-weight:700;padding:8px 0}#security-action{display:block;width:100%;background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:12px;font:inherit;min-height:48px}#security-notice,#account-email{overflow-wrap:anywhere}
+ #account-privacy{border-top:1px solid var(--line);padding-top:12px;min-width:0}#account-privacy summary{cursor:pointer;min-height:44px;font-weight:700;padding:8px 0}#privacy-action,#privacy-note{display:block;width:100%;max-width:100%;background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:12px;font:inherit}#privacy-case{white-space:pre-wrap;overflow-wrap:anywhere}#account-security{border-top:1px solid var(--line);padding-top:12px;min-width:0}#account-security summary{cursor:pointer;min-height:44px;font-weight:700;padding:8px 0}#security-action{display:block;width:100%;background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:12px;font:inherit;min-height:48px}#security-notice,#account-email{overflow-wrap:anywhere}
 .skip-link{position:absolute;left:14px;top:-90px;z-index:1000;padding:10px 16px;background:var(--accent);color:#21191c;border-radius:7px;font-weight:800;text-decoration:none}
 .skip-link:focus{top:10px}
 button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 </style>
-<script defer src="./account.js?v=17"></script>
+<script defer src="./account.js?v=18"></script>
 </head>
 <body>
 <a class="skip-link" href="#main">Skip to main content</a>
@@ -137,6 +137,21 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-off
       </form>
     </details>
     <p id="security-notice" role="status" aria-live="polite"></p>
+    <details id="account-privacy" hidden><summary>My data and privacy</summary>
+      <p>Download a structured JSON copy of your customer records. Images are not included; use your commission workspace for available image downloads. For additional data, corrections or deletion, submit a request for individual review.</p>
+      <p id="privacy-case" role="status"></p>
+      <form id="privacy-form">
+        <label for="privacy-action">Action</label>
+        <select id="privacy-action"><option value="export">Download customer records</option><option value="access">Request additional data access</option><option value="correction">Request a correction</option><option value="deletion">Request deletion</option></select>
+        <div id="privacy-note-fields" hidden><label for="privacy-note">Details (optional)</label><textarea id="privacy-note" maxlength="1000" rows="3" placeholder="Describe your request. Do not include passwords, card numbers or identity documents."></textarea></div>
+        <label for="privacy-password">Current password</label>
+        <input id="privacy-password" type="password" autocomplete="current-password" maxlength="128" required>
+        <button type="submit" class="primary" id="privacy-submit">Continue</button>
+        <button type="button" class="primary" id="privacy-withdraw" hidden>Withdraw open request</button>
+      </form>
+      <p id="privacy-notice" role="status" aria-live="polite"></p>
+      <p><small>Submitting a deletion request does not delete or deactivate your account. Retention obligations and existing orders require review.</small></p>
+    </details>
     <button id="sign-out" class="primary" type="button">Sign out</button>
   </div>
 </section>

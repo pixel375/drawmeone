@@ -1,1 +1,1 @@
-Read-only verify historical policy continuation UI and unchanged closed commercial gates.
+Verify private export/request interfaces and unchanged commercial gates. Read-only.

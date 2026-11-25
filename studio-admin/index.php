@@ -19,8 +19,8 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
 <meta name="robots" content="noindex,nofollow">
 <meta name="theme-color" content="#151317">
 <title>Artist's Desk · Draw Me One</title>
-<link rel="stylesheet" href="./panel.css?v=36">
-<script defer src="./panel.js?v=39"></script>
+<link rel="stylesheet" href="./panel.css?v=37">
+<script defer src="./panel.js?v=40"></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to dashboard</a>
@@ -98,6 +98,14 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
           <button class="quiet" type="submit" id="intake-save">Save intake settings</button>
         </form>
         <p class="small">This setting cannot enable customer registration, policy approval or commercial launch.</p>
+      </section>
+      <section class="launch-overview" aria-labelledby="privacy-queue-title">
+        <h3 id="privacy-queue-title">Privacy requests</h3>
+        <p class="small">Review requests for additional access, corrections or deletion. These controls record decisions only; they do not change or delete customer data. Respond through a verified channel if the customer cannot sign in.</p>
+        <button type="button" class="quiet" id="privacy-queue-refresh">Load open privacy requests</button>
+        <p id="privacy-queue-status" class="small" role="status"></p>
+        <div id="privacy-queue" class="record-list"></div>
+        <button type="button" class="quiet" id="privacy-queue-next" hidden>Load older open requests</button>
       </section>
       <section class="launch-overview" aria-labelledby="launch-overview-title">
         <div class="launch-overview-heading">

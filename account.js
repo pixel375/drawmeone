@@ -20,9 +20,10 @@
   let csrf = "";
   let status = null;
   let securityBusy=false;
+  let privacyBusy=false,privacyCase=null,privacyGeneration=0;
   let leaving=false;
   const securityForm=$("security-form");
-  function clearPrivateAccount(){csrf="";signedIn.hidden=true;$("account-name").textContent="";$("account-email").textContent="";$("account-session-count").textContent="";securityForm.reset();$("security-notice").textContent="";}
+  function clearPrivateAccount(){csrf="";signedIn.hidden=true;$("account-name").textContent="";$("account-email").textContent="";$("account-session-count").textContent="";securityForm.reset();$("security-notice").textContent="";++privacyGeneration;privacyCase=null;$("privacy-form").reset();$("privacy-case").textContent="";$("privacy-notice").textContent="";$("account-privacy").hidden=true;}
   function freshSignIn(reason){leaving=true;clearPrivateAccount();workspace.hidden=true;location.replace(location.pathname+"?session="+encodeURIComponent(reason));}
   window.addEventListener("pagehide",()=>{clearPrivateAccount();});
   window.addEventListener("pageshow",event=>{if(event.persisted)location.reload();});
@@ -62,6 +63,8 @@
     $("account-name").textContent = data.user.display_name;
     $("account-email").textContent = data.user.email;
     unavailable.hidden = true; workspace.hidden = true; signedIn.hidden = false;
+    $("account-privacy").hidden=data.privacy_self_service_enabled!==true;
+    if(data.privacy_self_service_enabled===true)loadPrivacyCase();
     return true;
   }
   function resetCaptcha(which) {
@@ -198,6 +201,72 @@
     finally{$("submit-signup").disabled=false;}
   });
 
+  function renderPrivacyCase(value){
+    privacyCase=value||null;
+    const open=privacyCase&&["submitted","in_review"].includes(privacyCase.status);
+    $("privacy-case").textContent=privacyCase?"Latest request #"+privacyCase.case_id+" · "+privacyCase.kind+" · "+privacyCase.status.replaceAll("_"," ")+(privacyCase.reply?"\n"+privacyCase.reply:""):"No privacy requests recorded.";
+    $("privacy-withdraw").hidden=!open;
+    for(const opt of $("privacy-action").options)opt.disabled=!!open&&opt.value!=="export";
+    if(open)$("privacy-action").value="export";
+    syncPrivacyForm();
+  }
+  function syncPrivacyForm(){
+    $("privacy-note-fields").hidden=$("privacy-action").value==="export";
+  }
+  async function loadPrivacyCase(){
+    const generation=++privacyGeneration;
+    try{
+      const response=await fetch("./api/auth/privacy.php",{credentials:"same-origin",cache:"no-store"});
+      if(generation!==privacyGeneration||leaving||!csrf)return;
+      if(response.status===401)return freshSignIn("expired");
+      const data=await response.json();
+      if(generation!==privacyGeneration||leaving||!csrf)return;
+      if(!response.ok||!data.ok)throw Error("privacy_status");
+      renderPrivacyCase(data.case);
+    }catch(_){if(generation===privacyGeneration)$("privacy-case").textContent="Request status unavailable. Refresh before retrying.";}
+  }
+  async function applyPrivacy(withdraw=false){
+    const form=$("privacy-form");
+    if(privacyBusy||securityBusy||!csrf||!form.reportValidity())return;
+    const action=$("privacy-action").value;
+    const payload={current_password:$("privacy-password").value,action:withdraw?"withdraw":action==="export"?"export":"submit"};
+    if(withdraw){
+      if(!privacyCase||!window.confirm("Withdraw this open privacy request?"))return;
+      payload.expected_version=privacyCase.version;
+    }else if(action!=="export"){
+      if(!window.confirm("Submit this privacy request for manual review? No data is changed or deleted automatically."))return;
+      payload.kind=action;payload.note=$("privacy-note").value.trim();
+    }
+    ++privacyGeneration;const generation=privacyGeneration;
+    privacyBusy=true;for(const field of form.querySelectorAll("input,select,textarea,button"))field.disabled=true;
+    $("sign-out").disabled=true;$("security-submit").disabled=true;$("privacy-notice").textContent="Processing…";
+    try{
+      const {response,body}=await request("./api/auth/privacy.php",payload,csrf);
+      if(generation!==privacyGeneration||leaving||!csrf)return;
+      if(response.status===401)return freshSignIn("expired");
+      if(!response.ok||!body.ok){
+        $("privacy-notice").textContent=response.status===413?"Your records exceed the self-service export limit. Submit an additional access request.":response.status===403?"Password or security confirmation not accepted.":response.status===409?"Request changed. Refresh before retrying.":"Action not confirmed. Please try again later.";return;
+      }
+      if(payload.action==="export"){
+        if(!body.export||body.export.format!=="drawmeone-customer-records-v1")throw Error("invalid_export");
+        const url=URL.createObjectURL(new Blob([JSON.stringify(body.export,null,2)],{type:"application/json"}));
+        const link=document.createElement("a");link.href=url;link.download="drawmeone-customer-records.json";document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);
+        $("privacy-notice").textContent="Export prepared. Store this private file securely.";
+      }else{
+        renderPrivacyCase(body.case);$("privacy-note").value="";
+        $("privacy-notice").textContent=withdraw?"Request withdrawn.":"Request recorded for manual review. No data has been deleted.";
+      }
+    }catch(_){if(generation===privacyGeneration)$("privacy-notice").textContent="Outcome uncertain. Refresh before retrying.";}
+    finally{
+      privacyBusy=false;$("privacy-password").value="";
+      for(const field of form.querySelectorAll("input,select,textarea,button"))field.disabled=false;
+      $("sign-out").disabled=false;$("security-submit").disabled=false;
+    }
+  }
+  $("privacy-action").addEventListener("change",syncPrivacyForm);
+  $("privacy-form").addEventListener("submit",event=>{event.preventDefault();applyPrivacy();});
+  $("privacy-withdraw").addEventListener("click",()=>applyPrivacy(true));
+
   function syncSecurityForm(){
     const change=$("security-action").value==="change_password";
     $("security-new-fields").hidden=!change;
@@ -206,7 +275,7 @@
   }
   $("security-action").addEventListener("change",syncSecurityForm);
   securityForm.addEventListener("submit",async event=>{
-    event.preventDefault();if(securityBusy||!csrf||!securityForm.reportValidity())return;
+    event.preventDefault();if(securityBusy||privacyBusy||!csrf||!securityForm.reportValidity())return;
     const action=$("security-action").value;
     const payload={action,current_password:$("security-current").value};
     if(action==="change_password"){
@@ -237,7 +306,7 @@
     }
   });
   $("sign-out").addEventListener("click",async()=>{
-    if(securityBusy||!csrf)return;
+    if(securityBusy||privacyBusy||!csrf)return;
     securityBusy=true;$("sign-out").disabled=true;$("security-submit").disabled=true;
     try{
       const {response,body}=await request("./api/auth/logout.php",{},csrf);

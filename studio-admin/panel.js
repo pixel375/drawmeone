@@ -101,6 +101,59 @@
       $("intake-save").disabled=intakeVersion===null;
     }
   });
+  let privacyCursor=null,privacyQueueBusy=false,privacyQueueGeneration=0;
+  function clearPrivacyQueue(){
+    ++privacyQueueGeneration;privacyCursor=null;$("privacy-queue").replaceChildren();$("privacy-queue-status").textContent="";$("privacy-queue-next").hidden=true;
+  }
+  function privacyQueueCard(item){
+    const card=document.createElement("article");card.className="notification-card";
+    card.append(textNode("strong","Case #"+item.case_id+" · "+item.kind+" · "+item.status.replaceAll("_"," ")),
+      textNode("p",item.display_name+" · "+item.email,"small"),textNode("p",item.note||"No additional details.","small"));
+    if(item.reply)card.append(textNode("p","Last reply: "+item.reply,"small"));
+    const form=document.createElement("form");form.className="intake-form";
+    const decision=textNode("label","Record outcome");const select=document.createElement("select");
+    if(item.status==="submitted")select.append(new Option("Start review","in_review"));
+    select.append(new Option("Record completed response","resolved"),new Option("Record declined request","declined"));decision.append(select);
+    const replyLabel=textNode("label","Customer-visible reply");const reply=document.createElement("textarea");reply.maxLength=1000;reply.rows=3;replyLabel.append(reply);
+    const ack=document.createElement("label");ack.className="order-date-ack";const check=document.createElement("input");check.type="checkbox";check.required=true;
+    ack.append(check,textNode("span","I confirm this records only the actual review or outcome, not an automatic deletion or correction."));
+    const submit=textNode("button","Save privacy decision","quiet");submit.type="submit";form.append(decision,replyLabel,ack,submit);
+    form.addEventListener("submit",async event=>{
+      event.preventDefault();if(privacyQueueBusy||!csrf||!check.checked)return;
+      if(select.value!=="in_review"&&reply.value.trim().length<10){$("privacy-queue-status").textContent="Provide a clear explanation of the outcome.";return;}
+      if(!window.confirm("Record this customer-visible privacy decision? No data is modified."))return;
+      privacyQueueBusy=true;const gen=privacyQueueGeneration;
+      for(const field of form.querySelectorAll("input,select,textarea,button"))field.disabled=true;
+      try{
+        const {response,data}=await post("privacy.php",{customer_id:item.customer_id,expected_version:item.version,status:select.value,reply:reply.value.trim(),confirm_record:true},csrf);
+        if(gen!==privacyQueueGeneration||leavingSession)return;
+        if(response.status===401)return sessionExpired();
+        if(!response.ok||!data.ok){$("privacy-queue-status").textContent="Decision not confirmed. Refresh the queue before retrying.";return;}
+        privacyQueueBusy=false;await loadPrivacyQueue(false);
+      }catch(_){if(gen===privacyQueueGeneration)$("privacy-queue-status").textContent="Outcome uncertain. Refresh the queue before retrying.";}
+      finally{privacyQueueBusy=false;for(const field of form.querySelectorAll("input,select,textarea,button"))field.disabled=false;}
+    });
+    card.append(form);return card;
+  }
+  async function loadPrivacyQueue(older=false){
+    if(privacyQueueBusy||!csrf||(older&&privacyCursor===null))return;
+    const gen=++privacyQueueGeneration;privacyQueueBusy=true;
+    $("privacy-queue-refresh").disabled=$("privacy-queue-next").disabled=true;
+    try{
+      const {response,data}=await get("privacy.php"+(older?"?before="+encodeURIComponent(privacyCursor):""));
+      if(gen!==privacyQueueGeneration||leavingSession)return;
+      if(response.status===401)return sessionExpired();
+      if(!response.ok||!data.ok||!Array.isArray(data.cases))throw Error("privacy_queue");
+      if(!older)$("privacy-queue").replaceChildren();
+      for(const item of data.cases)$("privacy-queue").append(privacyQueueCard(item));
+      privacyCursor=Number.isSafeInteger(data.next_before)?data.next_before:null;
+      $("privacy-queue-next").hidden=privacyCursor===null;
+      $("privacy-queue-status").textContent=$("privacy-queue").children.length+" open request(s) loaded.";
+    }catch(_){if(gen===privacyQueueGeneration)$("privacy-queue-status").textContent="Privacy queue unavailable. Refresh to retry.";}
+    finally{privacyQueueBusy=false;$("privacy-queue-refresh").disabled=$("privacy-queue-next").disabled=false;}
+  }
+  $("privacy-queue-refresh").addEventListener("click",()=>loadPrivacyQueue(false));
+  $("privacy-queue-next").addEventListener("click",()=>loadPrivacyQueue(true));
   async function overview() {
     const { response, data } = await get("overview.php");
     if (response.status === 401) return sessionExpired();
@@ -1990,6 +2043,7 @@
     ++requestLoadGeneration;
     ++requestListGeneration;
     ++messageGeneration;
+    clearPrivacyQueue();
     $("workspace").hidden = true;
     const url = new URL(location.href);
     url.search = "";
