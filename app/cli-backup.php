@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 require_once __DIR__ . '/references.php';
+require_once __DIR__ . '/deliveries.php';
 
 // Private encrypted, local-only operational backups. No HTTP entry point,
 // no arbitrary paths/commands/SQL and no secrets in output or GitHub.
@@ -157,7 +158,7 @@ function dmo_backup_archive(string $work): string
     $artParent = dirname(dmo_artwork_storage_root());
     $root = dmo_artwork_storage_root();
     $refs = dmo_refs_storage_root();
-    foreach ([$root, $refs] as $dir) {
+    foreach ([$root, $refs, dmo_delivery_storage_root()] as $dir) {
         if (is_link($dir)) throw new RuntimeException('Private image root is a symlink.');
         if (is_dir($dir)) {
             $argv[] = '-C';
@@ -364,10 +365,10 @@ function dmo_backup_restore_check(string $source, string $key, string $root): ar
             // Prevent traversal, symlinks and arbitrary files during extraction.
             if ($member === 'database.sql') continue;
             if (!preg_match(
-                '~^drawmeone-(?:artworks|references)/(?:[a-f0-9]{32}/(?:thumb|display)\.webp)?$~D',
+                '~^drawmeone-(?:artworks|references|deliveries)/(?:[a-f0-9]{32}/(?:thumb|display)\.webp)?$~D',
                 $member
             ) && !preg_match(
-                '~^drawmeone-(?:artworks|references)/[a-f0-9]{32}/?$~D',
+                '~^drawmeone-(?:artworks|references|deliveries)/[a-f0-9]{32}/?$~D',
                 $member
             )) {
                 throw new RuntimeException('Unsafe recovery member name.');
@@ -408,7 +409,7 @@ function dmo_backup_restore_check(string $source, string $key, string $root): ar
         }
         $images = 0;
         $dirs = 0;
-        foreach (['drawmeone-artworks', 'drawmeone-references'] as $base) {
+        foreach (['drawmeone-artworks', 'drawmeone-references', 'drawmeone-deliveries'] as $base) {
             $folder = $extracted . '/' . $base;
             if (!file_exists($folder)) continue;
             if (is_link($folder) || !is_dir($folder)) {

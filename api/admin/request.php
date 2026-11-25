@@ -2,6 +2,7 @@
 declare(strict_types=1);
 require_once dirname(__DIR__, 2) . '/app/commission-workflow.php';
 require_once dirname(__DIR__, 2) . '/app/notifications.php';
+require_once dirname(__DIR__, 2) . '/app/deliveries.php';
 dmo_reject_non_get();
 
 try {
@@ -24,6 +25,8 @@ try {
     dmo_json(200, [
         'ok' => true,
         'detail' => $detail,
+        'delivery_drafts' => dmo_delivery_drafts($db,$id),
+        'delivery_staging_enabled' => dmo_delivery_staging_enabled($db),
         'notification_options' => dmo_notification_options($db,$detail),
         'notifications_enabled' => dmo_notifications_enabled(),
         'admin_writes_enabled' => dmo_workflow_writes_enabled(),

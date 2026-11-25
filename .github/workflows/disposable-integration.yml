@@ -81,6 +81,7 @@ jobs:
           gzip -dc database/001_initial_schema.sql.gz | mariadb -h "$DB_HOST" -u "$DB_USER" "$DB_NAME"
           mariadb -h "$DB_HOST" -u "$DB_USER" "$DB_NAME" < database/002_auth_rate_limits.sql
           mariadb -h "$DB_HOST" -u "$DB_USER" "$DB_NAME" < database/003_private_references.sql
+          mariadb -h "$DB_HOST" -u "$DB_USER" "$DB_NAME" < database/004_delivery_drafts.sql
           echo "DISPOSABLE_SCHEMA=READY"
       - name: Run ownership, privacy and quote/order persistence contract
         run: php tests/integration_contract.php

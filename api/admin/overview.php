@@ -5,6 +5,7 @@ require_once dirname(__DIR__, 2) . '/app/orders.php';
 require_once dirname(__DIR__, 2) . '/app/references.php';
 require_once dirname(__DIR__, 2) . '/app/backup-health.php';
 require_once dirname(__DIR__, 2) . '/app/notifications.php';
+require_once dirname(__DIR__, 2) . '/app/deliveries.php';
 dmo_reject_non_get();
 
 try {
@@ -66,6 +67,9 @@ try {
         ['key' => 'orders', 'label' => 'Order confirmation',
          'status' => dmo_orders_admin_enabled() ? 'ready' : 'blocked',
          'detail' => 'Unpaid confirmation and individually agreed scheduling; no payment verification'],
+        ['key'=>'delivery_drafts','label'=>'Private artwork staging',
+         'status'=>dmo_delivery_staging_enabled($db)?'ready':'blocked',
+         'detail'=>'Artist-only draft storage; customer release not implemented'],
         ['key' => 'notifications', 'label' => 'Customer email notices',
          'status' => dmo_notifications_enabled() ? 'ready' : 'blocked',
          'detail' => 'Optional artist-triggered notices to verified email-preferring customers; no automated sends'],
