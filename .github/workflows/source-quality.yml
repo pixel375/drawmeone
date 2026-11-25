@@ -10,6 +10,7 @@ on:
       - '*.js'
       - '*.html'
       - 'tests/**'
+      - 'ops/backup_freshness.py'
       - '.github/workflows/source-quality.yml'
   pull_request:
     paths:
@@ -19,6 +20,7 @@ on:
       - '*.js'
       - '*.html'
       - 'tests/**'
+      - 'ops/backup_freshness.py'
       - '.github/workflows/source-quality.yml'
 
 permissions:
@@ -61,4 +63,5 @@ jobs:
           php tests/quote_smoke.php
           php tests/order_smoke.php
           php tests/config_review_contract.php
+          python3 tests/backup_freshness_contract.py
           DMO_CI_INTEGRATION=1 php tests/backup_health_contract.php

@@ -1,1 +1,1 @@
-Verify privacy credential clearing, printable summary improvements and configuration warning detail.
+Expand live syntax coverage for recent authenticated features.

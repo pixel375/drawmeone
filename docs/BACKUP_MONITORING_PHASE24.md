@@ -28,3 +28,8 @@ No backup bytes, customer records, recovery keys or off-site provider credential
 The upgraded Hostinger backup command completed successfully in [run 45445427769](https://github.com/pixel375/drawmeone/actions/runs/45445427769): it verified a newly encrypted snapshot, performed the pre-promotion isolated recovery check, retained **4** local encrypted snapshots and inspected **10** private WebP files. `offsite_backup=not_configured` remains explicit.
 
 The newly registered [backup-incident monitor run 45445471845](https://github.com/pixel375/drawmeone/actions/runs/45445471845) completed with `backup_alert=healthy` following this successful production backup. A real failure was **not** induced against production; failure-side issue creation is implemented but not exercised with real production outages.
+
+
+## Missed schedule detection
+
+Separate daily workflow checks the latest successful main-branch encrypted backup run at 14:35 UTC. No success within 36 hours opens one deduplicated issue; a recent success resolves it. This catches absent scheduled runs as well as repeated failures. It uses GitHub run metadata only, not actual snapshot bytes, and does not replace the local integrity/freshness check or independent recovery. No production backup is exported by this monitor. Synthetic classification tests cover empty history, delayed/failed runs, wrong branches, timestamp bounds and ordering.

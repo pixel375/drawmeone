@@ -1,0 +1,55 @@
+name: DrawMeOne — Backup Schedule Freshness
+
+# Distinct from failure alerts: detects missing or overdue successful runs.
+on:
+  schedule:
+    - cron: '35 14 * * *'
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/backup-schedule-freshness.yml']
+
+permissions:
+  actions: read
+  contents: read
+  issues: write
+
+concurrency:
+  group: drawmeone-backup-freshness
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Evaluate latest successful main-branch backup run
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          result=$(gh api "repos/$REPO/actions/workflows/hostinger-private-backup.yml/runs?branch=main&status=success&per_page=10" | python3 ops/backup_freshness.py)
+          state=$(jq -er '.state' <<< "$result")
+          run_id=$(jq -r '.run_id // empty' <<< "$result")
+          title='[DrawMeOne Ops] Successful backup schedule overdue'
+          [[ "$state" == recent_success || "$state" == stale_success || "$state" == no_success ]]
+          [[ -z "$run_id" || "$run_id" =~ ^[0-9]+$ ]]
+          current=$(gh api --paginate "repos/$REPO/issues?state=open&per_page=100" --jq '.[] | select(.pull_request == null and .title == "[DrawMeOne Ops] Successful backup schedule overdue") | .number' | head -n 1)
+          if [[ "$state" == recent_success ]]; then
+            if [[ -n "$current" ]]; then
+              gh api --method POST "repos/$REPO/issues/$current/comments" -f body="Recent successful backup workflow confirmed: https://github.com/$REPO/actions/runs/$run_id. This is workflow freshness evidence only, not offsite recovery." --silent
+              gh api --method PATCH "repos/$REPO/issues/$current" -f state=closed -f state_reason=completed --silent
+            fi
+            echo 'backup_schedule=recent_success'
+          else
+            message="No successful main-branch encrypted backup workflow was found within 36 hours. Review scheduled workflow execution, runner availability and local snapshot freshness. This monitor does not inspect backup bytes or keys. Do not paste private information into issues."
+            if [[ -n "$run_id" ]]; then message="$message Last successful run: https://github.com/$REPO/actions/runs/$run_id"; fi
+            if [[ -z "$current" ]]; then
+              gh api --method POST "repos/$REPO/issues" -f title="$title" -f body="$message" --silent
+            fi
+            echo "backup_schedule=$state"
+            exit 1
+          fi
