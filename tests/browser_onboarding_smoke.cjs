@@ -259,7 +259,7 @@ async function privacySelfService(browser){
   const m=await fakeService(page,{signedIn:true,privacy:true});
   try{
     await page.goto(base+"/account.html",{waitUntil:"domcontentloaded"});
-    await page.locator("#account-privacy summary").click();
+    await page.locator("#account-privacy > summary").click();
     await waitText(page,"#privacy-case","No privacy requests");
     await page.locator("#privacy-password").fill("ci-current-password");
     const downloaded=page.waitForEvent("download");
@@ -284,6 +284,13 @@ async function privacySelfService(browser){
     assert.equal(await page.locator("#privacy-withdraw").isVisible(),false);
     await page.locator("#privacy-history summary").click();
     await waitText(page,"#privacy-history-list","withdrawn");
+    await page.route("**/api/auth/privacy.php",route=>route.fulfill({status:503,body:"Unavailable"}));
+    await page.locator("#privacy-history-refresh").click();
+    await waitText(page,"#privacy-case","Request status unavailable");
+    await page.locator("#privacy-action").selectOption("deletion");
+    assert.equal(await page.locator("#privacy-submit").isEnabled(),false);
+    assert.equal(await page.locator("#privacy-history-list article").count(),0);
+    assert.equal(await page.locator("#privacy-withdraw").isVisible(),false);
     assert.equal(m.writes.filter(x=>x.endpoint==="privacy.php").length,3);
     await overflow(page);
     console.log("PASS: private JSON export, deletion request and withdrawal UI");

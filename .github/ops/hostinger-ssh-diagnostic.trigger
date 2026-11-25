@@ -1,1 +1,1 @@
-Verify private customer directory and exact customer request scope.
+Verify scoped request detail isolation and privacy fail-closed controls.

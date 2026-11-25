@@ -130,15 +130,16 @@
         const {response,data}=await post("privacy.php",{customer_id:item.customer_id,expected_version:item.version,status:select.value,reply:reply.value.trim(),confirm_record:true},csrf);
         if(gen!==privacyQueueGeneration||leavingSession)return;
         if(response.status===401)return sessionExpired();
-        if(!response.ok||!data.ok){$("privacy-queue-status").textContent="Decision not confirmed. Refresh the queue before retrying.";return;}
+        if(!response.ok||!data.ok){clearPrivacyQueue();$("privacy-queue-status").textContent="Decision not confirmed. Refresh the queue before retrying.";return;}
         privacyQueueBusy=false;await loadPrivacyQueue(false);
-      }catch(_){if(gen===privacyQueueGeneration)$("privacy-queue-status").textContent="Outcome uncertain. Refresh the queue before retrying.";}
+      }catch(_){if(gen===privacyQueueGeneration){clearPrivacyQueue();$("privacy-queue-status").textContent="Outcome uncertain. Refresh the queue before retrying.";}}
       finally{privacyQueueBusy=false;for(const field of form.querySelectorAll("input,select,textarea,button"))field.disabled=false;}
     });
     card.append(form);return card;
   }
   async function loadPrivacyQueue(older=false){
     if(privacyQueueBusy||!csrf||(older&&privacyCursor===null))return;
+    if(!older)clearPrivacyQueue();
     const gen=++privacyQueueGeneration;privacyQueueBusy=true;
     $("privacy-queue-refresh").disabled=$("privacy-queue-next").disabled=$("privacy-queue-view").disabled=true;
     try{
@@ -152,7 +153,7 @@
       privacyCursor=Number.isSafeInteger(data.next_before)?data.next_before:null;
       $("privacy-queue-next").hidden=privacyCursor===null;
       $("privacy-queue-status").textContent=$("privacy-queue").children.length+" "+view+" request(s) loaded.";
-    }catch(_){if(gen===privacyQueueGeneration)$("privacy-queue-status").textContent="Privacy queue unavailable. Refresh to retry.";}
+    }catch(_){if(gen===privacyQueueGeneration){clearPrivacyQueue();$("privacy-queue-status").textContent="Privacy queue unavailable. Refresh to retry.";}}
     finally{privacyQueueBusy=false;$("privacy-queue-refresh").disabled=$("privacy-queue-next").disabled=$("privacy-queue-view").disabled=false;}
   }
   $("privacy-queue-view").addEventListener("change",()=>{if(!privacyQueueBusy){clearPrivacyQueue();loadPrivacyQueue(false);}});
@@ -294,8 +295,12 @@
   });
 
   let requestCustomerId=null;
-  function setRequestCustomer(id=null){requestCustomerId=id;$("request-customer-scope").hidden=id===null;$("request-customer-label").textContent=id===null?"":"Commission history for customer #"+id;}
-  $("request-customer-clear").addEventListener("click",()=>{setRequestCustomer();requestListPage=1;requests();});
+  function setRequestCustomer(id=null){
+    if(requestBusy&&!leavingSession)return false;
+    if(id!==requestCustomerId||id!==null)closeRequestDetail();
+    requestCustomerId=id;$("request-customer-scope").hidden=id===null;$("request-customer-label").textContent=id===null?"":"Commission history for customer #"+id;return true;
+  }
+  $("request-customer-clear").addEventListener("click",()=>{if(!setRequestCustomer())return;requestListPage=1;requests();});
   let requestListPage = 1;
   let requestListQuery = "";
   let requestListFilter = "all";
@@ -367,7 +372,7 @@
   document.querySelectorAll("[data-request-queue]").forEach(button=>button.addEventListener("click",()=>{
     requestListPage=1;
     requestListQuery="";
-    setRequestCustomer();
+    if(!setRequestCustomer())return;
     requestListFilter=button.dataset.requestQueue;
     $("request-list-query").value="";
     $("request-list-filter").value=requestListFilter;
@@ -1227,8 +1232,8 @@
     finally{requestBusy=false;updateRequestButtons();}
   });
 
-  $("request-detail-close").addEventListener("click", () => {
-    if (requestBusy) return;
+  function closeRequestDetail(force=false) {
+    if (requestBusy&&!force) return false;
     ++requestLoadGeneration;
     selectedRequestId = null;
     reviewStatus = null;
@@ -1240,8 +1245,9 @@
     $("request-detail").hidden = true;
     resetRequestDrafts();
     clearRequestContent();
-    updateRequestButtons();
-  });
+    updateRequestButtons();return true;
+  }
+  $("request-detail-close").addEventListener("click",()=>closeRequestDetail());
 
   function addQuoteLine(description = "", amount = "") {
     const lines = $("quote-lines");
@@ -2206,10 +2212,10 @@
         const card=document.createElement("article");card.className="notification-card";card.dataset.customerId=String(row.id);
         card.append(textNode("strong",row.display_name||"Customer"),textNode("p",row.email||"","small"),textNode("p","Account #"+row.id+" · "+String(row.account_status).replaceAll("_"," ")+" · "+(row.email_verified?"Email verified":"Email not verified"),"small"),textNode("p",row.request_count+" commission request(s)"+(row.last_request_at?" · Latest: "+row.last_request_at:""),"small"));
         const btn=textNode("button","View commission history","quiet");btn.type="button";btn.disabled=row.request_count===0;
-        btn.addEventListener("click",()=>{setRequestCustomer(row.id);requestListPage=1;requestListQuery="";requestListFilter="all";$("request-list-query").value="";$("request-list-filter").value="all";selectPanel("requests");});card.append(btn);list.append(card);
+        btn.addEventListener("click",()=>{if(!setRequestCustomer(row.id))return;requestListPage=1;requestListQuery="";requestListFilter="all";$("request-list-query").value="";$("request-list-filter").value="all";selectPanel("requests");});card.append(btn);list.append(card);
       }
       customerCursor=Number.isSafeInteger(data.next_before)?data.next_before:null;next.hidden=customerCursor===null;status.textContent=list.children.length+" customer(s) loaded.";
-    }catch(_){if(generation===customerGeneration){clearCustomers();status.textContent="Customer directory unavailable. Search again to retry.";}}
+    }catch(_){if(generation===customerGeneration){clearCustomers();next.disabled=false;status.textContent="Customer directory unavailable. Search again to retry.";}}
     finally{if(generation===customerGeneration)next.disabled=false;}
   }
   $("customer-filters").addEventListener("submit",event=>{event.preventDefault();loadCustomers();});
@@ -2253,15 +2259,15 @@
         card.append(textNode("strong",financeLabels[item.record_state]+" · "+financeAmount(item.amount_minor,item.currency)),
           textNode("p","Order #"+item.order_id+" · "+item.public_ref+" · "+String(item.method).replaceAll("_"," "),"small"),
           textNode("p","Recorded: "+item.created_at+(item.verified_at?" · Reviewed: "+item.verified_at:""),"small"));
-        const button=textNode("button","Open commission","quiet");button.type="button";button.addEventListener("click",()=>{selectPanel("requests");openRequest(item.request_id);});card.append(button);$("finance-records").append(card);
+        const button=textNode("button","Open commission","quiet");button.type="button";button.addEventListener("click",()=>{if(!setRequestCustomer())return;requestListPage=1;requestListQuery="";requestListFilter="all";$("request-list-query").value="";$("request-list-filter").value="all";selectPanel("requests");openRequest(item.request_id);});card.append(button);$("finance-records").append(card);
       }
       financeCursor=Number.isSafeInteger(data.next_before)?data.next_before:null;
       financeReport={scope:"local_records_only",as_of:data.as_of,filter,currency};
       $("finance-next").hidden=financeCursor===null;
       $("finance-status").textContent=financeRecords.length+" payment record(s) loaded · local evidence only.";
       $("finance-export").disabled=financeRecords.length===0;
-    }catch(_){if(generation===financeGeneration){clearFinance();$("finance-status").textContent="Payment records unavailable. Refresh to retry.";}}
-    finally{if(generation===financeGeneration||financeReport===null){$("finance-next").disabled=$("finance-refresh").disabled=false;}}
+    }catch(_){if(generation===financeGeneration){clearFinance();$("finance-next").disabled=$("finance-refresh").disabled=false;$("finance-status").textContent="Payment records unavailable. Refresh to retry.";}}
+    finally{if(generation===financeGeneration){$("finance-next").disabled=$("finance-refresh").disabled=false;}}
   }
   $("finance-state").addEventListener("change",()=>loadFinance());
   $("finance-currency").addEventListener("change",()=>loadFinance());
@@ -2314,7 +2320,7 @@
     ++artworkGeneration;
     artworkRecords=[];artworkWriteEnabled=false;$("artwork-list").replaceChildren();
     renderLaunchEvidence(null);
-    clearPrivacyQueue();clearFinance();clearCustomers();setRequestCustomer();$("customer-query").value="";
+    closeRequestDetail(true);clearPrivacyQueue();clearFinance();clearCustomers();setRequestCustomer();$("customer-query").value="";
     $("workspace").hidden = true;
     const url = new URL(location.href);
     url.search = "";

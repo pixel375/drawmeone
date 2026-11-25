@@ -170,6 +170,12 @@ async function verifyArtistDesk(browser, width) {
       } else if(name==="customers"){
         await page.locator("#customer-directory-list article").first().waitFor();
         assert.match(await page.locator("#customer-directory-list").innerText(),/Synthetic Customer/);
+        await page.getByRole("button",{name:"View commission history"}).click();
+        await page.locator("#request-list .empty-state").waitFor();
+        assert.match(await page.locator("#request-customer-label").innerText(),/customer #44/);
+        assert.equal(await page.locator("#request-detail").isVisible(),false);
+        await page.locator("#request-customer-clear").click();
+        assert.equal(await page.locator("#request-customer-scope").isVisible(),false);
       } else if(name==="finance"){
         await page.locator("#finance-records article").first().waitFor();
         assert.match(await page.locator("#finance-summary").innerText(),/CAD 30.00/);

@@ -20,10 +20,10 @@
   let csrf = "";
   let status = null;
   let securityBusy=false;
-  let privacyBusy=false,privacyCase=null,privacyGeneration=0,privacyCursor=null;
+  let privacyBusy=false,privacyCase=null,privacyGeneration=0,privacyCursor=null,privacyReady=false,privacyLoading=false;
   let leaving=false;
   const securityForm=$("security-form");
-  function clearPrivateAccount(){csrf="";signedIn.hidden=true;$("account-name").textContent="";$("account-email").textContent="";$("account-session-count").textContent="";securityForm.reset();$("security-notice").textContent="";++privacyGeneration;privacyCase=null;$("privacy-form").reset();$("privacy-case").textContent="";$("privacy-notice").textContent="";privacyCursor=null;$("privacy-history-list").replaceChildren();$("privacy-history-status").textContent="";$("privacy-history-more").hidden=true;$("account-privacy").hidden=true;}
+  function clearPrivateAccount(){csrf="";signedIn.hidden=true;$("account-name").textContent="";$("account-email").textContent="";$("account-session-count").textContent="";securityForm.reset();$("security-notice").textContent="";++privacyGeneration;privacyCase=null;privacyReady=false;privacyLoading=false;$("privacy-form").reset();$("privacy-case").textContent="";$("privacy-notice").textContent="";privacyCursor=null;$("privacy-history-list").replaceChildren();$("privacy-history-status").textContent="";$("privacy-history-more").hidden=true;$("account-privacy").hidden=true;}
   function freshSignIn(reason){leaving=true;clearPrivateAccount();workspace.hidden=true;location.replace(location.pathname+"?session="+encodeURIComponent(reason));}
   window.addEventListener("pagehide",()=>{clearPrivateAccount();});
   window.addEventListener("pageshow",event=>{if(event.persisted)location.reload();});
@@ -211,7 +211,10 @@
     syncPrivacyForm();
   }
   function syncPrivacyForm(){
-    $("privacy-note-fields").hidden=$("privacy-action").value==="export";
+    const exporting=$("privacy-action").value==="export";
+    $("privacy-note-fields").hidden=exporting;
+    $("privacy-submit").disabled=privacyBusy||privacyLoading||(!exporting&&!privacyReady);
+    $("privacy-withdraw").disabled=privacyBusy||privacyLoading||!privacyReady;
   }
   function renderPrivacyHistory(history,older){
     const list=$("privacy-history-list");
@@ -234,6 +237,7 @@
   async function loadPrivacyCase(older=false){
     if(older&&privacyCursor===null)return;
     const generation=++privacyGeneration;
+    privacyReady=false;privacyLoading=true;syncPrivacyForm();
     $("privacy-history-refresh").disabled=$("privacy-history-more").disabled=true;
     try{
       const response=await fetch("./api/auth/privacy.php"+(older?"?before="+encodeURIComponent(privacyCursor):""),{credentials:"same-origin",cache:"no-store"});
@@ -242,16 +246,17 @@
       const data=await response.json();
       if(generation!==privacyGeneration||leaving||!csrf)return;
       if(!response.ok||!data.ok)throw Error("privacy_status");
-      renderPrivacyCase(data.case);renderPrivacyHistory(data.history,older);
-    }catch(_){if(generation===privacyGeneration){$("privacy-case").textContent="Request status unavailable. Refresh before retrying.";$("privacy-history-status").textContent="Case history unavailable. Refresh to retry.";}}
-    finally{if(generation===privacyGeneration){$("privacy-history-refresh").disabled=$("privacy-history-more").disabled=false;}}
+      privacyReady=data.enabled===true;renderPrivacyCase(data.case);renderPrivacyHistory(data.history,older);
+    }catch(_){if(generation===privacyGeneration){privacyReady=false;privacyCase=null;privacyCursor=null;$("privacy-withdraw").hidden=true;$("privacy-history-list").replaceChildren();$("privacy-history-more").hidden=true;$("privacy-case").textContent="Request status unavailable. Refresh before retrying.";$("privacy-history-status").textContent="Case history unavailable. Refresh to retry.";}}
+    finally{if(generation===privacyGeneration){privacyLoading=false;$("privacy-history-refresh").disabled=$("privacy-history-more").disabled=false;syncPrivacyForm();}}
   }
   $("privacy-history-refresh").addEventListener("click",()=>{if(!privacyBusy)loadPrivacyCase();});
   $("privacy-history-more").addEventListener("click",()=>{if(!privacyBusy)loadPrivacyCase(true);});
   async function applyPrivacy(withdraw=false){
     const form=$("privacy-form");
-    if(privacyBusy||securityBusy||!csrf||!form.reportValidity())return;
+    if(privacyBusy||privacyLoading||securityBusy||!csrf||!form.reportValidity())return;
     const action=$("privacy-action").value;
+    if((withdraw||action!=="export")&&!privacyReady)return;
     const payload={current_password:$("privacy-password").value,action:withdraw?"withdraw":action==="export"?"export":"submit"};
     if(withdraw){
       if(!privacyCase||!window.confirm("Withdraw this open privacy request?"))return;
@@ -268,7 +273,7 @@
       if(generation!==privacyGeneration||leaving||!csrf)return;
       if(response.status===401)return freshSignIn("expired");
       if(!response.ok||!body.ok){
-        if(response.status===409)await loadPrivacyCase();
+        if(response.status===409||response.status>=500){privacyReady=false;await loadPrivacyCase();}
         $("privacy-notice").textContent=response.status===413?"Your records exceed the self-service export limit. Submit an additional access request.":response.status===403?"Password or security confirmation not accepted.":response.status===409?"Request changed. Refresh before retrying.":"Action not confirmed. Please try again later.";return;
       }
       if(payload.action==="export"){
@@ -280,11 +285,11 @@
         renderPrivacyCase(body.case);$("privacy-note").value="";await loadPrivacyCase();
         $("privacy-notice").textContent=withdraw?"Request withdrawn.":"Request recorded for manual review. No data has been deleted.";
       }
-    }catch(_){if(generation===privacyGeneration)$("privacy-notice").textContent="Outcome uncertain. Refresh before retrying.";}
+    }catch(_){if(generation===privacyGeneration){privacyReady=false;$("privacy-notice").textContent="Outcome uncertain. Refresh before retrying.";}}
     finally{
       privacyBusy=false;$("privacy-password").value="";
       for(const field of form.querySelectorAll("input,select,textarea,button"))field.disabled=false;
-      $("sign-out").disabled=false;$("security-submit").disabled=false;
+      $("sign-out").disabled=false;$("security-submit").disabled=false;syncPrivacyForm();
     }
   }
   $("privacy-action").addEventListener("change",syncPrivacyForm);

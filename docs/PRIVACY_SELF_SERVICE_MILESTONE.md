@@ -6,3 +6,6 @@ Follow-up: real isolated HTTP backend integration passed. Added browser tests fo
 
 
 Case history now groups immutable audit events by original case ID and returns the latest state per case, 25 per page. Customers see only their own cases, artists can browse closed outcomes separately from the actionable open queue. Closed history is read-only, with no new data deletion/correction permissions. Cursor filtering occurs after selecting each case's latest state.
+
+
+Customer privacy case actions require a successfully loaded current case state; unavailable history clears stale records and locks submission/withdrawal until refresh. Export remains an independently authorized action. Uncertain artist decisions invalidate the old queue. Corrected browser selector for the nested history disclosure and added failure-state tests.
