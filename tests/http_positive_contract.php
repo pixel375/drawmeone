@@ -115,7 +115,7 @@ try {
         'DMO_CUSTOMER_MESSAGING_ENABLED'=>'1',
         'DMO_ORDER_ADMIN_ENABLED'=>'1','DMO_ORDER_TERMS_APPROVED'=>'1',
         'DMO_MANUAL_PAYMENT_ENABLED'=>'1','DMO_MANUAL_PAYMENT_TERMS_APPROVED'=>'1',
-        'DMO_REGISTRATION_ENABLED'=>'0','DMO_REQUESTS_ENABLED'=>'1','DMO_INTAKE_CONTROL_ENABLED'=>'1','DMO_PRIVACY_SELF_SERVICE_ENABLED'=>'1',
+        'DMO_REGISTRATION_ENABLED'=>'0','DMO_REQUESTS_ENABLED'=>'1','DMO_INTAKE_CONTROL_ENABLED'=>'1','DMO_CHECKOUT_LINKS_ENABLED'=>'1','DMO_CHECKOUT_TERMS_APPROVED'=>'1','DMO_CHECKOUT_HOST'=>'checkout.example.invalid','DMO_CHECKOUT_PATH_PREFIX'=>'/invoice/','DMO_PRIVACY_SELF_SERVICE_ENABLED'=>'1',
     ] as $name=>$value) putenv($name.'='.$value);
     if (!is_string($log)) throw new RuntimeException('Local server log unavailable.');
     $process=proc_open([
@@ -390,6 +390,40 @@ try {
     qa_positive($code===409,'duplicate_order_confirmation_rejected');
 
     $orderId=$order['order_id'];
+    $link=['action'=>'issue_checkout_link','request_id'=>$requestA,'order_id'=>$orderId,'expected_link_id'=>null,'url'=>'https://checkout.example.invalid/invoice/ci-first','currency'=>'CAD','amount_minor'=>3000,'confirm_invoice'=>true];
+    foreach(['http://checkout.example.invalid/invoice/ci-first','https://checkout.example.invalid.evil.invalid/invoice/ci-first','https://checkout.example.invalid@evil.invalid/invoice/ci-first','https://checkout.example.invalid/invoice/../other','https://checkout.example.invalid/invoice/ci-first?redirect=evil','https://checkout.example.invalid/invoice/%2fother'] as $bad){
+        [$code]=qa_http('/api/admin/request-actions.php',$tokenAdmin,'__Host-dmo_admin',array_replace($link,['url'=>$bad]),$csrfAdmin);
+        qa_positive($code===422,'unsafe_checkout_url_rejected');
+    }
+    [$code]=qa_http('/api/admin/request-actions.php',$tokenAdmin,'__Host-dmo_admin',array_replace($link,['amount_minor'=>1]),$csrfAdmin);
+    qa_positive($code===409,'checkout_requires_exact_quote_total');
+    [$code,$created]=qa_http('/api/admin/request-actions.php',$tokenAdmin,'__Host-dmo_admin',$link,$csrfAdmin);
+    qa_positive($code===201&&$created['money_moved']===false,'artist_issues_invoice_without_charge');
+    $linkId=$created['link_id'];
+    [$code,$detail]=qa_http('/api/request.php?ref='.$referenceA,$tokenA);
+    qa_positive($code===200&&$detail['checkout_links'][0]['id']===$linkId&&!str_contains(json_encode($detail,JSON_THROW_ON_ERROR),'ci-first'),'customer_gets_opaque_checkout_link_only');
+    [$code]=qa_http('/api/checkout.php?id='.$linkId,$tokenB);
+    qa_positive($code===404,'other_customer_checkout_denied');
+    [$code]=qa_http('/api/checkout.php?id='.$linkId,$tokenA);
+    qa_positive($code===303,'owner_checkout_redirect');
+    $q=$db->prepare('SELECT url_ciphertext FROM dmo_checkout_links WHERE id=:id');$q->execute(['id'=>$linkId]);
+    qa_positive(!str_contains((string)$q->fetchColumn(),'ci-first'),'checkout_url_encrypted_at_rest');
+    [$code]=qa_http('/api/admin/request-actions.php',$tokenAdmin,'__Host-dmo_admin',array_replace($link,['expected_link_id'=>$linkId,'url'=>'https://checkout.example.invalid/invoice/ci-next']),$csrfAdmin);
+    qa_positive($code===409,'existing_invoice_must_be_closed_before_replacement');
+    $revoke=['action'=>'revoke_checkout_link','request_id'=>$requestA,'order_id'=>$orderId,'expected_link_id'=>$linkId,'confirm_external_closed'=>true];
+    [$code]=qa_http('/api/admin/request-actions.php',$tokenAdmin,'__Host-dmo_admin',$revoke,$csrfAdmin);
+    qa_positive($code===200,'artist_removes_closed_invoice_link');
+    [$code]=qa_http('/api/checkout.php?id='.$linkId,$tokenA);
+    qa_positive($code===404,'revoked_checkout_denied');
+    [$code]=qa_http('/api/admin/request-actions.php',$tokenAdmin,'__Host-dmo_admin',array_replace($link,['expected_link_id'=>$linkId]),$csrfAdmin);
+    qa_positive($code===409,'same_invoice_cannot_be_reused');
+    [$code,$created]=qa_http('/api/admin/request-actions.php',$tokenAdmin,'__Host-dmo_admin',array_replace($link,['expected_link_id'=>$linkId,'url'=>'https://checkout.example.invalid/invoice/ci-next']),$csrfAdmin);
+    qa_positive($code===201,'new_invoice_after_external_closure');
+    $checkoutId=$created['link_id'];
+    $db->prepare("UPDATE dmo_checkout_links SET expires_at=DATE_SUB(UTC_TIMESTAMP(),INTERVAL 1 MINUTE) WHERE id=:id")->execute(['id'=>$checkoutId]);
+    [$code]=qa_http('/api/checkout.php?id='.$checkoutId,$tokenA);
+    qa_positive($code===404,'expired_checkout_denied');
+    $db->prepare("UPDATE dmo_checkout_links SET expires_at=DATE_ADD(UTC_TIMESTAMP(),INTERVAL 1 DAY) WHERE id=:id")->execute(['id'=>$checkoutId]);
     $deadline=(new DateTimeImmutable('today',new DateTimeZone('UTC')))->modify('+5 days')->format('Y-m-d');
     $schedule=['action'=>'set_order_deadline','request_id'=>$requestA,'order_id'=>$orderId,
         'expected_deadline'=>null,'agreed_deadline'=>$deadline,'confirm_agreement'=>true];

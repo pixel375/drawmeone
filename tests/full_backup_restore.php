@@ -317,6 +317,7 @@ try {
     drill_assert(is_file($draftPath)&&filesize($draftPath)===(int)$draft['byte_size']&&hash_equals($draft['sha256'],hash_file('sha256',$draftPath)),'restored_delivery_record_matches_checksum_and_file');
     drill_assert($restore->query("SELECT version FROM dmo_schema_migrations WHERE version='005_artwork_reviews'")->fetchColumn()==='005_artwork_reviews','restored_schema_includes_artwork_reviews');
     drill_assert((int)$restore->query('SELECT COUNT(*) FROM dmo_artwork_reviews')->fetchColumn()===0,'restored_review_table_available');
+    drill_assert($restore->query("SELECT version FROM dmo_schema_migrations WHERE version='006_checkout_links'")->fetchColumn()==='006_checkout_links','restored_checkout_schema_available');
     drill_assert(true,'restored_database_media_references_match_files');
     $sourceUsers=(int)$db->query('SELECT COUNT(*) FROM dmo_users')->fetchColumn();
     drill_assert($sourceUsers===2,'original_disposable_database_unchanged');

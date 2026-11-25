@@ -9,6 +9,7 @@ require_once dirname(__DIR__, 2) . '/app/deliveries.php';
 require_once dirname(__DIR__, 2) . '/app/payments.php';
 require_once dirname(__DIR__, 2) . '/app/integrity.php';
 require_once dirname(__DIR__, 2) . '/app/retention.php';
+require_once dirname(__DIR__, 2) . '/app/checkout.php';
 dmo_reject_non_get();
 
 try {
@@ -99,6 +100,7 @@ try {
         ['key'=>'payment_exceptions','label'=>'Payment exceptions','status'=>dmo_payment_exceptions_enabled()?'ready':'blocked','detail'=>'Manual dispute holds and external full refund records; no money movement'],
         ['key'=>'manual_payments','label'=>'Manual payment reconciliation','status'=>dmo_manual_payments_enabled()?'ready':'blocked',
          'detail'=>'Requires independently checked receiving-account records and separate owner approval'],
+        ['key'=>'hosted_checkout','label'=>'External hosted invoice links','status'=>dmo_checkout_enabled($db)?'ready':'blocked','detail'=>'Artist-issued single-order invoices; manual reconciliation remains required'],
         ['key' => 'payments', 'label' => 'Verified payment processing',
          'status' => 'planned',
          'detail' => 'Manual reconciliation implemented; automated provider verification not implemented'],

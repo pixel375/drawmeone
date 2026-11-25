@@ -89,3 +89,9 @@ DMO_INTAKE_CONTROL_ENABLED=0
 
 # Optional self-service structured export and privacy case submission; no automatic deletion.
 DMO_PRIVACY_SELF_SERVICE_ENABLED=0
+
+# Hosted single-order invoice links; no provider selected or activated.
+DMO_CHECKOUT_LINKS_ENABLED=0
+DMO_CHECKOUT_TERMS_APPROVED=0
+# DMO_CHECKOUT_HOST=approved.provider.example
+# DMO_CHECKOUT_PATH_PREFIX=/invoice/

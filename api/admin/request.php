@@ -4,6 +4,7 @@ require_once dirname(__DIR__, 2) . '/app/commission-workflow.php';
 require_once dirname(__DIR__, 2) . '/app/notifications.php';
 require_once dirname(__DIR__, 2) . '/app/deliveries.php';
 require_once dirname(__DIR__, 2) . '/app/payments.php';
+require_once dirname(__DIR__, 2) . '/app/checkout.php';
 dmo_reject_non_get();
 
 try {
@@ -32,6 +33,7 @@ try {
         'policy_eligible'=>$eligible,
         'manual_payments_enabled' => dmo_manual_payments_enabled() && $eligible && dmo_messages_request_open((string)$detail['request']['status']),
         'payment_exceptions_enabled' => dmo_payment_exceptions_enabled(),
+        'checkout_links'=>dmo_checkout_rows($db,$id,true),
         'payment_records' => dmo_payment_admin_rows($db,$id),
         'artwork_reviews' => dmo_review_orders($db,$id),
         'fulfillment_options' => dmo_fulfillment_options($db,$id),
