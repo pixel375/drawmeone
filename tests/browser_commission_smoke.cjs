@@ -470,7 +470,7 @@ async function verifyOrderHistoryStage(browser) {
   await page.route("**/api/requests.php?*",route=>answer(route,{ok:true,requests:[
     {...requests[0],workflow_stage:"awaiting_arrangement",order_deadline:"2027-01-15"},
     {...requests[1],workflow_stage:"quote_available"}],has_more:false}));
-  await page.route("**/api/request.php?*",route=>answer(route,{...detail(A),orders:[{id:71,status:"awaiting_arrangement",payment_status:"unverified",agreed_deadline:"2027-01-15",total_minor:3000,currency:"CAD"}]}));
+  await page.route("**/api/request.php?*",route=>answer(route,{...detail(A),orders:[{id:71,status:"awaiting_arrangement",payment_status:"unverified",agreed_deadline:"2027-01-15",total_minor:3000,currency:"CAD"}],checkout_links:[{id:72,order_id:71,provider_host:"checkout.example.invalid",expires_at:"2027-01-10 00:00:00"}]}));
   try{
     await page.goto(base+"/commission.html",{waitUntil:"domcontentloaded"});
     await page.locator("#my-request-list .request-list-item").first().waitFor();
@@ -480,6 +480,9 @@ async function verifyOrderHistoryStage(browser) {
     await page.locator("#detail-orders").waitFor({state:"visible"});
     assert.match(await page.locator("#detail-orders").innerText(),/Agreed delivery date: 2027-01-15/);
     assert.match(await page.locator("#detail-orders").innerText(),/unverified/);
+    const invoice=page.getByRole("link",{name:"Open external invoice"});
+    assert.equal(await invoice.getAttribute("href"),"./api/checkout.php?id=72");
+    assert.equal(await invoice.getAttribute("rel"),"noopener noreferrer");
     await checkOverflow(page,"customer order history");
     assert.deepEqual(test.posts,[]);
   }finally{await page.close();}

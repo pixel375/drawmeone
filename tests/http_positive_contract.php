@@ -544,6 +544,10 @@ try {
     qa_positive($code===409,'partial_payment_not_accepted');
     [$code,$pending]=qa_http('/api/admin/request-actions.php',$tokenAdmin,'__Host-dmo_admin',$evidence,$csrfAdmin);
     qa_positive($code===201 && $pending['status']==='pending_verification' && $pending['payment_status']==='unverified','payment_evidence_not_payment_confirmation');
+    [$code]=qa_http('/api/checkout.php?id='.$checkoutId,$tokenA);
+    qa_positive($code===404,'pending_evidence_suspends_invoice');
+    $q=$db->prepare('SELECT status,url_ciphertext FROM dmo_checkout_links WHERE id=:id');$q->execute(['id'=>$checkoutId]);$suspended=$q->fetch(PDO::FETCH_ASSOC);
+    qa_positive($suspended['status']==='suspended'&&$suspended['url_ciphertext']==='','suspended_invoice_cannot_resurface');
     [$code]=qa_http('/api/admin/request-actions.php',$tokenAdmin,'__Host-dmo_admin',$evidence,$csrfAdmin);
     qa_positive($code===409,'duplicate_evidence_denied');
     [$code,$queue]=qa_http('/api/admin/requests.php?filter=payment_review',$tokenAdmin,'__Host-dmo_admin');
@@ -555,6 +559,8 @@ try {
     qa_positive($code===422,'receiving_account_confirmation_required');
     [$code,$paid]=qa_http('/api/admin/request-actions.php',$tokenAdmin,'__Host-dmo_admin',$confirm,$csrfAdmin);
     qa_positive($code===200 && $paid['payment_status']==='paid' && $paid['provider_verified']===false && $paid['money_moved']===false,'manual_full_payment_reconciled_without_charge');
+    [$code]=qa_http('/api/checkout.php?id='.$checkoutId,$tokenA);
+    qa_positive($code===404,'paid_order_checkout_denied');
     [$code,$customerPaid]=qa_http('/api/request.php?ref='.urlencode($referenceA),$tokenA);
     qa_positive($code===200 && $customerPaid['orders'][0]['payment_status']==='paid' &&
         !str_contains(json_encode($customerPaid,JSON_THROW_ON_ERROR),'CI-ONLY-TRANSACTION') &&

@@ -383,7 +383,7 @@
     finally{state.quoteBusy=false;for(const field of box.querySelectorAll("button,textarea"))field.disabled=false;}
   }
 
-  function renderCustomerOrders(orders,deliveries=[],reviews=[]) {
+  function renderCustomerOrders(orders,deliveries=[],reviews=[],checkoutLinks=[]) {
     const root = $("detail-orders");
     root.replaceChildren();
     const records = Array.isArray(orders) ? orders : [];
@@ -413,9 +413,12 @@
       if(order.payment_status==="refunded")card.append(renderText("p","A full external refund has been recorded. Please contact the artist if you have questions.","small"));
       if (order.payment_status === "paid") card.append(renderText("p","The artist has recorded receipt after manual reconciliation. This is not an automated provider receipt.","small"));
       if (order.payment_status === "unverified") {
-        card.append(renderText("p",
-          "Payment has not been verified. Please use the agreed contact method " +
-          "with the artist; this page is not a payment request.", "small"));
+        const invoice=checkoutLinks.find(x=>x.order_id===order.id&&Number.isSafeInteger(x.id)&&x.id>0);
+        if(invoice){
+          card.append(renderText("p","An external invoice is available. Check the receiving merchant, currency and exact quote total before paying. Do not pay again if you have already paid. The artist must verify receipt separately.","small"),
+            renderText("small","Provider: "+invoice.provider_host+" · Local access until "+invoice.expires_at+" UTC"));
+          const link=renderText("a","Open external invoice","text-button");link.href="./api/checkout.php?id="+invoice.id;link.target="_blank";link.rel="noopener noreferrer";card.append(link);
+        }else card.append(renderText("p","Payment has not been verified. Please use the agreed contact method with the artist; no hosted invoice is available.","small"));
       }
       const review=reviews.find(r=>r.order_id===order.id);
       if(review?.latest){
@@ -618,7 +621,7 @@
         state.uploadBusy;
       const r = body.request || {};
       renderCustomerQuotes(body.quotes || [], ref, r.policy_version || "");
-      renderCustomerOrders(body.orders || [],Array.isArray(body.deliveries)?body.deliveries:[],Array.isArray(body.artwork_reviews)?body.artwork_reviews:[]);
+      renderCustomerOrders(body.orders || [],Array.isArray(body.deliveries)?body.deliveries:[],Array.isArray(body.artwork_reviews)?body.artwork_reviews:[],Array.isArray(body.checkout_links)?body.checkout_links:[]);
       showFact("detail-ref",r.public_ref);
       showFact("detail-status",readableRequestStatus(r.workflow_stage || r.status));
       showFact("detail-type",labels[r.subject_type] || r.subject_type);

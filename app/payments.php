@@ -84,6 +84,11 @@ function dmo_payment_reconcile(PDO $db,array $admin,int $requestId,array $input)
             $db->prepare("INSERT INTO dmo_payments (order_id,method,currency,amount_minor,provider_reference,status) VALUES (:order,:method,:currency,:amount,:ref,'pending_verification')")
                 ->execute(['order'=>$orderId,'method'=>$input['method'],'currency'=>$order['currency'],'amount'=>(int)$order['total_minor'],'ref'=>$fingerprint]);
             $paymentId=(int)$db->lastInsertId();$status='pending_verification';
+            require_once __DIR__.'/checkout.php';
+            if(dmo_checkout_schema_ready($db)){
+                // Never automatically resurface an old invoice after evidence rejection.
+                $db->prepare("UPDATE dmo_checkout_links SET status='suspended',url_ciphertext='' WHERE order_id=:id AND status='active'")->execute(['id'=>$orderId]);
+            }
         }else{
             $p=$db->prepare("SELECT method,currency,amount_minor,provider_reference,status FROM dmo_payments WHERE id=:id AND order_id=:order FOR UPDATE");
             $p->execute(['id'=>$paymentId,'order'=>$orderId]);$payment=$p->fetch(PDO::FETCH_ASSOC);

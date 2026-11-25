@@ -67,7 +67,7 @@ function dmo_checkout_rows(PDO $db,int $request,bool $admin=false): array {
         $eligible=dmo_checkout_enabled($db)?dmo_checkout_eligible($db,$request,$id):null;
         if($admin){
             $result[]=['order_id'=>$id,'latest'=>$latest,'can_issue'=>$eligible!==null&&($latest===null||$latest['status']==='revoked'),
-                'can_revoke'=>$latest!==null&&$latest['status']==='active','provider_host'=>dmo_checkout_config()['host']??null];
+                'can_revoke'=>$latest!==null&&in_array($latest['status'],['active','suspended'],true),'provider_host'=>dmo_checkout_config()['host']??null];
         }elseif($eligible!==null&&$latest!==null&&$latest['status']==='active'&&$latest['fresh']&&
             $latest['provider_host']===(dmo_checkout_config()['host']??null)&&$latest['currency']===$eligible['currency']&&$latest['amount_minor']===(int)$eligible['total_minor']){
             $result[]=['id'=>$latest['id'],'order_id'=>$id,'provider_host'=>$latest['provider_host'],'expires_at'=>$latest['expires_at']];
@@ -111,7 +111,7 @@ function dmo_checkout_apply(PDO $db,array $admin,int $request,array $input): nev
                 ->execute(['order'=>$order,'actor'=>$admin['user_id'],'cipher'=>dmo_checkout_seal($input['url'],$order),'hash'=>$fingerprint,'host'=>dmo_checkout_config()['host'],'currency'=>$r['currency'],'amount'=>(int)$r['total_minor']]);
             $id=(int)$db->lastInsertId();$status='active';
         }else{
-            if($latest===null||$latest['status']!=='active')throw new DmoPaymentConflict('checkout_not_active');
+            if($latest===null||!in_array($latest['status'],['active','suspended'],true))throw new DmoPaymentConflict('checkout_not_active');
             $id=$latest['id'];$status='revoked';
             $db->prepare("UPDATE dmo_checkout_links SET status='revoked',revoked_at=UTC_TIMESTAMP(),url_ciphertext='' WHERE id=:id")->execute(['id'=>$id]);
         }

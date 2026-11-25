@@ -714,7 +714,7 @@
     }
   }
 
-  function renderPaymentRecords(orders,records,enabled,exceptionsEnabled=false) {
+  function renderPaymentRecords(orders,records,enabled,exceptionsEnabled=false,checkoutLinks=[]) {
     const root=$("request-payment-records");root.replaceChildren();
     if(!enabled)root.append(textNode("p","Manual reconciliation is disabled until approved.","small"));
     for(const order of orders||[]){
@@ -722,6 +722,37 @@
       const card=document.createElement("article");card.className="notification-card";
       card.append(textNode("strong","Order #"+order.id+" · "+formatQuoteMoney(order.total_minor,order.currency)));
       for(const p of rows)card.append(textNode("p","Payment #"+p.id+" · "+p.method+" · "+formatQuoteMoney(p.amount_minor,p.currency)+" · "+p.status,"small"));
+      const checkout=checkoutLinks.find(x=>x.order_id===order.id);
+      if(checkout&&(checkout.latest||checkout.can_issue)){
+        const section=document.createElement("section");section.className="checkout-admin";
+        section.append(textNode("strong","External hosted invoice"));
+        const latest=checkout.latest;
+        if(latest) section.append(textNode("p","Invoice #"+latest.id+" · "+latest.status+(latest.status==="active"&&!latest.fresh?" (local access expired)":"")+" · "+latest.provider_host,"small"));
+        if(checkout.can_issue){
+          const form=document.createElement("form");form.className="payment-evidence-form";
+          const label=textNode("label","Order-specific hosted invoice URL ("+checkout.provider_host+")");
+          const url=document.createElement("input");url.type="url";url.required=true;url.maxLength=1000;url.autocomplete="off";label.append(url);
+          const ack=document.createElement("label");ack.className="order-date-ack";const check=document.createElement("input");check.type="checkbox";check.required=true;
+          ack.append(check,textNode("span","I checked the provider account: this single-order invoice is payable only once, belongs to this customer, and charges exactly "+formatQuoteMoney(order.total_minor,order.currency)+". No subscription, tip or adjustable amount."));
+          const submit=textNode("button","Publish invoice link","quiet");submit.type="submit";
+          form.append(label,ack,submit);
+          form.addEventListener("submit",event=>{
+            event.preventDefault();if(requestBusy||!check.checked)return;
+            reconcilePayment({action:"issue_checkout_link",order_id:order.id,expected_link_id:latest?.id??null,url:url.value.trim(),currency:order.currency,amount_minor:order.total_minor,confirm_invoice:true});
+          });section.append(form);
+        }
+        if(checkout.can_revoke){
+          const form=document.createElement("form");form.className="payment-evidence-form";
+          const ack=document.createElement("label");ack.className="order-date-ack";const check=document.createElement("input");check.type="checkbox";check.required=true;
+          ack.append(check,textNode("span","I checked the provider: this invoice is closed, cancelled or fully settled and cannot collect another payment."));
+          const submit=textNode("button","Remove closed invoice link","quiet");submit.type="submit";form.append(ack,submit);
+          form.addEventListener("submit",event=>{event.preventDefault();if(requestBusy||!check.checked)return;
+            reconcilePayment({action:"revoke_checkout_link",order_id:order.id,expected_link_id:latest.id,confirm_external_closed:true});});
+          section.append(form);
+        }
+        section.append(textNode("p","The local link expires after seven days or is hidden when evidence is recorded. This does not cancel the external invoice. Verify actual receipt separately.","small"));
+        card.append(section);
+      }
       const payment=order.payment_status;
       if(payment==="on_hold")card.append(textNode("p","Payment on hold. Production and downloads are blocked.","small"));
       if(payment==="refunded")card.append(textNode("p","Full external refund recorded. No refund was sent by this website.","small"));
@@ -791,7 +822,7 @@
   }
   async function reconcilePayment(body){
     if(requestBusy||selectedRequestId===null)return;
-    const prompt=body.action==="verify_payment_evidence"?"Confirm this exact external payment as received? This does not charge money or release artwork.":body.action==="reject_payment_evidence"?"Reject this evidence? It will remain in the audit history.":"Record pending evidence only? The order stays unpaid until reconciliation.";
+    const prompt=body.action==="issue_checkout_link"?"Publish this exact external invoice for this order? No payment is collected here.":body.action==="revoke_checkout_link"?"Remove this locally after confirming it cannot collect another payment externally?":body.action==="verify_payment_evidence"?"Confirm this exact external payment as received? This does not charge money or release artwork.":body.action==="reject_payment_evidence"?"Reject this evidence? It will remain in the audit history.":"Record pending evidence only? The order stays unpaid until reconciliation.";
     if(body.action!=="set_payment_exception"&&!window.confirm(prompt))return;
     const id=selectedRequestId;requestBusy=true;updateRequestButtons();
     try{
@@ -799,7 +830,7 @@
       if(response.status===401)return sessionExpired();
       if(!response.ok||!data.ok){requestText("request-detail-status","Payment record not changed ("+(data.error||response.status)+").");return;}
       await openRequest(id);await requests();
-      requestText("request-detail-status",body.action==="set_payment_exception"?"Payment exception recorded: "+data.payment_status+". No money moved.":data.status==="verified"?"Manual reconciliation recorded. No money moved or artwork released.":"Payment evidence "+data.status+". No money moved.");
+      requestText("request-detail-status",body.action==="issue_checkout_link"?"External invoice link published. Payment is not verified.":body.action==="revoke_checkout_link"?"Closed invoice link removed locally. No money moved.":body.action==="set_payment_exception"?"Payment exception recorded: "+data.payment_status+". No money moved.":data.status==="verified"?"Manual reconciliation recorded. No money moved or artwork released.":"Payment evidence "+data.status+". No money moved.");
     }catch(_){requestText("request-detail-status","Payment update not confirmed. Refresh before retrying.");}
     finally{requestBusy=false;updateRequestButtons();}
   }
@@ -1094,7 +1125,7 @@
     renderAdminOrders(item.orders, item.quotes);
     renderNotifications(data.notification_options,data.notifications_enabled===true);
     renderDeliveryDrafts(item.orders,data.delivery_drafts,data.delivery_staging_enabled===true,data.fulfillment_options||[],data.artwork_reviews||[]);
-    renderPaymentRecords(item.orders,data.payment_records,data.manual_payments_enabled===true,data.payment_exceptions_enabled===true);
+    renderPaymentRecords(item.orders,data.payment_records,data.manual_payments_enabled===true,data.payment_exceptions_enabled===true,Array.isArray(data.checkout_links)?data.checkout_links:[]);
     requestText("request-detail-status", requestWriteEnabled
       ? "Admin draft editing available. Nothing is sent to the customer."
       : "Viewing only. Private note and quote creation are disabled on the server.");

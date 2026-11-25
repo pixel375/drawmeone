@@ -712,6 +712,47 @@ async function verifyPrivacyQueue(browser){
   }finally{await page.close();}
 }
 
+async function verifyCheckoutLinks(browser){
+  const page=await browser.newPage({viewport:{width:320,height:844},reducedMotion:"reduce"});
+  const posts=[];await simulateBackend(page,posts);
+  const request={id:116,status:"submitted",public_ref:"CI-116",workflow_stage:"awaiting_arrangement"};
+  const order={id:117,status:"awaiting_arrangement",payment_status:"unverified",total_minor:3000,currency:"CAD"};
+  const checkout={order_id:117,latest:null,can_issue:true,can_revoke:false,provider_host:"checkout.example.invalid"};
+  const answer=(route,data)=>route.fulfill({status:200,contentType:"application/json",body:JSON.stringify(data)});
+  await page.route("**/api/admin/requests.php*",route=>answer(route,{ok:true,requests:[request]}));
+  await page.route("**/api/admin/request.php?*",route=>answer(route,{ok:true,checkout_links:[checkout],detail:{request,orders:[order],quotes:[],messages:[],references:[],addons:[]}}));
+  await page.route("**/api/admin/request-actions.php*",route=>{
+    const body=route.request().postDataJSON();assert.equal(body.order_id,117);assert.equal(body.request_id,116);
+    if(body.action==="issue_checkout_link"){
+      assert.equal(body.url,"https://checkout.example.invalid/invoice/ci-ui");assert.equal(body.confirm_invoice,true);assert.equal(body.amount_minor,3000);
+      Object.assign(checkout,{latest:{id:118,status:"active",fresh:true,provider_host:"checkout.example.invalid"},can_issue:false,can_revoke:true});
+    }else{
+      assert.equal(body.action,"revoke_checkout_link");assert.equal(body.expected_link_id,118);assert.equal(body.confirm_external_closed,true);
+      checkout.latest.status="revoked";checkout.can_issue=true;checkout.can_revoke=false;
+    }
+    return answer(route,{ok:true,status:checkout.latest.status,money_moved:false});
+  });
+  try{
+    await page.goto(base+"/studio-admin/index.php",{waitUntil:"domcontentloaded"});
+    await page.locator("#workspace").waitFor({state:"visible"});
+    await page.locator('[data-view="requests"]').click();
+    await page.locator("#request-list .request-open").first().click();
+    const section=page.locator(".checkout-admin");
+    await section.locator('input[type=url]').fill("https://checkout.example.invalid/invoice/ci-ui");
+    await section.getByRole("checkbox").check();
+    page.once("dialog",dialog=>dialog.accept());
+    await section.getByRole("button",{name:"Publish invoice link"}).click();
+    await section.getByRole("button",{name:"Remove closed invoice link"}).waitFor();
+    await section.getByRole("checkbox").check();
+    page.once("dialog",dialog=>dialog.accept());
+    await section.getByRole("button",{name:"Remove closed invoice link"}).click();
+    await section.getByRole("button",{name:"Publish invoice link"}).waitFor();
+    assert.match(await section.innerText(),/revoked/);
+    assert.deepEqual(posts,[]);
+    console.log("PASS: hosted invoice issue and external closure confirmation UI");
+  }finally{await page.close();}
+}
+
 async function verifyClosedDesk(browser) {
   const page=await browser.newPage({viewport:{width:390,height:844}});
   await page.route("**/api/admin/status.php*",route=>route.fulfill({
@@ -747,6 +788,7 @@ async function verifyClosedDesk(browser) {
     await verifyFinancialException(browser);
     await verifyIntakeControl(browser);
     await verifyPrivacyQueue(browser);
+    await verifyCheckoutLinks(browser);
     console.log("ADMIN_BROWSER_SMOKE=PASS");
   } finally {await browser.close();}
 })().catch(error=>{
