@@ -176,6 +176,18 @@ function dmo_artwork_upload_replay(PDO $db,int $admin,?string $key,?string $dige
         'width'=>(int)$detail['width'],'height'=>(int)$detail['height'],'already_saved'=>true];
 }
 
+/** Optional exact original-byte match. No visual similarity claim and no mutation. */
+function dmo_artwork_identical(PDO $db,string $digest): ?array
+{
+    $q=$db->prepare("SELECT p.id,p.visibility FROM dmo_audit_log a JOIN dmo_portfolio_artworks p ON p.id=a.entity_id
+        WHERE a.entity_type='portfolio_artwork' AND a.action='artwork.uploaded_as_draft'
+        AND JSON_UNQUOTE(JSON_EXTRACT(a.details_json,'$.payload_digest'))=:digest
+        ORDER BY a.id ASC LIMIT 1");
+    $q->execute(['digest'=>$digest]);$row=$q->fetch();
+    if(!is_array($row))return null;
+    if(!dmo_artwork_publishable($db,(int)$row['id']))dmo_json(409,['ok'=>false,'error'=>'identical_artwork_needs_review','artwork_id'=>(int)$row['id']]);
+    return ['ok'=>true,'artwork_id'=>(int)$row['id'],'visibility'=>$row['visibility'],'identical_skipped'=>true];
+}
 function dmo_artwork_record_audit(PDO $db, int $adminId, int $artworkId, string $action,?array $details=null): void
 {
     $stmt = $db->prepare(

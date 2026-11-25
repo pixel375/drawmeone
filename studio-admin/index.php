@@ -20,7 +20,7 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
 <meta name="theme-color" content="#151317">
 <title>Artist's Desk · Draw Me One</title>
 <link rel="stylesheet" href="./panel.css?v=51">
-<script defer src="./panel.js?v=83"></script>
+<script defer src="./panel.js?v=84"></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to dashboard</a>
@@ -325,6 +325,7 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
           <strong>Upload drawings</strong>
           <p class="small">JPEG, PNG, or WebP. Up to 8 MB per image, maximum 16 megapixels. Originals are re-encoded as optimized WebP images without EXIF metadata. New images remain private drafts.</p>
           <input id="artwork-files" type="file" accept="image/jpeg,image/png,image/webp" multiple aria-label="Choose artwork images for upload">
+          <label class="artwork-select-label"><input id="artwork-skip-identical" type="checkbox" checked> Skip exact files already in the library</label><p class="small">Matches previously recorded original-file bytes only; edited or older unrecorded images may not match.</p>
           <div class="artwork-toolbar-actions">
             <button type="button" class="quiet" id="artwork-upload" disabled>Upload as drafts</button>
             <button type="button" class="quiet" id="artwork-upload-stop" hidden>Stop after current file</button>

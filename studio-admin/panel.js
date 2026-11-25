@@ -1637,6 +1637,7 @@
   const artworkDrafts=new Map();
   let artworkPendingFiles=[],artworkUploadRunning=false,artworkStopRequested=false;
   const artworkUploadKeys=new WeakMap();
+  const artworkUploadPreferences=new WeakMap();
   function artworkDraftKey(id,field){return id+":"+field;}
   function artworkDraftInput(work,field,input){
     const key=artworkDraftKey(work.id,field),base=String(work[field]??"");
@@ -1671,6 +1672,7 @@
     const canWrite = artworkWriteEnabled && !artworkBusy && !artworkLoading;
     $("artwork-refresh").disabled=artworkBusy||artworkLoading;
     $("artwork-files").disabled=!canWrite;
+    $("artwork-skip-identical").disabled=!canWrite||artworkPendingFiles.length>0;
     for(const field of $("artwork-list").querySelectorAll("button,input"))field.disabled=!canWrite;
     const selectable=$("artwork-list").querySelectorAll(".artwork-select").length;
     $("artwork-select-all").disabled=!canWrite||selectable===0;
@@ -1991,7 +1993,8 @@
     const progress=$("artwork-progress"),report=$("artwork-upload-results");
     progress.hidden=false;progress.max=selected.length;progress.value=0;
     report.replaceChildren();
-    let success=0,rejected=0,uncertain=0,attempted=0,stopReason="";
+    let success=0,duplicates=0,rejected=0,uncertain=0,attempted=0,stopReason="";
+    for(const file of selected)if(!artworkUploadPreferences.has(file))artworkUploadPreferences.set(file,$("artwork-skip-identical").checked);
     for(let i=0;i<selected.length;i++){
       if(leavingSession||artworkStopRequested){stopReason="Upload stopped.";break;}
       const file=selected[i],entry=document.createElement("li");
@@ -2003,12 +2006,13 @@
       }else{
         try{
           if(!artworkUploadKeys.has(file))artworkUploadKeys.set(file,crypto.randomUUID());
-          const body=new FormData();body.append("artwork",file);body.append("operation_key",artworkUploadKeys.get(file));
+          const body=new FormData();body.append("artwork",file);body.append("operation_key",artworkUploadKeys.get(file));body.append("skip_identical",artworkUploadPreferences.get(file)?"1":"0");
           const response=await fetch(api+"artwork-upload.php",{method:"POST",credentials:"same-origin",cache:"no-store",headers:{"X-DMO-CSRF":csrf},body});
           if(response.status===401){sessionExpired();return;}
           const data=await response.json();
           if(response.ok&&data.ok===true&&Number.isSafeInteger(data.artwork_id)&&data.artwork_id>0){
-            success++;entry.textContent+=data.already_saved?"Existing drawing #"+data.artwork_id+" recovered ("+data.visibility+").":"Saved privately as draft #"+data.artwork_id;
+            if(data.identical_skipped===true){duplicates++;entry.textContent+="Identical file skipped — existing drawing #"+data.artwork_id+" ("+data.visibility+").";}
+            else{success++;entry.textContent+=data.already_saved?"Existing drawing #"+data.artwork_id+" recovered ("+data.visibility+").":"Saved privately as draft #"+data.artwork_id;}
           }else if(response.status===409&&data.error==="artwork_upload_busy"){
             entry.textContent+="Not attempted by server (another upload is active).";
             stopReason="Another upload is active. Resume the remaining files later.";
@@ -2040,7 +2044,7 @@
     const refreshed=await artworksLoad();
     artworkBusy=false;artworkControls();
     if(leavingSession)return;
-    $("artwork-upload-message").textContent=(stopReason?stopReason+" ":"")+success+" saved as private drafts · "+rejected+" rejected/skipped · "+uncertain+" unconfirmed · "+artworkPendingFiles.length+" remaining."+
+    $("artwork-upload-message").textContent=(stopReason?stopReason+" ":"")+success+" saved or recovered · "+duplicates+" identical skipped · "+rejected+" rejected/skipped · "+uncertain+" unconfirmed · "+artworkPendingFiles.length+" remaining."+
       (uncertain?" Resume to recover the unconfirmed file using the same upload ID.":"")+
       (refreshed?"":" Library refresh failed; refresh before continuing.");
   }

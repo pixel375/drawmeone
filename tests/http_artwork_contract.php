@@ -20,7 +20,7 @@ function art_assert(bool $yes, string $name): void {
 }
 function art_http(string $route, ?string $cookie = null, ?string $csrf = null,
     ?array $body = null, ?string $file = null, string $origin = 'https://drawmeone.com',
-    ?string $ifNoneMatch = null,?string $operationKey=null): array {
+    ?string $ifNoneMatch = null,?string $operationKey=null,?string $skipIdentical=null): array {
     $handle = curl_init('http://127.0.0.1:18865' . $route);
     if ($handle === false) throw new RuntimeException('Missing localhost cURL');
     $headers = ['Accept: application/json'];
@@ -37,6 +37,7 @@ function art_http(string $route, ?string $cookie = null, ?string $csrf = null,
         if ($file !== null) {
             $options[CURLOPT_POSTFIELDS] = ['artwork' => new CURLFile($file)];
             if($operationKey!==null)$options[CURLOPT_POSTFIELDS]['operation_key']=$operationKey;
+            if($skipIdentical!==null)$options[CURLOPT_POSTFIELDS]['skip_identical']=$skipIdentical;
         } else {
             $headers[] = 'Content-Type: application/json';
             $options[CURLOPT_POSTFIELDS] = json_encode($body, JSON_THROW_ON_ERROR);
@@ -178,6 +179,11 @@ try {
     [$status,$conflict]=art_http('/api/admin/artwork-upload.php',$token,$csrf,null,$bad,operationKey:$uploadKey);
     art_assert($status===409&&($conflict['error']??null)==='operation_key_conflict','changed_upload_content_rejected');
     art_assert((int)$db->query('SELECT COUNT(*) FROM dmo_portfolio_artworks')->fetchColumn()===1,'upload_retry_does_not_duplicate_drawing');
+    [$status,$same]=art_http('/api/admin/artwork-upload.php',$token,$csrf,null,$png,operationKey:'10000000-0000-4000-8000-000000000012',skipIdentical:'1');
+    art_assert($status===200&&$same['identical_skipped']===true&&$same['artwork_id']===$id&&$same['visibility']==='draft','optional_exact_original_duplicate_skip');
+    art_assert((int)$db->query('SELECT COUNT(*) FROM dmo_portfolio_artworks')->fetchColumn()===1,'duplicate_skip_does_not_create_row');
+    [$status]=art_http('/api/admin/artwork-upload.php',$token,$csrf,null,$png,skipIdentical:'1');
+    art_assert($status===422,'duplicate_skip_requires_operation_key');
     $stmt=$db->prepare(
         "SELECT a.visibility,f.variant,f.storage_key,f.mime_type,f.pixel_width,
          f.pixel_height,f.byte_size FROM dmo_portfolio_artworks a

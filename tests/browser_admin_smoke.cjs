@@ -415,6 +415,7 @@ async function verifyInterruptedArtworkUpload(browser){
     uploaded.push(body.includes("first.png")?"first":body.includes("second.png")?"second":body.includes("third.png")?"third":"unknown");
     if(calls===2)return route.fulfill({status:502,contentType:"text/plain",body:"Gateway interrupted"});
     if(calls===3)return route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({ok:true,artwork_id:102,visibility:"draft",already_saved:true})});
+    if(calls===4)return route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({ok:true,artwork_id:101,visibility:"draft",identical_skipped:true})});
     return route.fulfill({status:201,contentType:"application/json",body:JSON.stringify({ok:true,artwork_id:100+calls})});
   });
   try{
@@ -432,6 +433,7 @@ async function verifyInterruptedArtworkUpload(browser){
     assert.deepEqual(uploaded,["first","second","second","third"],"ambiguous upload is retried with its original operation key");
     assert.match(keys[1]||"",/^[0-9a-f-]{36}$/);assert.equal(keys[1],keys[2]);assert.notEqual(keys[0],keys[1]);
     assert.equal(await page.locator("#artwork-upload-resume").isVisible(),false);
+    assert.match(await page.locator("#artwork-upload-message").innerText(),/1 identical skipped/);
     console.log("PASS: interrupted bulk artwork upload recovers original operation and untouched files");
   }finally{await page.close();}
 }

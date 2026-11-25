@@ -24,9 +24,11 @@ try {
     if ((int) ($_SERVER['CONTENT_LENGTH'] ?? 0) > DMO_ARTWORK_MAX_BYTES + 1048576) {
         dmo_json(413, ['ok' => false, 'error' => 'upload_too_large']);
     }
-    if(array_diff(array_keys($_POST),['operation_key'])!==[]||count($_FILES)!==1)
+    if(array_diff(array_keys($_POST),['operation_key','skip_identical'])!==[]||count($_FILES)!==1)
         dmo_json(422,['ok'=>false,'error'=>'unexpected_fields']);
     $operation=dmo_upload_operation_key($_POST);
+    $skip=$_POST['skip_identical']??'0';
+    if(!is_string($skip)||!in_array($skip,['0','1'],true)||($skip==='1'&&$operation===null))dmo_json(422,['ok'=>false,'error'=>'invalid_duplicate_preference']);
     $file = $_FILES['artwork'] ?? null;
     if (!is_array($file) || is_array($file['tmp_name'] ?? null) ||
         (int) ($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK ||
@@ -42,6 +44,7 @@ try {
     $digest=$operation===null?null:dmo_upload_payload_digest((string)$file['tmp_name'],'portfolio-upload');
     $prior=dmo_artwork_upload_replay($db,(int)$admin['user_id'],$operation,$digest);
     if($prior!==null)dmo_json(200,$prior);
+    if($skip==='1'&&$digest!==null){$identical=dmo_artwork_identical($db,$digest);if($identical!==null)dmo_json(200,$identical);}
     $count = (int) $db->query('SELECT COUNT(*) FROM dmo_portfolio_artworks')->fetchColumn();
     if ($count >= 2000) {
         dmo_json(422, ['ok' => false, 'error' => 'artwork_library_limit']);
