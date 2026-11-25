@@ -141,6 +141,33 @@ function dmo_requests_public_ref(int $customerId, string $key): string
     );
 }
 
+/** Optional operation key for compatible message retry; no new schema needed. */
+function dmo_message_operation_key(array $input): ?string
+{
+    if(!array_key_exists('operation_key',$input))return null;
+    $key=$input['operation_key'];
+    if(!is_string($key)||!preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/D',$key))
+        dmo_json(422,['ok'=>false,'error'=>'invalid_operation_key']);
+    return $key;
+}
+/** Caller holds the request row lock. Scope replay to request, actor and action. */
+function dmo_message_replay(PDO $db,int $request,int $actor,string $action,?string $key,string $body,bool $internal): ?int
+{
+    if($key===null)return null;
+    $q=$db->prepare("SELECT JSON_UNQUOTE(JSON_EXTRACT(details_json,'$.message_id')) FROM dmo_audit_log
+        WHERE entity_type='commission_request' AND entity_id=:request AND actor_id=:actor AND action=:action
+        AND JSON_UNQUOTE(JSON_EXTRACT(details_json,'$.operation_key'))=:operation ORDER BY id DESC LIMIT 1");
+    $q->execute(['request'=>$request,'actor'=>$actor,'action'=>$action,'operation'=>$key]);
+    $id=$q->fetchColumn();
+    if($id===false)return null;
+    $m=$db->prepare('SELECT m.body,m.is_internal FROM dmo_messages m JOIN dmo_conversations c ON c.id=m.conversation_id WHERE m.id=:id AND c.request_id=:request AND m.sender_id=:actor');
+    $m->execute(['id'=>$id,'request'=>$request,'actor'=>$actor]);$row=$m->fetch();
+    if(!is_array($row)||(string)$row['body']!==$body||(bool)$row['is_internal']!==$internal){
+        $db->rollBack();dmo_json(409,['ok'=>false,'error'=>'operation_key_conflict']);
+    }
+    return (int)$id;
+}
+
 function dmo_requests_snapshot(array $row): string
 {
     return json_encode([

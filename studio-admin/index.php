@@ -20,7 +20,7 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
 <meta name="theme-color" content="#151317">
 <title>Artist's Desk · Draw Me One</title>
 <link rel="stylesheet" href="./panel.css?v=45">
-<script defer src="./panel.js?v=65"></script>
+<script defer src="./panel.js?v=66"></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to dashboard</a>

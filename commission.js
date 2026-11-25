@@ -22,6 +22,7 @@
   }
   let leavingSession = false;
   const proofDrafts=new Map();
+  let pendingReply=null;
   function customerSessionExpired() {
     if (leavingSession) return;
     leavingSession = true;
@@ -65,7 +66,7 @@
   $("detail-reply-body").addEventListener("input",updateDetailDraftWarning);
   $("detail-reference-files").addEventListener("change",updateDetailDraftWarning);
   function clearDetailDrafts() {
-    proofDrafts.clear();
+    proofDrafts.clear();pendingReply=null;
     $("detail-reply-body").value = "";
     $("detail-reference-files").value = "";
     $("detail-reference-feedback").textContent = "";
@@ -852,6 +853,7 @@
         !state.csrf) return;
     const body = $("detail-reply-body").value.trim();
     if (body.length < 2 || body.length > 3000) return;
+    if(!pendingReply||pendingReply.ref!==ref||pendingReply.body!==body)pendingReply={ref,body,key:newKey()};
     state.messageBusy = true;
     $("detail-reply-body").disabled=true;
     $("detail-reply-send").disabled = true;
@@ -860,7 +862,7 @@
       const response = await fetch("./api/request-message.php",{
         method:"POST",credentials:"same-origin",cache:"no-store",
         headers:{"Content-Type":"application/json","X-DMO-CSRF":state.csrf},
-        body:JSON.stringify({ref,body}),
+        body:JSON.stringify({ref,body,operation_key:pendingReply.key}),
       });
       if (response.status === 401) return customerSessionExpired();
       const data = await response.json();
@@ -872,13 +874,14 @@
             : "Message could not be sent. Please try again.");
         return;
       }
+      pendingReply=null;
       $("detail-reply-body").value = "";
       await openDetail(ref);
       $("detail-reply-feedback").textContent =
         "Message saved privately for the artist. No email was sent.";
     } catch (_) {
       $("detail-reply-feedback").textContent =
-        "Connection interrupted. Refresh the conversation before retrying.";
+        "Connection interrupted. Retry the unchanged message to safely recover the result.";
     } finally {
       state.messageBusy = false;
       $("detail-reply-body").disabled=false;

@@ -550,9 +550,13 @@ try {
 
     [$code,$sentMessage]=qa_http('/api/request-message.php',$tokenA,
         '__Host-dmo_session',[
-            'ref'=>$referenceA,'body'=>'Please use soft shading.',
+            'ref'=>$referenceA,'body'=>'Please use soft shading.','operation_key'=>'10000000-0000-4000-8000-000000000001',
         ],$csrfA);
     qa_positive($code===201,'customer_can_send_private_message');
+    [$code,$replay]=qa_http('/api/request-message.php',$tokenA,'__Host-dmo_session',['ref'=>$referenceA,'body'=>'Please use soft shading.','operation_key'=>'10000000-0000-4000-8000-000000000001'],$csrfA);
+    qa_positive($code===200&&($replay['message_id']??null)===$sentMessage['message_id']&&($replay['already_saved']??false),'customer_message_retry_returns_original_id');
+    [$code]=qa_http('/api/request-message.php',$tokenA,'__Host-dmo_session',['ref'=>$referenceA,'body'=>'Changed message.','operation_key'=>'10000000-0000-4000-8000-000000000001'],$csrfA);
+    qa_positive($code===409,'customer_message_key_conflict_rejected');
     [$code]=qa_http('/api/request-message.php',$tokenB,
         '__Host-dmo_session',[
             'ref'=>$referenceA,'body'=>'Unauthorized message.',
@@ -561,17 +565,21 @@ try {
     [$code,$privateNote]=qa_http('/api/admin/request-actions.php',
         $tokenAdmin,'__Host-dmo_admin',[
             'action'=>'add_private_note','request_id'=>$requestA,
-            'body'=>'CI ARTIST-ONLY PRIVATE NOTE',
+            'body'=>'CI ARTIST-ONLY PRIVATE NOTE','operation_key'=>'10000000-0000-4000-8000-000000000002',
         ],$csrfAdmin);
     qa_positive($code===201 && ($privateNote['visibility']??'')==='internal_only',
         'artist_private_note_saved_as_internal');
+    [$code,$replay]=qa_http('/api/admin/request-actions.php',$tokenAdmin,'__Host-dmo_admin',['action'=>'add_private_note','request_id'=>$requestA,'body'=>'CI ARTIST-ONLY PRIVATE NOTE','operation_key'=>'10000000-0000-4000-8000-000000000002'],$csrfAdmin);
+    qa_positive($code===200&&($replay['message_id']??null)===$privateNote['message_id'],'artist_private_note_retry_returns_original_id');
     [$code,$publicReply]=qa_http('/api/admin/request-actions.php',
         $tokenAdmin,'__Host-dmo_admin',[
             'action'=>'send_customer_message','request_id'=>$requestA,
-            'body'=>'Understood, soft shading it is.',
+            'body'=>'Understood, soft shading it is.','operation_key'=>'10000000-0000-4000-8000-000000000003',
         ],$csrfAdmin);
     qa_positive($code===201 && ($publicReply['visibility']??'')==='customer_visible',
         'artist_public_reply_saved_separately');
+    [$code,$replay]=qa_http('/api/admin/request-actions.php',$tokenAdmin,'__Host-dmo_admin',['action'=>'send_customer_message','request_id'=>$requestA,'body'=>'Understood, soft shading it is.','operation_key'=>'10000000-0000-4000-8000-000000000003'],$csrfAdmin);
+    qa_positive($code===200&&($replay['message_id']??null)===$publicReply['message_id'],'artist_reply_retry_returns_original_id');
     [$code,$thread]=qa_http('/api/request.php?ref='.urlencode($referenceA),$tokenA);
     qa_positive($code===200 && count($thread['messages']??[])===2 &&
         !str_contains(json_encode($thread,JSON_THROW_ON_ERROR),

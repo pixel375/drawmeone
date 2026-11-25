@@ -12,10 +12,11 @@ try {
     if (!dmo_messages_enabled()) {
         dmo_json(503, ['ok' => false, 'error' => 'messaging_disabled']);
     }
-    if (array_diff(array_keys($input), ['ref', 'body']) !== [] ||
-        count($input) !== 2) {
+    if (array_diff(array_keys($input), ['ref', 'body','operation_key']) !== [] ||
+        !array_key_exists('ref',$input)||!array_key_exists('body',$input)) {
         dmo_json(422, ['ok' => false, 'error' => 'unexpected_fields']);
     }
+    $key=dmo_message_operation_key($input);
     $ref = $input['ref'] ?? null;
     if (!is_string($ref) || !preg_match('/^DMO-[a-f0-9]{20}$/D', $ref)) {
         dmo_json(422, ['ok' => false, 'error' => 'invalid_request_reference']);
@@ -38,6 +39,8 @@ try {
             $db->rollBack();
             dmo_json(404, ['ok' => false, 'error' => 'request_not_found']);
         }
+        $prior=dmo_message_replay($db,(int)$request['id'],(int)$customer['user_id'],'request.customer_message_sent',$key,$body,false);
+        if($prior!==null){$db->commit();dmo_json(200,['ok'=>true,'message_id'=>$prior,'visibility'=>'customer_and_artist','already_saved'=>true]);}
         if (!dmo_messages_request_open((string) $request['status'])) {
             $db->rollBack();
             dmo_json(409, ['ok' => false, 'error' => 'conversation_closed']);
@@ -80,12 +83,13 @@ try {
         ]);
         $messageId = (int) $db->lastInsertId();
         $audit = $db->prepare(
-            "INSERT INTO dmo_audit_log (actor_id, action, entity_type, entity_id) " .
-            "VALUES (:actor, 'request.customer_message_sent', 'commission_request', :entity)"
+            "INSERT INTO dmo_audit_log (actor_id, action, entity_type, entity_id, details_json) " .
+            "VALUES (:actor, 'request.customer_message_sent', 'commission_request', :entity,:details)"
         );
         $audit->execute([
             'actor' => (int) $customer['user_id'],
             'entity' => (int) $request['id'],
+            'details'=>json_encode(['message_id'=>$messageId,'operation_key'=>$key],JSON_THROW_ON_ERROR),
         ]);
         $db->commit();
         dmo_json(201, [

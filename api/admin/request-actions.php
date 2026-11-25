@@ -32,6 +32,7 @@ try {
     // Validate EVERYTHING before opening a transaction so no error path
     // exits with an uncommitted transaction.
     $note = null;
+    $messageKey=null;
     $quote = null;
     $deadline = null;
     $orderId = null;
@@ -65,9 +66,10 @@ try {
         }
         if (!dmo_quote_policy_ready()) dmo_json(503,['ok'=>false,'error'=>'review_status_disabled']);
     } elseif ($action === 'add_private_note' || $action === 'send_customer_message') {
-        if (array_diff(array_keys($input), ['action', 'request_id', 'body']) !== []) {
+        if (array_diff(array_keys($input), ['action', 'request_id', 'body','operation_key']) !== []) {
             dmo_json(422, ['ok' => false, 'error' => 'unexpected_fields']);
         }
+        $messageKey=dmo_message_operation_key($input);
         $note = dmo_workflow_text($input['body'] ?? null,
             $action === 'send_customer_message' ? 3000 : 5000,
             $action === 'send_customer_message' ? 2 : 1);
@@ -167,6 +169,10 @@ try {
         }
 
         if ($action === 'add_private_note' || $action === 'send_customer_message') {
+            $internal=$action==='add_private_note';
+            $auditAction=$internal?'request.private_note_created':'request.customer_message_sent';
+            $prior=dmo_message_replay($db,$requestId,(int)$admin['user_id'],$auditAction,$messageKey,$note,$internal);
+            if($prior!==null){$db->commit();dmo_json(200,['ok'=>true,'message_id'=>$prior,'visibility'=>$internal?'internal_only':'customer_visible','already_saved'=>true]);}
             if ($action === 'send_customer_message') {
                 $statusQuery = $db->prepare(
                     'SELECT status FROM dmo_commission_requests WHERE id = :id LIMIT 1'
@@ -221,7 +227,7 @@ try {
                 $db, (int) $admin['user_id'], $requestId,
                 $action === 'add_private_note' ?
                     'request.private_note_created' : 'request.customer_message_sent',
-                ['message_id' => $messageId]
+                ['message_id' => $messageId,'operation_key'=>$messageKey]
             );
             $db->commit();
             dmo_json(201, [

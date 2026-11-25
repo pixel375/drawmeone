@@ -1,0 +1,3 @@
+# Private message retry safety
+
+Customer replies, artist replies and artist-only notes now support optional UUID operation keys. Under the existing request row lock, a retry with the same request, actor, action and body returns the original message ID; changed content with the same key is rejected. The audit record contains the key and message ID, not an extra copy of the message body. Current dashboard clients reuse keys for unchanged text within the current request, clear them on confirmed save or discard, and do not persist text or keys in browser storage. Older clients are compatible but do not get idempotency. Existing feature gates apply even to retries. Disposable HTTP tests check replay and conflict without adding extra messages.

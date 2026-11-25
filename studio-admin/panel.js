@@ -463,6 +463,12 @@
   let requestFullThread = false;
   let reviewStatus = null;
   let quoteDraftAllowed = false;
+  const pendingAdminMessages=new Map();
+  function adminMessageKey(action,id,body){
+    const prior=pendingAdminMessages.get(action);
+    if(prior&&prior.id===id&&prior.body===body)return prior.key;
+    const key=crypto.randomUUID();pendingAdminMessages.set(action,{id,body,key});return key;
+  }
 
   function requestText(id, value) {
     $(id).textContent = value == null || value === "" ? "—" : String(value);
@@ -1146,6 +1152,7 @@
     addQuoteLine();
   }
   function resetRequestDrafts() {
+    pendingAdminMessages.clear();
     $("request-note-form").reset();
     $("request-message-form").reset();
     resetQuoteDraft();
@@ -1376,7 +1383,7 @@
     updateRequestButtons();
     try {
       const {response, data} = await post("request-actions.php", {
-        action:"add_private_note", request_id:id, body,
+        action:"add_private_note", request_id:id, body,operation_key:adminMessageKey("add_private_note",id,body),
       }, csrf);
       if (response.status === 401) return sessionExpired();
       if (!response.ok || !data.ok) {
@@ -1384,6 +1391,7 @@
           "Note not saved (" + (data.error || response.status) + ").");
         return;
       }
+      pendingAdminMessages.delete("add_private_note");
       $("request-note-body").value = "";
       await openRequest(id);
       requestText("request-detail-status", "Private note saved. Not sent to customer.");
@@ -1410,7 +1418,7 @@
     updateRequestButtons();
     try {
       const {response, data} = await post("request-actions.php", {
-        action:"send_customer_message",request_id:id,body,
+        action:"send_customer_message",request_id:id,body,operation_key:adminMessageKey("send_customer_message",id,body),
       },csrf);
       if (response.status === 401) return sessionExpired();
       if (!response.ok || !data.ok) {
@@ -1418,13 +1426,14 @@
           (data.error || response.status) + ").");
         return;
       }
+      pendingAdminMessages.delete("send_customer_message");
       $("request-message-body").value = "";
       await openRequest(id);
       requestText("request-detail-status",
         "Customer-visible message saved. No email or payment was sent.");
     } catch (_) {
       requestText("request-detail-status",
-        "Connection interrupted. Check conversation before retrying to avoid duplicates.");
+        "Connection interrupted. Retrying the unchanged message safely recovers the result.");
     } finally {
       requestBusy = false;
       updateRequestButtons();
