@@ -67,7 +67,7 @@ jobs:
           [[ -d "$site" && -f "$site/app/cli-admin.php" && -f "$site/app/bootstrap.php" ]] || {
             echo "Expected DrawMeOne PHP deployment is missing"; exit 1;
           }
-          for file in artwork.php portfolio.php sitemap.php services.php policy.php app/public-info.php app/policies.php api/policy.php app/bootstrap.php app/launch-readiness.php app/cli-launch-readiness.php app/catalog.php app/packages.php api/catalog.php api/admin/packages.php app/backup-health.php app/auth.php app/mailer.php app/admin.php app/cli-admin.php app/cli-backup.php app/backup-archive.php app/cli-recovery-check.php app/integrity.php app/cli-integrity.php app/cli-mail-config.php app/cli-smtp-probe.php app/commission-workflow.php app/quotes.php app/orders.php app/artwork.php app/requests.php app/references.php app/cli-migrate-references.php app/deliveries.php app/artwork-reviews.php app/cli-migrate-reviews.php app/cli-migrate-deliveries.php app/notifications.php app/payments.php app/checkout.php app/cli-migrate-checkout.php api/checkout.php api/admin/delivery-draft.php api/delivery.php api/artwork-review.php api/request-status.php api/requests.php api/request.php api/request-message.php api/quote-response.php api/request-attachment.php api/reference.php api/reference-delete.php api/auth/signup.php api/auth/login.php api/auth/logout.php api/auth/me.php api/auth/status.php api/auth/verify.php api/auth/resend-verification.php api/auth/reset-request.php api/auth/reset-confirm.php api/admin/login.php api/admin/email.php api/admin/request.php api/admin/request-actions.php api/admin/quote-send.php api/admin/order-create.php api/portfolio.php api/artwork.php api/admin/artworks.php api/admin/artwork-preview.php api/admin/artwork-upload.php; do
+          for file in artwork.php portfolio.php sitemap.php services.php policy.php app/public-info.php app/policies.php api/policy.php app/bootstrap.php app/artist-queues.php app/launch-readiness.php app/cli-launch-readiness.php app/catalog.php app/packages.php api/catalog.php api/admin/packages.php app/backup-health.php app/auth.php app/mailer.php app/admin.php app/cli-admin.php app/cli-backup.php app/backup-archive.php app/cli-recovery-check.php app/integrity.php app/cli-integrity.php app/cli-mail-config.php app/cli-smtp-probe.php app/commission-workflow.php app/quotes.php app/orders.php app/artwork.php app/requests.php app/references.php app/cli-migrate-references.php app/deliveries.php app/artwork-reviews.php app/cli-migrate-reviews.php app/cli-migrate-deliveries.php app/notifications.php app/payments.php app/checkout.php app/cli-migrate-checkout.php api/checkout.php api/admin/delivery-draft.php api/delivery.php api/artwork-review.php api/request-status.php api/requests.php api/request.php api/request-message.php api/quote-response.php api/request-attachment.php api/reference.php api/reference-delete.php api/auth/signup.php api/auth/login.php api/auth/logout.php api/auth/me.php api/auth/status.php api/auth/verify.php api/auth/resend-verification.php api/auth/reset-request.php api/auth/reset-confirm.php api/admin/login.php api/admin/email.php api/admin/request.php api/admin/request-actions.php api/admin/quote-send.php api/admin/order-create.php api/portfolio.php api/artwork.php api/admin/artworks.php api/admin/artwork-preview.php api/admin/artwork-upload.php; do
             valid=no
             for attempt in 1 2 3 4 5 6 7 8 9 10; do
               if [[ -f "$site/$file" ]] && php -l "$site/$file" >/dev/null 2>&1; then
@@ -290,7 +290,7 @@ jobs:
             desk_page=$(curl -fsSL --max-time 5 -H "Cache-Control: no-cache" "https://drawmeone.com/studio-admin/index.php" || true)
             commission_page=$(curl -fsSL --max-time 5 -H "Cache-Control: no-cache" "https://drawmeone.com/commission.html" || true)
             customer_page=$(curl -fsSL --max-time 5 -H "Cache-Control: no-cache" "https://drawmeone.com/account.html" || true)
-            if [[ "$public_home" == *'concepts.js?v=13'* && "$public_home" == *'studio.js?v=14'* && "$public_home" == *'gallery.js?v=14'* && "$public_home" == *'styles.css?v=14'* && "$desk_page" == *'panel.js?v=50'* && "$desk_page" == *'panel.css?v=40'* && "$commission_page" == *'commission.js?v=39'* && "$customer_page" == *'account.js?v=20'* ]]; then synced=yes; break; fi
+            if [[ "$public_home" == *'concepts.js?v=13'* && "$public_home" == *'studio.js?v=14'* && "$public_home" == *'gallery.js?v=14'* && "$public_home" == *'styles.css?v=14'* && "$desk_page" == *'panel.js?v=51'* && "$desk_page" == *'panel.css?v=40'* && "$commission_page" == *'commission.js?v=39'* && "$customer_page" == *'account.js?v=20'* ]]; then synced=yes; break; fi
             sleep 4
           done
           [[ "$synced" == "yes" ]] || { echo "deployment_sync=expected_versions_unavailable"; exit 1; }
@@ -325,7 +325,7 @@ jobs:
             echo "mobile_artist_desk=stale_or_missing_mobile_layout"
             exit 1
           }
-          [[ "$desk_page" == *'panel.js?v=50'* ]] &&
+          [[ "$desk_page" == *'panel.js?v=51'* ]] &&
           [[ "$desk_page" == *'id="artwork-filter"'* ]] &&
           [[ "$desk_page" == *'id="artwork-unpublish-selected"'* ]] || {
             echo "artist_artwork_library=stale_html"
@@ -335,7 +335,7 @@ jobs:
             echo "artist_artwork_library=stale_css"
             exit 1
           }
-          desk_js=$(curl -fsSL --max-time 15 "https://drawmeone.com/studio-admin/panel.js?v=50")
+          desk_js=$(curl -fsSL --max-time 15 "https://drawmeone.com/studio-admin/panel.js?v=51")
           [[ "$desk_js" == *'artwork-unpublish-selected'* ]] &&
           [[ "$desk_js" == *'No artworks match this view.'* ]] || {
             echo "artist_artwork_library=stale_js"
@@ -348,6 +348,8 @@ jobs:
           echo "package_compatibility=deployed"
           [[ "$desk_page" == *'id="launch-evidence-export"'* ]] && [[ "$desk_js" == *'configuration_only'* ]] || { echo "launch_evidence=stale_assets"; exit 1; }
           echo "launch_evidence=deployed"
+          [[ "$desk_page" == *'id="stat-reply-due"'* && "$desk_page" == *'id="stat-revision-due"'* ]] || { echo "artist_queues=stale_assets"; exit 1; }
+          echo "artist_queues=deployed"
           [[ "$desk_page" == *'id="request-list-query"'* ]] &&
           [[ "$desk_page" == *'id="request-list-next"'* ]] &&
           [[ "$desk_js" == *'requestListGeneration'* ]] &&

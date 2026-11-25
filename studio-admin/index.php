@@ -20,7 +20,7 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
 <meta name="theme-color" content="#151317">
 <title>Artist's Desk · Draw Me One</title>
 <link rel="stylesheet" href="./panel.css?v=40">
-<script defer src="./panel.js?v=50"></script>
+<script defer src="./panel.js?v=51"></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to dashboard</a>
@@ -85,6 +85,12 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
         <article><span>INVOICE FOLLOW-UP</span><strong id="stat-checkout">—</strong><small>Expired or suspended local links needing external closure review</small><button type="button" class="quiet stat-shortcut" data-request-queue="checkout_followup">Review invoices</button></article>
         <article><span>PAYMENT HOLDS</span><strong id="stat-holds">—</strong><small>Payment exceptions requiring attention</small><button type="button" class="quiet stat-shortcut" data-request-queue="payment_hold">Review holds</button></article>
         <article><span>OPEN PRIVACY REQUESTS</span><strong id="stat-privacy">—</strong><small>Require individual review</small></article>
+        <article><span>REPLIES NEEDED</span><strong id="stat-reply-due">—</strong><small>Latest public message is from the customer</small><button type="button" class="quiet stat-shortcut" data-request-queue="reply_due">View conversations</button></article>
+        <article><span>ACCEPTED QUOTES</span><strong id="stat-accepted">—</strong><small>Accepted quote without an order</small><button type="button" class="quiet stat-shortcut" data-request-queue="accepted">Review accepted quotes</button></article>
+        <article><span>OVERDUE ORDERS</span><strong id="stat-overdue">—</strong><small>Agreed date has passed</small><button type="button" class="quiet stat-shortcut" data-request-queue="overdue">Review overdue</button></article>
+        <article><span>UPCOMING DEADLINES</span><strong id="stat-upcoming">—</strong><small>Today through the next seven days</small><button type="button" class="quiet stat-shortcut" data-request-queue="upcoming">View upcoming</button></article>
+        <article><span>REVISIONS REQUESTED</span><strong id="stat-revision-due">—</strong><small>Latest artwork review requests a revision</small><button type="button" class="quiet stat-shortcut" data-request-queue="revision_due">Review artwork</button></article>
+        <article><span>PROOFS AWAITING REVIEW</span><strong id="stat-proof-waiting">—</strong><small>Latest artwork review pending</small><button type="button" class="quiet stat-shortcut" data-request-queue="proof_waiting">View pending proofs</button></article>
         <article><span>MESSAGE ACTIVITY</span><strong id="stat-messages">—</strong><small>Last seven days, not an unread count</small></article>
       </div>
       <p class="small">Activity reflects actual records. No placeholder orders, customers or payments are created.</p>
@@ -141,7 +147,7 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
           <input id="request-list-query" type="search" maxlength="80" placeholder="Search commissions">
         </label>
         <label for="request-list-filter">Request status
-          <select id="request-list-filter"><option value="all">All requests</option><option value="review">Needs review</option><option value="quote_waiting">Awaiting quote decision</option><option value="quote_followup">Quotes needing follow-up</option><option value="accepted">Accepted quote, no order</option><option value="orders">Active orders</option><option value="payment_review">Payments to reconcile</option><option value="payment_hold">Payment holds</option><option value="checkout_followup">Invoice follow-up</option><option value="due">Due soon or overdue</option><option value="other">Other statuses</option></select>
+          <select id="request-list-filter"><option value="all">All requests</option><option value="review">Needs review</option><option value="quote_waiting">Awaiting quote decision</option><option value="quote_followup">Quotes needing follow-up</option><option value="accepted">Accepted quote, no order</option><option value="orders">Active orders</option><option value="payment_review">Payments to reconcile</option><option value="payment_hold">Payment holds</option><option value="checkout_followup">Invoice follow-up</option><option value="due">Due soon or overdue</option><option value="reply_due">Customer reply needed</option><option value="overdue">Overdue</option><option value="upcoming">Due in next seven days</option><option value="revision_due">Revision requested</option><option value="proof_waiting">Proof awaiting customer</option><option value="other">Other statuses</option></select>
         </label>
         <button type="submit" class="quiet">Search</button>
         <button type="button" class="quiet" id="request-list-refresh">Refresh</button>
@@ -252,7 +258,7 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
       <div class="section-intro"><h2>Messages</h2><p>Recent conversation activity, including internal notes. Open a request to read details and reply when customer messaging is enabled.</p></div>
       <div class="request-list-filters">
         <label for="message-list-filter">Message type
-          <select id="message-list-filter"><option value="all">All activity</option><option value="customer">Customer messages</option><option value="artist">Artist replies</option><option value="internal">Private notes</option></select>
+          <select id="message-list-filter"><option value="all">All activity</option><option value="customer">Customer messages</option><option value="reply_due">Conversations awaiting artist reply</option><option value="artist">Artist replies</option><option value="internal">Private notes</option></select>
         </label>
         <button type="button" class="quiet" id="message-list-refresh">Refresh</button>
       </div>

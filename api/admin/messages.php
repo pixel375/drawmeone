@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 require_once dirname(__DIR__, 2) . '/app/admin.php';
+require_once dirname(__DIR__,2).'/app/artist-queues.php';
 dmo_reject_non_get();
 
 try {
@@ -9,12 +10,13 @@ try {
     $pageText = $_GET['page'] ?? '1';
     $filter = $_GET['filter'] ?? 'all';
     if (!is_string($pageText) || !preg_match('/^[1-9][0-9]{0,3}$/D',$pageText) ||
-        !is_string($filter) || !in_array($filter,['all','customer','artist','internal'],true)) {
+        !is_string($filter) || !in_array($filter,['all','customer','artist','internal','reply_due'],true)) {
         dmo_json(422,['ok'=>false,'error'=>'invalid_message_filter']);
     }
     $page=(int)$pageText;
     $offset=($page-1)*50;
     $condition=match($filter){
+        'reply_due'=>"WHERE m.is_internal=0 AND u.role='customer' AND r.status IN ('submitted','clarification_needed') AND NOT EXISTS(SELECT 1 FROM dmo_messages later WHERE later.conversation_id=c.id AND later.is_internal=0 AND later.id>m.id) ",
         'customer'=>"WHERE m.is_internal=0 AND u.role='customer' ",
         'artist'=>"WHERE m.is_internal=0 AND u.role='admin' ",
         'internal'=>"WHERE m.is_internal=1 ",

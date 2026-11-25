@@ -254,6 +254,8 @@ try {
     require_once dirname(__DIR__).'/app/notifications.php';
     $db->prepare("UPDATE dmo_commission_requests SET preferred_contact='email' WHERE id=:id")->execute(['id'=>$requestA]);
     ref_assert(dmo_notification_target($db,$requestA,'proof',$reviewId)!==null,'proof_notice_target_eligible');
+    [$code,$queue]=ref_http('/api/admin/requests.php?filter=proof_waiting',$artistCookie);
+    ref_assert($code===200&&in_array($requestA,array_map('intval',array_column($queue['requests'],'id')),true),'pending_proof_work_queue');
     ref_assert(dmo_notification_target($db,$requestB,'proof',$reviewId)===null,'proof_notice_cross_request_denied');
     [$code,$noticeDetail]=ref_http('/api/admin/request.php?id='.$requestA,$artistCookie);
     ref_assert($code===200&&count(array_filter($noticeDetail['notification_options'],fn($n)=>$n['kind']==='proof'&&$n['event_id']===$reviewId))===1,'proof_notice_listed');
@@ -271,6 +273,8 @@ try {
     [$code]=ref_http('/api/artwork-review.php',$cookieA,$decision,$csrfA);
     ref_assert($code===200,'customer_uses_included_revision');
     ref_assert(dmo_notification_target($db,$requestA,'proof',$reviewId)===null,'responded_proof_notice_denied');
+    [$code,$queue]=ref_http('/api/admin/requests.php?filter=revision_due',$artistCookie);
+    ref_assert($code===200&&in_array($requestA,array_map('intval',array_column($queue['requests'],'id')),true),'revision_requested_work_queue');
     [$code]=ref_http('/api/artwork-review.php',$cookieA,$decision,$csrfA);
     ref_assert($code===409,'revision_replay_denied');
     [$code,$saved]=ref_http('/api/admin/delivery-draft.php',$artistCookie,null,$artistCsrf,$upload);

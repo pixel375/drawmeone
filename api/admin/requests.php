@@ -3,6 +3,7 @@ declare(strict_types=1);
 require_once dirname(__DIR__, 2) . '/app/admin.php';
 require_once dirname(__DIR__, 2) . '/app/orders.php';
 require_once dirname(__DIR__, 2) . '/app/checkout.php';
+require_once dirname(__DIR__,2).'/app/artist-queues.php';
 dmo_reject_non_get();
 
 try {
@@ -14,7 +15,7 @@ try {
     if (!is_string($search) || strlen($search) > 160 ||
         preg_match('/[\x00-\x1f\x7f]/', $search) ||
         !is_string($pageText) || !preg_match('/^[1-9][0-9]{0,3}$/D', $pageText) ||
-        !is_string($filter) || !in_array($filter, ['all','review','other','orders','quote_waiting','accepted','due','quote_followup','payment_review','payment_hold','checkout_followup'], true)) {
+        !is_string($filter) || !in_array($filter, ['all','review','other','orders','quote_waiting','accepted','due','quote_followup','payment_review','payment_hold','checkout_followup','reply_due','overdue','upcoming','revision_due','proof_waiting'], true)) {
         dmo_json(422, ['ok'=>false,'error'=>'invalid_request_list_filter']);
     }
     $search = trim($search);
@@ -37,12 +38,13 @@ try {
     if ($filter === 'orders') $where[] = $activeOrders;
     if ($filter === 'quote_waiting') $where[] = "o.id IS NULL AND vq.status='sent' AND vq.validity_ends_at>UTC_TIMESTAMP()";
     if ($filter === 'quote_followup') $where[] = "o.id IS NULL AND r.status IN ('submitted','clarification_needed') AND ((vq.status='sent' AND vq.validity_ends_at<=UTC_TIMESTAMP()) OR vq.status IN ('declined','superseded'))";
-    if ($filter === 'accepted') $where[] = "o.id IS NULL AND vq.status='accepted'";
+    $queues=dmo_artist_queue_conditions($db);
+    if(isset($queues[$filter]))$where[]='('.$queues[$filter].')';
     if ($filter === 'due') $where[] = $activeOrders . " AND o.agreed_deadline IS NOT NULL AND DATE(o.agreed_deadline)<=DATE_ADD(UTC_DATE(),INTERVAL 7 DAY)";
     $from = ' FROM dmo_commission_requests r JOIN dmo_users u ON u.id = r.customer_id ' .
         'LEFT JOIN dmo_commission_tiers t ON t.id = r.tier_id ' . dmo_requests_stage_joins();
     $conditions = $where === [] ? '' : 'WHERE ' . implode(' AND ', $where) . ' ';
-    $sort = $filter === 'due' ? 'o.agreed_deadline ASC, r.id ASC' : 'r.submitted_at DESC, r.id DESC';
+    $sort = in_array($filter,['due','overdue','upcoming'],true) ? 'o.agreed_deadline ASC, r.id ASC' : 'r.submitted_at DESC, r.id DESC';
     // Limit and offset derive only from validated bounded integers.
     $offset = ($page - 1) * $size;
     $stmt = $db->prepare(

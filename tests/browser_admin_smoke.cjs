@@ -474,6 +474,9 @@ async function verifyReviewAndInbox(browser) {
     const overflow=await horizontalOverflow(page);
     assert(overflow.measured<=overflow.available+3,JSON.stringify(overflow));
     assert.deepEqual(posts,[]);
+    await page.locator("#message-list-filter").selectOption("reply_due");
+    await page.waitForFunction(()=>document.querySelector("#message-list-status")?.textContent.includes("awaiting reply"));
+    assert.deepEqual(queries.at(-1),{filter:"reply_due",n:1});
     console.log("PASS: review transition, full thread and filtered message inbox at 320px");
   }finally{await page.close();}
 }

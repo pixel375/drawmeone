@@ -208,6 +208,12 @@
       "stat-holds": data.counts?.payment_holds,
       "stat-privacy": data.counts?.privacy_open,
       "stat-messages": data.counts?.messages_last_seven_days,
+      "stat-reply-due":data.counts?.reply_due,
+      "stat-accepted":data.counts?.accepted,
+      "stat-overdue":data.counts?.overdue,
+      "stat-upcoming":data.counts?.upcoming,
+      "stat-revision-due":data.counts?.revision_due,
+      "stat-proof-waiting":data.counts?.proof_waiting,
     };
     for (const [name, value] of Object.entries(counters)) {
       $(name).textContent = Number.isSafeInteger(value) && value >= 0
@@ -389,7 +395,7 @@
       if(!response.ok||!data.ok||!Array.isArray(data.messages))throw Error("unavailable");
       previous.disabled=messagePage===1;
       next.disabled=data.has_more!==true;
-      status.textContent="Page "+messagePage+" · "+data.messages.length+" message(s)";
+      status.textContent="Page "+messagePage+" · "+data.messages.length+($("message-list-filter").value==="reply_due"?" conversation(s) awaiting reply":" message(s)");
       if(!data.messages.length){empty(list,"No messages match this view.");return;}
     for (const row of data.messages) {
       record(list,

@@ -13,6 +13,7 @@ require_once __DIR__ . '/checkout.php';
 require_once __DIR__ . '/cancellations.php';
 require_once __DIR__ . '/design.php';
 require_once __DIR__.'/catalog.php';
+require_once __DIR__.'/artist-queues.php';
 
 /** Shared read-only dashboard data, with no customer identifiers or secrets. */
 function dmo_launch_overview(PDO $db): array
@@ -35,6 +36,7 @@ function dmo_launch_overview(PDO $db): array
             "WHERE created_at >= DATE_SUB(UTC_TIMESTAMP(), INTERVAL 7 DAY)",
     ];
     if(dmo_checkout_schema_ready($db))$queries['checkout_followup']="SELECT COUNT(*) FROM dmo_orders o JOIN dmo_commission_requests r ON r.id=o.request_id WHERE ".dmo_checkout_followup_sql();
+    foreach(dmo_artist_queue_conditions($db) as $key=>$predicate)$queries[$key]="SELECT COUNT(*) FROM dmo_commission_requests r ".dmo_requests_stage_joins()." WHERE ".$predicate;
     $counts = [];
     foreach ($queries as $name => $sql) {
         $counts[$name] = (int) $db->query($sql)->fetchColumn();

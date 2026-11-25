@@ -330,6 +330,16 @@ try {
     qa_positive(dmo_notification_target($db,$requestA,'message',$internalId)===null,'internal_note_never_notified');
     $replyId=qa_seed($db,"INSERT INTO dmo_messages (conversation_id,sender_id,body,is_internal) VALUES (:conv,:sender,'Synthetic customer response',0)",['conv'=>$conv,'sender'=>$a]);
     qa_positive(dmo_notification_target($db,$requestA,'message',$messageId)===null,'customer_reply_invalidates_message_notice');
+    [$code,$queue]=qa_http('/api/admin/requests.php?filter=reply_due',$tokenAdmin,'__Host-dmo_admin');
+    qa_positive($code===200&&in_array($requestA,array_map('intval',array_column($queue['requests'],'id')),true),'reply_due_queue_customer_latest');
+    [$code,$inbox]=qa_http('/api/admin/messages.php?filter=reply_due',$tokenAdmin,'__Host-dmo_admin');
+    qa_positive($code===200&&in_array($replyId,array_map('intval',array_column($inbox['messages'],'id')),true),'reply_due_inbox_latest_only');
+    [$code,$overview]=qa_http('/api/admin/overview.php',$tokenAdmin,'__Host-dmo_admin');
+    qa_positive($code===200&&$overview['counts']['reply_due']===count($queue['requests']),'reply_due_count_matches_queue');
+    $afterReply=qa_seed($db,"INSERT INTO dmo_messages (conversation_id,sender_id,body,is_internal) VALUES (:conv,:sender,'Synthetic artist response',0)",['conv'=>$conv,'sender'=>$admin]);
+    [$code,$queue]=qa_http('/api/admin/requests.php?filter=reply_due',$tokenAdmin,'__Host-dmo_admin');
+    qa_positive($code===200&&!in_array($requestA,array_map('intval',array_column($queue['requests'],'id')),true),'artist_reply_clears_queue');
+    $db->prepare('DELETE FROM dmo_messages WHERE id=:id')->execute(['id'=>$afterReply]);
     $db->prepare("DELETE FROM dmo_messages WHERE id IN (:a,:b,:c)")->execute(['a'=>$messageId,'b'=>$internalId,'c'=>$replyId]);
     $db->prepare("UPDATE dmo_commission_requests SET preferred_contact='onsite' WHERE id=:id")->execute(['id'=>$requestA]);
     $oldQuote=$quoteId;

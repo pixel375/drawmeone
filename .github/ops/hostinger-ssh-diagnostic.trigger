@@ -1,1 +1,1 @@
-Verify extended opt-in notice templates and assets, read-only.
+Verify new artist work queues, read-only.
