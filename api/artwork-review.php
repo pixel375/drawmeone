@@ -11,9 +11,9 @@ try{
     }
     dmo_reject_non_get();
     $id=dmo_workflow_id($_GET['id']??null);
-    $q=$db->prepare('SELECT d.storage_key,d.byte_size,d.sha256'.dmo_review_owner_query().' AND v.id=:id LIMIT 1');
-    $q->execute(['customer'=>(int)$session['user_id'],'policy'=>dmo_requests_policy_version(),'id'=>$id]);$row=$q->fetch(PDO::FETCH_ASSOC);
-    if(!is_array($row))dmo_json(404,['ok'=>false,'error'=>'review_not_available']);
+    $q=$db->prepare('SELECT d.storage_key,d.byte_size,d.sha256,r.id AS request_id,r.policy_version'.dmo_review_owner_query().' AND v.id=:id LIMIT 1');
+    $q->execute(['customer'=>(int)$session['user_id'],'id'=>$id]);$row=$q->fetch(PDO::FETCH_ASSOC);
+    if(!is_array($row)||!dmo_policy_request_eligible($db,(int)$row['request_id'],$row['policy_version']))dmo_json(404,['ok'=>false,'error'=>'review_not_available']);
     $path=dmo_delivery_file($row['storage_key']);
     if(!is_file($path)||filesize($path)!==(int)$row['byte_size']||!hash_equals($row['sha256'],(string)hash_file('sha256',$path)))
         dmo_json(404,['ok'=>false,'error'=>'review_not_available']);

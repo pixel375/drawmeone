@@ -40,7 +40,7 @@ function dmo_delivery_order_eligible(PDO $db,int $requestId,int $orderId): bool
     $row=$q->fetch(PDO::FETCH_ASSOC);
     return is_array($row) && dmo_messages_request_open($row['request_status']) &&
         in_array($row['order_status'],['awaiting_arrangement','in_progress','ready_for_delivery','queued','drawing','awaiting_feedback','revision'],true) &&
-        hash_equals(dmo_requests_policy_version(),$row['policy_version']);
+        dmo_policy_request_eligible($db,$requestId,$row['policy_version']);
 }
 
 function dmo_delivery_drafts(PDO $db,int $requestId): array
@@ -124,14 +124,15 @@ function dmo_fulfillment_payment_sql(): string
 function dmo_fulfillment_options(PDO $db,int $requestId): array
 {
     if(!dmo_fulfillment_enabled($db))return [];
-    $q=$db->prepare("SELECT o.id,o.status FROM dmo_orders o JOIN dmo_quotes q ON q.id=o.accepted_quote_id AND q.request_id=o.request_id
+    $q=$db->prepare("SELECT o.id,o.status,r.policy_version FROM dmo_orders o JOIN dmo_quotes q ON q.id=o.accepted_quote_id AND q.request_id=o.request_id
         JOIN dmo_commission_requests r ON r.id=o.request_id JOIN dmo_users u ON u.id=r.customer_id
-        WHERE r.id=:id AND r.status IN ('submitted','clarification_needed') AND r.policy_version=:policy
+        WHERE r.id=:id AND r.status IN ('submitted','clarification_needed')
         AND u.role='customer' AND u.account_status='active' AND u.email_verified_at IS NOT NULL
         AND q.status='accepted' AND ".dmo_fulfillment_payment_sql());
-    $q->execute(['id'=>$requestId,'policy'=>dmo_requests_policy_version()]);
+    $q->execute(['id'=>$requestId]);
     $options=[];
     foreach($q->fetchAll(PDO::FETCH_ASSOC) as $row){
+        if(!dmo_policy_request_eligible($db,$requestId,$row['policy_version']))continue;
         $next=match($row['status']){
             'awaiting_arrangement'=>['in_progress'],
             'in_progress'=>['ready_for_delivery'],

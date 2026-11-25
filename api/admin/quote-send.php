@@ -40,7 +40,7 @@ try {
             dmo_json(404, ['ok' => false, 'error' => 'request_not_found']);
         }
         if (!dmo_messages_request_open((string) $request['status']) ||
-            !hash_equals(dmo_requests_policy_version(), (string) $request['policy_version'])) {
+            !dmo_policy_request_eligible($db,$requestId,(string)$request['policy_version'])) {
             $db->rollBack();
             dmo_json(409, ['ok' => false, 'error' => 'request_not_eligible']);
         }
@@ -103,7 +103,7 @@ try {
         dmo_workflow_audit(
             $db, (int) $admin['user_id'], $requestId, 'quote.published_to_customer',
             ['quote_id' => $quoteId, 'version' => $latest,
-             'validity_days' => $days, 'policy_version' => dmo_requests_policy_version()]
+             'validity_days' => $days, 'policy_version' => $request['policy_version'],'policy_sha256'=>dmo_policy_receipt($db,$requestId)]
         );
         $db->commit();
         dmo_json(200, [

@@ -67,7 +67,7 @@ function dmo_payment_reconcile(PDO $db,array $admin,int $requestId,array $input)
         $lock=$db->prepare('SELECT status,policy_version FROM dmo_commission_requests WHERE id=:id FOR UPDATE');
         $lock->execute(['id'=>$requestId]);$request=$lock->fetch(PDO::FETCH_ASSOC);
         if(!is_array($request)||!dmo_messages_request_open($request['status'])||
-            !hash_equals(dmo_requests_policy_version(),$request['policy_version']))
+            !dmo_policy_request_eligible($db,$requestId,$request['policy_version']))
             throw new DmoPaymentConflict('request_not_eligible');
         $q=$db->prepare("SELECT o.status,o.payment_status,q.currency,q.total_minor," . dmo_order_exception_sql() . " AS exception_action FROM dmo_orders o " .
             "JOIN dmo_quotes q ON q.id=o.accepted_quote_id AND q.request_id=o.request_id AND q.status='accepted' " .

@@ -40,7 +40,7 @@ try {
             dmo_json(404, ['ok' => false, 'error' => 'request_not_found']);
         }
         if (!dmo_messages_request_open((string) $request['status']) ||
-            !hash_equals(dmo_requests_policy_version(), (string) $request['policy_version'])) {
+            !dmo_policy_request_eligible($db,$requestId,(string)$request['policy_version'])) {
             $db->rollBack();
             dmo_json(409, ['ok' => false, 'error' => 'request_not_eligible']);
         }

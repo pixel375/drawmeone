@@ -46,7 +46,7 @@ function dmo_notification_target(PDO $db,int $requestId,string $kind,int $eventI
     $row=$query->fetch(PDO::FETCH_ASSOC);
     if (!is_array($row) || $row['preferred_contact']!=='email' ||
         !dmo_messages_request_open((string)$row['status']) ||
-        !hash_equals(dmo_requests_policy_version(),(string)$row['policy_version']) ||
+        !dmo_policy_request_eligible($db,$requestId,(string)$row['policy_version']) ||
         filter_var($row['email'],FILTER_VALIDATE_EMAIL)===false) return null;
     if ($kind==='quote') {
         $event=$db->prepare("SELECT q.id FROM dmo_quotes q WHERE q.request_id=:id AND q.id=:event " .

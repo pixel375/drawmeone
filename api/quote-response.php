@@ -26,7 +26,7 @@ try {
         !is_int($quoteId) || $quoteId < 1 ||
         !in_array($decision, ['accept','decline'], true) ||
         !is_string($version) ||
-        !hash_equals(dmo_requests_policy_version(), $version) ||
+        !preg_match('/^[a-zA-Z0-9][a-zA-Z0-9._-]{2,39}$/D',$version) ||
         ($decision === 'accept' && ($input['acknowledge_quote'] ?? false) !== true) ||
         ($decision === 'decline' && ($input['acknowledge_quote'] ?? null) !== false)) {
         dmo_json(422, ['ok' => false, 'error' => 'invalid_quote_decision']);
@@ -52,7 +52,8 @@ try {
             dmo_json(404, ['ok' => false, 'error' => 'quote_not_found']);
         }
         if (!dmo_messages_request_open((string) $request['status']) ||
-            !hash_equals($version, (string) $request['policy_version'])) {
+            !hash_equals($version, (string) $request['policy_version']) ||
+            !dmo_policy_request_eligible($db,(int)$request['id'],$version)) {
             $db->rollBack();
             dmo_json(409, ['ok' => false, 'error' => 'request_policy_or_status_changed']);
         }
@@ -68,7 +69,7 @@ try {
             $db->rollBack();
             dmo_json(404, ['ok' => false, 'error' => 'quote_not_found']);
         }
-        if (!dmo_quote_can_respond($quote, true, (string) $request['policy_version'])) {
+        if (!dmo_quote_can_respond($quote, true, (string) $request['policy_version'],true)) {
             $db->rollBack();
             dmo_json(409, ['ok' => false, 'error' => 'quote_expired_or_not_open']);
         }
@@ -105,6 +106,7 @@ try {
             'entity' => (int) $request['id'],
             'details' => json_encode([
                 'quote_id' => $quoteId, 'policy_version' => $version,
+                'policy_sha256'=>dmo_policy_receipt($db,(int)$request['id']),
                 'acknowledged' => $decision === 'accept',
             ], JSON_THROW_ON_ERROR),
         ]);

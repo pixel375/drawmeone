@@ -27,11 +27,11 @@ function dmo_quote_response_enabled(): bool
         && dmo_config('DMO_QUOTE_RESPONSES_ENABLED') === '1';
 }
 
-function dmo_quote_can_respond(array $quote, bool $serviceReady, string $requestPolicy): bool
+function dmo_quote_can_respond(array $quote, bool $serviceReady, string $requestPolicy, ?bool $policyEligible=null): bool
 {
     return $serviceReady
         && $requestPolicy !== ''
-        && hash_equals(dmo_requests_policy_version(), $requestPolicy)
+        && ($policyEligible??hash_equals(dmo_requests_policy_version(), $requestPolicy))
         && ($quote['status'] ?? null) === 'sent'
         && isset($quote['sent_at']) && $quote['sent_at'] !== null
         && isset($quote['validity_ends_at']) && $quote['validity_ends_at'] !== null
@@ -56,6 +56,7 @@ function dmo_quote_customer_rows(PDO $db, int $requestId, string $requestPolicy)
         'SELECT description, amount_minor FROM dmo_quote_lines ' .
         'WHERE quote_id = :id ORDER BY sort_order, id LIMIT 12'
     );
+    $policyEligible=dmo_quote_response_enabled()&&dmo_policy_request_eligible($db,$requestId,$requestPolicy);
     $accepted = false;
     foreach ($quotes as $q) {
         if ($q['status'] === 'accepted') {
@@ -73,7 +74,7 @@ function dmo_quote_customer_rows(PDO $db, int $requestId, string $requestPolicy)
             ['status' => $q['status'], 'sent_at' => $q['sent_at'],
              'validity_ends_at' => $q['validity_ends_at'],
              'is_expired' => $q['is_expired'] ? 1 : 0],
-            dmo_quote_response_enabled(), $requestPolicy
+            dmo_quote_response_enabled(), $requestPolicy,$policyEligible
         );
         $lines->execute(['id' => $q['id']]);
         $q['lines'] = [];

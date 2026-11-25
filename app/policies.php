@@ -41,3 +41,29 @@ function dmo_policy_receipt(PDO $db,int $requestId): ?string
     $q->execute(['id'=>$requestId]);$sha=$q->fetchColumn();
     return is_string($sha)&&preg_match('/^[a-f0-9]{64}$/D',$sha)?$sha:null;
 }
+
+/** Owner-reviewed continuation pins. Not a substitute for the current bundle. */
+function dmo_policy_archived(string $version): ?array
+{
+    $raw=dmo_config('DMO_HISTORICAL_POLICY_PINS');
+    if($raw===''||strlen($raw)>16000)return null;
+    try{$pins=json_decode($raw,true,4,JSON_THROW_ON_ERROR);}catch(Throwable $e){return null;}
+    if(!is_array($pins)||array_is_list($pins)||count($pins)>100)return null;
+    $pin=$pins[$version]??null;
+    if(!is_string($pin)||!preg_match('/^[a-f0-9]{64}$/D',$pin))return null;
+    $doc=dmo_policy_load($version);
+    return $doc!==null&&hash_equals($doc['sha256'],$pin)?$doc:null;
+}
+function dmo_policy_request_eligible(PDO $db,int $requestId,string $version): bool
+{
+    $current=dmo_policy_current();
+    if($current===null)return false;
+    $receipt=dmo_policy_receipt($db,$requestId);
+    if(hash_equals($current['version'],$version)){
+        // Preserve current-version legacy records, but never infer a
+        // historical acknowledgement when the version changes.
+        return $receipt===null||hash_equals($current['sha256'],$receipt);
+    }
+    $archived=dmo_policy_archived($version);
+    return $receipt!==null&&$archived!==null&&hash_equals($archived['sha256'],$receipt);
+}

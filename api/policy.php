@@ -8,7 +8,7 @@ if($version===null&&$sha===null){
 }else{
     if(!is_string($version)||!is_string($sha)||!preg_match('/^[a-f0-9]{64}$/D',$sha))
         dmo_json(404,['ok'=>false,'error'=>'policy_not_available']);
-    $doc=dmo_policy_load($version);
+    $doc=$version===dmo_config('DMO_REQUEST_POLICY_VERSION')?dmo_policy_current():dmo_policy_archived($version);
     if($doc===null||!hash_equals($doc['sha256'],$sha))$doc=null;
     // The current version must be pinned and explicitly published.
     if($version===dmo_config('DMO_REQUEST_POLICY_VERSION')&&dmo_policy_current()===null)$doc=null;
