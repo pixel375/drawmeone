@@ -1,1 +1,1 @@
-Verify expanded media metadata and record integrity checks.
+Verify responsive artwork filters, neutral unavailable state and media integrity markers.

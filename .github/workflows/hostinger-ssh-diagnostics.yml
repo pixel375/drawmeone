@@ -290,7 +290,7 @@ jobs:
             desk_page=$(curl -fsSL --max-time 5 -H "Cache-Control: no-cache" "https://drawmeone.com/studio-admin/index.php" || true)
             commission_page=$(curl -fsSL --max-time 5 -H "Cache-Control: no-cache" "https://drawmeone.com/commission.html" || true)
             customer_page=$(curl -fsSL --max-time 5 -H "Cache-Control: no-cache" "https://drawmeone.com/account.html" || true)
-            if [[ "$public_home" == *'concepts.js?v=13'* && "$public_home" == *'studio.js?v=14'* && "$public_home" == *'gallery.js?v=14'* && "$public_home" == *'styles.css?v=14'* && "$desk_page" == *'panel.js?v=53'* && "$desk_page" == *'panel.css?v=41'* && "$commission_page" == *'commission.js?v=41'* && "$customer_page" == *'account.js?v=20'* ]]; then synced=yes; break; fi
+            if [[ "$public_home" == *'concepts.js?v=13'* && "$public_home" == *'studio.js?v=14'* && "$public_home" == *'gallery.js?v=15'* && "$public_home" == *'styles.css?v=14'* && "$desk_page" == *'panel.js?v=53'* && "$desk_page" == *'panel.css?v=42'* && "$commission_page" == *'commission.js?v=41'* && "$customer_page" == *'account.js?v=20'* ]]; then synced=yes; break; fi
             sleep 4
           done
           [[ "$synced" == "yes" ]] || { echo "deployment_sync=expected_versions_unavailable"; exit 1; }
@@ -315,11 +315,11 @@ jobs:
           [[ "$studio_js" == *'function loadPresentation()'* ]] && [[ "$public_home" == *'id="design-lab" hidden'* ]] || { echo "public_design_runtime=stale_assets"; exit 1; }
           curl -fsSL --max-time 15 https://drawmeone.com/api/site-settings.php | php -r '$d=json_decode(stream_get_contents(STDIN),true); if (!is_array($d)||($d["ok"]??false)!==true||!in_array($d["presentation"]??null,["preview","published"],true)) exit(1); echo "public_design_runtime=".$d["presentation"]."\\n";'
           # Verify mobile Artist Desk stylesheet was deployed and cache-busted.
-          [[ "$desk_page" == *'panel.css?v=41'* ]] || {
+          [[ "$desk_page" == *'panel.css?v=42'* ]] || {
             echo "mobile_artist_desk=stale_stylesheet_reference"
             exit 1
           }
-          desk_css=$(curl -fsSL --max-time 15 "https://drawmeone.com/studio-admin/panel.css?v=41")
+          desk_css=$(curl -fsSL --max-time 15 "https://drawmeone.com/studio-admin/panel.css?v=42")
           [[ "$desk_css" == *'v3.3: All six Artist Desk sections'* ]] &&
           [[ "$desk_css" == *'grid-template-columns:repeat(3,minmax(0,1fr))'* ]] || {
             echo "mobile_artist_desk=stale_or_missing_mobile_layout"
@@ -346,6 +346,7 @@ jobs:
           echo "artwork_library_scale=deployed"
           [[ "$desk_js" == *'action:"batch_visibility"'* ]] || { echo "artwork_atomic_batch=stale_assets"; exit 1; }
           echo "artwork_atomic_batch=deployed"
+          [[ "$desk_css" == *'grid-template-columns:minmax(0,1fr);gap:5px'* ]] || { echo "artwork_filter_mobile=stale_assets"; exit 1; }
           [[ "$desk_page" == *'id="design-history"'* ]] && [[ "$desk_js" == *'restore_draft'* ]] || { echo "design_history=stale_assets"; exit 1; }
           echo "design_history=deployed"
           [[ "$desk_page" == *'id="package-compatibility"'* ]] && [[ "$desk_js" == *'expected_compatibility_revision'* ]] || { echo "package_compatibility=stale_assets"; exit 1; }
@@ -376,11 +377,11 @@ jobs:
           }
           echo "artist_checkbox_sizing=deployed"
           gallery_page=$(curl -fsSL --max-time 15 "https://drawmeone.com/")
-          [[ "$gallery_page" == *'gallery.js?v=14'* ]] || {
+          [[ "$gallery_page" == *'gallery.js?v=15'* ]] || {
             echo "published_gallery=stale_html"
             exit 1
           }
-          gallery_js=$(curl -fsSL --max-time 15 "https://drawmeone.com/gallery.js?v=14")
+          gallery_js=$(curl -fsSL --max-time 15 "https://drawmeone.com/gallery.js?v=15")
           [[ "$gallery_js" == *'if (!unique.has(item.src)) unique.set(item.src,item)'* ]] &&
           [[ "$gallery_js" == *'if (!hosted.length) throw issue'* ]] &&
           [[ "$gallery_js" == *'delete big.dataset.fallback'* ]] || {
@@ -392,6 +393,8 @@ jobs:
           directory=$(curl -fsSL --max-time 15 https://drawmeone.com/portfolio.php)
           [[ "$directory" == *'<h1>Published drawings</h1>'* ]] && [[ "$directory" != *'assets/demo/'* ]] || { echo "authentic_portfolio=directory_unavailable"; exit 1; }
           echo "authentic_portfolio=deployed"
+          [[ "$gallery_js" == *'assets/artwork-unavailable.svg'* && "$gallery_page" == *'id="portfolio-directory-note"'* ]] || { echo "gallery_unavailable_state=stale_assets"; exit 1; }
+          echo "gallery_unavailable_state=deployed"
           services=$(curl -fsSL --max-time 15 https://drawmeone.com/services.php)
           [[ "$services" == *'<h1>Commission services</h1>'* ]] && [[ "$public_home" == *'href="./services.php"'* ]] || { echo "services_page=stale"; exit 1; }
           policy_status=$(curl -sSL --max-time 15 -o /dev/null -w '%{http_code}' https://drawmeone.com/policy.php)
@@ -557,6 +560,7 @@ jobs:
           php "$site/app/cli-retention.php" report
           integrity_output=$(php "$site/app/cli-integrity.php" check) || { printf '%s\n' "$integrity_output"; exit 1; }
           printf '%s\n' "$integrity_output"
+          [[ "$integrity_output" == *"integrity_portfolio_missing_variants=0"* && "$integrity_output" == *"integrity_portfolio_invalid_metadata=0"* ]] || { echo "portfolio_integrity_scan=missing_or_failed"; exit 1; }
           [[ "$integrity_output" == *"integrity_checkout_crypto_complete=yes"* ]] && [[ "$integrity_output" == *"integrity_checkout_crypto_invalid=0"* ]] || { echo "invoice_integrity_scan=missing_or_failed"; exit 1; }
           echo "READ_ONLY_DIAGNOSTIC_COMPLETED"
           REMOTE

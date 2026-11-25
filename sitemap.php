@@ -13,8 +13,9 @@ try {
     $stmt = dmo_database()->query(
         "SELECT a.id FROM dmo_portfolio_artworks a " .
         "JOIN dmo_artwork_files f ON f.artwork_id = a.id AND f.variant = 'display' " .
+        "JOIN dmo_artwork_files t ON t.artwork_id=a.id AND t.variant='thumb' " .
         "WHERE a.visibility = 'published' " .
-        "ORDER BY a.id DESC LIMIT 500"
+        "ORDER BY a.id DESC LIMIT 2000"
     );
     $ids = [];
     foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {

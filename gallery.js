@@ -19,6 +19,8 @@
   const optimizedThumb = /^api\/artwork\.php\?id=[1-9][0-9]{0,17}&v=thumb$/i;
   const demoImage = /^assets\/demo\/art-[0-9]{2}\.svg$/;
   const fallback = "./assets/demo/placeholder.svg";
+  const unavailable="./assets/artwork-unavailable.svg";
+  let hostedHasMore=false;
   let entries=[],isDemo=false,visible=0,renderedCount=0,expanded=false,activeIndex=0,lastFocused=null,startX=null;
   const step=()=>window.matchMedia("(max-width:620px)").matches ? 8 : 12;
   const isScroll=()=>root.dataset.layout === "rows";
@@ -34,7 +36,8 @@
     img.addEventListener("error",()=>{
       if (img.dataset.fallback === "true") return;
       img.dataset.fallback="true";
-      img.src=fallback;
+      img.src=isDemo?fallback:unavailable;
+      if(!isDemo)img.alt="Artwork image currently unavailable";
     });
   }
   function showAt(i) {
@@ -84,6 +87,8 @@
     root.dataset.galleryState=entries.length?(isDemo?"demo":"artwork"):"empty";
     document.querySelectorAll("[data-showcase-image]").forEach(img=>{
       if(!img.dataset.defaultSrc) img.dataset.defaultSrc=img.getAttribute("src") || "";
+      if(!img.dataset.safeguarded){safeguard(img);img.dataset.safeguarded="true";}
+      delete img.dataset.fallback;
       if(!img.dataset.defaultAlt) img.dataset.defaultAlt=img.getAttribute("alt") || "";
       const n=Math.max(0,Number.parseInt(img.dataset.showcaseImage||"0",10)||0);
       if(!isDemo && entries.length){
@@ -136,7 +141,8 @@
     more.hidden=isScroll() || moreRemain<=0;
     remaining.textContent=moreRemain>0?"+ "+Math.min(step(),moreRemain):"";
     moreButton.setAttribute("aria-label","Load "+Math.min(step(),moreRemain)+" more images");
-    progress.textContent="Showing "+total+" of "+entries.length+" images";
+    progress.textContent="Showing "+total+" of "+entries.length+" images"+(hostedHasMore?" in this selection":"");
+    document.getElementById("portfolio-directory-note").hidden=!hostedHasMore;
   }
   moreButton.addEventListener("click",()=>{
     expanded=true;visible=Math.min(entries.length,visible+step());render();
@@ -158,6 +164,7 @@
     if(!response.ok)throw new Error(path+" returned "+response.status);
     const data=await response.json();
     if(!data||!Array.isArray(data.works))throw new Error("Invalid manifest at "+path);
+    if(path==="./api/portfolio.php")hostedHasMore=data.has_more===true;
     return data.works;
     }finally{clearTimeout(timer);}
   }

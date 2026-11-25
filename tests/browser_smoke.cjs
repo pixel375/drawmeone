@@ -216,8 +216,9 @@ async function checkPublishedPortfolio(browser) {
       for (const id of [103,104]) {
         await page.keyboard.press("ArrowRight");
         await page.waitForFunction(()=>document.querySelector("#lightbox-image")
-          ?.getAttribute("src")==="./assets/demo/placeholder.svg");
+          ?.getAttribute("src")==="./assets/artwork-unavailable.svg");
         assert.equal(await link.getAttribute("href"),"./artwork.php?id="+id);
+        assert.equal(await image.getAttribute("alt"),"Artwork image currently unavailable");
       }
       await page.keyboard.press("ArrowRight");
       assert.match(await image.getAttribute("src"),/id=101&v=display$/);
@@ -347,6 +348,12 @@ async function checkPublishedPresentation(browser){
     assert.equal(await page.locator(".hero-visual").isVisible(),false);
     assert.deepEqual(demoRequests,[]);
     assert.equal(await page.locator('.portfolio-directory-link a').isVisible(),true);
+    await page.route("**/api/portfolio.php*",route=>route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({ok:true,has_more:true,works:[{src:"api/artwork.php?id=1&v=display",thumb:"api/artwork.php?id=1&v=thumb",alt:"Synthetic drawing",width:320,height:240}]})}));
+    await page.route("**/api/artwork.php?*",route=>route.fulfill({status:404,body:"unavailable"}));
+    await page.reload({waitUntil:"domcontentloaded"});
+    await page.locator("#portfolio-directory-note").waitFor({state:"visible"});
+    await page.waitForFunction(()=>document.querySelector("#portfolio-gallery img")?.getAttribute("src")==="./assets/artwork-unavailable.svg");
+    assert.deepEqual(demoRequests,[]);
     console.log("PASS: published design, separate visitor mode, stale preview isolation and safe fallback");
   }finally{await context.close();}
 }

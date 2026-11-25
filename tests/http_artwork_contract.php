@@ -168,6 +168,7 @@ try {
     [$status,$manifest]=art_http('/api/portfolio.php');
     art_assert($status===200 && ($manifest['works']??null)===[],
         'draft_not_in_public_manifest');
+    art_assert($manifest['has_more']===false,'small_gallery_not_truncated');
     [$status,,$directory]=art_http('/portfolio.php');
     art_assert($status===200&&!str_contains($directory,'/artwork.php?id='.$id),'draft_absent_from_server_rendered_directory');
     [$status]=art_http('/api/artwork.php?id='.$id.'&v=display');

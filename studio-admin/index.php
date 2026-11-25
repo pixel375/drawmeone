@@ -19,7 +19,7 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
 <meta name="robots" content="noindex,nofollow">
 <meta name="theme-color" content="#151317">
 <title>Artist's Desk · Draw Me One</title>
-<link rel="stylesheet" href="./panel.css?v=41">
+<link rel="stylesheet" href="./panel.css?v=42">
 <script defer src="./panel.js?v=53"></script>
 </head>
 <body>
