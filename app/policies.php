@@ -34,12 +34,23 @@ function dmo_policy_current(): ?array
     $pin=dmo_config('DMO_REQUEST_POLICY_SHA256');
     return $doc!==null&&preg_match('/^[a-f0-9]{64}$/D',$pin)&&hash_equals($pin,$doc['sha256'])?$doc:null;
 }
+/** Missing legacy metadata is distinct from a malformed or mismatched receipt. */
+function dmo_policy_receipt_record(PDO $db,int $requestId): array
+{
+    $q=$db->prepare("SELECT details_json FROM dmo_audit_log WHERE entity_type='commission_request'
+        AND entity_id=:id AND action='request.submitted' ORDER BY id ASC LIMIT 1");
+    $q->execute(['id'=>$requestId]);$raw=$q->fetchColumn();
+    if($raw===false||$raw===null)return ['state'=>'legacy','version'=>null,'sha256'=>null];
+    try{$details=json_decode($raw,true,8,JSON_THROW_ON_ERROR);}catch(Throwable $e){$details=null;}
+    if(!is_array($details)||!is_string($details['policy_version']??null)||
+        !preg_match('/^[a-zA-Z0-9][a-zA-Z0-9._-]{2,39}$/D',$details['policy_version'])||
+        !is_string($details['policy_sha256']??null)||!preg_match('/^[a-f0-9]{64}$/D',$details['policy_sha256']))
+        return ['state'=>'invalid','version'=>null,'sha256'=>null];
+    return ['state'=>'recorded','version'=>$details['policy_version'],'sha256'=>$details['policy_sha256']];
+}
 function dmo_policy_receipt(PDO $db,int $requestId): ?string
 {
-    $q=$db->prepare("SELECT JSON_UNQUOTE(JSON_EXTRACT(details_json,'$.policy_sha256')) FROM dmo_audit_log
-        WHERE entity_type='commission_request' AND entity_id=:id AND action='request.submitted' ORDER BY id ASC LIMIT 1");
-    $q->execute(['id'=>$requestId]);$sha=$q->fetchColumn();
-    return is_string($sha)&&preg_match('/^[a-f0-9]{64}$/D',$sha)?$sha:null;
+    return dmo_policy_receipt_record($db,$requestId)['sha256'];
 }
 
 /** Owner-reviewed continuation pins. Not a substitute for the current bundle. */
@@ -58,7 +69,9 @@ function dmo_policy_request_eligible(PDO $db,int $requestId,string $version): bo
 {
     $current=dmo_policy_current();
     if($current===null)return false;
-    $receipt=dmo_policy_receipt($db,$requestId);
+    $record=dmo_policy_receipt_record($db,$requestId);
+    if($record['state']==='invalid'||($record['state']==='recorded'&&!hash_equals($record['version'],$version)))return false;
+    $receipt=$record['sha256'];
     if(hash_equals($current['version'],$version)){
         // Preserve current-version legacy records, but never infer a
         // historical acknowledgement when the version changes.

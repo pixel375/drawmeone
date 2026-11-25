@@ -935,7 +935,7 @@
 
   function clearRequestContent() {
     for (const id of ["request-detail-ref","request-detail-title","request-customer",
-      "request-tier","request-contact","request-deadline","request-brief-text"]) {
+      "request-tier","request-contact","request-deadline","request-brief-text","request-policy-status"]) {
       requestText(id, "—");
     }
     for (const id of ["request-thread","request-quotes","request-references","request-orders","request-notifications","request-delivery-drafts","request-payment-records"]) {

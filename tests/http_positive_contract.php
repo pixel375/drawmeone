@@ -135,6 +135,15 @@ try {
     qa_positive($code===200&&$archived['policy']['version']==='qa-policy-v0','explicitly_pinned_historical_policy_readable');
     [$code]=qa_http('/api/policy.php?version=qa-policy-v0&sha256='.str_repeat('0',64));
     qa_positive($code===404,'historical_document_wrong_digest_denied');
+    qa_positive(dmo_policy_request_eligible($db,$requestA,'qa-policy-v0'),'archived_receipt_matches_request_version');
+    qa_positive(!dmo_policy_request_eligible($db,$requestA,'qa-policy-v1'),'receipt_version_mismatch_fails_closed');
+    $pins=getenv('DMO_HISTORICAL_POLICY_PINS');
+    putenv('DMO_HISTORICAL_POLICY_PINS={}');
+    qa_positive(!dmo_policy_request_eligible($db,$requestA,'qa-policy-v0'),'historical_pin_required');
+    putenv('DMO_HISTORICAL_POLICY_PINS='.$pins);
+    $receipt->execute(['actor'=>$b,'id'=>$requestB,'details'=>json_encode(['policy_version'=>'qa-policy-v1','policy_sha256'=>'invalid-digest'],JSON_THROW_ON_ERROR)]);
+    qa_positive(!dmo_policy_request_eligible($db,$requestB,'qa-policy-v1'),'malformed_current_receipt_not_legacy');
+    $db->prepare("DELETE FROM dmo_audit_log WHERE entity_type='commission_request' AND entity_id=:id AND action='request.submitted'")->execute(['id'=>$requestB]);
     // Catalog edits must never change a previously submitted commission label.
     $tierId=qa_seed($db,
         "INSERT INTO dmo_commission_tiers
