@@ -228,6 +228,7 @@ async function checkPublishedPortfolio(browser) {
       await page.keyboard.press("ArrowRight");
       assert.match(await image.getAttribute("src"),/id=101&v=display$/);
       await page.keyboard.press("Escape");
+      await page.waitForFunction(()=>!document.querySelector("#portfolio-lightbox").open);
       assert.equal(await page.locator("#portfolio-lightbox").evaluate(el=>el.open),false);
       console.log("PASS: published portfolio / invalid manifests / consecutive missing images / legacy outage="+legacyUnavailable);
     } finally {await context.close();}

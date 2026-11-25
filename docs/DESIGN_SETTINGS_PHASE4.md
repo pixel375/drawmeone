@@ -60,3 +60,8 @@ The admin overview reports whether a published presentation is ready. Synthetic 
 ## Version history and safe rollback
 
 Replacing a published design archives the previous validated snapshot in the existing private audit table, without a migration. Re-publishing identical settings is idempotent. Artist's Desk exposes the most recent 20 replaced versions, never publicly. Restore copies the selected version into a new draft version under the existing write, authentication, CSRF and optimistic-lock requirements. A separate Publish is still required. Older settings replaced before this feature cannot be reconstructed unless independently backed up. No production flags were changed. The disposable HTTP router now explicitly includes both design endpoints, resolving the earlier 404 before the design assertions could run. The new tests cover draft isolation and rollback through real endpoints and the browser UI.
+
+
+## Draft editing safeguards
+
+Unsaved appearance options remain in the current editor during tab navigation. Publish is blocked until saved, and replacing/reloading a dirty draft requires explicit confirmation. The existing optimistic version protection remains in force. No public presentation or write flags changed. Gallery Escape explicitly closes the modal; tests wait for the actual closed state across engines.

@@ -1,1 +1,1 @@
-Verify administrator account security controls and guarded route.
+Verify gallery Escape and unsaved design controls.

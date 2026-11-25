@@ -68,6 +68,7 @@
     if(lastFocused&&lastFocused.isConnected)lastFocused.focus();
   });
   dialog.addEventListener("keydown",(event)=>{
+    if(event.key==="Escape"){event.preventDefault();if(dialog.open)dialog.close();return;}
     if(event.key==="ArrowLeft"){event.preventDefault();showAt(activeIndex-1);}
     if(event.key==="ArrowRight"){event.preventDefault();showAt(activeIndex+1);}
   });

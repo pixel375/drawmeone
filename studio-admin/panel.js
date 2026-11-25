@@ -1805,7 +1805,7 @@
 
   let designDraftVersion = 0;
   let designWriteEnabled = false;
-  let designBusy=false,designGeneration=0,designHistory=[];
+  let designBusy=false,designGeneration=0,designHistory=[],designSaved=null,designLoaded=false;
   const designIds = {
     site_style: "design-site",
     color_theme: "design-color",
@@ -1833,6 +1833,7 @@
         $(id).value = snapshot[key];
       }
     }
+    designSaved=designValues();designLoaded=true;
     const version = data.published?.exists
       ? "Published v" + data.published.version : "Not published yet";
     $("design-state").textContent = "Draft v" + designDraftVersion +
@@ -1846,17 +1847,20 @@
     syncDesignControls();
   }
 
+  function designDirty(){return designSaved!==null&&Object.keys(designIds).some(key=>designValues()[key]!==designSaved[key]);}
   function syncDesignControls(){
     const locked=designBusy||!designWriteEnabled;
+    const dirty=designDirty();
+    $("design-unsaved").hidden=!dirty;
     for(const id of Object.values(designIds))$(id).disabled=locked;
     $("design-save").disabled=locked;
-    $("design-publish").disabled=locked||designDraftVersion===0;
+    $("design-publish").disabled=locked||designDraftVersion===0||dirty;
     $("design-history").disabled=locked||designHistory.length===0;
     $("design-restore").disabled=locked||!designHistory.some(x=>String(x.id)===$("design-history").value);
     $("design-reload").disabled=designBusy;
   }
   async function designLoad(){
-    const generation=++designGeneration;
+    const generation=++designGeneration;designLoaded=false;
     designWriteEnabled=false;syncDesignControls();
     $("design-state").textContent="Loading draft and published settings…";
     try{
@@ -1870,7 +1874,7 @@
     }
   }
   async function designAction(action){
-    if(designBusy||!designWriteEnabled||!csrf)return;
+    if(designBusy||!designWriteEnabled||!csrf||(action==="publish"&&designDirty()))return;
     const body={action,expected_version:designDraftVersion};
     if(action==="save_draft")body.settings=designValues();
     if(action==="restore_draft"){
@@ -1898,13 +1902,14 @@
     }
   }
   $("design-form").addEventListener("submit",event=>{event.preventDefault();designAction("save_draft");});
-  $("design-reload").addEventListener("click",()=>{if(!designBusy)designLoad();});
+  for(const id of Object.values(designIds))$(id).addEventListener("change",syncDesignControls);
+  $("design-reload").addEventListener("click",()=>{if(!designBusy&&(!designDirty()||window.confirm("Discard unsaved appearance changes and reload?")))designLoad();});
   $("design-history").addEventListener("change",syncDesignControls);
   $("design-publish").addEventListener("click",()=>{
-    if(!designBusy&&designWriteEnabled&&window.confirm("Publish the last saved design draft? Unsaved changes will not be included."))designAction("publish");
+    if(!designBusy&&designWriteEnabled&&!designDirty()&&window.confirm("Publish this saved design draft?"))designAction("publish");
   });
   $("design-restore").addEventListener("click",()=>{
-    if(!designBusy&&designWriteEnabled&&window.confirm("Replace your saved draft with this previous design? The public design will not change."))designAction("restore_draft");
+    if(!designBusy&&designWriteEnabled&&window.confirm("Replace your saved draft"+(designDirty()?" and discard unsaved changes":"")+" with this previous design? The public design will not change."))designAction("restore_draft");
   });
 
   // Commission catalog editor. Displayed amounts are dollars, but the API
@@ -2359,7 +2364,7 @@
     if (name === "messages") messages().catch(() => showError("Connection unavailable."));
     if(name==="finance")loadFinance();
     if(name==="customers")loadCustomers();
-    if (name === "settings") designLoad().catch(() => showError("Settings unavailable."));
+    if (name === "settings"&&!designBusy&&!designDirty()&&!designLoaded) designLoad().catch(() => showError("Settings unavailable."));
     if (name === "settings") emailDiagnosticsLoad().catch(() => {
       $("mail-check-status").textContent = "Email diagnostics unavailable.";
     });

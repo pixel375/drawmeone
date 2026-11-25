@@ -20,7 +20,7 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
 <meta name="theme-color" content="#151317">
 <title>Artist's Desk · Draw Me One</title>
 <link rel="stylesheet" href="./panel.css?v=45">
-<script defer src="./panel.js?v=59"></script>
+<script defer src="./panel.js?v=60"></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to dashboard</a>
@@ -458,6 +458,7 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
             </select>
           </label>
         </div>
+        <p id="design-unsaved" class="small" role="status" hidden>Unsaved appearance changes. Save the draft before publishing.</p>
         <div class="design-actions">
           <button type="button" class="quiet" id="design-reload">Reload draft</button>
           <button type="submit" class="quiet" id="design-save" disabled>Save draft</button>
