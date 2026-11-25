@@ -1,1 +1,1 @@
-Verify isolated customer history and public service failure fallback.
+Verify improved library browsing and optional accessibility descriptions.

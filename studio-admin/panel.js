@@ -1418,6 +1418,7 @@
   let artworkRecords = [];
   let artworkWriteEnabled = false;
   let artworkBusy = false;
+  let artworkPage=1,artworkGeneration=0,artworkLoading=false;
 
   function artworkState(message) {
     $("artwork-library-status").textContent = message;
@@ -1425,7 +1426,11 @@
 
   function artworkControls() {
     const checked = [...document.querySelectorAll("#artwork-list .artwork-select:checked")];
-    const canWrite = artworkWriteEnabled && !artworkBusy;
+    const canWrite = artworkWriteEnabled && !artworkBusy && !artworkLoading;
+    $("artwork-refresh").disabled=artworkBusy||artworkLoading;
+    $("artwork-files").disabled=!canWrite;
+    for(const field of $("artwork-list").querySelectorAll("button,input"))field.disabled=!canWrite;
+    $("artwork-select-all").disabled=!canWrite;
     $("artwork-upload").disabled = !canWrite;
     $("artwork-publish-selected").disabled = !canWrite ||
       !checked.some(input => input.dataset.visibility === "draft");
@@ -1442,15 +1447,25 @@
     target.replaceChildren();
     if (!artworkRecords.length) {
       $("artwork-visible-count").textContent = "No artworks uploaded";
+      $("artwork-page").textContent="";$("artwork-prev").disabled=$("artwork-next").disabled=true;
       $("artwork-select-all").checked = false;
       empty(target, "No real artwork uploaded yet. Choose drawing files above.");
       artworkControls();
       return;
     }
     const filter = $("artwork-filter").value;
-    const visible = artworkRecords.filter(work => filter === "all" ||
-      (filter === "draft" ? work.visibility === "draft" : work.visibility === "published"));
-    $("artwork-visible-count").textContent = "Showing " + visible.length + " of " +
+    const matching=artworkRecords.filter(work=>filter==="all"||
+      (filter==="featured"?work.featured===true:filter==="missing_alt"?!String(work.alt||"").trim():work.visibility===filter));
+    const mode=$("artwork-sort-mode").value;
+    if(mode==="gallery")matching.sort((a,b)=>Number(b.featured)-Number(a.featured)||a.sort_order-b.sort_order||b.id-a.id);
+    if(mode==="oldest")matching.reverse();
+    const pages=Math.max(1,Math.ceil(matching.length/60));artworkPage=Math.max(1,Math.min(pages,artworkPage));
+    const visible=matching.slice((artworkPage-1)*60,artworkPage*60);
+    $("artwork-page").textContent="Page "+artworkPage+" of "+pages;
+    $("artwork-prev").disabled=artworkPage===1;
+    $("artwork-next").disabled=artworkPage===pages;
+    $("artwork-select-all").checked=false;
+    $("artwork-visible-count").textContent = "Showing " + matching.length + " of " +
       artworkRecords.length + " drawings · " +
       artworkRecords.filter(work => work.visibility === "draft").length + " drafts · " +
       artworkRecords.filter(work => work.visibility === "published").length + " published";
@@ -1531,7 +1546,17 @@
         updateArtwork(work.id,"set_order",{sort_order:value});
       });
       order.append(input,save);
-      body.append(title,state,pick,actions,order);
+      const accessibility=document.createElement("details");
+      const summary=textNode("summary","Optional accessibility description");
+      const alt=document.createElement("input");alt.type="text";alt.maxLength=240;alt.value=work.alt||"";
+      alt.setAttribute("aria-label","Accessibility description for drawing "+work.id);
+      alt.placeholder="Describe what is visible (optional)";
+      const saveAlt=textNode("button","Save description","quiet");saveAlt.type="button";
+      saveAlt.addEventListener("click",()=>updateArtwork(work.id,"set_alt",{alt:alt.value.trim()}));
+      accessibility.append(summary,alt,saveAlt);
+      if(work.visibility==="published"){
+        const link=textNode("a","View public drawing","small");link.href="../artwork.php?id="+work.id;link.target="_blank";link.rel="noopener noreferrer";body.append(title,state,link,pick,actions,order,accessibility);
+      }else body.append(title,state,pick,actions,order,accessibility);
       card.append(preview,body);
       target.append(card);
     }
@@ -1539,20 +1564,23 @@
   }
 
   async function artworksLoad() {
+    const generation=++artworkGeneration;
+    artworkLoading=true;artworkWriteEnabled=false;artworkControls();
     artworkState("Loading real artwork from the database…");
-    const {response,data} = await get("artworks.php");
-    if (response.status === 401) return sessionExpired();
-    if (!response.ok || !data.ok) {
-      artworkState("Artwork library unavailable (HTTP " + response.status + ").");
-      return;
-    }
-    artworkRecords = Array.isArray(data.artworks) ? data.artworks : [];
-    artworkWriteEnabled = data.write_enabled === true;
-    $("artwork-select-all").checked = false;
-    renderArtwork();
-    artworkState(artworkRecords.length + " artwork entries · " +
-      (artworkWriteEnabled ? "Uploads and publishing available" :
-        "Uploads locked until private server setup is complete"));
+    try{
+      const {response,data}=await get("artworks.php");
+      if(generation!==artworkGeneration||leavingSession)return false;
+      if(response.status===401){sessionExpired();return false;}
+      if(!response.ok||!data.ok||!Array.isArray(data.artworks))throw Error("unavailable");
+      artworkRecords=data.artworks;
+      artworkWriteEnabled=data.write_enabled===true&&data.truncated!==true;
+      renderArtwork();
+      artworkState(artworkRecords.length+" artwork entries · "+(data.truncated===true?"Library exceeds supported limit; writes locked":artworkWriteEnabled?"Uploads and publishing available":"Uploads locked until private server setup is complete"));
+      return true;
+    }catch(_){
+      if(generation===artworkGeneration&&!leavingSession)artworkState("Artwork library unavailable. Reload before editing.");
+      return false;
+    }finally{if(generation===artworkGeneration){artworkLoading=false;artworkControls();}}
   }
 
   async function updateArtwork(id, action, payload) {
@@ -1570,10 +1598,9 @@
         artworkState("Change not saved: " + (data.error || "HTTP " + response.status));
         return;
       }
-      await artworksLoad();
-      artworkState("Artwork #" + id + " updated.");
+      if(await artworksLoad())artworkState("Artwork #" + id + " updated.");
     } catch (_) {
-      artworkState("Connection failed. Change not confirmed.");
+      artworkWriteEnabled=false;artworkState("Connection failed. Change not confirmed; reload before editing.");
     } finally {
       artworkBusy = false;
       renderArtwork();
@@ -1581,10 +1608,14 @@
   }
 
   $("artwork-refresh").addEventListener("click", () => {
-    artworksLoad().catch(() => artworkState("Cannot refresh artwork library."));
+    if(!artworkBusy)artworksLoad();
   });
 
+  $("artwork-sort-mode").addEventListener("change",()=>{artworkPage=1;renderArtwork();});
+  $("artwork-prev").addEventListener("click",()=>{artworkPage--;renderArtwork();});
+  $("artwork-next").addEventListener("click",()=>{artworkPage++;renderArtwork();});
   $("artwork-filter").addEventListener("change", () => {
+    artworkPage=1;
     $("artwork-select-all").checked = false;
     renderArtwork();
   });
@@ -2206,7 +2237,7 @@
       $("mail-check-status").textContent = "Email diagnostics unavailable.";
     });
     if (name === "packages") packagesLoad().catch(() => showError("Packages unavailable."));
-    if (name === "artwork") artworksLoad().catch(() => showError("Artwork unavailable."));
+    if (name === "artwork"&&!artworkBusy) artworksLoad();
   }
 
   let leavingSession = false;
@@ -2222,6 +2253,8 @@
     ++designGeneration;
     ++packageGeneration;
     ++overviewGeneration;
+    ++artworkGeneration;
+    artworkRecords=[];artworkWriteEnabled=false;$("artwork-list").replaceChildren();
     renderLaunchEvidence(null);
     clearPrivacyQueue();
     $("workspace").hidden = true;

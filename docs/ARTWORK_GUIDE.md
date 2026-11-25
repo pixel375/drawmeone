@@ -46,3 +46,7 @@ The authenticated **Artwork** tab now supports multi-select uploads directly fro
 ## Verified operational milestone — 2026-11-23
 
 The owner tested real image upload, publication and unpublication through Artist's Desk and confirmed all three work. Phase 7's essential functionality has therefore been owner-tested. Backups of the PRIVATE Hostinger image storage and a recovery rehearsal remain outstanding. Uploaded images are stored separately from the public GitHub repository.
+
+## Library browsing and optional descriptions
+
+The Artist's Desk retrieves up to the supported 2,000-item library, shows 60 drawings per screen, and can filter featured drawings or missing optional accessibility descriptions, and sort by public gallery order or upload age. Select all applies only to the current displayed page. Descriptions are optional plain text (240 UTF-8 bytes), not titles or required upload fields. Publishing now verifies both optimized files against recorded byte lengths, WebP type and dimensions before exposing them. Failed or incomplete library refreshes lock editing until a successful reload. No existing artwork or production settings were changed.

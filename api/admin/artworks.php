@@ -11,13 +11,15 @@ try {
     $admin = dmo_admin_require_session($db);
     if ($method === 'GET') {
         $query = $db->query(
-            'SELECT a.id, a.slug, a.visibility, a.is_featured, a.sort_order, ' .
+            'SELECT a.id, a.slug, a.visibility, a.is_featured, a.sort_order, a.alt_text, ' .
             'a.created_at, d.pixel_width, d.pixel_height FROM dmo_portfolio_artworks a ' .
             "LEFT JOIN dmo_artwork_files d ON d.artwork_id = a.id AND d.variant = 'display' " .
-            'ORDER BY a.created_at DESC, a.id DESC LIMIT 500'
+            'ORDER BY a.created_at DESC, a.id DESC LIMIT 2001'
         );
+        $rows=$query->fetchAll();
+        $truncated=count($rows)>2000;
         $items = [];
-        foreach ($query->fetchAll() as $row) {
+        foreach (array_slice($rows,0,2000) as $row) {
             $id = (int) $row['id'];
             $items[] = [
                 'id' => $id,
@@ -25,13 +27,14 @@ try {
                 'featured' => (bool) $row['is_featured'],
                 'sort_order' => (int) $row['sort_order'],
                 'created_at' => $row['created_at'],
+                'alt' => (string)($row['alt_text']??''),
                 'width' => $row['pixel_width'] === null ? null : (int) $row['pixel_width'],
                 'height' => $row['pixel_height'] === null ? null : (int) $row['pixel_height'],
                 'thumb' => 'artwork-preview.php?id=' . $id . '&v=thumb',
             ];
         }
         dmo_json(200, [
-            'ok' => true, 'artworks' => $items,
+            'ok' => true, 'artworks' => $items, 'truncated'=>$truncated,
             'write_enabled' => dmo_artwork_writes_enabled(),
         ]);
     }
@@ -43,7 +46,7 @@ try {
     }
     $id = dmo_artwork_id($input['id'] ?? null);
     $action = $input['action'] ?? null;
-    if (!in_array($action, ['set_visibility', 'set_featured', 'set_order'], true)) {
+    if (!in_array($action, ['set_visibility', 'set_featured', 'set_order', 'set_alt'], true)) {
         dmo_json(422, ['ok' => false, 'error' => 'invalid_action']);
     }
     $params = ['id' => $id];
@@ -62,6 +65,11 @@ try {
         }
         $params['value'] = (int) $value;
         $update = 'is_featured = :value';
+    } elseif($action==='set_alt') {
+        $value=$input['alt']??null;
+        if(!is_string($value)||strlen($value)>240||!preg_match('//u',$value)||preg_match('/[\\x00-\\x1f\\x7f]/',$value))dmo_json(422,['ok'=>false,'error'=>'invalid_alt_text']);
+        $params['value']=trim($value)===''?null:trim($value);
+        $update='alt_text = :value';
     } else {
         $value = $input['sort_order'] ?? null;
         if (!is_int($value) || $value < -10000 || $value > 10000) {
@@ -81,13 +89,13 @@ try {
         }
         if ($action === 'set_visibility' && $value === 'published') {
             $files = $db->prepare(
-                'SELECT variant, storage_key FROM dmo_artwork_files WHERE artwork_id = :id'
+                'SELECT variant, storage_key,mime_type,byte_size,pixel_width,pixel_height FROM dmo_artwork_files WHERE artwork_id = :id'
             );
             $files->execute(['id' => $id]);
             $found = [];
             foreach ($files->fetchAll() as $file) {
                 if (in_array($file['variant'], ['thumb', 'display'], true) &&
-                    is_file(dmo_artwork_storage_file((string) $file['storage_key']))) {
+                    dmo_artwork_variant_valid($file)) {
                     $found[$file['variant']] = true;
                 }
             }

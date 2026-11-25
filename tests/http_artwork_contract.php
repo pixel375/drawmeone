@@ -198,6 +198,11 @@ try {
         null,'https://evil.example.invalid');
     art_assert($status===403,'publishing_wrong_origin_denied');
 
+    $path=dmo_artwork_storage_file($variants[0]['storage_key']);$saved=file_get_contents($path);
+    file_put_contents($path,'broken synthetic variant');
+    [$status]=art_http('/api/admin/artworks.php',$token,$csrf,['id'=>$id,'action'=>'set_visibility','visibility'=>'published']);
+    art_assert($status===422,'damaged_variant_blocks_publication');
+    file_put_contents($path,$saved);chmod($path,0600);
     [$status,$result]=art_http('/api/admin/artworks.php',$token,$csrf,
         ['id'=>$id,'action'=>'set_visibility','visibility'=>'published']);
     art_assert($status===200 && ($result['ok']??false)===true,
@@ -227,8 +232,12 @@ try {
     art_assert($status===200 && $changed===$bytes,'different_etag_returns_image');
     // Synthetic hostile metadata is escaped in HTML and JSON-LD.
     $label='CI drawing <script>alert("test")</script> & sample';
-    $db->prepare('UPDATE dmo_portfolio_artworks SET alt_text=:label WHERE id=:id')
-        ->execute(['label'=>$label,'id'=>$id]);
+    [$status]=art_http('/api/admin/artworks.php',$token,$csrf,['id'=>$id,'action'=>'set_alt','alt'=>str_repeat('x',241)]);
+    art_assert($status===422,'oversize_accessibility_description_denied');
+    [$status]=art_http('/api/admin/artworks.php',$token,$csrf,['id'=>$id,'action'=>'set_alt','alt'=>$label]);
+    art_assert($status===200,'optional_accessibility_description_saved');
+    [$status,$list]=art_http('/api/admin/artworks.php',$token);
+    art_assert($status===200&&$list['artworks'][0]['alt']===$label,'artist_accessibility_description_roundtrip');
     [$status,,$html,$headers]=art_http('/artwork.php?id='.$id);
     art_assert($status===200 && str_contains($html,'https://drawmeone.com/artwork.php?id='.$id) &&
         str_contains($html,'&lt;script&gt;') && !str_contains($html,'<script>alert(') &&
@@ -280,6 +289,8 @@ try {
     [$status,$json,$bytes,$headers]=art_http(
         '/api/admin/artwork-preview.php?id='.$id.'&v=thumb',$token);
     art_assert($status===200,'unpublished_artwork_still_private_artist_preview');
+    [$status]=art_http('/api/admin/artworks.php',$token,$csrf,['id'=>$id,'action'=>'set_alt','alt'=>'']);
+    art_assert($status===200,'optional_description_can_be_cleared');
     $audit=$db->query(
         "SELECT action FROM dmo_audit_log WHERE entity_type='portfolio_artwork'"
     )->fetchAll(PDO::FETCH_COLUMN);

@@ -175,3 +175,17 @@ function dmo_artwork_send_file(PDO $db, int $id, string $variant, bool $admin): 
     readfile($path);
     exit;
 }
+
+/** Validate an optimized file against recorded metadata before publication. */
+function dmo_artwork_variant_valid(array $row): bool
+{
+    try{
+        $path=dmo_artwork_storage_file((string)$row['storage_key']);
+        if(is_link($path)||is_link(dirname($path))||is_link(dirname(dirname($path)))||
+            !is_file($path)||!is_readable($path)||$row['mime_type']!=='image/webp'||
+            filesize($path)!==(int)$row['byte_size'])return false;
+        $size=@getimagesize($path);
+        return is_array($size)&&($size['mime']??null)==='image/webp'&&
+            (int)$size[0]===(int)$row['pixel_width']&&(int)$size[1]===(int)$row['pixel_height'];
+    }catch(Throwable $e){return false;}
+}

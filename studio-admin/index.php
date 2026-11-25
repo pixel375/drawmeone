@@ -19,8 +19,8 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
 <meta name="robots" content="noindex,nofollow">
 <meta name="theme-color" content="#151317">
 <title>Artist's Desk · Draw Me One</title>
-<link rel="stylesheet" href="./panel.css?v=40">
-<script defer src="./panel.js?v=51"></script>
+<link rel="stylesheet" href="./panel.css?v=41">
+<script defer src="./panel.js?v=52"></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to dashboard</a>
@@ -301,12 +301,14 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
           <select id="artwork-filter">
             <option value="all">All drawings</option>
             <option value="draft">Private drafts</option>
-            <option value="published">Published drawings</option>
+            <option value="published">Published drawings</option><option value="featured">Featured drawings</option><option value="missing_alt">Without accessibility description</option>
           </select>
         </label>
+        <label for="artwork-sort-mode">Order by<select id="artwork-sort-mode"><option value="recent">Recently uploaded</option><option value="gallery">Public gallery order</option><option value="oldest">Oldest first</option></select></label>
         <span id="artwork-visible-count" class="small" role="status" aria-live="polite"></span>
       </div>
       <div id="artwork-list" class="artwork-library-grid" aria-label="Uploaded artwork">Loading artwork library…</div>
+      <div class="request-list-pagination"><button id="artwork-prev" type="button" class="quiet" disabled>Previous</button><span id="artwork-page" class="small" role="status"></span><button id="artwork-next" type="button" class="quiet" disabled>Next</button></div>
     </section>
 
     <section data-panel="packages" class="content-panel" hidden>

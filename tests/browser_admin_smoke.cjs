@@ -184,6 +184,8 @@ async function verifyArtistDesk(browser, width) {
           "published filter selects only public drawings");
         assert.match(await page.locator("#artwork-visible-count").innerText(),/1 of 2/);
         await page.locator("#artwork-filter").selectOption("all");
+        await page.locator("#artwork-sort-mode").selectOption("oldest");
+        assert.equal(await page.locator("#artwork-page").innerText(),"Page 1 of 1");
         for(const checkbox of await active.locator('input[type="checkbox"]').all()){
           const rect=await checkbox.boundingBox();
           assert(rect && rect.width>=16 && rect.width<=24,"artwork checkbox uses compact control sizing");
