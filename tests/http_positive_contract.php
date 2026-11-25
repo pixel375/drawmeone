@@ -676,6 +676,17 @@ try {
     qa_positive(count($activity['events'])<=50&&in_array('Quote released to customer',array_column($activity['events'],'label'),true),'artist_activity_includes_quote_release');
     foreach($activity['events'] as $event)qa_positive(array_keys($event)===['label','created_at'],'activity_event_minimal_fields');
     qa_positive(!isset($customerDetail['activity']),'customer_detail_excludes_artist_activity');
+    $activityInsert=$db->prepare("INSERT INTO dmo_audit_log (actor_id,action,entity_type,entity_id,details_json) VALUES (:actor,'request.private_note_created','commission_request',:id,'{}')");
+    for($i=0;$i<52;$i++)$activityInsert->execute(['actor'=>$admin,'id'=>$requestA]);
+    [$code,$recentActivity]=qa_http('/api/admin/request.php?id='.$requestA,$tokenAdmin,'__Host-dmo_admin');
+    $activity=$recentActivity['detail']['activity'];
+    qa_positive($code===200&&count($activity['events'])===50&&$activity['has_older']===true&&is_string($activity['next_before']),'activity_history_bounded_cursor');
+    $path='/api/admin/request.php?id='.$requestA.'&activity_before='.$activity['next_before'];
+    [$code,$olderActivity]=qa_http($path,$tokenAdmin,'__Host-dmo_admin');
+    qa_positive($code===200&&count($olderActivity['activity']['events'])>=2&&in_array('Quote released to customer',array_column($olderActivity['activity']['events'],'label'),true)&&!isset($olderActivity['detail']),'older_activity_only_projection');
+    [$code]=qa_http($path,$tokenA);qa_positive(in_array($code,[401,403],true),'older_activity_admin_only');
+    [$code]=qa_http('/api/admin/request.php?id='.$requestA.'&activity_before=0',$tokenAdmin,'__Host-dmo_admin');
+    qa_positive($code===422,'invalid_activity_cursor');
     [$code,$messages]=qa_http('/api/admin/messages.php?filter=internal&page=1',$tokenAdmin,'__Host-dmo_admin');
     qa_positive($code===200 && count($messages['messages'])===50 && $messages['has_more']===true &&
         count(array_filter($messages['messages'],fn($m)=>(int)$m['is_internal']!==1))===0,'artist_message_filter_and_page');

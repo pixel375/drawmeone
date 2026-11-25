@@ -589,11 +589,16 @@
     }
   }
 
-  function renderRequestActivity(activity){
-    const root=$("request-activity-list");root.replaceChildren();
-    $("request-activity-limit").hidden=activity?.has_older!==true;
+  let activityBefore=null,activityBusy=false;
+  function syncActivityControls(){
+    $("request-activity-older").hidden=!activityBefore;$("request-activity-older").disabled=activityBusy;
+  }
+  function renderRequestActivity(activity,append=false){
+    const root=$("request-activity-list");if(!append)root.replaceChildren();
+    activityBefore=activity?.has_older===true&&typeof activity.next_before==="string"&&/^[1-9][0-9]{0,17}$/.test(activity.next_before)?activity.next_before:null;
+    $("request-activity-limit").hidden=activity?.has_older!==true;syncActivityControls();
     if(!Array.isArray(activity?.events)||!activity.events.length){
-      root.append(textNode("li","No recorded workflow events.","small"));return;
+      if(!append)root.append(textNode("li","No recorded workflow events.","small"));return;
     }
     for(const event of activity.events){
       if(typeof event.label!=="string"||typeof event.created_at!=="string")continue;
@@ -602,6 +607,19 @@
       root.append(entry);
     }
   }
+  $("request-activity-older").addEventListener("click",async()=>{
+    if(activityBusy||!activityBefore||selectedRequestId===null||leavingSession)return;
+    const generation=requestLoadGeneration,id=selectedRequestId,cursor=activityBefore;
+    activityBusy=true;syncActivityControls();$("request-activity-feedback").textContent="Loading older events…";
+    try{
+      const {response,data}=await get("request.php?id="+id+"&activity_before="+encodeURIComponent(cursor));
+      if(generation!==requestLoadGeneration||id!==selectedRequestId||leavingSession)return;
+      if(response.status===401)return sessionExpired();
+      if(!response.ok||!data.ok||!Array.isArray(data.activity?.events)||data.activity.next_before===cursor)throw Error("Activity unavailable");
+      renderRequestActivity(data.activity,true);$("request-activity-feedback").textContent="Older events loaded.";
+    }catch(_){if(generation===requestLoadGeneration)$("request-activity-feedback").textContent="Could not load older activity. Try again.";}
+    finally{if(generation===requestLoadGeneration){activityBusy=false;syncActivityControls();}}
+  });
   function renderQuotes(records) {
     const root = $("request-quotes");
     root.replaceChildren();
@@ -1265,7 +1283,7 @@
       "request-tier","request-contact","request-deadline","request-brief-text","request-policy-status"]) {
       requestText(id, "—");
     }
-    $("request-activity-limit").hidden=true;
+    $("request-activity-limit").hidden=true;activityBefore=null;activityBusy=false;syncActivityControls();$("request-activity-feedback").textContent="";
     for (const id of ["request-thread","request-quotes","request-references","request-orders","request-notifications","request-delivery-drafts","request-payment-records","request-activity-list"]) {
       $(id).replaceChildren();
     }
@@ -1294,7 +1312,7 @@
     updateRequestButtons();
     $("request-detail").hidden = false;
     requestText("request-detail-status", "Loading complete request...");
-    $("request-detail").scrollIntoView({behavior:"smooth",block:"start"});
+    if(switching)$("request-detail").scrollIntoView({behavior:"instant",block:"start"});
     let response, data;
     try {
       ({response, data} = await get("request.php?id=" + encodeURIComponent(parsed) + (requestFullThread ? "&thread=full" : "")));

@@ -74,7 +74,7 @@ function dmo_workflow_review_choices(string $status, array $quotes, array $order
 }
 
 /** Private, bounded event history. Never return raw audit JSON, identifiers or actor names. */
-function dmo_workflow_activity(PDO $db,int $id): array
+function dmo_workflow_activity(PDO $db,int $id,?int $before=null): array
 {
     $labels=[
         'request.submitted'=>'Commission submitted','request.review_status_changed'=>'Review status changed',
@@ -96,11 +96,12 @@ function dmo_workflow_activity(PDO $db,int $id): array
         'notification.failed'=>'Mail notice not confirmed',
     ];
     $placeholders=implode(',',array_fill(0,count($labels),'?'));
-    $q=$db->prepare("SELECT action,created_at FROM dmo_audit_log WHERE entity_type='commission_request' AND entity_id=? AND action IN ($placeholders) ORDER BY id DESC LIMIT 51");
-    $q->execute(array_merge([$id],array_keys($labels)));
+    $cursor=$before===null?'':' AND id<?';
+    $q=$db->prepare("SELECT id,action,created_at FROM dmo_audit_log WHERE entity_type='commission_request' AND entity_id=? AND action IN ($placeholders)$cursor ORDER BY id DESC LIMIT 51");
+    $q->execute(array_merge([$id],array_keys($labels),$before===null?[]:[$before]));
     $rows=$q->fetchAll();$older=count($rows)>50;
     if($older)array_pop($rows);
-    return ['events'=>array_map(static fn($r)=>['label'=>$labels[$r['action']],'created_at'=>$r['created_at']],$rows),'has_older'=>$older];
+    return ['events'=>array_map(static fn($r)=>['label'=>$labels[$r['action']],'created_at'=>$r['created_at']],$rows),'has_older'=>$older,'next_before'=>$older?(string)$rows[count($rows)-1]['id']:null];
 }
 
 function dmo_workflow_load(PDO $db, int $id, bool $fullThread = false): ?array

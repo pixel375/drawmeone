@@ -782,7 +782,7 @@ async function verifyDeliveryDraftManagement(browser) {
   let drafts=[];
   const answer=(route,data)=>route.fulfill({status:200,contentType:"application/json",body:JSON.stringify(data)});
   await page.route("**/api/admin/requests.php*",route=>answer(route,{ok:true,requests:[row]}));
-  await page.route("**/api/admin/request.php?*",route=>answer(route,{ok:true,delivery_staging_enabled:true,delivery_drafts:drafts,detail:{request:row,orders:[order],messages:[],quotes:[],references:[],addons:[],activity:{events:[{label:"Unpaid order confirmed",created_at:"2026-11-25 12:00:00"}],has_older:true}}}));
+  await page.route("**/api/admin/request.php?*",route=>new URL(route.request().url()).searchParams.has("activity_before")?answer(route,{ok:true,activity:{events:[{label:"Commission submitted",created_at:"2026-11-24 12:00:00"}],has_older:false,next_before:null}}):answer(route,{ok:true,delivery_staging_enabled:true,delivery_drafts:drafts,detail:{request:row,orders:[order],messages:[],quotes:[],references:[],addons:[],activity:{events:[{label:"Unpaid order confirmed",created_at:"2026-11-25 12:00:00"}],has_older:true,next_before:"100"}}}));
   const stageKeys=[];
   await page.route("**/api/admin/delivery-draft.php",route=>{
     assert.equal(route.request().method(),"POST");
@@ -805,6 +805,9 @@ async function verifyDeliveryDraftManagement(browser) {
     await page.waitForFunction(()=>document.querySelector("#request-activity-list")?.textContent.includes("Unpaid order confirmed"));
     assert.match(await page.locator("#request-activity-list").innerText(),/Unpaid order confirmed/i);
     assert.equal(await page.locator("#request-activity-limit").isVisible(),true);
+    await page.locator("#request-activity-older").click();
+    await page.waitForFunction(()=>document.querySelector("#request-activity-list")?.textContent.includes("Commission submitted"));
+    assert.equal(await page.locator("#request-activity-list li").count(),2);assert.equal(await page.locator("#request-activity-older").isVisible(),false);
     await page.locator(".delivery-draft-form input").setInputFiles({name:"fixture.png",mimeType:"image/png",buffer:Buffer.from("synthetic image fixture")});
     await page.getByRole("button",{name:"Stage privately",exact:true}).click();
     await page.waitForFunction(()=>document.querySelector("#request-detail-status")?.textContent.includes("Draft upload not confirmed"));

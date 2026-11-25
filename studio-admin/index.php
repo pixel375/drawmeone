@@ -20,7 +20,7 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
 <meta name="theme-color" content="#151317">
 <title>Artist's Desk · Draw Me One</title>
 <link rel="stylesheet" href="./panel.css?v=49">
-<script defer src="./panel.js?v=79"></script>
+<script defer src="./panel.js?v=80"></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to dashboard</a>
@@ -232,7 +232,7 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
           <summary>Commission activity history</summary>
           <p class="small">Most recent recorded workflow events. Artist-only; no message text or payment details.</p>
           <ol id="request-activity-list" class="request-activity-list"></ol>
-          <p id="request-activity-limit" class="small" hidden>Showing the latest 50 recorded events; older records are retained.</p>
+          <p id="request-activity-limit" class="small" hidden>Older recorded events are available.</p><button id="request-activity-older" type="button" class="quiet" hidden>Load older activity</button><p id="request-activity-feedback" class="small" role="status"></p>
         </details>
         <div class="request-columns">
           <section class="request-workpanel">
