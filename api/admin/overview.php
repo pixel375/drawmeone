@@ -40,6 +40,7 @@ try {
     )->fetchColumn();
     $localBackup = dmo_backup_local_health();
     $policyReady = dmo_quote_policy_ready();
+    $intake=dmo_intake_state($db);
     $integrity=dmo_integrity_records($db);
     $integrityIssues=array_sum($integrity);
     $readiness = [
@@ -61,7 +62,7 @@ try {
             dmo_config('DMO_REGISTRATION_ENABLED') === '1' ? 'ready' : 'blocked',
          'detail' => 'Registration stays closed until controlled account QA'],
         ['key' => 'requests', 'label' => 'Commission submissions',
-         'status' => dmo_requests_open() ? 'ready' : 'blocked',
+         'status' => $intake['requests_open'] ? 'ready' : 'blocked',
          'detail' => 'Requires verified accounts and approved policies'],
         ['key' => 'messaging', 'label' => 'Private messaging',
          'status' => dmo_messages_enabled() ? 'ready' : 'blocked',
@@ -102,6 +103,7 @@ try {
         'ok' => true,
         'readiness' => $readiness,
         'counts' => $counts,
+        'intake' => $intake,
         'integrity' => ['checks'=>$integrity,'issue_count'=>$integrityIssues,'scope'=>'database_only'],
         'readonly' => true,
         'data_is_live' => true,

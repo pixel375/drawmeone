@@ -3,12 +3,14 @@ declare(strict_types=1);
 require_once dirname(__DIR__) . '/app/requests.php';
 dmo_reject_non_get();
 
+$intake=dmo_intake_public_state();
 dmo_json(200, [
     'ok' => true,
-    'requests_open' => dmo_requests_open(),
+    'requests_open' => $intake['requests_open'],
+    'intake_reason' => $intake['intake_reason'],
     'requires_account' => true,
     'text_only' => true,
     'uploads_available' => false,
     'quotes_sent_automatically' => false,
-    'policy_version' => dmo_requests_open() ? dmo_requests_policy_version() : null,
+    'policy_version' => $intake['requests_open'] ? dmo_requests_policy_version() : null,
 ]);

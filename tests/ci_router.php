@@ -17,6 +17,8 @@ $allowed = [
     '/api/request-message.php',
     '/api/quote-response.php',
     '/api/admin/overview.php',
+    '/api/admin/intake.php',
+    '/api/request-status.php',
     '/api/admin/messages.php',
     '/api/admin/requests.php',
     '/api/admin/order-create.php',

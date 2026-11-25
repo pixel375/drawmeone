@@ -257,3 +257,52 @@ function dmo_order_exception_status(mixed $action): ?string
         default=>null,
     };
 }
+
+/** Optional artist intake control. Cannot override commercial/policy flags. */
+function dmo_intake_control_enabled(): bool
+{
+    return dmo_config('DMO_INTAKE_CONTROL_ENABLED')==='1';
+}
+function dmo_intake_lock(PDO $db): void
+{
+    // Stable existing administrator row serializes intake settings and new
+    // submissions across different customers, without a schema change.
+    if($db->query("SELECT id FROM dmo_users WHERE role='admin' ORDER BY id LIMIT 1 FOR UPDATE")->fetchColumn()===false)
+        throw new RuntimeException('Intake control unavailable');
+}
+function dmo_intake_settings(PDO $db): array
+{
+    $q=$db->query("SELECT id,details_json FROM dmo_audit_log WHERE entity_type='studio_intake' AND entity_id=1 AND action='intake.settings_changed' ORDER BY id DESC LIMIT 1");
+    $row=$q->fetch(PDO::FETCH_ASSOC);
+    if(!is_array($row))return ['version'=>0,'paused'=>true,'capacity'=>10];
+    $data=json_decode($row['details_json'],true,8,JSON_THROW_ON_ERROR);
+    if(!is_array($data)||!is_bool($data['paused']??null)||!is_int($data['capacity']??null)||$data['capacity']<1||$data['capacity']>100)
+        throw new RuntimeException('Invalid intake configuration');
+    return ['version'=>(int)$row['id'],'paused'=>$data['paused'],'capacity'=>$data['capacity']];
+}
+function dmo_intake_active_count(PDO $db): int
+{
+    return (int)$db->query("SELECT COUNT(*) FROM dmo_commission_requests WHERE status NOT IN ('cancelled','canceled','rejected','declined','completed','closed','archived','refunded')")->fetchColumn();
+}
+function dmo_intake_state(PDO $db): array
+{
+    $configured=dmo_requests_open();
+    if(!dmo_intake_control_enabled())return ['control_enabled'=>false,'requests_open'=>$configured,'reason'=>$configured?'open':'not_available'];
+    $settings=dmo_intake_settings($db);
+    $count=dmo_intake_active_count($db);
+    $reason=!$configured?'not_available':($settings['paused']?'paused':($count>=$settings['capacity']?'at_capacity':'open'));
+    return $settings+['control_enabled'=>true,'commercial_gates_open'=>$configured,'active_requests'=>$count,
+        'requests_open'=>$reason==='open','reason'=>$reason];
+}
+function dmo_intake_public_state(?PDO $db=null): array
+{
+    if(!dmo_requests_open())return ['requests_open'=>false,'intake_reason'=>'not_available'];
+    if(!dmo_intake_control_enabled())return ['requests_open'=>true,'intake_reason'=>'open'];
+    try{
+        $state=dmo_intake_state($db??dmo_database());
+        return ['requests_open'=>$state['requests_open'],'intake_reason'=>$state['reason']];
+    }catch(Throwable $e){
+        dmo_log_problem($e,'intake availability');
+        return ['requests_open'=>false,'intake_reason'=>'not_available'];
+    }
+}

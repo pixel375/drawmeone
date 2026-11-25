@@ -111,7 +111,7 @@ try {
         'DMO_CUSTOMER_MESSAGING_ENABLED'=>'1',
         'DMO_ORDER_ADMIN_ENABLED'=>'1','DMO_ORDER_TERMS_APPROVED'=>'1',
         'DMO_MANUAL_PAYMENT_ENABLED'=>'1','DMO_MANUAL_PAYMENT_TERMS_APPROVED'=>'1',
-        'DMO_REGISTRATION_ENABLED'=>'0','DMO_REQUESTS_ENABLED'=>'0',
+        'DMO_REGISTRATION_ENABLED'=>'0','DMO_REQUESTS_ENABLED'=>'1','DMO_INTAKE_CONTROL_ENABLED'=>'1',
     ] as $name=>$value) putenv($name.'='.$value);
     if (!is_string($log)) throw new RuntimeException('Local server log unavailable.');
     $process=proc_open([
@@ -514,6 +514,35 @@ try {
         ],$csrfA);
     qa_positive($code===409,'closed_request_rejects_new_messages');
 
+    [$code,$intake]=qa_http('/api/admin/intake.php',$tokenAdmin,'__Host-dmo_admin');
+    qa_positive($code===200&&$intake['intake']['paused']===true&&$intake['intake']['version']===0,'intake_control_starts_paused');
+    $settings=['expected_version'=>0,'paused'=>false,'capacity'=>1,'confirm_change'=>true];
+    [$code]=qa_http('/api/admin/intake.php',$tokenA,'__Host-dmo_admin',$settings,$csrfA);
+    qa_positive(in_array($code,[401,403],true),'customer_cannot_change_intake');
+    [$code]=qa_http('/api/admin/intake.php',$tokenAdmin,'__Host-dmo_admin',$settings);
+    qa_positive($code===403,'intake_control_requires_csrf');
+    [$code,$saved]=qa_http('/api/admin/intake.php',$tokenAdmin,'__Host-dmo_admin',$settings,$csrfAdmin);
+    qa_positive($code===200&&$saved['intake']['reason']==='at_capacity','existing_active_request_consumes_capacity');
+    $version=$saved['intake']['version'];
+    [$code]=qa_http('/api/admin/intake.php',$tokenAdmin,'__Host-dmo_admin',$settings,$csrfAdmin);
+    qa_positive($code===409,'stale_intake_settings_rejected');
+    [$code,$public]=qa_http('/api/request-status.php');
+    qa_positive($code===200&&$public['requests_open']===false&&!isset($public['capacity'])&&!isset($public['active_requests']),'public_intake_has_no_queue_counts');
+    $payload=['idempotency_key'=>'b1899b00-7b76-4d9c-b5a0-aef173b5e0d1','tier_id'=>null,'addon_ids'=>[],'subject_type'=>'portrait','brief'=>'Synthetic new commission for capacity testing.','preferred_contact'=>'onsite','preferred_deadline'=>null,'policy_version'=>'qa-policy-v1','acknowledge_review'=>true];
+    [$code,$blocked]=qa_http('/api/requests.php',$tokenA,'__Host-dmo_session',$payload,$csrfA);
+    qa_positive($code===503&&$blocked['error']==='commissions_at_capacity','capacity_blocks_new_request');
+    [$code,$saved]=qa_http('/api/admin/intake.php',$tokenAdmin,'__Host-dmo_admin',array_replace($settings,['expected_version'=>$version,'capacity'=>2]),$csrfAdmin);
+    qa_positive($code===200&&$saved['intake']['requests_open']===true,'capacity_increase_reopens_intake_under_existing_gates');
+    [$code,$submitted]=qa_http('/api/requests.php',$tokenA,'__Host-dmo_session',$payload,$csrfA);
+    qa_positive($code===201,'new_request_consumes_remaining_capacity');
+    [$code,$public]=qa_http('/api/request-status.php');
+    qa_positive($public['intake_reason']==='at_capacity','intake_capacity_updates_after_submission');
+    [$code,$saved]=qa_http('/api/admin/intake.php',$tokenAdmin,'__Host-dmo_admin',array_replace($settings,['expected_version'=>$saved['intake']['version'],'paused'=>true,'capacity'=>2]),$csrfAdmin);
+    qa_positive($code===200&&$saved['intake']['reason']==='paused','artist_can_pause_intake');
+    [$code,$retry]=qa_http('/api/requests.php',$tokenA,'__Host-dmo_session',$payload,$csrfA);
+    qa_positive($code===200&&$retry['already_submitted']===true&&$retry['public_ref']===$submitted['public_ref'],'idempotent_retry_survives_intake_pause');
+    [$code,$history]=qa_http('/api/requests.php',$tokenA);
+    qa_positive($code===200&&$history['new_requests_open']===false,'history_available_during_pause');
     echo "DISPOSABLE_POSITIVE_HTTP=PASS\n";
 } catch(Throwable $error) {
     fwrite(STDERR,'DISPOSABLE_POSITIVE_HTTP=FAIL ('.get_class($error).

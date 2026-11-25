@@ -37,7 +37,7 @@ try {
             'ok' => true,
             'requests' => array_map('dmo_requests_list_summary', $rows),
             'page' => $page, 'page_size' => $size, 'has_more' => $hasMore && $page < 9999,
-            'new_requests_open' => dmo_requests_open(),
+            'new_requests_open' => dmo_intake_public_state($db)['requests_open'],
         ]);
     }
 
@@ -50,6 +50,7 @@ try {
     $ref = dmo_requests_public_ref($customer, $request['key']);
     $db->beginTransaction();
     try {
+        if(dmo_intake_control_enabled())dmo_intake_lock($db);
         // Serialize request insertion for each customer, preventing concurrent
         // duplicate retries and limiting request floods.
         $lock = $db->prepare(
@@ -73,6 +74,14 @@ try {
             dmo_json(200, ['ok' => true, 'public_ref' => $ref, 'already_submitted' => true]);
         }
 
+        // Check AFTER idempotent retry lookup; a successful prior submission
+        // remains recoverable even when the artist subsequently pauses intake.
+        if(dmo_intake_control_enabled()){
+            $intake=dmo_intake_state($db);
+            if(!$intake['requests_open']){
+                $db->rollBack();dmo_json(503,['ok'=>false,'error'=>$intake['reason']==='at_capacity'?'commissions_at_capacity':'commissions_closed']);
+            }
+        }
         if (!dmo_auth_rate_limit($db, 'commission-submit-ip', '', 12, 60) ||
             !dmo_auth_rate_limit(
                 $db, 'commission-submit-customer', (string) $customer, 5, 1440
