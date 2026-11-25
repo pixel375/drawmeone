@@ -39,6 +39,7 @@ $allowed = [
     '/api/portfolio.php',
     '/api/artwork.php',
     '/artwork.php',
+    '/portfolio.php',
     '/sitemap.php',
     '/api/auth/verify.php',
     '/api/auth/reset-confirm.php',

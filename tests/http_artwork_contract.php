@@ -168,6 +168,8 @@ try {
     [$status,$manifest]=art_http('/api/portfolio.php');
     art_assert($status===200 && ($manifest['works']??null)===[],
         'draft_not_in_public_manifest');
+    [$status,,$directory]=art_http('/portfolio.php');
+    art_assert($status===200&&!str_contains($directory,'/artwork.php?id='.$id),'draft_absent_from_server_rendered_directory');
     [$status]=art_http('/api/artwork.php?id='.$id.'&v=display');
     art_assert($status===404,'draft_public_image_denied');
     [$status,,$html,$headers]=art_http('/artwork.php?id='.$id);
@@ -232,6 +234,12 @@ try {
         str_contains($html,'&lt;script&gt;') && !str_contains($html,'<script>alert(') &&
         str_contains($html,'"@type":"ImageObject"') &&
         str_contains(strtolower($headers),'no-cache'),'published_detail_safe_html_and_schema');
+    [$status,,$directory,$headers]=art_http('/portfolio.php');
+    art_assert($status===200&&str_contains($directory,'href="/artwork.php?id='.$id.'"')&&str_contains($directory,'&lt;script&gt;')&&!str_contains($directory,'<script>alert(')&&str_contains(strtolower($headers),'no-store'),'directory_public_image_and_escaped_alt');
+    [$status]=art_http('/portfolio.php?page=-1');
+    art_assert($status===404,'directory_invalid_page_rejected');
+    [$status]=art_http('/portfolio.php?page=2');
+    art_assert($status===404,'directory_empty_later_page_not_found');
     [$status,,$xml,$headers]=art_http('/sitemap.php');
     art_assert($status===200 && str_contains($xml,'<loc>https://drawmeone.com/artwork.php?id='.$id.'</loc>') &&
         str_contains($xml,'id='.$id.'&amp;v=display') &&
@@ -255,6 +263,8 @@ try {
     [$status,$manifest]=art_http('/api/portfolio.php');
     art_assert($status===200 && ($manifest['works']??null)===[],
         'unpublished_drawing_removed_from_public_manifest');
+    [$status,,$directory]=art_http('/portfolio.php');
+    art_assert($status===200&&!str_contains($directory,'/artwork.php?id='.$id),'unpublished_removed_from_directory');
     [$status]=art_http('/api/artwork.php?id='.$id.'&v=display');
     art_assert($status===404,'unpublished_public_file_revoked');
     [$status,,$body,$headers]=art_http('/api/artwork.php?id='.$id.'&v=thumb',

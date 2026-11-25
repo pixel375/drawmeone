@@ -1,0 +1,7 @@
+# Authentic public gallery and server-rendered portfolio directory
+
+Explicit development preview preserves labeled samples and the legacy manifest. Public presentation (including settings-service fallback) uses only the artist-published database manifest. Empty and unavailable states never load demo or legacy manifests. Static sample hero art is hidden until preview or authentic artwork is established. No existing artwork is modified.
+
+The new /portfolio.php renders published database artwork as accessible HTML links to individual drawings, 24 per page, with lazy thumbnails and no JavaScript requirement. Featured/sort/id ordering, escaped alt text, no private paths or drafts. Invalid or empty later pages return 404; database failure returns 503. Pagination is bounded at 1,000 pages. The directory remains noindex during launch preparation and is not added to the sitemap. Existing artwork detail and sitemap indexing behavior remains unchanged.
+
+Existing legacy artwork must be uploaded and published through the dashboard before public-mode use. Commercial switches, design activation and policies remain unchanged. Disposable artwork HTTP tests cover draft/published/unpublished visibility and escaping; cross-browser tests cover empty and failed public gallery responses. Live diagnostics check the new page and assets without mutating data.

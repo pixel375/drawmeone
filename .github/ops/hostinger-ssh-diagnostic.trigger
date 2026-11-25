@@ -1,1 +1,1 @@
-Verify versioned artist design history controls and read-only production status.
+Verify authentic public gallery fallback and server-rendered directory; read-only.

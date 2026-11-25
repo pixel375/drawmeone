@@ -368,3 +368,9 @@ h1 em,h2 em{font-style:normal;color:var(--accent)}
 /* Public presentation must never expose the development picker on fallback. */
 .design-lab[hidden]{display:none!important}
 :root[data-presentation="public"] .footer{padding-bottom:42px}
+
+/* Never display sample artwork before explicit development-preview confirmation. */
+:root:not([data-presentation="preview"]):not([data-gallery-state="artwork"]) .hero-visual{display:none!important}
+:root:not([data-presentation="preview"]):not([data-gallery-state="artwork"]) .hero{grid-template-columns:1fr!important;min-height:0}
+:root:not([data-presentation="preview"]) [data-demo-caption]{display:none!important}
+.portfolio-directory-link{margin:22px 0;text-align:center}

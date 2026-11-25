@@ -331,6 +331,22 @@ async function checkPublishedPresentation(browser){
       assert.deepEqual(await state(),["studio","noir","masonry","dark","original"]);
       assert.equal(await page.locator("#design-lab").isVisible(),false);
     }
+    const demoRequests=[];
+    await page.route("**/data/*portfolio.json",route=>{demoRequests.push(route.request().url());return route.abort();});
+    await page.route("**/api/portfolio.php*",route=>route.fulfill({status:503,body:"unavailable"}));
+    await page.reload({waitUntil:"domcontentloaded"});
+    await page.locator("#portfolio-error").waitFor({state:"visible"});
+    assert.equal(await page.locator("#gallery-demo-notice").isVisible(),false);
+    assert.equal(await page.locator("#portfolio-gallery .art-tile").count(),0);
+    assert.equal(await page.locator(".hero-visual").isVisible(),false);
+    assert.deepEqual(demoRequests,[]);
+    await page.route("**/api/portfolio.php*",route=>route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({ok:true,works:[]})}));
+    await page.reload({waitUntil:"domcontentloaded"});
+    await page.locator("#portfolio-empty").waitFor({state:"visible"});
+    assert.equal(await page.locator("#portfolio-error").isVisible(),false);
+    assert.equal(await page.locator(".hero-visual").isVisible(),false);
+    assert.deepEqual(demoRequests,[]);
+    assert.equal(await page.locator('.portfolio-directory-link a').isVisible(),true);
     console.log("PASS: published design, separate visitor mode, stale preview isolation and safe fallback");
   }finally{await context.close();}
 }

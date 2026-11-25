@@ -81,6 +81,7 @@
 
   function syncShowcase(){
     document.documentElement.dataset.hasArtwork=String(!isDemo && entries.length>0);
+    root.dataset.galleryState=entries.length?(isDemo?"demo":"artwork"):"empty";
     document.querySelectorAll("[data-showcase-image]").forEach(img=>{
       if(!img.dataset.defaultSrc) img.dataset.defaultSrc=img.getAttribute("src") || "";
       if(!img.dataset.defaultAlt) img.dataset.defaultAlt=img.getAttribute("alt") || "";
@@ -89,13 +90,15 @@
         const work=entries[n%entries.length];
         img.src=work.src;
         img.alt=imageAlt(work);
-      }else{
+      }else if(root.dataset.presentation==="preview"){
         img.src=img.dataset.defaultSrc;
         img.alt=img.dataset.defaultAlt;
+      }else{
+        img.removeAttribute("src");img.alt="";
       }
     });
     document.querySelectorAll("[data-demo-caption]").forEach(el=>{
-      el.hidden=!isDemo && entries.length>0;
+      el.hidden=root.dataset.presentation!=="preview"||(!isDemo && entries.length>0);
     });
   }
   document.addEventListener("dmo:site-change",()=>queueMicrotask(syncShowcase));
@@ -149,23 +152,28 @@
   });
 
   async function manifest(path){
-    const response=await fetch(path,{cache:"no-cache"});
+    const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),8000);
+    try{
+    const response=await fetch(path,{cache:"no-cache",signal:controller.signal});
     if(!response.ok)throw new Error(path+" returned "+response.status);
     const data=await response.json();
     if(!data||!Array.isArray(data.works))throw new Error("Invalid manifest at "+path);
     return data.works;
+    }finally{clearTimeout(timer);}
   }
   async function load(){
+    const preview=root.dataset.presentation==="preview";
     let hosted = [];
     try {
       hosted = (await manifest("./api/portfolio.php")).filter(item=>acceptable(item,false));
     } catch (_) {
-      // Keep the existing local portfolio/demo fallback during outages.
+      if(!preview)throw Error("Published portfolio unavailable");
+      // Keep existing fallback during preview outages.
       console.warn("Draw Me One: Database portfolio temporarily unavailable.");
     }
     let local = [];
     try {
-      local = (await manifest("./data/portfolio.json")).filter(item=>acceptable(item,false));
+      if(preview)local = (await manifest("./data/portfolio.json")).filter(item=>acceptable(item,false));
     } catch (issue) {
       // A missing legacy manifest must not hide successfully fetched published art.
       if (!hosted.length) throw issue;
@@ -176,14 +184,18 @@
       if (!unique.has(item.src)) unique.set(item.src,item);
     }
     const real=[...unique.values()];
-    isDemo=real.length===0;
+    isDemo=preview&&real.length===0;
     entries=isDemo?(await manifest("./data/demo-portfolio.json")).filter(item=>acceptable(item,true)):real;
     notice.hidden=!isDemo;empty.hidden=entries.length>0;
+    syncShowcase();
     if(!entries.length)return;
-    visible=step();render();syncShowcase();
+    visible=step();render();
   }
-  load().catch(issue=>{
+  function startLoad(){load().catch(issue=>{
     console.warn("Draw Me One gallery:",issue);
-    error.hidden=false;
-  });
+    entries=[];isDemo=false;syncShowcase();root.dataset.galleryState="error";
+    notice.hidden=true;empty.hidden=true;error.hidden=false;
+  });}
+  if(root.dataset.presentation)startLoad();
+  else document.addEventListener("dmo:presentation-ready",startLoad,{once:true});
 })();

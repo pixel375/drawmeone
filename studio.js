@@ -152,6 +152,7 @@
     if(oldLayout!==root.dataset.layout)document.dispatchEvent(new CustomEvent("dmo:layout-change"));
     reflect();
     root.dataset.presentation=preview?"preview":"public";
+    document.dispatchEvent(new CustomEvent("dmo:presentation-ready"));
   }
   async function loadPresentation(){
     let choices={...defaults},preview=false;
