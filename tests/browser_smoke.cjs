@@ -405,6 +405,26 @@ async function checkPublicInformation(browser){
   }finally{await context.close();}
 }
 
+async function checkPublicTheme(browser){
+  const context=await browser.newContext({viewport:{width:320,height:844},colorScheme:"dark"});
+  try{
+    const page=await context.newPage();
+    await page.goto(base+"/services.php");
+    await page.getByRole("button",{name:"Switch to light mode"}).click();
+    assert.equal(await page.locator("html").getAttribute("data-public-mode"),"light");
+    await page.goto(base+"/portfolio.php");
+    await page.getByRole("button",{name:"Switch to dark mode"}).waitFor();
+    assert.equal(await page.locator("html").getAttribute("data-public-mode"),"light");
+    await page.getByRole("button",{name:"Switch to dark mode"}).click();
+    assert.equal(await page.evaluate(()=>localStorage.getItem("dmo-visitor-mode")),"dark");
+    await page.goto(base+"/policy.php?version=invalid&sha256="+"0".repeat(64));
+    await page.getByRole("button",{name:"Switch to light mode"}).waitFor();
+    assert.equal(await page.locator("html").getAttribute("data-public-mode"),"dark");
+    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth+2),true);
+    console.log("PASS: public page theme persistence and 320px layout");
+  }finally{await context.close();}
+}
+
 (async () => {
   const browser = await browserType.launch({ headless: true });
   try {
@@ -422,6 +442,7 @@ async function checkPublicInformation(browser){
     await checkHomepageIntake(browser);
     await checkPublishedPresentation(browser);
     await checkPublicInformation(browser);
+    await checkPublicTheme(browser);
     console.log("BROWSER_SMOKE=PASS");
   } finally { await browser.close(); }
 })().catch(error => {

@@ -315,7 +315,8 @@ jobs:
               verify_asset "$expected_commission_js" "$digest_commission_js" && \
               verify_asset "$expected_commission_css" "$digest_commission_css" && \
               verify_asset "$expected_customer_js" "$digest_customer_js" && \
-              verify_asset "$expected_recover_js" "$digest_recover_js"; then
+              verify_asset "$expected_recover_js" "$digest_recover_js" && \
+              verify_asset "$expected_public_theme" "$digest_public_theme"; then
               echo "deployment_asset_digests=matched"
               break
             fi

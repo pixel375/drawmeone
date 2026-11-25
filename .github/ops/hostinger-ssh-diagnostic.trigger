@@ -1,1 +1,1 @@
-Verify activity sentence-case presentation and all current assets; read-only.
+Verify gallery curation and shared public theme assets; read-only.

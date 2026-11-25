@@ -99,6 +99,7 @@ header('Referrer-Policy: strict-origin-when-cross-origin');
 <link rel="canonical" href="<?= dmo_artwork_page_escape($canonical) ?>">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <meta name="theme-color" content="#141318">
+<script src="./public-theme.js?v=1"></script>
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Draw Me One">
 <meta property="og:title" content="<?= dmo_artwork_page_escape($title) ?>">
@@ -113,6 +114,8 @@ header('Referrer-Policy: strict-origin-when-cross-origin');
 <style>
 :root{color-scheme:dark;--bg:#151318;--card:#211e24;--ink:#faf3ed;--muted:#c6b8bf;--line:#514550;--accent:#edb9ab}
 @media(prefers-color-scheme:light){:root{color-scheme:light;--bg:#faf7f3;--card:#fffdfa;--ink:#242027;--muted:#615662;--line:#d6c9ce;--accent:#783e53}}
+:root[data-public-mode="dark"]{color-scheme:dark;--bg:#151318;--ink:#faf3ed;--muted:#c6b8bf;--line:#514550;--accent:#edb9ab;--card:#211e24}:root[data-public-mode="light"]{color-scheme:light;--bg:#faf7f3;--ink:#242027;--muted:#615662;--line:#d6c9ce;--accent:#783e53;--card:#fffdfa}
+.public-theme-toggle{font:inherit;color:var(--ink);background:transparent;border:1px solid var(--line);border-radius:6px;min-height:44px;padding:8px 12px;cursor:pointer}.public-theme-toggle:focus-visible{outline:2px solid var(--accent);outline-offset:3px}.public-theme-toggle[hidden]{display:none}
 *{box-sizing:border-box}
 body{margin:0;background:radial-gradient(ellipse at 65% -10%,rgba(237,185,171,.1),transparent 65%),var(--bg);color:var(--ink);font:14px/1.65 system-ui,-apple-system,Segoe UI,sans-serif;min-height:100vh}
 a{color:inherit;text-decoration:none}
@@ -139,7 +142,7 @@ footer{padding:24px 0 45px;border-top:1px solid var(--line);font-size:12px;color
 <a class="skip" href="#main">Skip to drawing</a>
 <header>
   <a class="wordmark" href="/" aria-label="Draw Me One homepage">drawmeone<span>.</span></a>
-  <nav aria-label="Main navigation"><a href="/portfolio.php">All drawings</a><a href="/commission.html">Commissions</a></nav>
+  <nav aria-label="Main navigation"><a href="/portfolio.php">All drawings</a><a href="/commission.html">Commissions</a><button type="button" class="public-theme-toggle" data-public-theme hidden>Light mode</button></nav>
 </header>
 <main id="main" tabindex="-1">
   <span class="eyebrow">FROM THE ARTIST'S PORTFOLIO</span>

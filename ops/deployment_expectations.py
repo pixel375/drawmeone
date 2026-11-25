@@ -5,6 +5,7 @@ import re
 import sys
 
 ASSETS = [
+    ["public_theme","portfolio.php","public-theme.js"],
     [
         "concepts",
         "index.html",

@@ -31,6 +31,8 @@ function dmo_directory_escape(string $value): string{return htmlspecialchars($va
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,follow">
+<meta name="theme-color" content="#151318">
+<script src="./public-theme.js?v=1"></script>
 <meta name="description" content="Browse original drawings published by the Draw Me One artist.">
 <title>Published drawings | Draw Me One</title>
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
@@ -38,6 +40,8 @@ function dmo_directory_escape(string $value): string{return htmlspecialchars($va
 <style>
 :root{color-scheme:dark;--bg:#151318;--ink:#faf3ed;--muted:#c6b8bf;--line:#514550;--accent:#edb9ab}
 @media(prefers-color-scheme:light){:root{color-scheme:light;--bg:#faf7f3;--ink:#242027;--muted:#615662;--line:#d6c9ce;--accent:#783e53}}
+:root[data-public-mode="dark"]{color-scheme:dark;--bg:#151318;--ink:#faf3ed;--muted:#c6b8bf;--line:#514550;--accent:#edb9ab}:root[data-public-mode="light"]{color-scheme:light;--bg:#faf7f3;--ink:#242027;--muted:#615662;--line:#d6c9ce;--accent:#783e53}
+.public-theme-toggle{font:inherit;color:var(--ink);background:transparent;border:1px solid var(--line);border-radius:6px;min-height:44px;padding:8px 12px;cursor:pointer}.public-theme-toggle:focus-visible{outline:2px solid var(--accent);outline-offset:3px}.public-theme-toggle[hidden]{display:none}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.6 system-ui,sans-serif}
 header,main,footer{width:min(1200px,calc(100% - 32px));margin:auto}
 header,footer{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;padding:24px 0;border-bottom:1px solid var(--line)}
@@ -54,7 +58,7 @@ main{padding:38px 0 56px}h1{font:normal clamp(32px,5vw,58px)/1.15 Georgia,serif;
 </head>
 <body>
 <a class="skip" href="#main">Skip to drawings</a>
-<header><a href="/" aria-label="Draw Me One homepage">drawmeone.</a><nav aria-label="Main navigation"><a href="/#portfolio">Home gallery</a><a href="/services.php">Services</a><a href="/commission.html">Commissions</a></nav></header>
+<header><a href="/" aria-label="Draw Me One homepage">drawmeone.</a><nav aria-label="Main navigation"><a href="/#portfolio">Home gallery</a><a href="/services.php">Services</a><a href="/commission.html">Commissions</a><button type="button" class="public-theme-toggle" data-public-theme hidden>Light mode</button></nav></header>
 <main id="main" tabindex="-1">
 <h1>Published drawings</h1>
 <p class="intro">Original artwork shared by the artist. Select a drawing to view it individually.</p>
