@@ -16,7 +16,7 @@
   if (![gallery,notice,empty,error,more,moreButton,remaining,progress,dialog,big,count,pageLink].every(Boolean)) return;
 
   const realImage = /^(?:assets\/portfolio\/[a-z0-9][a-z0-9/_-]*\.(?:avif|webp|png|jpe?g)|api\/artwork\.php\?id=[1-9][0-9]{0,17}&v=display)$/i;
-  const hostedImage = /^api\\/artwork\\.php\\?id=[1-9][0-9]{0,17}&v=display$/;
+  const hostedImage = /^api\/artwork\.php\?id=[1-9][0-9]{0,17}&v=display$/;
   const optimizedThumb = /^api\/artwork\.php\?id=[1-9][0-9]{0,17}&v=thumb$/i;
   const demoImage = /^assets\/demo\/art-[0-9]{2}\.svg$/;
   const fallback = "./assets/demo/placeholder.svg";

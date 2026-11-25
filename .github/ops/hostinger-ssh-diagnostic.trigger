@@ -1,1 +1,1 @@
-Verify private reference validation and private media headers.
+Retest corrected hosted gallery URL pattern and private media checks.
