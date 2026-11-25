@@ -360,6 +360,18 @@ try {
         $size=getimagesizefromstring($orientedBytes);
         art_assert($status===200&&$size[0]===420&&$size[1]===620&&strpos($orientedBytes,"Exif\0\0")===false,'oriented_private_webp_without_exif');
     }
+    $featureBatch=['action'=>'batch_featured','ids'=>[$id,$id2],'featured'=>false,'confirm'=>true];
+    [$status]=art_http('/api/admin/artworks.php',$token,$csrf,$featureBatch);
+    art_assert($status===409,'mixed_feature_batch_rejected_atomically');
+    art_assert((int)$db->query('SELECT is_featured FROM dmo_portfolio_artworks WHERE id='.(int)$id)->fetchColumn()===1,'failed_feature_batch_preserves_existing_flag');
+    [$status]=art_http('/api/admin/artworks.php',$token,$csrf,array_replace($featureBatch,['ids'=>[$id]]));
+    art_assert($status===200,'feature_batch_removes_flag');
+    [$status,$features]=art_http('/api/admin/artworks.php',$token,$csrf,array_replace($featureBatch,['featured'=>true]));
+    art_assert($status===200&&$features['updated']===2,'atomic_feature_batch');
+    [$status,$privateManifest]=art_http('/api/portfolio.php');
+    art_assert($status===200&&$privateManifest['works']===[],'feature_drafts_never_publishes');
+    [$status]=art_http('/api/admin/artworks.php',$token,$csrf,array_replace($featureBatch,['ids'=>[$id2]]));
+    art_assert($status===200,'restore_second_fixture_feature_flag');
     $batch=['action'=>'batch_visibility','ids'=>[$id,$id2],'visibility'=>'published','confirm'=>true];
     [$status]=art_http('/api/admin/artworks.php',$token,$csrf,array_replace($batch,['ids'=>[$id,$id]]));
     art_assert($status===422,'batch_duplicate_ids_denied');

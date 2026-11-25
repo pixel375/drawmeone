@@ -369,7 +369,8 @@ async function verifyGalleryMoves(browser){
   await page.route("**/api/admin/artworks.php*",route=>{
     const answer=data=>route.fulfill({status:200,contentType:"application/json",body:JSON.stringify(data)});
     if(route.request().method()==="GET")return answer({ok:true,write_enabled:true,artworks:rows});
-    payload=route.request().postDataJSON();rows=rows.map(w=>({...w,sort_order:w.id===92?0:5}));return answer({ok:true,updated:2});
+    payload=route.request().postDataJSON();if(payload.action==="batch_featured"){rows=rows.map(w=>({...w,featured:payload.featured}));return answer({ok:true,updated:payload.ids.length});}
+    rows=rows.map(w=>({...w,sort_order:w.id===92?0:5}));return answer({ok:true,updated:2});
   });
   try{
     await page.goto(base+"/studio-admin/index.php",{waitUntil:"domcontentloaded"});
@@ -380,7 +381,10 @@ async function verifyGalleryMoves(browser){
     await page.waitForFunction(()=>document.querySelector("#artwork-library-status")?.textContent.includes("moved earlier"));
     assert.deepEqual(payload,{action:"move_published",id:92,neighbor_id:91,direction:"earlier",expected_order:5,expected_neighbor_order:0,expected_featured:false});
     assert.match(await page.locator(".artwork-library-card").first().innerText(),/Drawing #92/i);
-    console.log("PASS: artist moves adjacent published drawing");
+    await page.locator("#artwork-select-all").check();page.once("dialog",d=>d.accept());await page.locator("#artwork-feature-selected").click();
+    await page.waitForFunction(()=>document.querySelector("#artwork-library-status")?.textContent.includes("Featured 2 drawings"));
+    assert.equal(payload.action,"batch_featured");assert.equal(payload.featured,true);assert.deepEqual([...payload.ids].sort(),[91,92]);
+    console.log("PASS: artist moves and bulk-features published drawings");
   }finally{await page.close();}
 }
 async function verifyInterruptedArtworkUpload(browser){

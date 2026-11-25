@@ -347,3 +347,28 @@ function dmo_artwork_move(PDO $db,int $admin,array $input): never
         $db->commit();dmo_json(200,['ok'=>true,'updated'=>$changed]);
     }catch(Throwable $error){if($db->inTransaction())$db->rollBack();throw $error;}
 }
+
+/** Feature a selected set without changing publication visibility. */
+function dmo_artwork_batch_featured(PDO $db,int $admin,array $input): never
+{
+    $ids=$input['ids']??null;$target=$input['featured']??null;
+    if(count($input)!==4||array_diff(array_keys($input),['action','ids','featured','confirm'])||
+        ($input['confirm']??null)!==true||!is_bool($target)||!is_array($ids)||!array_is_list($ids)||count($ids)<1||count($ids)>60)
+        dmo_json(422,['ok'=>false,'error'=>'invalid_artwork_batch']);
+    foreach($ids as $id)if(!is_int($id)||$id<1)dmo_json(422,['ok'=>false,'error'=>'invalid_artwork_batch']);
+    if(count(array_unique($ids))!==count($ids))dmo_json(422,['ok'=>false,'error'=>'invalid_artwork_batch']);
+    sort($ids,SORT_NUMERIC);$db->beginTransaction();
+    try{
+        $lock=$db->prepare('SELECT is_featured FROM dmo_portfolio_artworks WHERE id=:id FOR UPDATE');
+        foreach($ids as $id){
+            $lock->execute(['id'=>$id]);$current=$lock->fetchColumn();
+            if($current===false||(bool)$current===$target){$db->rollBack();dmo_json(409,['ok'=>false,'error'=>'artwork_batch_changed']);}
+        }
+        $update=$db->prepare('UPDATE dmo_portfolio_artworks SET is_featured=:featured WHERE id=:id');
+        foreach($ids as $id){
+            $update->execute(['featured'=>(int)$target,'id'=>$id]);
+            dmo_artwork_record_audit($db,$admin,$id,'artwork.set_featured');
+        }
+        $db->commit();dmo_json(200,['ok'=>true,'updated'=>count($ids),'featured'=>$target]);
+    }catch(Throwable $error){if($db->inTransaction())$db->rollBack();throw $error;}
+}

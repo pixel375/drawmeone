@@ -20,7 +20,7 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
 <meta name="theme-color" content="#151317">
 <title>Artist's Desk · Draw Me One</title>
 <link rel="stylesheet" href="./panel.css?v=48">
-<script defer src="./panel.js?v=74"></script>
+<script defer src="./panel.js?v=75"></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to dashboard</a>
@@ -333,13 +333,15 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
           <ul id="artwork-upload-results" class="artwork-upload-results"></ul>
         </div>
         <div class="artwork-bulk">
-          <strong>Artwork visibility</strong>
+          <strong>Artwork visibility &amp; featured status</strong>
           <p class="small">Only published artwork appears in the public gallery. Drafts are never served through the public image API. Selected drawings are published or unpublished together; a failed validation prevents the entire batch.</p>
           <label class="artwork-select-label"><input type="checkbox" id="artwork-select-all"> Select all displayed on this page</label>
           <p id="artwork-selection-count" class="small" role="status">0 selected on this page</p>
           <div class="artwork-batch-actions">
             <button type="button" class="quiet" id="artwork-publish-selected" disabled>Publish selected drafts</button>
             <button type="button" class="quiet" id="artwork-unpublish-selected" disabled>Unpublish selected drawings</button>
+            <button type="button" class="quiet" id="artwork-feature-selected" disabled>Feature selected drawings</button>
+            <button type="button" class="quiet" id="artwork-unfeature-selected" disabled>Remove selected featured status</button>
           </div>
           <p id="artwork-library-status" role="status" class="small"></p>
         </div>

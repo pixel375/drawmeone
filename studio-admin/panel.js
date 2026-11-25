@@ -1598,6 +1598,8 @@
       !checked.some(input => input.dataset.visibility === "draft");
     $("artwork-unpublish-selected").disabled = !canWrite ||
       !checked.some(input => input.dataset.visibility === "published");
+    $("artwork-feature-selected").disabled=!canWrite||!checked.some(input=>input.dataset.featured==="false");
+    $("artwork-unfeature-selected").disabled=!canWrite||!checked.some(input=>input.dataset.featured==="true");
   }
 
   function artworkSelectCount() {
@@ -1667,6 +1669,7 @@
       select.value = String(work.id);
       select.disabled = !artworkWriteEnabled || artworkBusy;
       select.dataset.visibility = work.visibility === "published" ? "published" : "draft";
+      select.dataset.featured=String(work.featured===true);
       select.setAttribute("aria-label", "Select drawing " + work.id + " for bulk actions");
       select.addEventListener("change", artworkControls);
       const pick = document.createElement("label");
@@ -1847,6 +1850,23 @@
   }
   $("artwork-publish-selected").addEventListener("click",()=>batchArtwork("published"));
   $("artwork-unpublish-selected").addEventListener("click",()=>batchArtwork("draft"));
+
+  async function batchArtworkFeatured(featured){
+    if(!artworkWriteEnabled||artworkBusy||artworkLoading)return;
+    const ids=[...$("artwork-list").querySelectorAll(".artwork-select:checked")].filter(x=>x.dataset.featured===String(!featured)).map(x=>Number(x.value)).filter(x=>Number.isSafeInteger(x)&&x>0);
+    if(!ids.length||ids.length>60)return;
+    if(!window.confirm((featured?"Feature ":"Remove featured status from ")+ids.length+" selected drawings? Private drafts remain private."))return;
+    artworkBusy=true;artworkControls();
+    try{
+      const {response,data}=await post("artworks.php",{action:"batch_featured",ids,featured,confirm:true},csrf);
+      if(response.status===401)return sessionExpired();
+      if(!response.ok||!data.ok||data.updated!==ids.length){artworkWriteEnabled=false;artworkState("Featured batch not confirmed. Refresh before editing.");return;}
+      if(await artworksLoad())artworkState((featured?"Featured ":"Removed featured status from ")+ids.length+" drawings. Publication unchanged.");
+    }catch(_){artworkWriteEnabled=false;artworkState("Featured batch outcome uncertain. Refresh before retrying.");}
+    finally{artworkBusy=false;if(!leavingSession)artworkControls();}
+  }
+  $("artwork-feature-selected").addEventListener("click",()=>batchArtworkFeatured(true));
+  $("artwork-unfeature-selected").addEventListener("click",()=>batchArtworkFeatured(false));
 
   $("artwork-files").addEventListener("change",()=>{
     if(artworkPendingFiles.length&&!window.confirm("Replace the remaining upload selection with these new files?")){$("artwork-files").value="";return;}
