@@ -1,1 +1,1 @@
-Verify responsive artwork filters, neutral unavailable state and media integrity markers.
+Verify neutral unavailable artwork handling and showcase regression correction.

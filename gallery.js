@@ -34,7 +34,7 @@
     item.alt.trim() : (isDemo ? "Decorative sample design image" : "Original drawing by Draw Me One");
   function safeguard(img) {
     img.addEventListener("error",()=>{
-      if (img.dataset.fallback === "true") return;
+      if (!img.getAttribute("src") || img.dataset.fallback === "true") return;
       img.dataset.fallback="true";
       img.src=isDemo?fallback:unavailable;
       if(!isDemo)img.alt="Artwork image currently unavailable";
@@ -44,8 +44,8 @@
     if (!entries.length) return;
     activeIndex=(i+entries.length)%entries.length;
     delete big.dataset.fallback;
-    big.src=entries[activeIndex].src;
     big.alt=imageAlt(entries[activeIndex]);
+    big.src=entries[activeIndex].src;
     count.textContent=(activeIndex+1)+" / "+entries.length;
     const match=/^api\/artwork\.php\?id=([1-9][0-9]{0,17})&v=display$/.exec(entries[activeIndex].src);
     pageLink.hidden=!match;
@@ -93,8 +93,8 @@
       const n=Math.max(0,Number.parseInt(img.dataset.showcaseImage||"0",10)||0);
       if(!isDemo && entries.length){
         const work=entries[n%entries.length];
-        img.src=work.src;
         img.alt=imageAlt(work);
+        img.src=work.src;
       }else if(root.dataset.presentation==="preview"){
         img.src=img.dataset.defaultSrc;
         img.alt=img.dataset.defaultAlt;
@@ -113,11 +113,11 @@
     button.type="button";button.className="art-tile";
     button.setAttribute("aria-label","View image "+(index+1)+" of "+entries.length+": "+imageAlt(item));
     const img=document.createElement("img");
-    img.src=item.thumb||item.src;img.alt=imageAlt(item);
+    safeguard(img);img.alt=imageAlt(item);img.src=item.thumb||item.src;
     img.loading=index<4?"eager":"lazy";img.decoding="async";
     if(Number.isInteger(item.width)&&item.width>0)img.width=item.width;
     if(Number.isInteger(item.height)&&item.height>0)img.height=item.height;
-    safeguard(img);button.appendChild(img);
+    button.appendChild(img);
     button.addEventListener("click",()=>openAt(index,button));
     return button;
   }

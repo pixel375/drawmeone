@@ -203,7 +203,12 @@ async function checkPublishedPortfolio(browser) {
       assert.match(await tiles.first().locator("img").getAttribute("src"),/id=101&v=thumb$/);
       await page.locator("[data-site-choice=archive]").click();
       await page.waitForFunction(()=>[...document.querySelectorAll("[data-showcase-image]")]
-        .every(img=>img.src.includes("/api/artwork.php?")));
+        .every(img=>{
+          const n=Math.max(0,Number.parseInt(img.dataset.showcaseImage||"0",10)||0)%4;
+          const src=img.getAttribute("src");
+          return n<2?src==="api/artwork.php?id="+(101+n)+"&v=display":
+            src==="./assets/artwork-unavailable.svg"&&img.alt==="Artwork image currently unavailable";
+        }));
       assert.equal(await page.locator("#portfolio-gallery .art-tile").count(),4);
       await page.locator("[data-site-choice=studio]").click();
       await tiles.first().click();
