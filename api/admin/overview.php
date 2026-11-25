@@ -4,6 +4,7 @@ require_once dirname(__DIR__, 2) . '/app/admin.php';
 require_once dirname(__DIR__, 2) . '/app/orders.php';
 require_once dirname(__DIR__, 2) . '/app/references.php';
 require_once dirname(__DIR__, 2) . '/app/backup-health.php';
+require_once dirname(__DIR__, 2) . '/app/notifications.php';
 dmo_reject_non_get();
 
 try {
@@ -65,6 +66,9 @@ try {
         ['key' => 'orders', 'label' => 'Order confirmation',
          'status' => dmo_orders_admin_enabled() ? 'ready' : 'blocked',
          'detail' => 'Unpaid confirmation and individually agreed scheduling; no payment verification'],
+        ['key' => 'notifications', 'label' => 'Customer email notices',
+         'status' => dmo_notifications_enabled() ? 'ready' : 'blocked',
+         'detail' => 'Optional artist-triggered notices to verified email-preferring customers; no automated sends'],
         ['key' => 'backup', 'label' => 'Encrypted local backup',
          'status' => $localBackup['ready'] ? 'ready' : 'blocked',
          'detail' => $localBackup['ready']

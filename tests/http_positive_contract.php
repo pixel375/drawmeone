@@ -276,6 +276,24 @@ try {
         count($offer['quotes'][0]['lines']??[])===2,
         'customer_receives_itemized_live_offer');
 
+    $notice=['action'=>'send_notification','request_id'=>$requestA,'kind'=>'quote','event_id'=>$quoteId,'confirm_send'=>true];
+    [$code]=qa_http('/api/admin/request-actions.php',$tokenAdmin,'__Host-dmo_admin',$notice,$csrfAdmin);
+    qa_positive($code===503,'customer_notifications_default_disabled');
+    require_once dirname(__DIR__).'/app/notifications.php';
+    qa_positive(dmo_notification_target($db,$requestA,'quote',$quoteId)===null,
+        'onsite_contact_preference_prevents_email');
+    $db->prepare("UPDATE dmo_commission_requests SET preferred_contact='email' WHERE id=:id")->execute(['id'=>$requestA]);
+    $reservation=dmo_notification_reserve($db,$admin,$requestA,'quote',$quoteId);
+    qa_positive($reservation['status']==='reserved' && $reservation['recipient']==='positive-a@example.invalid',
+        'notice_reserves_verified_customer_only');
+    qa_positive(dmo_notification_reserve($db,$admin,$requestA,'quote',$quoteId)['status']==='duplicate',
+        'uncertain_notice_blocks_duplicate');
+    dmo_notification_finish($db,$admin,$requestA,'quote',$quoteId,true);
+    qa_positive(dmo_notification_status($db,$requestA,'quote',$quoteId)==='accepted',
+        'smtp_acceptance_ledger_without_real_mail');
+    qa_positive(dmo_notification_reserve($db,$admin,$requestB,'quote',$quoteId)['status']==='ineligible',
+        'cross_request_notice_rejected');
+    $db->prepare("UPDATE dmo_commission_requests SET preferred_contact='onsite' WHERE id=:id")->execute(['id'=>$requestA]);
     $oldQuote=$quoteId;
     $db->prepare('UPDATE dmo_quotes SET validity_ends_at=DATE_SUB(UTC_TIMESTAMP(),INTERVAL 1 DAY) WHERE id=:id')->execute(['id'=>$oldQuote]);
     [$code,$expired]=qa_http('/api/request.php?ref='.urlencode($referenceA),$tokenA);

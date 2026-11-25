@@ -1,6 +1,6 @@
 <?php
 declare(strict_types=1);
-require_once dirname(__DIR__, 2) . '/app/commission-workflow.php';
+require_once dirname(__DIR__, 2) . '/app/notifications.php';
 
 try {
     $db = dmo_database();
@@ -13,6 +13,7 @@ try {
 
     $action = $input['action'] ?? null;
     $requestId = dmo_workflow_id($input['request_id'] ?? null);
+    if ($action === 'send_notification') dmo_notification_send($db,$admin,$requestId,$input);
     if (!in_array($action, ['add_private_note', 'create_quote_draft', 'send_customer_message','set_review_status','set_order_deadline','withdraw_quote'], true)) {
         dmo_json(422, ['ok' => false, 'error' => 'unsupported_action']);
     }

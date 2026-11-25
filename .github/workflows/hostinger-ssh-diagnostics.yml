@@ -370,7 +370,7 @@ jobs:
           }
           commission_js=$(curl -fsSL --max-time 15 "https://drawmeone.com/commission.js?v=30")
           [[ "$commission_js" == *'function renderRequestHistory()'* ]] &&
-          [[ "$commission_js" == *'readableRequestStatus(r.status)'* ]] &&
+          [[ "$commission_js" == *'readableRequestStatus(r.workflow_stage || r.status)'* ]] &&
           [[ "$commission_js" == *'requestsFetchSequence'* ]] || {
             echo "customer_history=stale_script"
             exit 1
