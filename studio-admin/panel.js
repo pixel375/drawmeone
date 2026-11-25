@@ -961,6 +961,7 @@
     $("request-thread-full").hidden = true;
     if (switching) { requestFullThread=false; resetRequestDrafts(); }
     clearRequestContent();
+    requestText("request-policy-status","");
     updateRequestButtons();
     $("request-detail").hidden = false;
     requestText("request-detail-status", "Loading complete request...");
@@ -996,6 +997,13 @@
     quoteDeliveryEnabled = data.quote_sending_enabled === true;
     orderCreationEnabled = data.order_creation_enabled === true;
     $("request-message-form").hidden = !requestMessagingEnabled;
+    const policy=$("request-policy-status");policy.replaceChildren();
+    if(typeof info.policy_version==="string"){
+      policy.append(document.createTextNode("Agreement: "+info.policy_version+" · "+(data.policy_eligible===true?"Eligible for continuation":data.policy_eligible===false?"Continuation not approved or receipt unavailable":"Not checked")));
+      if(typeof info.policy_sha256==="string"&&/^[a-f0-9]{64}$/.test(info.policy_sha256)){
+        const link=document.createElement("a");link.href="../policy.html?"+new URLSearchParams({version:info.policy_version,sha256:info.policy_sha256});link.textContent=" Read recorded agreement";link.target="_blank";link.rel="noopener noreferrer";policy.append(link);
+      }
+    }
     requestText("request-detail-ref", info.public_ref || "COMMISSION REQUEST");
     requestText("request-detail-title", "Request #" + (info.id || parsed) +
       " · " + (info.status || "unknown"));

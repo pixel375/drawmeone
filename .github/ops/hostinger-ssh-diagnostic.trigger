@@ -1,1 +1,1 @@
-Read-only verify versioned policy links and preserved closed launch gates.
+Read-only verify historical policy continuation UI and unchanged closed commercial gates.

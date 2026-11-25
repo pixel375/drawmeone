@@ -306,7 +306,7 @@ jobs:
             echo "mobile_artist_desk=stale_or_missing_mobile_layout"
             exit 1
           }
-          [[ "$desk_page" == *'panel.js?v=38'* ]] &&
+          [[ "$desk_page" == *'panel.js?v=39'* ]] &&
           [[ "$desk_page" == *'id="artwork-filter"'* ]] &&
           [[ "$desk_page" == *'id="artwork-unpublish-selected"'* ]] || {
             echo "artist_artwork_library=stale_html"
@@ -316,7 +316,7 @@ jobs:
             echo "artist_artwork_library=stale_css"
             exit 1
           }
-          desk_js=$(curl -fsSL --max-time 15 "https://drawmeone.com/studio-admin/panel.js?v=38")
+          desk_js=$(curl -fsSL --max-time 15 "https://drawmeone.com/studio-admin/panel.js?v=39")
           [[ "$desk_js" == *'artwork-unpublish-selected'* ]] &&
           [[ "$desk_js" == *'No artworks match this view.'* ]] || {
             echo "artist_artwork_library=stale_js"
@@ -497,6 +497,8 @@ jobs:
           }
           [[ "$desk_page" == *'id="intake-form"'* ]] && [[ "$desk_js" == *'function renderIntake(data)'* ]] && [[ "$commission_js" == *'commissions_at_capacity'* ]] || { echo "intake_control=stale_assets"; exit 1; }
           [[ "$commission_js" == *'policy_sha256:state.service.policy_sha256'* ]] && [[ "$customer_page" == *'id="signup-privacy-ack"'* ]] || { echo "policy_receipts=stale_assets"; exit 1; }
+          [[ "$desk_page" == *'id="request-policy-status"'* ]] && [[ "$desk_js" == *'Eligible for continuation'* ]] || { echo "policy_continuation=stale_assets"; exit 1; }
+          echo "policy_continuation=deployed"
           echo "policy_receipts=deployed"
           echo "intake_control=deployed"
           echo "integrity_dashboard=deployed"

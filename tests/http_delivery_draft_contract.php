@@ -146,6 +146,10 @@ try {
          VALUES (:ref,:customer,'portrait',:brief,'onsite','qa-policy-v1','submitted')",
         ['ref'=>$refB, 'customer'=>$customerB,
          'brief'=>str_repeat('Other synthetic private inquiry. ', 2)]);
+    $oldPin=hash_file('sha256',__DIR__.'/fixtures/policies/qa-policy-v0.json');
+    $db->prepare("UPDATE dmo_commission_requests SET policy_version='qa-policy-v0' WHERE id=:id")->execute(['id'=>$requestA]);
+    $db->prepare("INSERT INTO dmo_audit_log (actor_id,action,entity_type,entity_id,details_json) VALUES (:actor,'request.submitted','commission_request',:id,:details)")
+        ->execute(['actor'=>$customerA,'id'=>$requestA,'details'=>json_encode(['policy_version'=>'qa-policy-v0','policy_sha256'=>$oldPin],JSON_THROW_ON_ERROR)]);
     [$cookieA,$csrfA] = ref_session($db,$customerA);
     [$cookieB,$csrfB] = ref_session($db,$customerB);
 
@@ -185,6 +189,11 @@ try {
     ref_assert($code===401, 'anonymous_reference_access_denied');
 
     $upload=['request_id'=>$requestA,'order_id'=>$order,'path'=>$png,'type'=>'image/png'];
+    $audit=$db->prepare("UPDATE dmo_audit_log SET details_json=:details WHERE entity_type='commission_request' AND entity_id=:id AND action='request.submitted'");
+    $audit->execute(['id'=>$requestA,'details'=>json_encode(['policy_version'=>'qa-policy-v0','policy_sha256'=>str_repeat('0',64)],JSON_THROW_ON_ERROR)]);
+    [$code]=ref_http('/api/admin/delivery-draft.php',$artistCookie,null,$artistCsrf,$upload);
+    ref_assert($code===409,'historical_receipt_mismatch_blocks_staging');
+    $audit->execute(['id'=>$requestA,'details'=>json_encode(['policy_version'=>'qa-policy-v0','policy_sha256'=>$oldPin],JSON_THROW_ON_ERROR)]);
     [$code]=ref_http('/api/admin/delivery-draft.php',$cookieA,null,$csrfA,$upload);
     ref_assert(in_array($code,[401,403],true),'customer_cannot_stage_delivery');
     [$code]=ref_http('/api/admin/delivery-draft.php',$artistCookie,null,null,$upload);

@@ -83,3 +83,6 @@ DMO_INTAKE_CONTROL_ENABLED=0
 
 # Required exact SHA-256 of the owner-approved immutable app/policies/<version>.json.
 # DMO_REQUEST_POLICY_SHA256=64_LOWERCASE_HEX_CHARACTERS
+
+# Explicit continuation approval for immutable previously published policies.
+# DMO_HISTORICAL_POLICY_PINS={"previous-version":"64_LOWERCASE_HEX_CHARACTERS"}

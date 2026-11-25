@@ -84,6 +84,10 @@ try {
          VALUES (:ref,:customer,'portrait',:brief,'onsite','qa-policy-v1','submitted')",
         ['ref'=>$referenceB,'customer'=>$b,
          'brief'=>str_repeat('B private test drawing.',3)]);
+    $oldPin=hash_file('sha256',__DIR__.'/fixtures/policies/qa-policy-v0.json');
+    $db->prepare("UPDATE dmo_commission_requests SET policy_version='qa-policy-v0' WHERE id=:id")->execute(['id'=>$requestA]);
+    $receipt=$db->prepare("INSERT INTO dmo_audit_log (actor_id,action,entity_type,entity_id,details_json) VALUES (:actor,'request.submitted','commission_request',:id,:details)");
+    $receipt->execute(['actor'=>$a,'id'=>$requestA,'details'=>json_encode(['policy_version'=>'qa-policy-v0','policy_sha256'=>$oldPin],JSON_THROW_ON_ERROR)]);
     $tokenA=bin2hex(random_bytes(32));
     $tokenB=bin2hex(random_bytes(32));
     $tokenAdmin=bin2hex(random_bytes(32));
@@ -127,6 +131,10 @@ try {
         usleep(100000);
     }
     qa_positive($ready,'local_positive_server_ready');
+    [$code,$archived]=qa_http('/api/policy.php?version=qa-policy-v0&sha256='.$oldPin);
+    qa_positive($code===200&&$archived['policy']['version']==='qa-policy-v0','explicitly_pinned_historical_policy_readable');
+    [$code]=qa_http('/api/policy.php?version=qa-policy-v0&sha256='.str_repeat('0',64));
+    qa_positive($code===404,'historical_document_wrong_digest_denied');
     // Catalog edits must never change a previously submitted commission label.
     $tierId=qa_seed($db,
         "INSERT INTO dmo_commission_tiers
@@ -325,29 +333,33 @@ try {
     [$code]=qa_http('/api/quote-response.php',$tokenB,
         '__Host-dmo_session',[
             'ref'=>$referenceA,'quote_id'=>$quoteId,'decision'=>'accept',
-            'policy_version'=>'qa-policy-v1','acknowledge_quote'=>true,
+            'policy_version'=>'qa-policy-v0','acknowledge_quote'=>true,
         ],$csrfB);
     qa_positive($code===404,'other_customer_cannot_accept_quote');
     [$code]=qa_http('/api/quote-response.php',$tokenA,
         '__Host-dmo_session',[
             'ref'=>$referenceA,'quote_id'=>$quoteId,'decision'=>'accept',
-            'policy_version'=>'qa-policy-v1','acknowledge_quote'=>true,
+            'policy_version'=>'qa-policy-v0','acknowledge_quote'=>true,
             'total_minor'=>1,
         ],$csrfA);
     qa_positive($code===422,'client_price_override_rejected');
 
+    [$code]=qa_http('/api/quote-response.php',$tokenA,'__Host-dmo_session',[
+        'ref'=>$referenceA,'quote_id'=>$quoteId,'decision'=>'accept','policy_version'=>'qa-policy-v1','acknowledge_quote'=>true
+    ],$csrfA);
+    qa_positive($code===409,'cannot_substitute_current_policy_for_historical_agreement');
     [$code,$accept]=qa_http('/api/quote-response.php',$tokenA,
         '__Host-dmo_session',[
             'ref'=>$referenceA,'quote_id'=>$quoteId,'decision'=>'accept',
-            'policy_version'=>'qa-policy-v1','acknowledge_quote'=>true,
+            'policy_version'=>'qa-policy-v0','acknowledge_quote'=>true,
         ],$csrfA);
     qa_positive($code===200 && ($accept['status']??'')==='accepted' &&
         ($accept['payment_collected']??true)===false,
-        'customer_accepts_exact_uncharged_quote');
+        'customer_accepts_exact_uncharged_quote_under_historical_policy');
     [$code]=qa_http('/api/quote-response.php',$tokenA,
         '__Host-dmo_session',[
             'ref'=>$referenceA,'quote_id'=>$quoteId,'decision'=>'accept',
-            'policy_version'=>'qa-policy-v1','acknowledge_quote'=>true,
+            'policy_version'=>'qa-policy-v0','acknowledge_quote'=>true,
         ],$csrfA);
     qa_positive($code===409,'accepted_quote_replay_rejected');
 

@@ -22,14 +22,14 @@ function dmo_review_used(PDO $db,int $orderId): int {
 }
 function dmo_review_orders(PDO $db,int $requestId): array {
     if(!dmo_review_schema_ready($db))return [];
-    $q=$db->prepare("SELECT o.id,o.status,q.revision_allowance FROM dmo_orders o JOIN dmo_quotes q ON q.id=o.accepted_quote_id AND q.request_id=o.request_id
+    $q=$db->prepare("SELECT o.id,o.status,q.revision_allowance,r.policy_version FROM dmo_orders o JOIN dmo_quotes q ON q.id=o.accepted_quote_id AND q.request_id=o.request_id
       JOIN dmo_commission_requests r ON r.id=o.request_id JOIN dmo_users u ON u.id=r.customer_id
       WHERE r.id=:id AND q.status='accepted' AND u.account_status='active' AND u.email_verified_at IS NOT NULL AND ".dmo_fulfillment_payment_sql());
     $q->execute(['id'=>$requestId]);$result=[];
     foreach($q->fetchAll(PDO::FETCH_ASSOC) as $o){
         $id=(int)$o['id'];$latest=dmo_review_latest($db,$id);$used=dmo_review_used($db,$id);
         $result[]=['order_id'=>$id,'revision_allowance'=>(int)$o['revision_allowance'],'revisions_used'=>$used,
-            'can_offer'=>dmo_review_enabled($db)&&dmo_orders_admin_enabled()&&$o['status']==='in_progress'&&
+            'can_offer'=>dmo_review_enabled($db)&&dmo_orders_admin_enabled()&&dmo_policy_request_eligible($db,$requestId,$o['policy_version'])&&$o['status']==='in_progress'&&
                 ($latest===null||$latest['status']==='revision_requested'),
             'latest'=>$latest===null?null:['id'=>(int)$latest['id'],'draft_id'=>$latest['draft_id']===null?null:(int)$latest['draft_id'],
                 'round'=>(int)$latest['round_number'],'status'=>$latest['status'],'feedback'=>$latest['feedback'],'responded_at'=>$latest['responded_at']]];

@@ -20,7 +20,7 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
 <meta name="theme-color" content="#151317">
 <title>Artist's Desk · Draw Me One</title>
 <link rel="stylesheet" href="./panel.css?v=36">
-<script defer src="./panel.js?v=38"></script>
+<script defer src="./panel.js?v=39"></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to dashboard</a>
@@ -140,6 +140,7 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
           <button type="button" class="quiet" id="request-detail-close">Close details</button>
         </div>
         <p id="request-detail-status" class="small" role="status" aria-live="polite"></p>
+        <p id="request-policy-status" class="small"></p>
         <div class="request-summary">
           <div><strong>Customer</strong><span id="request-customer"></span></div>
           <div><strong>Type / tier</strong><span id="request-tier"></span></div>

@@ -18,6 +18,9 @@ try {
     if ($detail === null) {
         dmo_json(404, ['ok' => false, 'error' => 'request_not_found']);
     }
+    $version=(string)$detail['request']['policy_version'];
+    $eligible=dmo_policy_request_eligible($db,$id,$version);
+    $detail['request']['policy_sha256']=dmo_policy_receipt($db,$id);
     foreach ($detail['orders'] as &$order) {
         $order['deadline_editable'] = dmo_messages_request_open((string)$detail['request']['status']) &&
             dmo_orders_deadline_editable($order);
@@ -26,19 +29,20 @@ try {
     dmo_json(200, [
         'ok' => true,
         'detail' => $detail,
-        'manual_payments_enabled' => dmo_manual_payments_enabled() && dmo_messages_request_open((string)$detail['request']['status']),
+        'policy_eligible'=>$eligible,
+        'manual_payments_enabled' => dmo_manual_payments_enabled() && $eligible && dmo_messages_request_open((string)$detail['request']['status']),
         'payment_exceptions_enabled' => dmo_payment_exceptions_enabled(),
         'payment_records' => dmo_payment_admin_rows($db,$id),
         'artwork_reviews' => dmo_review_orders($db,$id),
         'fulfillment_options' => dmo_fulfillment_options($db,$id),
         'delivery_drafts' => dmo_delivery_drafts($db,$id),
-        'delivery_staging_enabled' => dmo_delivery_staging_enabled($db),
+        'delivery_staging_enabled' => dmo_delivery_staging_enabled($db)&&$eligible,
         'notification_options' => dmo_notification_options($db,$detail),
         'notifications_enabled' => dmo_notifications_enabled(),
         'admin_writes_enabled' => dmo_workflow_writes_enabled(),
-        'order_creation_enabled' => dmo_orders_admin_enabled() &&
+        'order_creation_enabled' => dmo_orders_admin_enabled() && $eligible &&
             dmo_messages_request_open((string) $detail['request']['status']),
-        'quote_sending_enabled' => dmo_quote_delivery_enabled() &&
+        'quote_sending_enabled' => dmo_quote_delivery_enabled() && $eligible &&
             dmo_messages_request_open((string) $detail['request']['status']),
         'customer_messaging_enabled' => dmo_workflow_messaging_enabled() &&
             dmo_messages_request_open((string) $detail['request']['status']),

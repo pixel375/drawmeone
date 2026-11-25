@@ -70,7 +70,10 @@ jobs:
           sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq mariadb-client php-mysql php-curl php-gd >/dev/null
           php -m | grep -Fx pdo_mysql >/dev/null
       - name: Pin isolated synthetic policy fixture
-        run: echo "DMO_REQUEST_POLICY_SHA256=$(sha256sum tests/fixtures/policies/qa-policy-v1.json | cut -d ' ' -f 1)" >> "$GITHUB_ENV"
+        run: |
+          echo "DMO_REQUEST_POLICY_SHA256=$(sha256sum tests/fixtures/policies/qa-policy-v1.json | cut -d ' ' -f 1)" >> "$GITHUB_ENV"
+          old_sha=$(sha256sum tests/fixtures/policies/qa-policy-v0.json | cut -d ' ' -f 1)
+          printf 'DMO_HISTORICAL_POLICY_PINS={"qa-policy-v0":"%s"}\n' "$old_sha" >> "$GITHUB_ENV"
       - name: Import actual committed schema into throwaway database
         shell: bash
         run: |
