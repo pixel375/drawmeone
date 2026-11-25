@@ -16,20 +16,22 @@
   if (![gallery,notice,empty,error,more,moreButton,remaining,progress,dialog,big,count,pageLink].every(Boolean)) return;
 
   const realImage = /^(?:assets\/portfolio\/[a-z0-9][a-z0-9/_-]*\.(?:avif|webp|png|jpe?g)|api\/artwork\.php\?id=[1-9][0-9]{0,17}&v=display)$/i;
+  const hostedImage = /^api\\/artwork\\.php\\?id=[1-9][0-9]{0,17}&v=display$/;
   const optimizedThumb = /^api\/artwork\.php\?id=[1-9][0-9]{0,17}&v=thumb$/i;
   const demoImage = /^assets\/demo\/art-[0-9]{2}\.svg$/;
   const fallback = "./assets/demo/placeholder.svg";
   const unavailable="./assets/artwork-unavailable.svg";
   let hostedHasMore=false;
   let entries=[],isDemo=false,visible=0,renderedCount=0,expanded=false,activeIndex=0,lastFocused=null,startX=null;
-  const step=()=>window.matchMedia("(max-width:620px)").matches ? 8 : 12;
   const isScroll=()=>root.dataset.layout === "rows";
+  const step=()=>isScroll()?24:window.matchMedia("(max-width:620px)").matches?8:12;
 
   const acceptable=(item,demo)=>!!item && typeof item.src === "string" &&
     (demo ? demoImage.test(item.src) : realImage.test(item.src)) &&
     (item.thumb == null || (typeof item.thumb === "string" && optimizedThumb.test(item.thumb) &&
       item.src === item.thumb.replace(/&v=thumb$/i,"&v=display"))) &&
     (item.alt == null || (typeof item.alt==="string" && item.alt.length<=260));
+  const acceptableHosted=item=>acceptable(item,false)&&hostedImage.test(item.src)&&typeof item.thumb==="string"&&item.thumb===item.src.replace(/&v=display$/,"&v=thumb")&&Number.isSafeInteger(item.width)&&item.width>0&&item.width<=20000&&Number.isSafeInteger(item.height)&&item.height>0&&item.height<=20000;
   const imageAlt=(item)=>typeof item.alt==="string" && item.alt.trim() ?
     item.alt.trim() : (isDemo ? "Decorative sample design image" : "Original drawing by Draw Me One");
   function safeguard(img) {
@@ -124,7 +126,7 @@
   }
   function render() {
     if(!entries.length)return;
-    const total=isScroll()?entries.length:Math.min(visible,entries.length);
+    const total=Math.min(visible,entries.length);
     // Append only new images; avoid redownloading and recreating all old tiles.
     if(total<renderedCount || gallery.childElementCount!==renderedCount){
       gallery.replaceChildren();
@@ -139,7 +141,7 @@
     gallery.classList.add("is-loaded");
     gallery.setAttribute("aria-label",isDemo?"Temporary sample images, not the artist's work":"Original drawings by Draw Me One");
     const moreRemain=entries.length-total;
-    more.hidden=isScroll() || moreRemain<=0;
+    more.hidden=moreRemain<=0;
     remaining.textContent=moreRemain>0?"+ "+Math.min(step(),moreRemain):"";
     moreButton.setAttribute("aria-label","Load "+Math.min(step(),moreRemain)+" more images");
     progress.textContent="Showing "+total+" of "+entries.length+" images"+(hostedHasMore?" in this selection":"");
@@ -165,7 +167,10 @@
     if(!response.ok)throw new Error(path+" returned "+response.status);
     const data=await response.json();
     if(!data||!Array.isArray(data.works))throw new Error("Invalid manifest at "+path);
-    if(path==="./api/portfolio.php")hostedHasMore=data.has_more===true;
+    if(path==="./api/portfolio.php"){
+      if(data.ok!==true||data.works.length>500||(data.has_more!==undefined&&typeof data.has_more!=="boolean"))throw Error("Invalid hosted portfolio");
+      hostedHasMore=data.has_more===true;
+    }
     return data.works;
     }finally{clearTimeout(timer);}
   }
@@ -173,7 +178,7 @@
     const preview=root.dataset.presentation==="preview";
     let hosted = [];
     try {
-      hosted = (await manifest("./api/portfolio.php")).filter(item=>acceptable(item,false));
+      hosted = (await manifest("./api/portfolio.php")).filter(acceptableHosted);
     } catch (_) {
       if(!preview)throw Error("Published portfolio unavailable");
       // Keep existing fallback during preview outages.
@@ -195,6 +200,7 @@
     isDemo=preview&&real.length===0;
     entries=isDemo?(await manifest("./data/demo-portfolio.json")).filter(item=>acceptable(item,true)):real;
     notice.hidden=!isDemo;empty.hidden=entries.length>0;
+    document.getElementById("portfolio-directory-note").hidden=!hostedHasMore;
     syncShowcase();
     if(!entries.length)return;
     visible=step();render();
@@ -204,6 +210,8 @@
     entries=[];isDemo=false;syncShowcase();root.dataset.galleryState="error";
     notice.hidden=true;empty.hidden=true;error.hidden=false;
   });}
+  // A restored public document must not indefinitely retain old publication state.
+  window.addEventListener("pageshow",event=>{if(event.persisted&&root.dataset.presentation==="public")location.reload();});
   if(root.dataset.presentation)startLoad();
   else document.addEventListener("dmo:presentation-ready",startLoad,{once:true});
 })();

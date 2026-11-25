@@ -354,6 +354,25 @@ async function checkPublishedPresentation(browser){
     assert.equal(await page.locator(".hero-visual").isVisible(),false);
     assert.deepEqual(demoRequests,[]);
     assert.equal(await page.locator('.portfolio-directory-link a').isVisible(),true);
+    for(const bad of [{ok:false,works:[]},{ok:true,works:[],has_more:"true"}]){
+      await page.route("**/api/portfolio.php*",route=>route.fulfill({status:200,contentType:"application/json",body:JSON.stringify(bad)}));
+      await page.reload({waitUntil:"domcontentloaded"});
+      await page.locator("#portfolio-error").waitFor({state:"visible"});
+      assert.equal(await page.locator("#portfolio-gallery .art-tile").count(),0);
+    }
+    payload={ok:true,presentation:"published",published:true,version:3,settings};http=200;
+    const many=Array.from({length:65},(_,i)=>({src:"api/artwork.php?id="+(i+1)+"&v=display",thumb:"api/artwork.php?id="+(i+1)+"&v=thumb",width:320,height:240,alt:"Synthetic drawing "+(i+1)}));
+    many.push({src:"assets/portfolio/legacy.webp",width:320,height:240});
+    await page.route("**/api/portfolio.php*",route=>route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({ok:true,has_more:false,works:many})}));
+    await page.reload({waitUntil:"domcontentloaded"});
+    await page.locator("#portfolio-gallery .art-tile").first().waitFor({state:"visible"});
+    assert.equal(await page.locator("#portfolio-gallery .art-tile").count(),24);
+    await page.locator("#gallery-more-button").click();
+    assert.equal(await page.locator("#portfolio-gallery .art-tile").count(),48);
+    await page.locator("#gallery-more-button").click();
+    assert.equal(await page.locator("#portfolio-gallery .art-tile").count(),65);
+    assert.equal(await page.locator("#gallery-more-button").isVisible(),false);
+    assert.deepEqual(demoRequests,[]);
     await page.route("**/api/portfolio.php*",route=>route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({ok:true,has_more:true,works:[{src:"api/artwork.php?id=1&v=display",thumb:"api/artwork.php?id=1&v=thumb",alt:"Synthetic drawing",width:320,height:240}]})}));
     await page.route("**/api/artwork.php?*",route=>route.fulfill({status:404,body:"unavailable"}));
     await page.reload({waitUntil:"domcontentloaded"});
