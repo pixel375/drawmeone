@@ -13,7 +13,7 @@ try {
     if (!is_string($search) || strlen($search) > 160 ||
         preg_match('/[\x00-\x1f\x7f]/', $search) ||
         !is_string($pageText) || !preg_match('/^[1-9][0-9]{0,3}$/D', $pageText) ||
-        !is_string($filter) || !in_array($filter, ['all','review','other','orders','quote_waiting','accepted','due'], true)) {
+        !is_string($filter) || !in_array($filter, ['all','review','other','orders','quote_waiting','accepted','due','quote_followup'], true)) {
         dmo_json(422, ['ok'=>false,'error'=>'invalid_request_list_filter']);
     }
     $search = trim($search);
@@ -32,18 +32,20 @@ try {
     $activeOrders = "o.status IN ('awaiting_arrangement','in_progress','ready_for_delivery','queued','drawing','awaiting_feedback','revision')";
     if ($filter === 'orders') $where[] = $activeOrders;
     if ($filter === 'quote_waiting') $where[] = "o.id IS NULL AND vq.status='sent' AND vq.validity_ends_at>UTC_TIMESTAMP()";
+    if ($filter === 'quote_followup') $where[] = "o.id IS NULL AND r.status IN ('submitted','clarification_needed') AND ((vq.status='sent' AND vq.validity_ends_at<=UTC_TIMESTAMP()) OR vq.status IN ('declined','superseded'))";
     if ($filter === 'accepted') $where[] = "o.id IS NULL AND vq.status='accepted'";
     if ($filter === 'due') $where[] = $activeOrders . " AND o.agreed_deadline IS NOT NULL AND DATE(o.agreed_deadline)<=DATE_ADD(UTC_DATE(),INTERVAL 7 DAY)";
     $from = ' FROM dmo_commission_requests r JOIN dmo_users u ON u.id = r.customer_id ' .
         'LEFT JOIN dmo_commission_tiers t ON t.id = r.tier_id ' . dmo_requests_stage_joins();
     $conditions = $where === [] ? '' : 'WHERE ' . implode(' AND ', $where) . ' ';
+    $sort = $filter === 'due' ? 'o.agreed_deadline ASC, r.id ASC' : 'r.submitted_at DESC, r.id DESC';
     // Limit and offset derive only from validated bounded integers.
     $offset = ($page - 1) * $size;
     $stmt = $db->prepare(
         'SELECT r.id, r.public_ref, r.subject_type, r.status, ' .
         'r.preferred_contact, r.submitted_at, LEFT(r.brief, 500) AS brief_excerpt, ' .
         'u.display_name AS customer_name, r.tier_snapshot_json, t.name AS tier_name, ' . dmo_requests_stage_columns() .
-        $from . $conditions . 'ORDER BY r.submitted_at DESC, r.id DESC LIMIT ' .
+        $from . $conditions . 'ORDER BY ' . $sort . ' LIMIT ' .
         ($size + 1) . ' OFFSET ' . $offset
     );
     $stmt->execute($params);

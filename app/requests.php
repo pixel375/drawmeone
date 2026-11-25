@@ -226,6 +226,8 @@ function dmo_requests_list_summary(array $row): array
             $stage=(int)$row['visible_quote_expired']===1 ? 'quote_expired' : 'quote_available';
         } elseif (($row['visible_quote_status']??null)==='declined') {
             $stage='quote_declined';
+        } elseif (($row['visible_quote_status']??null)==='superseded') {
+            $stage='quote_inactive';
         }
     }
     $row['workflow_stage']=$stage;

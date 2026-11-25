@@ -111,7 +111,8 @@ function dmo_workflow_load(PDO $db, int $id, bool $fullThread = false): ?array
 
     $quotesQuery = $db->prepare(
         'SELECT id, version_number, currency, total_minor, scope_description, ' .
-        'revision_allowance, validity_ends_at, status, sent_at, accepted_at, created_at ' .
+        'revision_allowance, validity_ends_at, status, sent_at, accepted_at, created_at, ' .
+        'CASE WHEN validity_ends_at IS NOT NULL AND validity_ends_at<=UTC_TIMESTAMP() THEN 1 ELSE 0 END AS is_expired ' .
         'FROM dmo_quotes WHERE request_id = :id ' .
         'ORDER BY version_number DESC LIMIT 30'
     );
@@ -124,6 +125,8 @@ function dmo_workflow_load(PDO $db, int $id, bool $fullThread = false): ?array
     foreach ($quotes as &$q) {
         $lineStmt->execute(['id' => $q['id']]);
         $q['lines'] = $lineStmt->fetchAll();
+        $q['id'] = (int) $q['id'];
+        $q['is_expired'] = (bool) $q['is_expired'];
         $q['version_number'] = (int) $q['version_number'];
         $q['total_minor'] = (int) $q['total_minor'];
         $q['revision_allowance'] = (int) $q['revision_allowance'];

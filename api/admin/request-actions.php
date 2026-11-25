@@ -13,7 +13,7 @@ try {
 
     $action = $input['action'] ?? null;
     $requestId = dmo_workflow_id($input['request_id'] ?? null);
-    if (!in_array($action, ['add_private_note', 'create_quote_draft', 'send_customer_message','set_review_status','set_order_deadline'], true)) {
+    if (!in_array($action, ['add_private_note', 'create_quote_draft', 'send_customer_message','set_review_status','set_order_deadline','withdraw_quote'], true)) {
         dmo_json(422, ['ok' => false, 'error' => 'unsupported_action']);
     }
 
@@ -23,7 +23,16 @@ try {
     $quote = null;
     $deadline = null;
     $orderId = null;
-    if ($action === 'set_order_deadline') {
+    $withdrawId = null;
+    if ($action === 'withdraw_quote') {
+        if (count($input)!==4 || array_diff(array_keys($input),
+            ['action','request_id','quote_id','confirm_withdrawal'])!==[] ||
+            ($input['confirm_withdrawal']??null)!==true) {
+            dmo_json(422,['ok'=>false,'error'=>'explicit_quote_withdrawal_required']);
+        }
+        if (!dmo_quote_delivery_enabled()) dmo_json(503,['ok'=>false,'error'=>'quote_withdrawal_disabled']);
+        $withdrawId=dmo_workflow_id($input['quote_id']??null);
+    } elseif ($action === 'set_order_deadline') {
         if (count($input) !== 6 || array_diff(array_keys($input),
             ['action','request_id','order_id','expected_deadline','agreed_deadline','confirm_agreement']) !== [] ||
             ($input['confirm_agreement'] ?? null) !== true ||
@@ -75,6 +84,30 @@ try {
         if ($currentStatus === false) {
             $db->rollBack();
             dmo_json(404, ['ok' => false, 'error' => 'request_not_found']);
+        }
+
+        if ($action === 'withdraw_quote') {
+            $existing=$db->prepare("SELECT id FROM dmo_quotes WHERE request_id=:id AND status='accepted' LIMIT 1");
+            $existing->execute(['id'=>$requestId]);
+            $order=$db->prepare('SELECT id FROM dmo_orders WHERE request_id=:id LIMIT 1');
+            $order->execute(['id'=>$requestId]);
+            if ($existing->fetchColumn()!==false || $order->fetchColumn()!==false ||
+                !dmo_messages_request_open((string)$currentStatus)) {
+                $db->rollBack();
+                dmo_json(409,['ok'=>false,'error'=>'quote_withdrawal_conflict']);
+            }
+            $update=$db->prepare("UPDATE dmo_quotes SET status='superseded' " .
+                "WHERE id=:quote AND request_id=:request AND status='sent' AND sent_at IS NOT NULL");
+            $update->execute(['quote'=>$withdrawId,'request'=>$requestId]);
+            if ($update->rowCount()!==1) {
+                $db->rollBack();
+                dmo_json(409,['ok'=>false,'error'=>'quote_not_withdrawable']);
+            }
+            dmo_workflow_audit($db,(int)$admin['user_id'],$requestId,'quote.withdrawn',
+                ['quote_id'=>$withdrawId]);
+            $db->commit();
+            dmo_json(200,['ok'=>true,'quote_id'=>$withdrawId,'status'=>'superseded',
+                'payment_collected'=>false,'email_sent'=>false]);
         }
 
         if ($action === 'set_order_deadline') {

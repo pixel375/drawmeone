@@ -276,6 +276,33 @@ try {
         count($offer['quotes'][0]['lines']??[])===2,
         'customer_receives_itemized_live_offer');
 
+    $oldQuote=$quoteId;
+    $db->prepare('UPDATE dmo_quotes SET validity_ends_at=DATE_SUB(UTC_TIMESTAMP(),INTERVAL 1 DAY) WHERE id=:id')->execute(['id'=>$oldQuote]);
+    [$code,$expired]=qa_http('/api/request.php?ref='.urlencode($referenceA),$tokenA);
+    qa_positive($code===200 && $expired['request']['workflow_stage']==='quote_expired' &&
+        $expired['quotes'][0]['can_respond']===false,'expired_offer_not_actionable');
+    [$code,$follow]=qa_http('/api/admin/requests.php?filter=quote_followup',$tokenAdmin,'__Host-dmo_admin');
+    qa_positive($code===200 && count($follow['requests'])===1 &&
+        $follow['requests'][0]['workflow_stage']==='quote_expired','expired_offer_in_followup_queue');
+    $withdraw=['action'=>'withdraw_quote','request_id'=>$requestA,'quote_id'=>$oldQuote,'confirm_withdrawal'=>true];
+    [$code]=qa_http('/api/admin/request-actions.php',$tokenAdmin,'__Host-dmo_admin',array_replace($withdraw,['confirm_withdrawal'=>false]),$csrfAdmin);
+    qa_positive($code===422,'withdraw_requires_confirmation');
+    [$code,$withdrawn]=qa_http('/api/admin/request-actions.php',$tokenAdmin,'__Host-dmo_admin',$withdraw,$csrfAdmin);
+    qa_positive($code===200 && $withdrawn['status']==='superseded' && $withdrawn['payment_collected']===false,'artist_withdraws_expired_offer');
+    [$code,$inactive]=qa_http('/api/request.php?ref='.urlencode($referenceA),$tokenA);
+    qa_positive($code===200 && $inactive['request']['workflow_stage']==='quote_inactive' &&
+        $inactive['quotes'][0]['can_respond']===false,'withdrawn_offer_preserved_read_only');
+    [$code,$renewal]=qa_http('/api/admin/request-actions.php',$tokenAdmin,'__Host-dmo_admin',[
+        'action'=>'create_quote_draft','request_id'=>$requestA,'currency'=>'CAD','scope'=>'Synthetic original portrait renewed',
+        'revision_allowance'=>2,'lines'=>[['description'=>'Illustration','amount_minor'=>2700],['description'=>'Background','amount_minor'=>300]]
+    ],$csrfAdmin);
+    qa_positive($code===201 && $renewal['version']===2,'new_version_after_withdrawal');
+    $quoteId=$renewal['quote_id'];
+    [$code]=qa_http('/api/admin/quote-send.php',$tokenAdmin,'__Host-dmo_admin',[
+        'request_id'=>$requestA,'quote_id'=>$quoteId,'validity_days'=>7
+    ],$csrfAdmin);
+    qa_positive($code===200,'renewed_offer_released');
+
     [$code]=qa_http('/api/quote-response.php',$tokenB,
         '__Host-dmo_session',[
             'ref'=>$referenceA,'quote_id'=>$quoteId,'decision'=>'accept',
@@ -305,6 +332,8 @@ try {
         ],$csrfA);
     qa_positive($code===409,'accepted_quote_replay_rejected');
 
+    [$code]=qa_http('/api/admin/request-actions.php',$tokenAdmin,'__Host-dmo_admin',array_replace($withdraw,['quote_id'=>$quoteId]),$csrfAdmin);
+    qa_positive($code===409,'accepted_quote_cannot_be_withdrawn');
     [$code,$order]=qa_http('/api/admin/order-create.php',$tokenAdmin,
         '__Host-dmo_admin',[
             'request_id'=>$requestA,'accepted_quote_id'=>$quoteId,

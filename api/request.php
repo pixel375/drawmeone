@@ -70,6 +70,11 @@ try {
         unset($quoted);
     }
     $orders = dmo_orders_customer_rows($db, (int) $request['id']);
+    $latest = $quotes[0] ?? [];
+    foreach ($quotes as $candidate) if ($candidate['status']==='accepted') { $latest=$candidate; break; }
+    $summary=dmo_requests_list_summary(['status'=>$request['status'], 'order_status'=>$orders[0]['status']??null,
+        'visible_quote_status'=>$latest['status']??null,'visible_quote_expired'=>$latest['is_expired']??false]);
+    $request['workflow_stage']=$summary['workflow_stage'];
     unset($request['id']);
     dmo_json(200, [
         'ok' => true,

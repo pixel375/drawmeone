@@ -12,6 +12,9 @@ try {
     $queries = [
         'requests_for_review' => "SELECT COUNT(*) FROM dmo_commission_requests r " .
             "WHERE r.status IN ('submitted','clarification_needed') AND NOT EXISTS (SELECT 1 FROM dmo_quotes q WHERE q.request_id=r.id AND q.status IN ('sent','accepted')) AND NOT EXISTS (SELECT 1 FROM dmo_orders o WHERE o.request_id=r.id)",
+        'quotes_to_follow_up' => "SELECT COUNT(*) FROM dmo_commission_requests r " .
+            dmo_requests_stage_joins() .
+            "WHERE o.id IS NULL AND r.status IN ('submitted','clarification_needed') AND ((vq.status='sent' AND vq.validity_ends_at<=UTC_TIMESTAMP()) OR vq.status IN ('declined','superseded'))",
         'active_orders' => "SELECT COUNT(*) FROM dmo_orders " .
             "WHERE status IN ('awaiting_arrangement','in_progress','ready_for_delivery'," .
             "'queued','drawing','awaiting_feedback','revision')",
