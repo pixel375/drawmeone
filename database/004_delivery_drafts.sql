@@ -10,13 +10,13 @@ CREATE TABLE IF NOT EXISTS dmo_delivery_drafts (
   byte_size INT UNSIGNED NOT NULL,
   sha256 CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE KEY uq_dmo_delivery_storage (storage_key),
-  KEY idx_dmo_delivery_order (order_id,id),
-  CONSTRAINT fk_dmo_delivery_request FOREIGN KEY (request_id)
+  UNIQUE KEY uq_dmo_stage004_storage (storage_key),
+  KEY idx_dmo_stage004_order (order_id,id),
+  CONSTRAINT fk_dmo_stage004_request FOREIGN KEY (request_id)
     REFERENCES dmo_commission_requests(id) ON DELETE CASCADE,
-  CONSTRAINT fk_dmo_delivery_order FOREIGN KEY (order_id)
+  CONSTRAINT fk_dmo_stage004_order FOREIGN KEY (order_id)
     REFERENCES dmo_orders(id) ON DELETE CASCADE,
-  CONSTRAINT fk_dmo_delivery_uploader FOREIGN KEY (uploaded_by)
+  CONSTRAINT fk_dmo_stage004_uploader FOREIGN KEY (uploaded_by)
     REFERENCES dmo_users(id) ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 

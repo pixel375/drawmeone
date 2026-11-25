@@ -30,14 +30,8 @@ try {
         throw new RuntimeException('Unexpected migration statement count.');
     }
     $db->exec($parts[0]);
-    $db->exec($parts[1]);
-    $q = $db->prepare(
-        'SELECT version FROM dmo_schema_migrations WHERE version = :version'
-    );
-    $q->execute(['version' => '004_delivery_drafts']);
-    if ($q->fetchColumn() !== '004_delivery_drafts') {
-        throw new RuntimeException('Migration version did not persist.');
-    }
+    // Mark migration ready only after verifying the actual table structure.
+
     $columns = [];
     foreach ($db->query('SHOW COLUMNS FROM dmo_delivery_drafts') as $row) {
         $columns[] = (string) $row['Field'];
@@ -48,6 +42,10 @@ try {
             throw new RuntimeException('Attachment table structure mismatch.');
         }
     }
+    $db->exec($parts[1]);
+    $q=$db->prepare('SELECT version FROM dmo_schema_migrations WHERE version=:version');
+    $q->execute(['version'=>'004_delivery_drafts']);
+    if($q->fetchColumn()!=='004_delivery_drafts')throw new RuntimeException('Migration version did not persist.');
     echo "delivery_draft_schema_ready=yes\n";
     echo "customer_service_unchanged=closed\n";
 } catch (Throwable $error) {

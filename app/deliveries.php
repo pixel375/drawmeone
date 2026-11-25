@@ -52,3 +52,44 @@ function dmo_delivery_drafts(PDO $db,int $requestId): array
         'width'=>(int)$r['pixel_width'],'height'=>(int)$r['pixel_height'],'bytes'=>(int)$r['byte_size'],
         'created_at'=>$r['created_at']],$q->fetchAll(PDO::FETCH_ASSOC));
 }
+
+/** Delete a staged file, not a customer reference or public artwork. */
+function dmo_delivery_remove(PDO $db,array $admin,int $requestId,array $input): never
+{
+    if(count($input)!==4 || array_diff(array_keys($input),
+        ['action','request_id','draft_id','confirm_remove'])!==[] ||
+        ($input['confirm_remove']??null)!==true)
+        dmo_json(422,['ok'=>false,'error'=>'explicit_draft_removal_required']);
+    if(!dmo_delivery_staging_enabled($db))
+        dmo_json(503,['ok'=>false,'error'=>'delivery_staging_disabled']);
+    $id=dmo_workflow_id($input['draft_id']??null);
+    if(!dmo_auth_rate_limit($db,'delivery-remove',(string)$admin['user_id'],16,60))
+        dmo_json(429,['ok'=>false,'error'=>'too_many_attempts']);
+    $db->beginTransaction();
+    try{
+        $lock=$db->prepare('SELECT id FROM dmo_commission_requests WHERE id=:id FOR UPDATE');
+        $lock->execute(['id'=>$requestId]);
+        if($lock->fetchColumn()===false){
+            $db->rollBack();dmo_json(404,['ok'=>false,'error'=>'draft_not_found']);
+        }
+        $q=$db->prepare('SELECT order_id,storage_key FROM dmo_delivery_drafts WHERE id=:id AND request_id=:request FOR UPDATE');
+        $q->execute(['id'=>$id,'request'=>$requestId]);$row=$q->fetch(PDO::FETCH_ASSOC);
+        if(!is_array($row)){
+            $db->rollBack();dmo_json(404,['ok'=>false,'error'=>'draft_not_found']);
+        }
+        $path=dmo_delivery_file($row['storage_key']);
+        $db->prepare('DELETE FROM dmo_delivery_drafts WHERE id=:id AND request_id=:request')
+            ->execute(['id'=>$id,'request'=>$requestId]);
+        dmo_workflow_audit($db,(int)$admin['user_id'],$requestId,'delivery.draft_removed',
+            ['draft_id'=>$id,'order_id'=>(int)$row['order_id']]);
+        $db->commit();
+    }catch(Throwable $error){
+        if($db->inTransaction())$db->rollBack();
+        throw $error;
+    }
+    // Revoke database access first. A failed filesystem cleanup leaves only
+    // an inaccessible orphan, never an active download link.
+    $clean=(!file_exists($path)||@unlink($path));
+    if($clean && is_dir(dirname($path)))$clean=@rmdir(dirname($path));
+    dmo_json(200,['ok'=>true,'draft_removed'=>true,'storage_cleanup_complete'=>$clean]);
+}

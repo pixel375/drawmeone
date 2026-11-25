@@ -21,7 +21,11 @@ try {
             !hash_equals($row['sha256'],(string)hash_file('sha256',$path)))dmo_json(404,['ok'=>false,'error'=>'draft_not_found']);
         header('Content-Type: image/webp');
         header('Content-Length: '.filesize($path));
-        header('Content-Disposition: attachment; filename="commission-draft-'.$id.'.webp"');
+        $view=$_GET['view']??'download';
+        if(!is_string($view)||!in_array($view,['download','preview'],true))dmo_json(422,['ok'=>false,'error'=>'invalid_view']);
+        header('Content-Disposition: '.($view==='preview'?'inline':'attachment').'; filename="commission-draft-'.$id.'.webp"');
+        header('X-Frame-Options: DENY');
+        header('Referrer-Policy: no-referrer');
         header('Cross-Origin-Resource-Policy: same-origin');
         header("Content-Security-Policy: default-src 'none'");
         header('X-Content-Type-Options: nosniff');

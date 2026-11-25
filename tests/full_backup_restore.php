@@ -177,6 +177,13 @@ try {
         'request'=>$requestId,'user'=>$userId,'key'=>$refKey.'/display.webp',
         'bytes'=>filesize($refDisplay)
     ]);
+    $db->prepare("INSERT INTO dmo_users (display_name,email,password_hash,role,account_status,email_verified_at) VALUES ('CI Recovery Artist','recovery-artist@example.invalid',:hash,'admin','active',UTC_TIMESTAMP())")->execute(['hash'=>$userHash]);
+    $artistId=(int)$db->lastInsertId();
+    $db->prepare("INSERT INTO dmo_quotes (request_id,version_number,currency,total_minor,scope_description,revision_allowance,status,sent_at,accepted_at) VALUES (:request,1,'CAD',3000,'Synthetic recovery artwork',1,'accepted',UTC_TIMESTAMP(),UTC_TIMESTAMP())")->execute(['request'=>$requestId]);
+    $quoteId=(int)$db->lastInsertId();
+    $db->prepare("INSERT INTO dmo_orders (request_id,accepted_quote_id,status,payment_status) VALUES (:request,:quote,'awaiting_arrangement','unverified')")->execute(['request'=>$requestId,'quote'=>$quoteId]);
+    $orderId=(int)$db->lastInsertId();
+    $db->prepare('INSERT INTO dmo_delivery_drafts (request_id,order_id,uploaded_by,storage_key,pixel_width,pixel_height,byte_size,sha256) VALUES (:request,:order,:actor,:key,320,240,:bytes,:sha)')->execute(['request'=>$requestId,'order'=>$orderId,'actor'=>$artistId,'key'=>$deliveryKey.'/display.webp','bytes'=>filesize($deliveryFile),'sha'=>hash_file('sha256',$deliveryFile)]);
     drill_assert((int)$db->query('SELECT COUNT(*) FROM dmo_portfolio_artworks')
         ->fetchColumn()===1,'snapshot_contains_synthetic_artwork');
     drill_assert((int)$db->query('SELECT COUNT(*) FROM dmo_request_attachments')
@@ -289,7 +296,7 @@ try {
         'restored_database_contains_artwork_and_variants');
     drill_assert((int)$restore->query(
         'SELECT COUNT(*) FROM dmo_request_attachments')->fetchColumn()===1 &&
-        (int)$restore->query('SELECT COUNT(*) FROM dmo_users')->fetchColumn()===1,
+        (int)$restore->query('SELECT COUNT(*) FROM dmo_users')->fetchColumn()===2,
         'restored_database_contains_customer_reference');
     $files=$restore->query(
         'SELECT storage_key FROM dmo_artwork_files')->fetchAll(PDO::FETCH_COLUMN);
@@ -305,9 +312,12 @@ try {
             throw new RuntimeException('Restored private-reference record has no recovered file');
         }
     }
+    $draft=$restore->query('SELECT storage_key,sha256,byte_size FROM dmo_delivery_drafts')->fetch(PDO::FETCH_ASSOC);
+    $draftPath=$restored.'/drawmeone-deliveries/'.$draft['storage_key'];
+    drill_assert(is_file($draftPath)&&filesize($draftPath)===(int)$draft['byte_size']&&hash_equals($draft['sha256'],hash_file('sha256',$draftPath)),'restored_delivery_record_matches_checksum_and_file');
     drill_assert(true,'restored_database_media_references_match_files');
     $sourceUsers=(int)$db->query('SELECT COUNT(*) FROM dmo_users')->fetchColumn();
-    drill_assert($sourceUsers===1,'original_disposable_database_unchanged');
+    drill_assert($sourceUsers===2,'original_disposable_database_unchanged');
     echo "DISPOSABLE_FULL_BACKUP_RESTORE=PASS\n";
 } catch (Throwable $error) {
     fwrite(STDERR,"DISPOSABLE_FULL_BACKUP_RESTORE=FAIL (".

@@ -204,6 +204,27 @@ try {
     ref_assert($code===200 && !isset($data['delivery_drafts']),'customer_detail_excludes_staging');
     $row=$db->query('SELECT storage_key,sha256 FROM dmo_delivery_drafts')->fetch(PDO::FETCH_ASSOC);
     ref_assert(hash_equals($row['sha256'],hash_file('sha256',dmo_delivery_file($row['storage_key']))),'draft_integrity_hash_matches');
+    $path=dmo_delivery_file($row['storage_key']);
+    [$code,$json,$bytes,$headers]=ref_http('/api/admin/delivery-draft.php?id='.$id.'&view=preview',$artistCookie);
+    ref_assert($code===200 && str_contains(strtolower($headers),'content-disposition: inline'),'artist_private_preview');
+    $original=file_get_contents($path);
+    file_put_contents($path,'CI checksum mismatch');
+    [$code]=ref_http('/api/admin/delivery-draft.php?id='.$id,$artistCookie);
+    ref_assert($code===404,'corrupt_draft_cannot_be_downloaded');
+    file_put_contents($path,$original);
+    $remove=['action'=>'remove_delivery_draft','request_id'=>$requestA,'draft_id'=>$id,'confirm_remove'=>true];
+    [$code]=ref_http('/api/admin/request-actions.php',$cookieA,$remove,$csrfA);
+    ref_assert(in_array($code,[401,403],true),'customer_cannot_remove_draft');
+    [$code]=ref_http('/api/admin/request-actions.php',$artistCookie,$remove);
+    ref_assert($code===403,'draft_removal_requires_csrf');
+    [$code]=ref_http('/api/admin/request-actions.php',$artistCookie,array_replace($remove,['confirm_remove'=>false]),$artistCsrf);
+    ref_assert($code===422,'explicit_draft_removal_confirmation_required');
+    [$code]=ref_http('/api/admin/request-actions.php',$artistCookie,array_replace($remove,['request_id'=>$requestA+1]),$artistCsrf);
+    ref_assert($code===404,'unrelated_request_cannot_remove_draft');
+    [$code,$result]=ref_http('/api/admin/request-actions.php',$artistCookie,$remove,$artistCsrf);
+    ref_assert($code===200 && $result['draft_removed']===true && $result['storage_cleanup_complete']===true && !file_exists($path),'artist_removes_private_draft_and_file');
+    [$code]=ref_http('/api/admin/delivery-draft.php?id='.$id,$artistCookie);
+    ref_assert($code===404,'removed_draft_cannot_be_downloaded');
     ref_assert($db->query('SELECT payment_status FROM dmo_orders')->fetchColumn()==='unverified','staging_does_not_verify_payment');
     echo "DISPOSABLE_DELIVERY_DRAFTS=PASS\n";
 } catch(Throwable $error){
