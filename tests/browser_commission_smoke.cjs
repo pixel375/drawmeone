@@ -403,6 +403,33 @@ async function verifySubmissionConflict(browser){
     console.log("PASS: conflicting request retry preserves brief until explicit separate submission");
   }finally{await page.close();}
 }
+async function verifyClosedIntakeReceiptLookup(browser){
+  const page=await browser.newPage({viewport:{width:390,height:844}});
+  await installMocks(page,{signedIn:true,open:false});
+  const key="10000000-0000-4000-8000-000000000005";
+  await page.addInitScript(k=>sessionStorage.setItem("dmo_request_pending_key",k),key);
+  let calls=0;
+  await page.route("**/api/requests.php",route=>{
+    if(route.request().method()==="GET")return answer(route,{ok:true,requests});
+    assert.deepEqual(route.request().postDataJSON(),{action:"lookup_submission",idempotency_key:key});
+    calls++;return answer(route,{ok:true,found:true,receipt:{public_ref:A,status:"submitted"}});
+  });
+  try{
+    await page.goto(base+"/commission.html",{waitUntil:"domcontentloaded"});
+    await page.locator("#request-recovery").waitFor({state:"visible"});
+    assert.equal(await page.locator("#request-create-panel").isVisible(),false);
+    await page.locator("#request-recovery-check").click();
+    await page.locator("#request-recovery-open").waitFor({state:"visible"});
+    await page.locator("#request-recovery-open").click();
+    await page.waitForFunction(ref=>document.querySelector("#detail-ref")?.textContent===ref,A);
+    assert.equal(calls,1);
+    page.once("dialog",d=>d.accept());
+    await page.locator("#request-recovery-dismiss").click();
+    assert.equal(await page.locator("#request-recovery").isVisible(),false);
+    assert.equal(await page.evaluate(()=>sessionStorage.getItem("dmo_request_pending_key")),null);
+    console.log("PASS: authenticated submission receipt recovery with intake closed");
+  }finally{await page.close();}
+}
 async function customerDraftAndSessionIsolation(browser) {
   const page=await browser.newPage({viewport:{width:390,height:844},reducedMotion:"reduce"});
   const test=await installMocks(page,{signedIn:true,open:false});
@@ -636,6 +663,7 @@ async function openWithoutLogin(browser) {
     for(const width of [320,390,768,1440]) await signedInClosed(browser,width);
     await openIntake(browser);
     await verifySubmissionConflict(browser);
+    await verifyClosedIntakeReceiptLookup(browser);
     await openWithoutLogin(browser);
     await quoteDecisionGuards(browser);
     await quoteSuccessWithoutPayment(browser);

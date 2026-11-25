@@ -46,6 +46,25 @@ try {
 
     $input = dmo_auth_json_request();
     dmo_auth_verify_csrf($session);
+    // Receipt recovery is read-only and intentionally independent of intake,
+    // catalog and current policy approval. It never creates a request.
+    if(($input['action']??null)==='lookup_submission'){
+        if(count($input)!==2||array_diff(array_keys($input),['action','idempotency_key'])!==[])
+            dmo_json(422,['ok'=>false,'error'=>'unexpected_fields']);
+        $key=dmo_request_validate_key($input['idempotency_key']??null);
+        $ref=dmo_requests_public_ref($customer,$key);
+        $db->beginTransaction();
+        try{
+            // Same per-customer row lock as insertion, without the intake lock.
+            $lock=$db->prepare("SELECT id FROM dmo_users WHERE id=:id AND role='customer' AND account_status='active' AND email_verified_at IS NOT NULL FOR UPDATE");
+            $lock->execute(['id'=>$customer]);
+            if($lock->fetchColumn()===false){$db->rollBack();dmo_json(401,['ok'=>false,'error'=>'customer_login_required']);}
+            $q=$db->prepare('SELECT public_ref,status,submitted_at FROM dmo_commission_requests WHERE customer_id=:customer AND public_ref=:ref LIMIT 1');
+            $q->execute(['customer'=>$customer,'ref'=>$ref]);$row=$q->fetch();
+            $db->commit();
+            dmo_json(200,['ok'=>true,'found'=>is_array($row),'receipt'=>is_array($row)?$row:null]);
+        }catch(Throwable $error){if($db->inTransaction())$db->rollBack();throw $error;}
+    }
     if (!dmo_requests_open()) {
         dmo_json(503, ['ok' => false, 'error' => 'commissions_closed']);
     }

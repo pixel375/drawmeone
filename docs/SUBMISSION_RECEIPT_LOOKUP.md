@@ -1,0 +1,3 @@
+# Submission receipt lookup
+
+The authenticated, CSRF-protected requests endpoint accepts a read-only lookup_submission action with an opaque UUID. It derives the reference from the authenticated customer, locks that customer's row to coordinate with insertion, and returns only a minimal owned receipt or not-found. It does not depend on intake or current policy approval, nor create requests. Customers with a pending ID can check it from the workspace even with intake closed, open the original request, or explicitly clear the ID after review. No private brief is persisted in browser storage. Not-found is not a guarantee that a concurrent submission cannot later complete. Synthetic tests cover ownership, CSRF, paused intake and closed-intake UI.

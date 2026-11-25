@@ -712,6 +712,13 @@ try {
     $changed=$payload;$changed['brief']='Different synthetic brief for a separate artwork request.';
     [$code,$conflict]=qa_http('/api/requests.php',$tokenA,'__Host-dmo_session',$changed,$csrfA);
     qa_positive($code===409&&($conflict['error']??null)==='request_key_conflict'&&($conflict['public_ref']??null)===$submitted['public_ref'],'request_key_conflict_prevents_silent_loss_of_changed_brief');
+    $lookup=['action'=>'lookup_submission','idempotency_key'=>$payload['idempotency_key']];
+    [$code,$found]=qa_http('/api/requests.php',$tokenA,'__Host-dmo_session',$lookup,$csrfA);
+    qa_positive($code===200&&($found['found']??false)&&($found['receipt']['public_ref']??null)===$submitted['public_ref'],'submission_receipt_lookup_while_intake_paused');
+    [$code,$other]=qa_http('/api/requests.php',$tokenB,'__Host-dmo_session',$lookup,$csrfB);
+    qa_positive($code===200&&($other['found']??null)===false&&($other['receipt']??null)===null,'submission_lookup_isolated_by_customer');
+    [$code]=qa_http('/api/requests.php',$tokenA,'__Host-dmo_session',$lookup,null);
+    qa_positive($code===403,'submission_lookup_requires_csrf');
     [$code,$history]=qa_http('/api/requests.php',$tokenA);
     qa_positive($code===200&&$history['new_requests_open']===false,'history_available_during_pause');
     $password='CI-positive-disposable-password!';

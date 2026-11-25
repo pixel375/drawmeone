@@ -10,7 +10,7 @@
 <title>Commission a drawing · Draw Me One</title>
 <link rel="icon" href="./favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="./commission.css?v=29">
-<script defer src="./commission.js?v=46"></script>
+<script defer src="./commission.js?v=47"></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
@@ -44,6 +44,14 @@
     <a href="./account.html" class="primary-link">Sign in or create an account</a>
   </section>
   <div id="customer-workspace" class="workspace" hidden>
+    <section id="request-recovery" class="request-form-panel" hidden aria-labelledby="request-recovery-heading">
+      <h2 id="request-recovery-heading">Previous submission</h2>
+      <p class="small">An earlier submission ID is retained in this browser tab. Check whether it was received, even if commission intake is closed.</p>
+      <button id="request-recovery-check" type="button" class="text-button">Check submission receipt</button>
+      <button id="request-recovery-open" type="button" class="text-button" hidden>View existing request</button>
+      <button id="request-recovery-dismiss" type="button" class="text-button">Clear saved submission ID</button>
+      <p id="request-recovery-status" role="status" class="small"></p>
+    </section>
     <section id="request-create-panel" class="request-form-panel">
       <div class="panel-heading">
         <span class="eyebrow">01 / START YOUR REQUEST</span>

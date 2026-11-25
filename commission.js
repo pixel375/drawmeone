@@ -183,13 +183,22 @@
     }
     return crypto.randomUUID();
   }
+  function storedRequestKey(){
+    let stored=null;
+    try{stored=sessionStorage.getItem("dmo_request_pending_key");}catch(_){}
+    return typeof stored==="string"&&/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(stored)?stored:null;
+  }
+  function syncReceiptRecovery(){
+    $("request-recovery").hidden=!(state.pendingKey||storedRequestKey());
+    $("request-recovery-check").disabled=state.sending||receiptBusy;
+    $("request-recovery-dismiss").disabled=state.sending||receiptBusy;
+  }
+  let receiptBusy=false;
   function requestKey() {
-    if (state.pendingKey) return state.pendingKey;
-    let stored = null;
-    try { stored = sessionStorage.getItem("dmo_request_pending_key"); } catch (_) {}
-    const valid = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
-    state.pendingKey = stored && valid.test(stored) ? stored : newKey();
+    if(state.pendingKey)return state.pendingKey;
+    state.pendingKey=storedRequestKey()||newKey();
     try { sessionStorage.setItem("dmo_request_pending_key",state.pendingKey); } catch (_) {}
+    syncReceiptRecovery();
     return state.pendingKey;
   }
 
@@ -910,15 +919,42 @@
     state.pendingKey=null;
     try{sessionStorage.removeItem("dmo_request_pending_key");}catch(_){}
     $("request-new-key").hidden=true;
+    $("request-recovery-open").hidden=true;
+    $("request-recovery-status").textContent="";
+    syncReceiptRecovery();
   }
+  $("request-recovery-check").addEventListener("click",async()=>{
+    const key=state.pendingKey||storedRequestKey();
+    if(!key||!state.csrf||receiptBusy||state.sending)return;
+    receiptBusy=true;syncReceiptRecovery();
+    const status=$("request-recovery-status"),open=$("request-recovery-open");
+    open.hidden=true;status.textContent="Checking your previous submission…";
+    try{
+      const response=await fetch("./api/requests.php",{method:"POST",cache:"no-store",credentials:"same-origin",headers:{"Content-Type":"application/json","X-DMO-CSRF":state.csrf},body:JSON.stringify({action:"lookup_submission",idempotency_key:key})});
+      if(response.status===401)return customerSessionExpired();
+      const data=await response.json();
+      if(!response.ok||data.ok!==true)throw Error("Receipt unavailable");
+      if(data.found===true&&typeof data.receipt?.public_ref==="string"&&/^DMO-[0-9a-f]{20}$/.test(data.receipt.public_ref)){
+        status.textContent="Existing request found: "+data.receipt.public_ref+". Review it before sending another request. No new request was created.";
+        open.hidden=false;open.onclick=()=>openDetail(data.receipt.public_ref);
+        await loadMyRequests();
+      }else if(data.found===false)status.textContent="No saved request was found for this submission ID. An unfinished upload may still be processing; wait for confirmation before starting a separate request.";
+      else throw Error("Invalid receipt");
+    }catch(_){status.textContent="Could not check the receipt. Your submission ID is retained; try again.";}
+    finally{receiptBusy=false;syncReceiptRecovery();}
+  });
+  $("request-recovery-dismiss").addEventListener("click",()=>{
+    if(state.sending||receiptBusy||!window.confirm("Clear the saved submission ID? Check your history first to avoid duplicate requests."))return;
+    clearPendingRequestKey();
+  });
   $("request-new-key").addEventListener("click",()=>{
-    if(state.sending||!window.confirm("Have you reviewed the earlier request? Use a new submission ID for a separate commission request?"))return;
+    if(state.sending||receiptBusy||!window.confirm("Have you reviewed the earlier request? Use a new submission ID for a separate commission request?"))return;
     clearPendingRequestKey();
     feedback("A new request ID will be used. Your current form is preserved. Review it before submitting.");
   });
   $("request-form").addEventListener("submit",async event => {
     event.preventDefault();
-    if (state.sending || !state.service?.requests_open || !state.csrf) return;
+    if (state.sending || receiptBusy || !state.service?.requests_open || !state.csrf) return;
     const form = $("request-form");
     if (!form.reportValidity()) return;
     const brief = $("request-brief").value.trim();
@@ -942,7 +978,7 @@
       acknowledge_review:$("request-ack").checked === true,
     };
     const button = $("request-submit");
-    state.sending = true;
+    state.sending = true;syncReceiptRecovery();
     const fields=[...form.querySelectorAll('input,select,textarea,button')].map(field=>[field,field.disabled]);
     for(const [field] of fields)field.disabled=true;
     button.disabled = true;
@@ -988,7 +1024,7 @@
     } catch (_) {
       feedback("Connection interrupted. Your form is preserved; retrying uses the same request ID to prevent duplicates.",true);
     } finally {
-      state.sending = false;
+      state.sending = false;syncReceiptRecovery();
       for(const [field,disabled] of fields)field.disabled=disabled;
       if(!leavingSession)$('request-tier').dispatchEvent(new Event('change'));
       button.disabled = !state.service?.requests_open||leavingSession;
@@ -1024,6 +1060,7 @@
     }
     if(state.account){
       $("customer-workspace").hidden=false;
+      syncReceiptRecovery();
       $("request-create-panel").hidden=!state.service.requests_open;
       $("request-closed").hidden=true;
       $("request-signin").hidden=true;

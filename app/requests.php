@@ -72,6 +72,17 @@ function dmo_requests_deadline(mixed $raw): ?string
     return $raw;
 }
 
+function dmo_request_validate_key(mixed $key): string
+{
+    if (!is_string($key) || !preg_match(
+        '/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/D',
+        $key
+    )) {
+        dmo_json(422, ['ok' => false, 'error' => 'invalid_request_key']);
+    }
+    return $key;
+}
+
 function dmo_requests_validate(array $input): array
 {
     $expected = [
@@ -83,13 +94,7 @@ function dmo_requests_validate(array $input): array
         dmo_json(422, ['ok' => false, 'error' => 'unexpected_fields']);
     }
 
-    $key = $input['idempotency_key'] ?? null;
-    if (!is_string($key) || !preg_match(
-        '/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/D',
-        $key
-    )) {
-        dmo_json(422, ['ok' => false, 'error' => 'invalid_request_key']);
-    }
+    $key = dmo_request_validate_key($input['idempotency_key'] ?? null);
     $subjects = ['original_character','fan_character','portrait','other'];
     $subject = $input['subject_type'] ?? null;
     if (!is_string($subject) || !in_array($subject, $subjects, true)) {
