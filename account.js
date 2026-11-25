@@ -20,10 +20,10 @@
   let csrf = "";
   let status = null;
   let securityBusy=false;
-  let privacyBusy=false,privacyCase=null,privacyGeneration=0;
+  let privacyBusy=false,privacyCase=null,privacyGeneration=0,privacyCursor=null;
   let leaving=false;
   const securityForm=$("security-form");
-  function clearPrivateAccount(){csrf="";signedIn.hidden=true;$("account-name").textContent="";$("account-email").textContent="";$("account-session-count").textContent="";securityForm.reset();$("security-notice").textContent="";++privacyGeneration;privacyCase=null;$("privacy-form").reset();$("privacy-case").textContent="";$("privacy-notice").textContent="";$("account-privacy").hidden=true;}
+  function clearPrivateAccount(){csrf="";signedIn.hidden=true;$("account-name").textContent="";$("account-email").textContent="";$("account-session-count").textContent="";securityForm.reset();$("security-notice").textContent="";++privacyGeneration;privacyCase=null;$("privacy-form").reset();$("privacy-case").textContent="";$("privacy-notice").textContent="";privacyCursor=null;$("privacy-history-list").replaceChildren();$("privacy-history-status").textContent="";$("privacy-history-more").hidden=true;$("account-privacy").hidden=true;}
   function freshSignIn(reason){leaving=true;clearPrivateAccount();workspace.hidden=true;location.replace(location.pathname+"?session="+encodeURIComponent(reason));}
   window.addEventListener("pagehide",()=>{clearPrivateAccount();});
   window.addEventListener("pageshow",event=>{if(event.persisted)location.reload();});
@@ -213,18 +213,41 @@
   function syncPrivacyForm(){
     $("privacy-note-fields").hidden=$("privacy-action").value==="export";
   }
-  async function loadPrivacyCase(){
+  function renderPrivacyHistory(history,older){
+    const list=$("privacy-history-list");
+    if(!older)list.replaceChildren();
+    for(const item of Array.isArray(history?.cases)?history.cases:[]){
+      if(!Number.isSafeInteger(item.case_id)||typeof item.status!=="string"||typeof item.kind!=="string")continue;
+      if([...list.children].some(el=>el.dataset.caseId===String(item.case_id)))continue;
+      const article=document.createElement("article");article.dataset.caseId=String(item.case_id);
+      const heading=document.createElement("p"),title=document.createElement("strong");
+      title.textContent="Case #"+item.case_id+" · "+item.kind+" · "+item.status.replaceAll("_"," ");heading.append(title);article.append(heading);
+      for(const [label,value] of [["Updated",item.updated_at],["Your request",item.note],["Artist response",item.reply]]){
+        if(typeof value==="string"&&value){const p=document.createElement("p");p.textContent=label+": "+value;p.style.overflowWrap="anywhere";article.append(p);}
+      }
+      list.append(article);
+    }
+    privacyCursor=Number.isSafeInteger(history?.next_before)?history.next_before:null;
+    $("privacy-history-more").hidden=privacyCursor===null;
+    $("privacy-history-status").textContent=list.children.length?list.children.length+" case(s) loaded.":"No privacy case history.";
+  }
+  async function loadPrivacyCase(older=false){
+    if(older&&privacyCursor===null)return;
     const generation=++privacyGeneration;
+    $("privacy-history-refresh").disabled=$("privacy-history-more").disabled=true;
     try{
-      const response=await fetch("./api/auth/privacy.php",{credentials:"same-origin",cache:"no-store"});
+      const response=await fetch("./api/auth/privacy.php"+(older?"?before="+encodeURIComponent(privacyCursor):""),{credentials:"same-origin",cache:"no-store"});
       if(generation!==privacyGeneration||leaving||!csrf)return;
       if(response.status===401)return freshSignIn("expired");
       const data=await response.json();
       if(generation!==privacyGeneration||leaving||!csrf)return;
       if(!response.ok||!data.ok)throw Error("privacy_status");
-      renderPrivacyCase(data.case);
-    }catch(_){if(generation===privacyGeneration)$("privacy-case").textContent="Request status unavailable. Refresh before retrying.";}
+      renderPrivacyCase(data.case);renderPrivacyHistory(data.history,older);
+    }catch(_){if(generation===privacyGeneration){$("privacy-case").textContent="Request status unavailable. Refresh before retrying.";$("privacy-history-status").textContent="Case history unavailable. Refresh to retry.";}}
+    finally{if(generation===privacyGeneration){$("privacy-history-refresh").disabled=$("privacy-history-more").disabled=false;}}
   }
+  $("privacy-history-refresh").addEventListener("click",()=>{if(!privacyBusy)loadPrivacyCase();});
+  $("privacy-history-more").addEventListener("click",()=>{if(!privacyBusy)loadPrivacyCase(true);});
   async function applyPrivacy(withdraw=false){
     const form=$("privacy-form");
     if(privacyBusy||securityBusy||!csrf||!form.reportValidity())return;
@@ -254,7 +277,7 @@
         const link=document.createElement("a");link.href=url;link.download="drawmeone-customer-records.json";document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);
         $("privacy-notice").textContent="Export prepared. Store this private file securely.";
       }else{
-        renderPrivacyCase(body.case);$("privacy-note").value="";
+        renderPrivacyCase(body.case);$("privacy-note").value="";await loadPrivacyCase();
         $("privacy-notice").textContent=withdraw?"Request withdrawn.":"Request recorded for manual review. No data has been deleted.";
       }
     }catch(_){if(generation===privacyGeneration)$("privacy-notice").textContent="Outcome uncertain. Refresh before retrying.";}

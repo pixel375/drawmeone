@@ -37,7 +37,7 @@ async function fakeService(page,options={}) {
       case "logout.php":
         counts.logout++;signedIn=false;return reply(route,{ok:true,status:"signed_out"});
       case "privacy.php":{
-        if(request.method()==="GET")return reply(route,{ok:true,enabled:true,case:privacyCase});
+        if(request.method()==="GET")return reply(route,{ok:true,enabled:true,case:privacyCase,history:{cases:privacyCase?[privacyCase]:[],next_before:null}});
         const p=request.postDataJSON();assert.equal(p.current_password,"ci-current-password");
         if(p.action==="export")return reply(route,{ok:true,export:{format:"drawmeone-customer-records-v1",profile:{email:"ci@example.invalid"}}});
         if(p.action==="submit"){privacyCase={case_id:17,version:17,kind:p.kind,status:"submitted",note:p.note,reply:""};return reply(route,{ok:true,case:privacyCase,data_deleted:false});}
@@ -282,6 +282,8 @@ async function privacySelfService(browser){
     await page.locator("#privacy-withdraw").click();
     await waitText(page,"#privacy-case","withdrawn");
     assert.equal(await page.locator("#privacy-withdraw").isVisible(),false);
+    await page.locator("#privacy-history summary").click();
+    await waitText(page,"#privacy-history-list","withdrawn");
     assert.equal(m.writes.filter(x=>x.endpoint==="privacy.php").length,3);
     await overflow(page);
     console.log("PASS: private JSON export, deletion request and withdrawal UI");

@@ -4,8 +4,10 @@ require_once dirname(__DIR__,2).'/app/privacy.php';
 try{
     $db=dmo_database();$admin=dmo_admin_require_session($db);
     if(($_SERVER['REQUEST_METHOD']??'')==='GET'){
-        $before=$_GET['before']??null;
-        if($before!==null&&(!is_string($before)||!preg_match('/^[1-9][0-9]{0,17}$/D',$before)))dmo_json(422,['ok'=>false,'error'=>'invalid_cursor']);
+        $before=dmo_privacy_cursor($_GET['before']??null);
+        $view=$_GET['view']??'open';
+        if(!in_array($view,['open','closed'],true))dmo_json(422,['ok'=>false,'error'=>'invalid_privacy_view']);
+        if($view==='closed')dmo_json(200,['ok'=>true]+dmo_privacy_history($db,null,$before,true));
         $q=$db->prepare("SELECT a.id,a.details_json,a.created_at,u.id AS customer_id,u.display_name,u.email FROM dmo_audit_log a JOIN dmo_users u ON u.id=a.entity_id
           WHERE a.entity_type='user' AND a.action='privacy.case' AND u.role='customer'
           AND a.id=(SELECT MAX(x.id) FROM dmo_audit_log x WHERE x.entity_type='user' AND x.entity_id=u.id AND x.action='privacy.case')

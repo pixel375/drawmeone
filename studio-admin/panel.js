@@ -110,6 +110,8 @@
     card.append(textNode("strong","Case #"+item.case_id+" · "+item.kind+" · "+item.status.replaceAll("_"," ")),
       textNode("p",item.display_name+" · "+item.email,"small"),textNode("p",item.note||"No additional details.","small"));
     if(item.reply)card.append(textNode("p","Last reply: "+item.reply,"small"));
+    if(item.updated_at)card.append(textNode("p","Updated: "+item.updated_at,"small"));
+    if(!["submitted","in_review"].includes(item.status))return card;
     const form=document.createElement("form");form.className="intake-form";
     const decision=textNode("label","Record outcome");const select=document.createElement("select");
     if(item.status==="submitted")select.append(new Option("Start review","in_review"));
@@ -138,9 +140,10 @@
   async function loadPrivacyQueue(older=false){
     if(privacyQueueBusy||!csrf||(older&&privacyCursor===null))return;
     const gen=++privacyQueueGeneration;privacyQueueBusy=true;
-    $("privacy-queue-refresh").disabled=$("privacy-queue-next").disabled=true;
+    $("privacy-queue-refresh").disabled=$("privacy-queue-next").disabled=$("privacy-queue-view").disabled=true;
     try{
-      const {response,data}=await get("privacy.php"+(older?"?before="+encodeURIComponent(privacyCursor):""));
+      const view=$("privacy-queue-view").value;
+      const {response,data}=await get("privacy.php?view="+encodeURIComponent(view)+(older?"&before="+encodeURIComponent(privacyCursor):""));
       if(gen!==privacyQueueGeneration||leavingSession)return;
       if(response.status===401)return sessionExpired();
       if(!response.ok||!data.ok||!Array.isArray(data.cases))throw Error("privacy_queue");
@@ -148,10 +151,11 @@
       for(const item of data.cases)$("privacy-queue").append(privacyQueueCard(item));
       privacyCursor=Number.isSafeInteger(data.next_before)?data.next_before:null;
       $("privacy-queue-next").hidden=privacyCursor===null;
-      $("privacy-queue-status").textContent=$("privacy-queue").children.length+" open request(s) loaded.";
+      $("privacy-queue-status").textContent=$("privacy-queue").children.length+" "+view+" request(s) loaded.";
     }catch(_){if(gen===privacyQueueGeneration)$("privacy-queue-status").textContent="Privacy queue unavailable. Refresh to retry.";}
-    finally{privacyQueueBusy=false;$("privacy-queue-refresh").disabled=$("privacy-queue-next").disabled=false;}
+    finally{privacyQueueBusy=false;$("privacy-queue-refresh").disabled=$("privacy-queue-next").disabled=$("privacy-queue-view").disabled=false;}
   }
+  $("privacy-queue-view").addEventListener("change",()=>{if(!privacyQueueBusy){clearPrivacyQueue();loadPrivacyQueue(false);}});
   $("privacy-queue-refresh").addEventListener("click",()=>loadPrivacyQueue(false));
   $("privacy-queue-next").addEventListener("click",()=>loadPrivacyQueue(true));
   let overviewGeneration=0,launchEvidence=null;

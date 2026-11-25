@@ -75,3 +75,37 @@ function dmo_privacy_export(PDO $db,int $user,array $profile): array {
     }
     return $export;
 }
+
+/** One latest event per case, including earlier resolved/withdrawn cases.
+ * The original event's ID is the case ID. Subsequent events carry that ID.
+ * All joins are scoped to the same customer; cursor operates on event ID.
+ */
+function dmo_privacy_history(PDO $db,?int $user,?int $before,bool $closedOnly): array
+{
+    $caseId=static fn(string $alias): string=>"COALESCE(CAST(JSON_UNQUOTE(JSON_EXTRACT(".$alias.".details_json,'$.case_id')) AS UNSIGNED),".$alias.".id)";
+    $sql="SELECT a.id,a.details_json,a.created_at,u.id AS customer_id,u.display_name,u.email
+        FROM dmo_audit_log a JOIN dmo_users u ON u.id=a.entity_id
+        WHERE a.entity_type='user' AND a.action='privacy.case' AND u.role='customer'
+        AND NOT EXISTS(SELECT 1 FROM dmo_audit_log x WHERE x.entity_type='user' AND x.action='privacy.case'
+            AND x.entity_id=a.entity_id AND x.id>a.id AND ".$caseId('x')."=".$caseId('a').")";
+    $params=[];
+    if($user!==null){$sql.=" AND a.entity_id=:user";$params['user']=$user;}
+    if($before!==null){$sql.=" AND a.id<:before";$params['before']=$before;}
+    if($closedOnly)$sql.=" AND JSON_UNQUOTE(JSON_EXTRACT(a.details_json,'$.status')) IN ('resolved','declined','withdrawn')";
+    $q=$db->prepare($sql.' ORDER BY a.id DESC LIMIT 26');$q->execute($params);
+    $rows=$q->fetchAll(PDO::FETCH_ASSOC);$more=count($rows)>25;
+    if($more)array_pop($rows);
+    $cases=[];
+    foreach($rows as $row){
+        $item=dmo_privacy_case($row);
+        if($user===null)$item+=['customer_id'=>(int)$row['customer_id'],'display_name'=>$row['display_name'],'email'=>$row['email']];
+        $cases[]=$item;
+    }
+    return ['cases'=>$cases,'next_before'=>$more?$cases[count($cases)-1]['version']:null];
+}
+function dmo_privacy_cursor(mixed $value): ?int
+{
+    if($value===null)return null;
+    if(!is_string($value)||!preg_match('/^[1-9][0-9]{0,17}$/D',$value))dmo_json(422,['ok'=>false,'error'=>'invalid_cursor']);
+    return (int)$value;
+}

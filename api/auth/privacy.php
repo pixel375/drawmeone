@@ -3,7 +3,10 @@ declare(strict_types=1);
 require_once dirname(__DIR__,2).'/app/privacy.php';
 try{
     $db=dmo_database();$session=dmo_customer_require($db);$user=(int)$session['user_id'];
-    if(($_SERVER['REQUEST_METHOD']??'')==='GET')dmo_json(200,['ok'=>true,'enabled'=>dmo_privacy_enabled(),'case'=>dmo_privacy_latest($db,$user)]);
+    if(($_SERVER['REQUEST_METHOD']??'')==='GET'){
+        $before=dmo_privacy_cursor($_GET['before']??null);
+        dmo_json(200,['ok'=>true,'enabled'=>dmo_privacy_enabled(),'case'=>dmo_privacy_latest($db,$user),'history'=>dmo_privacy_history($db,$user,$before,false)]);
+    }
     $input=dmo_auth_json_request();dmo_auth_verify_csrf($session);
     if(!dmo_privacy_enabled())dmo_json(503,['ok'=>false,'error'=>'privacy_self_service_disabled']);
     $action=$input['action']??null;

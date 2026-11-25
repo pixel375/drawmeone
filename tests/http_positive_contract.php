@@ -705,6 +705,16 @@ try {
     qa_positive($code===200&&$withdrawn['case']['status']==='withdrawn','customer_withdraws_open_case');
     [$code,$queue]=qa_http('/api/admin/privacy.php',$tokenAdmin,'__Host-dmo_admin');
     qa_positive($code===200&&$queue['cases']===[],'completed_or_withdrawn_cases_leave_open_queue');
+    [$code,$history]=qa_http('/api/auth/privacy.php',$tokenA);
+    qa_positive($code===200&&array_column($history['history']['cases'],'status')===['withdrawn','declined'],'customer_privacy_history_preserves_earlier_case');
+    [$code,$older]=qa_http('/api/auth/privacy.php?before='.$history['history']['cases'][0]['version'],$tokenA);
+    qa_positive($code===200&&array_column($older['history']['cases'],'status')===['declined'],'privacy_history_cursor_does_not_resurrect_old_case_events');
+    [$code,$other]=qa_http('/api/auth/privacy.php',$tokenB);
+    qa_positive($code===200&&$other['history']['cases']===[],'privacy_history_cross_account_denied');
+    [$code,$closed]=qa_http('/api/admin/privacy.php?view=closed',$tokenAdmin,'__Host-dmo_admin');
+    qa_positive($code===200&&array_column($closed['cases'],'status')===['withdrawn','declined'],'artist_closed_history_preserves_both_cases');
+    [$code]=qa_http('/api/admin/privacy.php?view=closed',$tokenA,'__Host-dmo_admin');
+    qa_positive(in_array($code,[401,403],true),'privacy_closed_history_admin_only');
     // A new review update must not reset the age of an old privacy request.
     $db->prepare("UPDATE dmo_commission_requests SET status='closed',updated_at=DATE_SUB(UTC_TIMESTAMP(),INTERVAL 366 DAY) WHERE id=:id")->execute(['id'=>$requestB]);
     [$code,$opened]=qa_http('/api/auth/privacy.php',$tokenB,'__Host-dmo_session',$privacy,$csrfB);

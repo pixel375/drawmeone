@@ -290,7 +290,7 @@ jobs:
             desk_page=$(curl -fsSL --max-time 5 -H "Cache-Control: no-cache" "https://drawmeone.com/studio-admin/index.php" || true)
             commission_page=$(curl -fsSL --max-time 5 -H "Cache-Control: no-cache" "https://drawmeone.com/commission.html" || true)
             customer_page=$(curl -fsSL --max-time 5 -H "Cache-Control: no-cache" "https://drawmeone.com/account.html" || true)
-            if [[ "$public_home" == *'concepts.js?v=13'* && "$public_home" == *'studio.js?v=14'* && "$public_home" == *'gallery.js?v=16'* && "$public_home" == *'styles.css?v=14'* && "$desk_page" == *'panel.js?v=53'* && "$desk_page" == *'panel.css?v=42'* && "$commission_page" == *'commission.js?v=41'* && "$customer_page" == *'account.js?v=20'* ]]; then synced=yes; break; fi
+            if [[ "$public_home" == *'concepts.js?v=13'* && "$public_home" == *'studio.js?v=14'* && "$public_home" == *'gallery.js?v=16'* && "$public_home" == *'styles.css?v=14'* && "$desk_page" == *'panel.js?v=54'* && "$desk_page" == *'panel.css?v=42'* && "$commission_page" == *'commission.js?v=41'* && "$customer_page" == *'account.js?v=21'* ]]; then synced=yes; break; fi
             sleep 4
           done
           [[ "$synced" == "yes" ]] || { echo "deployment_sync=expected_versions_unavailable"; exit 1; }
@@ -325,7 +325,7 @@ jobs:
             echo "mobile_artist_desk=stale_or_missing_mobile_layout"
             exit 1
           }
-          [[ "$desk_page" == *'panel.js?v=53'* ]] &&
+          [[ "$desk_page" == *'panel.js?v=54'* ]] &&
           [[ "$desk_page" == *'id="artwork-filter"'* ]] &&
           [[ "$desk_page" == *'id="artwork-unpublish-selected"'* ]] || {
             echo "artist_artwork_library=stale_html"
@@ -335,7 +335,7 @@ jobs:
             echo "artist_artwork_library=stale_css"
             exit 1
           }
-          desk_js=$(curl -fsSL --max-time 15 "https://drawmeone.com/studio-admin/panel.js?v=53")
+          desk_js=$(curl -fsSL --max-time 15 "https://drawmeone.com/studio-admin/panel.js?v=54")
           [[ "$desk_js" == *'artwork-unpublish-selected'* ]] &&
           [[ "$desk_js" == *'No artworks match this view.'* ]] || {
             echo "artist_artwork_library=stale_js"
@@ -491,12 +491,12 @@ jobs:
           echo "customer_fault_isolation=deployed"
           # v3.9 registration remains closed, but verify the versioned
           # customer signup and recovery assets are deployed safely.
-          [[ "$customer_page" == *'account.js?v=20'* ]] &&
+          [[ "$customer_page" == *'account.js?v=21'* ]] &&
           [[ "$customer_page" == *'id="signup-password-confirm"'* ]] || {
             echo "customer_onboarding_assets=stale_signup"
             exit 1
           }
-          customer_js=$(curl -fsSL --max-time 15 "https://drawmeone.com/account.js?v=20")
+          customer_js=$(curl -fsSL --max-time 15 "https://drawmeone.com/account.js?v=21")
           [[ "$customer_js" == *'signupPasswordConfirm.setCustomValidity'* ]] &&
           [[ "$customer_js" == *'Too many sign-in attempts'* ]] || {
             echo "customer_onboarding_assets=stale_signup_script"
@@ -547,6 +547,8 @@ jobs:
           [[ "$desk_page" == *'id="request-policy-status"'* ]] && [[ "$desk_js" == *'Eligible for continuation'* ]] || { echo "policy_continuation=stale_assets"; exit 1; }
           [[ "$desk_page" == *'id="privacy-queue"'* ]] && [[ "$customer_page" == *'id="account-privacy"'* ]] || { echo "privacy_self_service=stale_assets"; exit 1; }
           echo "privacy_self_service=deployed"
+          [[ "$desk_page" == *'id="privacy-queue-view"'* && "$customer_page" == *'id="privacy-history"'* ]] || { echo "privacy_history=stale_assets"; exit 1; }
+          echo "privacy_history=deployed"
           echo "policy_continuation=deployed"
           echo "policy_receipts=deployed"
           echo "intake_control=deployed"

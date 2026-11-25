@@ -50,7 +50,7 @@ footer{border-top:1px solid var(--line);padding-top:20px;margin-top:28px;font-si
 .skip-link:focus{top:10px}
 button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 </style>
-<script defer src="./account.js?v=20"></script>
+<script defer src="./account.js?v=21"></script>
 </head>
 <body>
 <a class="skip-link" href="#main">Skip to main content</a>
@@ -140,6 +140,7 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-off
     <details id="account-privacy" hidden><summary>My data and privacy</summary>
       <p>Download a structured JSON copy of your customer records. Images are not included; use your commission workspace for available image downloads. For additional data, corrections or deletion, submit a request for individual review.</p>
       <p id="privacy-case" role="status"></p>
+      <details id="privacy-history"><summary>Previous privacy requests</summary><div id="privacy-history-list"></div><p id="privacy-history-status" role="status"></p><button type="button" class="primary" id="privacy-history-refresh">Refresh history</button><button type="button" class="primary" id="privacy-history-more" hidden>Load older cases</button></details>
       <form id="privacy-form">
         <label for="privacy-action">Action</label>
         <select id="privacy-action"><option value="export">Download customer records</option><option value="access">Request additional data access</option><option value="correction">Request a correction</option><option value="deletion">Request deletion</option></select>

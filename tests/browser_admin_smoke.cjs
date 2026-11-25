@@ -666,6 +666,10 @@ async function verifyFinancialException(browser) {
     await form.getByRole("button",{name:"Record financial exception"}).click();
     await page.waitForFunction(()=>document.querySelector("#request-payment-records")?.textContent.includes("Full external refund recorded"));
     assert.equal(await form.count(),0);
+    await page.locator("#privacy-queue-view").selectOption("closed");
+    await page.waitForFunction(()=>document.querySelector("#privacy-queue-status")?.textContent.includes("1 closed"));
+    assert.equal(await form.count(),0);
+    assert.match(await page.locator("#privacy-queue").innerText(),/resolved/);
     assert.deepEqual(posts,[]);
     console.log("PASS: financial hold, restore and full external refund UI");
   }finally{await page.close();}
@@ -704,7 +708,7 @@ async function verifyPrivacyQueue(browser){
   let open=true;
   const answer=(route,data)=>route.fulfill({status:200,contentType:"application/json",body:JSON.stringify(data)});
   await page.route("**/api/admin/privacy.php*",route=>{
-    if(route.request().method()==="GET")return answer(route,{ok:true,cases:open?[item]:[],next_before:null});
+    if(route.request().method()==="GET"){const closed=new URL(route.request().url()).searchParams.get("view")==="closed";return answer(route,{ok:true,cases:closed?(!open?[{...item,status:"resolved"}]:[]):(open?[item]:[]),next_before:null});}
     const body=route.request().postDataJSON();assert.equal(body.customer_id,4);assert.equal(body.expected_version,item.version);assert.equal(body.confirm_record,true);
     if(body.status==="in_review")Object.assign(item,{version:13,status:"in_review",reply:body.reply});
     else {assert.equal(body.status,"resolved");open=false;}

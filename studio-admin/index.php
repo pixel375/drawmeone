@@ -20,7 +20,7 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
 <meta name="theme-color" content="#151317">
 <title>Artist's Desk · Draw Me One</title>
 <link rel="stylesheet" href="./panel.css?v=42">
-<script defer src="./panel.js?v=53"></script>
+<script defer src="./panel.js?v=54"></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to dashboard</a>
@@ -110,10 +110,11 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
       <section class="launch-overview" aria-labelledby="privacy-queue-title">
         <h3 id="privacy-queue-title">Privacy requests</h3>
         <p class="small">Review requests for additional access, corrections or deletion. These controls record decisions only; they do not change or delete customer data. Respond through a verified channel if the customer cannot sign in.</p>
-        <button type="button" class="quiet" id="privacy-queue-refresh">Load open privacy requests</button>
+        <label for="privacy-queue-view">Show <select id="privacy-queue-view"><option value="open">Open requests</option><option value="closed">Resolved, declined and withdrawn</option></select></label>
+        <button type="button" class="quiet" id="privacy-queue-refresh">Load privacy requests</button>
         <p id="privacy-queue-status" class="small" role="status"></p>
         <div id="privacy-queue" class="record-list"></div>
-        <button type="button" class="quiet" id="privacy-queue-next" hidden>Load older open requests</button>
+        <button type="button" class="quiet" id="privacy-queue-next" hidden>Load older requests</button>
       </section>
       <section class="launch-overview" aria-labelledby="launch-overview-title">
         <div class="launch-overview-heading">

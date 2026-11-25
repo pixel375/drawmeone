@@ -1,1 +1,1 @@
-Verify shared invoice authentication and independent recovery coverage; read-only.
+Verify customer and artist privacy history.
