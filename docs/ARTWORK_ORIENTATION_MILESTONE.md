@@ -1,0 +1,3 @@
+# JPEG orientation and artist library QA
+
+JPEG uploads now honor EXIF orientation when the PHP EXIF extension is available, including mirrored orientations. Output remains metadata-free WebP and recorded dimensions follow the transformed image. This shared image processor is used for portfolio, reference and delivery processing. No existing images are rewritten. Synthetic tests check all eight orientation transforms and a JPEG APP1 orientation fixture when EXIF is available. The search field receives responsive styling and browser coverage alongside the authenticated full-size preview. EXIF-free environments continue to accept JPEGs without automatic orientation normalization.

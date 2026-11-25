@@ -336,3 +336,8 @@ footer{padding:28px 0 70px;border-top:1px solid var(--line);color:var(--muted);f
 #request-customer-scope{margin:0 0 16px;padding:12px;border:1px solid var(--line);border-radius:8px}#request-customer-scope[hidden]{display:none!important}#customer-directory-list .notification-card{overflow-wrap:anywhere;min-width:0}#customer-directory-list button{max-width:100%;white-space:normal}#customer-directory-next{margin-top:12px}
 
 #admin-security{margin-bottom:24px}#admin-security-form{margin-top:16px}#admin-security-form input,#admin-security-form select{width:100%;min-width:0;max-width:100%}#admin-security-new-fields[hidden]{display:none!important}#admin-security-activity{overflow-wrap:anywhere}
+
+/* Private library search stays within the viewport at narrow widths. */
+.artwork-library-filters .artwork-search-field{display:grid;gap:5px;flex:1 1 220px;min-width:0}
+#artwork-search{width:100%;min-width:0;max-width:100%;box-sizing:border-box;min-height:44px;font:inherit;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:10px 13px}
+#artwork-search:focus-visible{outline:2px solid var(--accent);outline-offset:3px}

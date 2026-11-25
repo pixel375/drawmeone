@@ -53,6 +53,20 @@ function dmo_artwork_storage_file(string $key): string
     return dmo_artwork_storage_root() . '/' . $key;
 }
 
+/** Normalize JPEG camera orientation before the metadata-free WebP conversion. */
+function dmo_artwork_orient(GdImage $source,int $orientation): GdImage
+{
+    if(in_array($orientation,[2,5,7],true)&&!imageflip($source,IMG_FLIP_HORIZONTAL))
+        throw new RuntimeException('Image orientation flip failed.');
+    if($orientation===4&&!imageflip($source,IMG_FLIP_VERTICAL))
+        throw new RuntimeException('Image orientation flip failed.');
+    // GD angles are counterclockwise. Mirror first for orientations 5 and 7.
+    $angle=match($orientation){3=>180,5,8=>90,6,7=>-90,default=>0};
+    if($angle===0)return $source;
+    $rotated=imagerotate($source,$angle,0);
+    if(!$rotated instanceof GdImage)throw new RuntimeException('Image orientation rotation failed.');
+    return $rotated;
+}
 function dmo_artwork_open_image(string $tmp): array
 {
     if (!is_uploaded_file($tmp) || !extension_loaded('gd') ||
@@ -83,6 +97,14 @@ function dmo_artwork_open_image(string $tmp): array
     };
     if (!$source instanceof GdImage) {
         dmo_json(422, ['ok' => false, 'error' => 'image_decode_failed']);
+    }
+    if($mime==='image/jpeg'&&function_exists('exif_read_data')){
+        $metadata=@exif_read_data($tmp,'IFD0',true,false);
+        $orientation=is_array($metadata)?(int)($metadata['IFD0']['Orientation']??1):1;
+        if($orientation>=2&&$orientation<=8){
+            $source=dmo_artwork_orient($source,$orientation);
+            $width=imagesx($source);$height=imagesy($source);
+        }
     }
     return [$source, $width, $height];
 }

@@ -109,6 +109,23 @@ try {
     $png = $private . '/synthetic-source.png';
     imagepng($image, $png);
     imagedestroy($image);
+    // Minimal synthetic EXIF APP1 block: orientation 6 (90 degrees clockwise).
+    $jpeg=$private.'/orientation-six.jpg';
+    $fixture=imagecreatefrompng($png);imagejpeg($fixture,$jpeg,95);imagedestroy($fixture);
+    $jpegBytes=file_get_contents($jpeg);
+    $exif="Exif\0\0"."II".pack('vV',42,8).pack('v',1).pack('vvVv',0x0112,3,1,6)."\0\0".pack('V',0);
+    file_put_contents($jpeg,substr($jpegBytes,0,2)."\xFF\xE1".pack('n',strlen($exif)+2).$exif.substr($jpegBytes,2));
+    $probe=imagecreatetruecolor(3,2);
+    for($i=0;$i<6;$i++)imagesetpixel($probe,$i%3,intdiv($i,3),$i+1);
+    $expected=[[1,2,3,4,5,6],[3,2,1,6,5,4],[6,5,4,3,2,1],[4,5,6,1,2,3],[1,4,2,5,3,6],[4,1,5,2,6,3],[6,3,5,2,4,1],[3,6,2,5,1,4]];
+    for($o=1;$o<=8;$o++){
+        $copy=imagecreatetruecolor(3,2);imagecopy($copy,$probe,0,0,0,0,3,2);
+        $oriented=dmo_artwork_orient($copy,$o);$pixels=[];
+        for($y=0;$y<imagesy($oriented);$y++)for($x=0;$x<imagesx($oriented);$x++)$pixels[]=imagecolorat($oriented,$x,$y);
+        art_assert($pixels===$expected[$o-1],'orientation_transform_'.$o);
+        unset($copy,$oriented);
+    }
+    unset($probe);
     $bad = $private . '/not-an-image.png';
     file_put_contents($bad, 'This is not a valid artwork image');
     art_assert(is_file($png) && filesize($png) > 100, 'generated_test_artwork');
@@ -327,9 +344,15 @@ try {
     art_assert($status===200,'unpublished_artwork_still_private_artist_preview');
     [$status]=art_http('/api/admin/artworks.php',$token,$csrf,['id'=>$id,'action'=>'set_alt','alt'=>'']);
     art_assert($status===200,'optional_description_can_be_cleared');
-    [$status,$second]=art_http('/api/admin/artwork-upload.php',$token,$csrf,null,$png);
+    [$status,$second]=art_http('/api/admin/artwork-upload.php',$token,$csrf,null,function_exists('exif_read_data')?$jpeg:$png);
     art_assert($status===201,'second_private_drawing_for_batch');
     $id2=$second['artwork_id'];
+    if(function_exists('exif_read_data')){
+        art_assert($second['width']===420&&$second['height']===620,'jpeg_exif_orientation_normalized');
+        [$status,,$orientedBytes]=art_http('/api/admin/artwork-preview.php?id='.$id2.'&v=display',$token);
+        $size=getimagesizefromstring($orientedBytes);
+        art_assert($status===200&&$size[0]===420&&$size[1]===620&&strpos($orientedBytes,"Exif\0\0")===false,'oriented_private_webp_without_exif');
+    }
     $batch=['action'=>'batch_visibility','ids'=>[$id,$id2],'visibility'=>'published','confirm'=>true];
     [$status]=art_http('/api/admin/artworks.php',$token,$csrf,array_replace($batch,['ids'=>[$id,$id]]));
     art_assert($status===422,'batch_duplicate_ids_denied');

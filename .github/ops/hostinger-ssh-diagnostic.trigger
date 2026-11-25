@@ -1,1 +1,1 @@
-Verify customer editing, message retry and upload recovery release; read-only diagnostics.
+Verify receipt lookup, quote retries, artwork inspection and orientation; read-only diagnostics.

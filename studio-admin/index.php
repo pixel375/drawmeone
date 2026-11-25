@@ -19,7 +19,7 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
 <meta name="robots" content="noindex,nofollow">
 <meta name="theme-color" content="#151317">
 <title>Artist's Desk · Draw Me One</title>
-<link rel="stylesheet" href="./panel.css?v=45">
+<link rel="stylesheet" href="./panel.css?v=46">
 <script defer src="./panel.js?v=68"></script>
 </head>
 <body>
@@ -343,8 +343,9 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
             <option value="published">Published drawings</option><option value="featured">Featured drawings</option><option value="missing_alt">Without accessibility description</option>
           </select>
         </label>
-          <label for="artwork-search">Find drawing</label>
-          <input id="artwork-search" type="search" maxlength="240" placeholder="Drawing ID or optional description" autocomplete="off">
+        <label class="artwork-search-field" for="artwork-search">Find drawing
+          <input id="artwork-search" type="search" maxlength="240" placeholder="Drawing ID or description" autocomplete="off">
+        </label>
         <label for="artwork-sort-mode">Order by<select id="artwork-sort-mode"><option value="recent">Recently uploaded</option><option value="gallery">Public gallery order</option><option value="oldest">Oldest first</option></select></label>
         <span id="artwork-visible-count" class="small" role="status" aria-live="polite"></span>
       </div>
