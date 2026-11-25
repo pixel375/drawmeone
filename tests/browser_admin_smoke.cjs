@@ -456,6 +456,45 @@ async function verifyReviewAndInbox(browser) {
   }finally{await page.close();}
 }
 
+async function verifyOrderPlanning(browser) {
+  const page=await browser.newPage({viewport:{width:320,height:844},reducedMotion:"reduce"});
+  const posts=[];await simulateBackend(page,posts);
+  const order={id:71,quote_id:8,status:"awaiting_arrangement",payment_status:"unverified",total_minor:3000,currency:"CAD",deadline_editable:true,agreed_deadline:null};
+  const fixture={id:61,public_ref:"CI-61",status:"submitted",workflow_stage:"awaiting_arrangement",customer_name:"Synthetic order customer"};
+  const answer=(route,data)=>route.fulfill({status:200,contentType:"application/json",body:JSON.stringify(data)});
+  let filter="";
+  await page.route("**/api/admin/requests.php*",route=>{
+    filter=new URL(route.request().url()).searchParams.get("filter");
+    return answer(route,{ok:true,requests:[{...fixture,order_deadline:order.agreed_deadline}]});
+  });
+  await page.route("**/api/admin/request.php?*",route=>answer(route,{ok:true,detail:{
+    request:fixture,messages:[],quotes:[],orders:[order],references:[],addons:[]
+  }}));
+  await page.route("**/api/admin/request-actions.php*",route=>{
+    const body=route.request().postDataJSON();
+    assert.deepEqual(body,{action:"set_order_deadline",request_id:61,order_id:71,expected_deadline:null,agreed_deadline:"2027-01-15",confirm_agreement:true});
+    order.agreed_deadline=body.agreed_deadline;
+    return answer(route,{ok:true,payment_status:"unverified",agreed_deadline:order.agreed_deadline});
+  });
+  try{
+    await page.goto(base+"/studio-admin/index.php",{waitUntil:"domcontentloaded"});
+    await page.locator("#workspace").waitFor({state:"visible"});
+    await page.locator('[data-request-queue="orders"]').click();
+    await page.locator("#request-list .request-open").first().click();
+    assert.equal(filter,"orders");
+    await page.locator(".order-date-form input[type=date]").fill("2027-01-15");
+    await page.locator(".order-date-form input[type=checkbox]").check();
+    await page.locator(".order-date-form button").click();
+    await page.waitForFunction(()=>document.querySelector("#request-detail-status")?.textContent.includes("Payment remains unverified"));
+    assert.match(await page.locator("#request-orders").innerText(),/2027-01-15/);
+    assert.match(await page.locator("#request-orders").innerText(),/unverified/);
+    const overflow=await horizontalOverflow(page);
+    assert(overflow.measured<=overflow.available+3,JSON.stringify(overflow));
+    assert.deepEqual(posts,[]);
+    console.log("PASS: order queue and agreed delivery date at 320px");
+  }finally{await page.close();}
+}
+
 async function verifyClosedDesk(browser) {
   const page=await browser.newPage({viewport:{width:390,height:844}});
   await page.route("**/api/admin/status.php*",route=>route.fulfill({
@@ -484,6 +523,7 @@ async function verifyClosedDesk(browser) {
     await verifyRequestList(browser);
     await verifyFreshAdminSignIn(browser);
     await verifyReviewAndInbox(browser);
+    await verifyOrderPlanning(browser);
     console.log("ADMIN_BROWSER_SMOKE=PASS");
   } finally {await browser.close();}
 })().catch(error=>{

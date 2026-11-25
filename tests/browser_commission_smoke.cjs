@@ -462,6 +462,27 @@ async function verifyFullCustomerThread(browser) {
   }finally{await page.close();}
 }
 
+async function verifyOrderHistoryStage(browser) {
+  const page=await browser.newPage({viewport:{width:320,height:844},reducedMotion:"reduce"});
+  const test=await installMocks(page,{signedIn:true,open:false});
+  await page.route("**/api/requests.php?*",route=>answer(route,{ok:true,requests:[
+    {...requests[0],workflow_stage:"awaiting_arrangement",order_deadline:"2027-01-15"},
+    {...requests[1],workflow_stage:"quote_available"}],has_more:false}));
+  await page.route("**/api/request.php?*",route=>answer(route,{...detail(A),orders:[{id:71,status:"awaiting_arrangement",payment_status:"unverified",agreed_deadline:"2027-01-15",total_minor:3000,currency:"CAD"}]}));
+  try{
+    await page.goto(base+"/commission.html",{waitUntil:"domcontentloaded"});
+    await page.locator("#my-request-list .request-list-item").first().waitFor();
+    assert.match(await page.locator("#my-request-list").innerText(),/Awaiting payment arrangements/);
+    assert.match(await page.locator("#my-request-list").innerText(),/2027-01-15/);
+    await page.locator('#my-request-list button[aria-label$="'+A+'"]').click();
+    await page.locator("#detail-orders").waitFor({state:"visible"});
+    assert.match(await page.locator("#detail-orders").innerText(),/Agreed delivery date: 2027-01-15/);
+    assert.match(await page.locator("#detail-orders").innerText(),/unverified/);
+    await checkOverflow(page,"customer order history");
+    assert.deepEqual(test.posts,[]);
+  }finally{await page.close();}
+}
+
 async function openWithoutLogin(browser) {
   const page=await browser.newPage({viewport:{width:390,height:844}});
   await installMocks(page,{signedIn:false,open:true});
@@ -486,6 +507,7 @@ async function openWithoutLogin(browser) {
     await customerDraftAndSessionIsolation(browser);
     await verifyOlderCustomerHistory(browser);
     await verifyFullCustomerThread(browser);
+    await verifyOrderHistoryStage(browser);
     console.log("COMMISSION_BROWSER_SMOKE=PASS");
   } finally {await browser.close();}
 })().catch(err=>{console.error(err.stack||String(err));process.exitCode=1;});

@@ -162,7 +162,11 @@
     quoted:"Quote available",
     awaiting_customer:"Awaiting your response",
     accepted:"Quote accepted",
-    awaiting_arrangement:"Awaiting arrangements",
+    quote_accepted:"Quote accepted",
+    quote_available:"Awaiting your quote decision",
+    quote_expired:"Quote expired",
+    quote_declined:"Quote declined",
+    awaiting_arrangement:"Awaiting payment arrangements",
     queued:"In the artist queue",
     drawing:"Drawing in progress",
     in_progress:"In progress",
@@ -187,12 +191,12 @@
     const query = $("request-history-search").value.trim().toLocaleLowerCase();
     const filter = $("request-history-filter").value;
     const matches = rows.filter(item => {
-      const closed = closedRequestStatuses.has(item.status);
+      const closed = closedRequestStatuses.has(item.workflow_stage || item.status);
       if (filter === "closed" && !closed) return false;
       if (filter === "active" && closed) return false;
       return !query || [
         item.public_ref, item.tier_name, labels[item.subject_type],
-        readableRequestStatus(item.status),
+        readableRequestStatus(item.workflow_stage || item.status),
       ].some(value => String(value || "").toLocaleLowerCase().includes(query));
     });
     target.replaceChildren();
@@ -216,9 +220,10 @@
       detail.append(
         renderText("strong",item.public_ref),
         renderText("small",(item.tier_name || labels[item.subject_type] || "Custom") +
-          " · " + readableRequestStatus(item.status)),
+          " · " + readableRequestStatus(item.workflow_stage || item.status)),
         renderText("small","Submitted " + (item.submitted_at || ""))
       );
+      if(item.order_deadline)detail.append(renderText("small","Agreed date: "+item.order_deadline));
       const button = document.createElement("button");
       button.type = "button";
       button.className = "text-button";
@@ -384,6 +389,7 @@
           (order.payment_status || "Not verified")),
         renderText("small","Order recorded: " + (order.created_at || "Not available"))
       );
+      card.append(renderText("small","Agreed delivery date: "+(order.agreed_deadline||"Not agreed yet")));
       if (order.payment_status === "unverified") {
         card.append(renderText("p",
           "Payment has not been verified. Please use the agreed contact method " +

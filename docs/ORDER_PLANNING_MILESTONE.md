@@ -1,0 +1,7 @@
+# Order planning and queue milestone
+
+The previous consolidated workspace milestone passed CI and read-only live verification on retry. This milestone introduces an administrator queue for active orders, imminent/overdue agreed dates, released quotes awaiting response and accepted quotes awaiting order confirmation. Both private histories show a computed workflow stage derived from actual visible quote and order records rather than misrepresenting the initial request status. Internal draft quotes are excluded from these summaries.
+
+Artists may record or remove an individually agreed date on an unverified order awaiting arrangements. The existing order-policy and admin write gates apply. The server requires explicit agreement acknowledgement, session, CSRF, request/order ownership, row locks, a matching previous date and a valid date within two years. The audit records only order ID and dates. No payment record is created or upgraded, no delivery is promised automatically, and no email is sent. Date removal requires the same agreement. Paid/in-progress/closed orders are excluded from this planning action; production payment and fulfillment remain gated.
+
+Automated synthetic HTTP and browser tests cover date validation, authorization, stale edit conflicts, queues, customer visibility and responsive controls. No production settings or data were changed. Initial verification pending.

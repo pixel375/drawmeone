@@ -74,6 +74,7 @@
     const counters = {
       "stat-requests": data.counts?.requests_for_review,
       "stat-orders": data.counts?.active_orders,
+      "stat-due": data.counts?.orders_due_soon,
       "stat-payments": data.counts?.payments_to_verify,
       "stat-messages": data.counts?.messages_last_seven_days,
     };
@@ -126,6 +127,16 @@
   let requestListFilter = "all";
   let requestListGeneration = 0;
 
+  function workflowLabel(stage) {
+    const labels={submitted:"Awaiting review",clarification_needed:"Clarification needed",
+      quote_available:"Awaiting quote decision",quote_accepted:"Quote accepted",quote_expired:"Quote expired",
+      quote_declined:"Quote declined",awaiting_arrangement:"Awaiting payment arrangements",
+      in_progress:"Artwork in progress",queued:"Queued",drawing:"Drawing in progress",
+      awaiting_feedback:"Awaiting feedback",revision:"Revisions in progress",
+      ready_for_delivery:"Ready for delivery",completed:"Completed",rejected:"Declined",cancelled:"Cancelled"};
+    return labels[stage] || String(stage||"Under review").replaceAll("_"," ");
+  }
+
   async function requests() {
     const generation = ++requestListGeneration;
     const list = $("request-list");
@@ -161,9 +172,9 @@
     }
     for (const row of data.requests) {
       record(list,
-        (row.public_ref || "REQUEST") + " · " + (row.status || ""),
+        (row.public_ref || "REQUEST") + " · " + workflowLabel(row.workflow_stage || row.status),
         row.customer_name || "Customer",
-        [row.tier_name || "Custom", row.subject_type || "", row.brief_excerpt || ""]
+        [row.tier_name || "Custom", row.subject_type || "", row.order_deadline ? "Agreed date: " + row.order_deadline : "", row.brief_excerpt || ""]
           .filter(Boolean).join(" · "),
         row.submitted_at || ""
       );
@@ -178,6 +189,14 @@
     }
   }
 
+  document.querySelectorAll("[data-request-queue]").forEach(button=>button.addEventListener("click",()=>{
+    requestListPage=1;
+    requestListQuery="";
+    requestListFilter=button.dataset.requestQueue;
+    $("request-list-query").value="";
+    $("request-list-filter").value=requestListFilter;
+    selectPanel("requests");
+  }));
   $("request-list-filters").addEventListener("submit", event => {
     event.preventDefault();
     requestListPage = 1;
@@ -432,12 +451,38 @@
         const card = document.createElement("article");
         card.className = "request-order-card";
         card.append(
-          textNode("strong", "Order #" + order.id + " · " + order.status),
+          textNode("strong", "Order #" + order.id + " · " + workflowLabel(order.status)),
           textNode("p", "Accepted quote #" + order.quote_id +
             " · " + formatQuoteMoney(order.total_minor, order.currency)),
           textNode("small", "Payment: " + (order.payment_status || "unverified") +
             " · Created: " + (order.created_at || ""))
         );
+        card.append(textNode("p","Agreed delivery date: "+(order.agreed_deadline||"Not agreed yet"),"small"));
+        if(order.deadline_editable===true){
+          const form=document.createElement("form");
+          form.className="order-date-form";
+          const label=textNode("label","Agreed delivery date (optional)");
+          const input=document.createElement("input");
+          input.type="date";
+          input.value=order.agreed_deadline||"";
+          input.setAttribute("aria-label","Agreed delivery date for order "+order.id);
+          label.append(input);
+          const acknowledgement=document.createElement("label");
+          acknowledgement.className="order-date-ack";
+          const check=document.createElement("input");
+          check.type="checkbox";check.required=true;
+          acknowledgement.append(check,textNode("span","The customer and I agreed to this date or to remove it."));
+          const save=textNode("button","Save agreed date","quiet");
+          save.type="submit";
+          save.disabled=requestBusy;
+          form.append(label,acknowledgement,save);
+          form.addEventListener("submit",event=>{
+            event.preventDefault();
+            if(!check.checked||requestBusy)return;
+            saveOrderDate(order,input.value||null);
+          });
+          card.append(form);
+        }
         root.append(card);
       }
       return;
@@ -464,6 +509,27 @@
     button.disabled = requestBusy;
     button.addEventListener("click", () => confirmUnpaidOrder(Number(accepted.id)));
     root.append(button);
+  }
+
+  async function saveOrderDate(order,deadline) {
+    if(requestBusy||selectedRequestId===null||order.deadline_editable!==true)return;
+    const id=selectedRequestId;
+    requestBusy=true;updateRequestButtons();
+    try{
+      const {response,data}=await post("request-actions.php",{
+        action:"set_order_deadline",request_id:id,order_id:Number(order.id),
+        expected_deadline:order.agreed_deadline||null,agreed_deadline:deadline,confirm_agreement:true
+      },csrf);
+      if(response.status===401)return sessionExpired();
+      if(!response.ok||!data.ok){
+        requestText("request-detail-status","Agreed date not saved ("+(data.error||response.status)+"). Refresh before retrying.");
+        return;
+      }
+      await openRequest(id);
+      await requests();
+      requestText("request-detail-status","Agreed delivery date saved. Payment remains unverified.");
+    }catch(_){requestText("request-detail-status","Date save not confirmed. Refresh before retrying.");}
+    finally{requestBusy=false;updateRequestButtons();}
   }
 
   async function confirmUnpaidOrder(quoteId) {
@@ -505,6 +571,7 @@
     $("request-thread-full").disabled = requestBusy;
     $("request-review-save").disabled = requestBusy || !reviewStatus;
     $("request-review-status").disabled = requestBusy || !reviewStatus;
+    for(const field of $("request-orders").querySelectorAll(".order-date-form input,.order-date-form button"))field.disabled=requestBusy;
     for (const field of $("request-note-form").querySelectorAll("textarea")) {
       field.disabled = !requestWriteEnabled || requestBusy;
     }

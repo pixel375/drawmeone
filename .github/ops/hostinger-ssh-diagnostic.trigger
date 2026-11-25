@@ -1,1 +1,1 @@
-2026-11-24 consolidated commission workspace milestone: verify current artist and customer assets, review actions, conversation history, message inbox and existing launch gates. Read-only.
+2026-11-24 order-planning milestone: verify queue and deadline controls, customer status assets and unchanged launch gates. Read-only.
