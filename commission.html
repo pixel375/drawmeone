@@ -10,7 +10,7 @@
 <title>Commission a drawing · Draw Me One</title>
 <link rel="icon" href="./favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="./commission.css?v=28">
-<script defer src="./commission.js?v=35"></script>
+<script defer src="./commission.js?v=36"></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
@@ -94,9 +94,10 @@
             <small>A preferred contact method, not permission to send automated marketing.</small>
           </div>
         </div>
+        <p class="small"><a id="request-policy-link" href="./policy.html" target="_blank" rel="noopener noreferrer">Read the commission terms and privacy policy</a> (opens in a new tab).</p>
         <label class="review-checkbox">
           <input type="checkbox" id="request-ack" required>
-          <span>I understand this is only a request for artist review. The artwork, pricing, delivery schedule and any payment will be agreed separately before an order is placed.</span>
+          <span>I have read the commission terms and privacy policy, and understand this is only a request for artist review. The artwork, pricing, delivery schedule and any payment will be agreed separately before an order is placed.</span>
         </label>
         <div class="submit-row">
           <span class="small">No charge at submission. Maximum three new requests per 24 hours.</span>
@@ -151,6 +152,7 @@
           <div><dt>Tier and extras</dt><dd id="detail-options"></dd></div>
           <div><dt>Preferred contact</dt><dd id="detail-contact"></dd></div>
           <div><dt>Requested deadline</dt><dd id="detail-deadline"></dd></div>
+          <div><dt>Acknowledged policies</dt><dd id="detail-policy"></dd></div>
         </dl>
         <h4>Your description</h4>
         <p id="detail-brief" class="detail-brief"></p>

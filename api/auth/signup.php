@@ -3,6 +3,9 @@ declare(strict_types=1);
 require_once dirname(__DIR__, 2) . '/app/auth.php';
 dmo_auth_require_enabled(true);
 $input = dmo_auth_json_request();
+$policy=dmo_policy_current();
+if($policy===null||($input['acknowledge_privacy']??null)!==true||($input['policy_version']??null)!==$policy['version']||!is_string($input['policy_sha256']??null)||!hash_equals($policy['sha256'],$input['policy_sha256']))
+    dmo_json(422,['ok'=>false,'error'=>'policy_acknowledgement_required']);
 
 $name = dmo_auth_field($input, 'display_name', 120);
 $email = dmo_auth_email(dmo_auth_field($input, 'email', 254));
@@ -51,10 +54,10 @@ try {
             throw new RuntimeException('Verification message was not accepted by mail transport.');
         }
         $audit = $db->prepare(
-            "INSERT INTO dmo_audit_log (actor_id, action, entity_type, entity_id) " .
-            "VALUES (:id, 'account.created', 'user', :entity_id)"
+            "INSERT INTO dmo_audit_log (actor_id, action, entity_type, entity_id,details_json) " .
+            "VALUES (:id, 'account.created', 'user', :entity_id,:details)"
         );
-        $audit->execute(['id' => $userId, 'entity_id' => $userId]);
+        $audit->execute(['id' => $userId, 'entity_id' => $userId,'details'=>json_encode(['policy_version'=>$policy['version'],'policy_sha256'=>$policy['sha256']],JSON_THROW_ON_ERROR)]);
         $db->commit();
     } catch (PDOException $error) {
         $db->rollBack();

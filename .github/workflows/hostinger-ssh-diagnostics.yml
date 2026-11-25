@@ -361,14 +361,14 @@ jobs:
           # Public commission intake remains closed, but its signed-in history
           # assets must include the new browser-only filters and status labels.
           commission_page=$(curl -fsSL --max-time 15 "https://drawmeone.com/commission.html")
-          [[ "$commission_page" == *'commission.js?v=35'* ]] &&
+          [[ "$commission_page" == *'commission.js?v=36'* ]] &&
           [[ "$commission_page" == *'commission.css?v=28'* ]] &&
           [[ "$commission_page" == *'id="request-history-search"'* ]] &&
           [[ "$commission_page" == *'id="request-history-filter"'* ]] || {
             echo "customer_history=stale_html"
             exit 1
           }
-          commission_js=$(curl -fsSL --max-time 15 "https://drawmeone.com/commission.js?v=35")
+          commission_js=$(curl -fsSL --max-time 15 "https://drawmeone.com/commission.js?v=36")
           [[ "$commission_js" == *'function renderRequestHistory()'* ]] &&
           [[ "$commission_js" == *'readableRequestStatus(r.workflow_stage || r.status)'* ]] &&
           [[ "$commission_js" == *'requestsFetchSequence'* ]] || {
@@ -444,12 +444,12 @@ jobs:
           # v3.9 registration remains closed, but verify the versioned
           # customer signup and recovery assets are deployed safely.
           customer_page=$(curl -fsSL --max-time 15 "https://drawmeone.com/account.html")
-          [[ "$customer_page" == *'account.js?v=16'* ]] &&
+          [[ "$customer_page" == *'account.js?v=17'* ]] &&
           [[ "$customer_page" == *'id="signup-password-confirm"'* ]] || {
             echo "customer_onboarding_assets=stale_signup"
             exit 1
           }
-          customer_js=$(curl -fsSL --max-time 15 "https://drawmeone.com/account.js?v=16")
+          customer_js=$(curl -fsSL --max-time 15 "https://drawmeone.com/account.js?v=17")
           [[ "$customer_js" == *'signupPasswordConfirm.setCustomValidity'* ]] &&
           [[ "$customer_js" == *'Too many sign-in attempts'* ]] || {
             echo "customer_onboarding_assets=stale_signup_script"
@@ -496,6 +496,8 @@ jobs:
             exit 1
           }
           [[ "$desk_page" == *'id="intake-form"'* ]] && [[ "$desk_js" == *'function renderIntake(data)'* ]] && [[ "$commission_js" == *'commissions_at_capacity'* ]] || { echo "intake_control=stale_assets"; exit 1; }
+          [[ "$commission_js" == *'policy_sha256:state.service.policy_sha256'* ]] && [[ "$customer_page" == *'id="signup-privacy-ack"'* ]] || { echo "policy_receipts=stale_assets"; exit 1; }
+          echo "policy_receipts=deployed"
           echo "intake_control=deployed"
           echo "integrity_dashboard=deployed"
           php "$site/app/cli-integrity.php" check

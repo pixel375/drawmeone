@@ -181,6 +181,7 @@
         email:$("signup-email").value,
         password,
         turnstile_token:captcha,
+        policy_version:status.policy_version,policy_sha256:status.policy_sha256,acknowledge_privacy:$("signup-privacy-ack").checked,
       });
       signupPassword.value="";
       signupPasswordConfirm.value="";
@@ -270,6 +271,10 @@
       const response = await fetch("./api/auth/status.php", {cache:"no-store"});
       if(!response.ok) throw new Error("unavailable");
       status=await response.json();
+      if(status.registration_available){
+        if(typeof status.policy_version!=="string"||!/^[a-zA-Z0-9][a-zA-Z0-9._-]{2,39}$/.test(status.policy_version)||typeof status.policy_sha256!=="string"||!/^[a-f0-9]{64}$/.test(status.policy_sha256))status.registration_available=false;
+        else $("signup-policy-link").href="./policy.html?"+new URLSearchParams({version:status.policy_version,sha256:status.policy_sha256})+"#privacy";
+      }
       if(!status.auth_available || !status.turnstile_site_key){
         state.textContent = verificationToken
           ? "Email verification isn't available yet. Reopen the original link from your email when account access becomes available."

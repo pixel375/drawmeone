@@ -549,7 +549,7 @@
     panel.hidden = false;
     panel.setAttribute("aria-busy","true");
     $("detail-content").hidden = true;
-    for (const id of ["detail-status","detail-type","detail-options","detail-contact","detail-deadline","detail-brief"]) {
+    for (const id of ["detail-status","detail-type","detail-options","detail-contact","detail-deadline","detail-brief","detail-policy"]) {
       $(id).textContent = "";
     }
     $("detail-messages").replaceChildren();
@@ -627,6 +627,10 @@
         [r.tier_name || "Custom",...addons].filter(Boolean).join(" · "));
       showFact("detail-contact",r.preferred_contact);
       showFact("detail-deadline",r.preferred_deadline);
+      const policy=$("detail-policy");policy.replaceChildren();
+      if(typeof r.policy_version==="string"&&/^[a-zA-Z0-9][a-zA-Z0-9._-]{2,39}$/.test(r.policy_version)&&typeof r.policy_sha256==="string"&&/^[a-f0-9]{64}$/.test(r.policy_sha256)){
+        const link=document.createElement("a");link.href="./policy.html?"+new URLSearchParams({version:r.policy_version,sha256:r.policy_sha256});link.target="_blank";link.rel="noopener noreferrer";link.textContent="Read version "+r.policy_version;policy.append(link);
+      }else policy.textContent=r.policy_version?"Version "+r.policy_version+" (document receipt unavailable)":"Unavailable";
       showFact("detail-brief",r.brief);
       $("detail-thread-full").hidden = body.messages_have_older !== true;
       const root = $("detail-messages");
@@ -822,6 +826,7 @@
       preferred_contact:$("request-contact").value,
       preferred_deadline:$("request-deadline").value || null,
       policy_version:state.service.policy_version,
+      policy_sha256:state.service.policy_sha256,
       acknowledge_review:$("request-ack").checked === true,
     };
     const button = $("request-submit");
@@ -881,6 +886,10 @@
         throw new Error("Site status unavailable");
       }
       state.service = s.body;
+      if(state.service.requests_open){
+        if(typeof s.body.policy_version!=="string"||!/^[a-zA-Z0-9][a-zA-Z0-9._-]{2,39}$/.test(s.body.policy_version)||typeof s.body.policy_sha256!=="string"||!/^[a-f0-9]{64}$/.test(s.body.policy_sha256))state.service.requests_open=false;
+        else $("request-policy-link").href="./policy.html?"+new URLSearchParams({version:s.body.policy_version,sha256:s.body.policy_sha256});
+      }
       state.catalog = c.body;
       state.auth = a.body;
 

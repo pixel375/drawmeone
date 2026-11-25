@@ -22,6 +22,7 @@ async function fakeService(page,options={}) {
     switch(endpoint){
       case "status.php":return reply(route,{ok:true,auth_available:!options.closed,
         registration_available:!options.closed&&!!options.registration,
+        policy_version:"qa-policy-2026",policy_sha256:"a".repeat(64),
         turnstile_site_key:options.closed?null:"ci-only-key"});
       case "me.php":return reply(route,{ok:true,authenticated:signedIn,
         user:signedIn?{display_name:"CI Customer",email:"ci@example.invalid",role:"customer"}:undefined,
@@ -100,6 +101,7 @@ async function signupAndSignIn(browser) {
     await page.locator("#signup-email").fill("ci@example.invalid");
     await page.locator("#signup-password").fill("strong-ci-password-2026");
     await page.locator("#signup-password-confirm").fill("other-ci-password-2026");
+    await page.locator("#signup-privacy-ack").check();
     await page.locator("#submit-signup").click();
     await waitText(page,"#form-notice","passwords do not match");
     assert.equal(m.counts.signup,0,"mismatching passwords blocked locally");
@@ -107,6 +109,8 @@ async function signupAndSignIn(browser) {
     await page.locator("#submit-signup").click();
     await waitText(page,"#form-notice","verification link");
     assert.equal(m.counts.signup,1);
+    assert.equal(m.writes.find(x=>x.endpoint==="signup.php").payload.acknowledge_privacy,true);
+    assert.equal(m.writes.find(x=>x.endpoint==="signup.php").payload.policy_sha256,"a".repeat(64));
     assert.equal(m.writes.find(x=>x.endpoint==="signup.php").payload.password,
       "strong-ci-password-2026");
     assert.equal(await page.locator("#signup-password").inputValue(),"");

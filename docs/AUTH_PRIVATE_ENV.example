@@ -80,3 +80,6 @@ DMO_PAYMENT_EXCEPTIONS_TERMS_APPROVED=0
 # Optional artist intake control. When enabled, starts paused until configured.
 # Cannot override existing registration/auth/terms/commission gates.
 DMO_INTAKE_CONTROL_ENABLED=0
+
+# Required exact SHA-256 of the owner-approved immutable app/policies/<version>.json.
+# DMO_REQUEST_POLICY_SHA256=64_LOWERCASE_HEX_CHARACTERS

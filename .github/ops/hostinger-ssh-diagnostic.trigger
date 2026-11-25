@@ -1,1 +1,1 @@
-Verify artist intake controls, public status and existing closed commercial gates. Read-only.
+Read-only verify versioned policy links and preserved closed launch gates.

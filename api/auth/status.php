@@ -14,13 +14,16 @@ try {
     dmo_log_problem($error, 'auth schema status');
 }
 $ready = $storageReady && dmo_auth_configured();
-$registration = $ready && dmo_config('DMO_REGISTRATION_ENABLED') === '1';
+$policy=dmo_policy_current();
+$registration = $ready && dmo_config('DMO_REGISTRATION_ENABLED') === '1' && $policy!==null;
 
 dmo_json(200, [
     'ok' => true,
     'auth_migration_ready' => $storageReady,
     'auth_available' => $ready,
     'registration_available' => $registration,
+    'policy_version'=>$registration?$policy['version']:null,
+    'policy_sha256'=>$registration?$policy['sha256']:null,
     'turnstile_site_key' => $ready ? dmo_config('DMO_TURNSTILE_SITE_KEY') : null,
     'email_verification_required' => true,
     'commissions_open' => dmo_requests_open(),

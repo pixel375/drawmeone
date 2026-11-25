@@ -75,7 +75,7 @@ async function installMocks(page,options={}) {
     }
     if(endpoint==="/api/request-status.php") return answer(route,{
       ok:true,requests_open:!!options.open,text_only:true,
-      policy_version:options.open?"qa-policy-2026":null
+      policy_version:options.open?"qa-policy-2026":null,policy_sha256:options.open?"a".repeat(64):null
     });
     if(endpoint==="/api/catalog.php") return answer(route,{
       ok:true,requests_open:!!options.open,currency_pricing_approved:false,
@@ -363,6 +363,8 @@ async function openIntake(browser) {
     assert.equal(test.submissions,1,"exactly one POST for request creation");
     assert.equal(test.posts[0].endpoint,"/api/requests.php");
     assert.equal(test.posts[0].body.acknowledge_review,true);
+    assert.equal(test.posts[0].body.policy_sha256,"a".repeat(64));
+    assert.match(await page.locator("#request-policy-link").getAttribute("href"),/version=qa-policy-2026&sha256=/);
     assert.equal(test.posts[0].body.tier_id,12);
     assert.deepEqual(test.posts[0].body.addon_ids,[31]);
     assert.match(test.posts[0].body.idempotency_key,

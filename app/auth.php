@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/mailer.php';
+require_once __DIR__ . '/policies.php';
 
 const DMO_SESSION_COOKIE = '__Host-dmo_session';
 const DMO_AUTH_ORIGIN = 'https://drawmeone.com';
@@ -18,7 +19,7 @@ function dmo_auth_configured(): bool
 function dmo_auth_require_enabled(bool $registration = false): void
 {
     if (!dmo_auth_configured()
-        || ($registration && dmo_config('DMO_REGISTRATION_ENABLED') !== '1')) {
+        || ($registration && (dmo_config('DMO_REGISTRATION_ENABLED') !== '1'||dmo_policy_current()===null))) {
         dmo_json(503, ['ok' => false, 'error' => 'account_service_unavailable']);
     }
 
