@@ -320,3 +320,5 @@ footer{padding:28px 0 70px;border-top:1px solid var(--line);color:var(--muted);f
 .intake-form{display:grid;gap:8px;max-width:560px;min-width:0}.intake-form input,.intake-form select{width:100%;min-width:0}.intake-form button{justify-self:start;min-height:44px;white-space:normal}.intake-form p{margin:0}
 
 #privacy-queue .notification-card p{white-space:pre-wrap;overflow-wrap:anywhere}#privacy-queue textarea{max-width:100%;min-width:0;width:100%}#privacy-queue .order-date-ack{display:flex;align-items:flex-start;gap:8px}#privacy-queue .order-date-ack input{width:18px;height:18px;flex:0 0 18px}
+
+.retention-group{min-width:0}.retention-row{display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:7px 0;border-top:1px solid var(--line);font-size:.85rem}.retention-row span{min-width:0;overflow-wrap:anywhere}.retention-row strong{flex-shrink:0;font-variant-numeric:tabular-nums}

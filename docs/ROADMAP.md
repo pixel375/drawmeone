@@ -562,3 +562,6 @@ See `docs/ART_DIRECTION.md` and `docs/COMMISSION_PRODUCT_SPEC.md`.
 - [x] Comprehensive browser suite passed (run 45487112228); source quality (45487112277) and real-HTTP disposable MariaDB suite (45487112163) passed.
 - [x] Read-only Hostinger check confirmed the updated focus styles and both skip targets deployed (run 45487199976).
 - [ ] Manual VoiceOver/TalkBack, actual browser 200%+ zoom and controlled real authenticated artist/customer device QA before declaring accessibility conformance.
+
+## November 24 implementation checkpoint
+The commission lifecycle, accounts, historical agreement continuity, private delivery, manual payment exceptions, intake capacity and privacy request/export workflows are implemented and verified in disposable integration and browser/live diagnostics. They remain gated pending owner approval and real production onboarding. Retention inventory is read-only; deletion schedules remain undecided. Independent off-site recovery and approved payment setup remain major launch blockers. This checkpoint supersedes outdated implementation-status checkboxes above; the original requirements and owner choices remain relevant.

@@ -19,8 +19,8 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
 <meta name="robots" content="noindex,nofollow">
 <meta name="theme-color" content="#151317">
 <title>Artist's Desk · Draw Me One</title>
-<link rel="stylesheet" href="./panel.css?v=37">
-<script defer src="./panel.js?v=41"></script>
+<link rel="stylesheet" href="./panel.css?v=38">
+<script defer src="./panel.js?v=42"></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to dashboard</a>
@@ -118,6 +118,11 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
         </div>
         <p id="launch-status" class="small" role="status" aria-live="polite">Checking launch requirements…</p>
         <div id="launch-checks" class="launch-checks"></div>
+        <details class="integrity-details"><summary>Retention review (read-only)</summary>
+          <p id="retention-status" class="small" role="status">Not checked yet.</p>
+          <p class="small">These are operational review thresholds, not approved deletion periods or legal deadlines. No records are removed by this report. Older privacy requests are measured from the original submission.</p>
+          <div id="retention-checks" class="launch-checks"></div>
+        </details>
         <details class="integrity-details"><summary>Order and payment consistency details</summary><p class="small" id="integrity-status" role="status">Not checked yet.</p><div id="integrity-checks" class="launch-checks"></div><p class="small">Database checks only. Daily private-file integrity diagnostics are separate; a clean result is not a complete recovery guarantee.</p></details>
       </section>
     </section>

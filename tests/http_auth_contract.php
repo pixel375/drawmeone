@@ -264,6 +264,20 @@ try {
     auth_check($code===200&&$out['status']==='signed_out','logout_revokes_session');
     [$code,$me]=auth_request('/api/auth/me.php',null,$newSession);
     auth_check($me['authenticated']===false,'signed_out_session_invalid');
+    require_once dirname(__DIR__).'/app/retention.php';
+    $expired=auth_session($db,$pending);
+    $db->prepare("UPDATE dmo_sessions SET expires_at=DATE_SUB(UTC_TIMESTAMP(),INTERVAL 31 DAY) WHERE session_hash=:hash")->execute(['hash'=>hash('sha256',$expired)]);
+    $oldToken=auth_reset_token($db,$pending,bin2hex(random_bytes(32)));
+    $db->prepare("UPDATE dmo_auth_tokens SET expires_at=DATE_SUB(UTC_TIMESTAMP(),INTERVAL 31 DAY) WHERE id=:id")->execute(['id'=>$oldToken]);
+    $db->prepare("INSERT INTO dmo_rate_limits (key_hash,hits,window_started_at,expires_at) VALUES (:hash,1,DATE_SUB(UTC_TIMESTAMP(),INTERVAL 9 DAY),DATE_SUB(UTC_TIMESTAMP(),INTERVAL 8 DAY))")->execute(['hash'=>hash('sha256','retention-ci-old-counter')]);
+    $before=[];
+    foreach(['dmo_sessions','dmo_auth_tokens','dmo_rate_limits','dmo_users','dmo_audit_log'] as $table)$before[$table]=(int)$db->query('SELECT COUNT(*) FROM '.$table)->fetchColumn();
+    $report=dmo_retention_report($db);
+    auth_check($report['mode']==='review_only'&&$report['counts']['sessions_expired_30d']===1&&$report['counts']['tokens_expired_30d']===1&&$report['counts']['rate_limits_expired_7d']===1,'retention_counts_aged_auth_records');
+    auth_check($report['counts']['expired_tokens']>=$report['counts']['tokens_expired_30d'],'retention_distinguishes_all_expired_from_aged');
+    foreach($before as $table=>$count)auth_check((int)$db->query('SELECT COUNT(*) FROM '.$table)->fetchColumn()===$count,'retention_preserves_'.$table);
+    [$code,$me]=auth_request('/api/auth/me.php',null,$otherSession);
+    auth_check($me['authenticated']===true,'retention_preserves_active_session');
     echo "DISPOSABLE_AUTH_HTTP=PASS\n";
 } catch(Throwable $error) {
     fwrite(STDERR,'DISPOSABLE_AUTH_HTTP=FAIL ('.get_class($error).

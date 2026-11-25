@@ -611,6 +611,17 @@ try {
     qa_positive($code===200&&$withdrawn['case']['status']==='withdrawn','customer_withdraws_open_case');
     [$code,$queue]=qa_http('/api/admin/privacy.php',$tokenAdmin,'__Host-dmo_admin');
     qa_positive($code===200&&$queue['cases']===[],'completed_or_withdrawn_cases_leave_open_queue');
+    // A new review update must not reset the age of an old privacy request.
+    $db->prepare("UPDATE dmo_commission_requests SET status='closed',updated_at=DATE_SUB(UTC_TIMESTAMP(),INTERVAL 366 DAY) WHERE id=:id")->execute(['id'=>$requestB]);
+    [$code,$opened]=qa_http('/api/auth/privacy.php',$tokenB,'__Host-dmo_session',$privacy,$csrfB);
+    qa_positive($code===200,'retention_case_fixture');
+    $db->prepare("UPDATE dmo_audit_log SET created_at=DATE_SUB(UTC_TIMESTAMP(),INTERVAL 31 DAY) WHERE id=:id")->execute(['id'=>$opened['case']['version']]);
+    [$code,$progress]=qa_http('/api/admin/privacy.php',$tokenAdmin,'__Host-dmo_admin',array_replace($decision,['customer_id'=>$b,'expected_version'=>$opened['case']['version']]),$csrfAdmin);
+    qa_positive($code===200&&$progress['case']['status']==='in_review','retention_recent_review_update');
+    [$code,$dashboard]=qa_http('/api/admin/overview.php',$tokenAdmin,'__Host-dmo_admin');
+    qa_positive($code===200&&$dashboard['retention']['mode']==='review_only'&&$dashboard['retention']['counts']['privacy_open_7d']===1&&$dashboard['retention']['counts']['privacy_open_30d']===1,'privacy_age_uses_original_submission');
+    qa_positive($dashboard['retention']['counts']['closed_no_order_365d']===1,'retention_identifies_old_closed_request_without_order');
+    qa_positive(!str_contains(json_encode($dashboard['retention'],JSON_THROW_ON_ERROR),'positive-b@example.invalid'),'retention_report_contains_no_customer_identity');
     echo "DISPOSABLE_POSITIVE_HTTP=PASS\n";
 } catch(Throwable $error) {
     fwrite(STDERR,'DISPOSABLE_POSITIVE_HTTP=FAIL ('.get_class($error).

@@ -1,1 +1,1 @@
-Verify privacy case counters and customer export/queue UI, no customer records exported on live server.
+Verify read-only retention inventory, privacy aging and existing integrity diagnostics. No records deleted.

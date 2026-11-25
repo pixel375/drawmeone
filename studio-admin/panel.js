@@ -173,6 +173,24 @@
       $(name).textContent = Number.isSafeInteger(value) && value >= 0
         ? value.toLocaleString() : "—";
     }
+    const retention=$("retention-checks");retention.replaceChildren();
+    const review=data.retention;
+    const retentionGroups=[
+      ["Authentication records",{"expired_sessions":"Expired sessions (all)","expired_tokens":"Expired or used verification/recovery tokens (all)","expired_rate_limits":"Expired rate-limit counters (all)","sessions_expired_30d":"Sessions expired at least 30 days ago","tokens_expired_30d":"Tokens expired or used at least 30 days ago","rate_limits_expired_7d":"Rate-limit counters expired at least 7 days ago"}],
+      ["Customer and business records",{"closed_no_order_365d":"Closed requests without an order, last updated 365+ days ago","closed_with_order_365d":"Closed requests with an order, last updated 365+ days ago","closed_reference_files_365d":"Older references on older closed requests","closed_unreleased_drafts_365d":"Older unreleased drafts on older closed requests","released_delivery_records":"Released deliverable records (preserve)","open_payment_holds":"Open payment holds (preserve)"}],
+      ["Privacy request follow-up",{"privacy_open_7d":"Open at least 7 days","privacy_open_30d":"Open at least 30 days"}]
+    ];
+    if(review?.mode==="review_only"&&review.counts&&typeof review.counts==="object"){
+      $("retention-status").textContent="Read-only inventory. Counts may overlap; do not add them together.";
+      for(const [heading,labels] of retentionGroups){
+        const card=document.createElement("article");card.className="launch-check retention-group";card.append(textNode("strong",heading));
+        for(const [key,label] of Object.entries(labels)){
+          const value=review.counts[key];if(!Number.isSafeInteger(value)||value<0)continue;
+          const row=document.createElement("div");row.className="retention-row";row.append(textNode("span",label),textNode("strong",value.toLocaleString()));card.append(row);
+        }
+        retention.append(card);
+      }
+    }else $("retention-status").textContent="Retention inventory unavailable.";
     const integrity=$("integrity-checks");integrity.replaceChildren();
     const checksMap=data.integrity?.checks;
     const labels={order_quote_mismatch:"Order / accepted quote mismatch",paid_without_evidence:"Paid orders without eligible evidence",paid_order_exception_conflict:"Paid flag conflicts with payment hold or refund",duplicate_verified_payment:"Multiple verified payments per order",multiple_orders:"Multiple orders per request",draft_order_mismatch:"Draft attached to unrelated request",delivery_missing_draft:"Missing or inconsistent delivery record",delivery_state_mismatch:"Released artwork with incomplete order",completed_without_delivery:"Completed order without deliverable",review_draft_mismatch:"Pending or approved proof without matching draft",review_pending_multiple:"Multiple pending proofs",review_allowance_exceeded:"Included revision allowance exceeded",delivery_approval_mismatch:"Released drawing differs from approved proof"};

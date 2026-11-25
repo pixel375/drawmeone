@@ -8,6 +8,7 @@ require_once dirname(__DIR__, 2) . '/app/notifications.php';
 require_once dirname(__DIR__, 2) . '/app/deliveries.php';
 require_once dirname(__DIR__, 2) . '/app/payments.php';
 require_once dirname(__DIR__, 2) . '/app/integrity.php';
+require_once dirname(__DIR__, 2) . '/app/retention.php';
 dmo_reject_non_get();
 
 try {
@@ -44,6 +45,7 @@ try {
     $intake=dmo_intake_state($db);
     $integrity=dmo_integrity_records($db);
     $integrityIssues=array_sum($integrity);
+    $retention=dmo_retention_report($db);
     $readiness = [
         ['key'=>'integrity','label'=>'Order and payment record consistency','status'=>$integrityIssues===0?'ready':'blocked',
          'detail'=>$integrityIssues===0?'No inconsistencies detected in current database checks; file checks run separately':$integrityIssues.' failed record checks require operator review'],
@@ -60,7 +62,7 @@ try {
          'detail' => 'Requires owner-approved published legal documents and policy version'],
         ['key' => 'accounts', 'label' => 'Customer accounts',
          'status' => dmo_auth_configured() &&
-            dmo_config('DMO_REGISTRATION_ENABLED') === '1' ? 'ready' : 'blocked',
+            dmo_config('DMO_REGISTRATION_ENABLED') === '1' && dmo_policy_current()!==null ? 'ready' : 'blocked',
          'detail' => 'Registration stays closed until controlled account QA'],
         ['key' => 'requests', 'label' => 'Commission submissions',
          'status' => $intake['requests_open'] ? 'ready' : 'blocked',
@@ -106,6 +108,7 @@ try {
         'readiness' => $readiness,
         'counts' => $counts,
         'intake' => $intake,
+        'retention'=>$retention,
         'integrity' => ['checks'=>$integrity,'issue_count'=>$integrityIssues,'scope'=>'database_only'],
         'readonly' => true,
         'data_is_live' => true,

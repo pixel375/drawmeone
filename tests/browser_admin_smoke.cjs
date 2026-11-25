@@ -28,6 +28,7 @@ const mockAdmin = {
       requests_for_review: 0, active_orders: 0,
       payments_to_verify: 0, messages_last_seven_days: 0
     },
+    retention:{mode:"review_only",counts:{expired_sessions:3,privacy_open_30d:1,closed_no_order_365d:2}},
     integrity:{checks:{order_quote_mismatch:0,paid_without_evidence:1},issue_count:1,scope:"database_only"},
     readiness: [
       {key:"mail",label:"Transactional email",status:"ready",detail:"CI mock only"},
@@ -120,13 +121,19 @@ async function verifyArtistDesk(browser, width) {
     assert.equal(await page.locator("#stat-orders").innerText(),"0");
     assert.equal(await page.locator("#launch-checks .launch-check").count(),3);
     assert.match(await page.locator("#launch-status").innerText(),/1 of 3/);
-    await page.locator(".integrity-details summary").click();
+    const retention=page.locator(".integrity-details").filter({hasText:"Retention review (read-only)"});
+    await retention.locator("summary").click();
+    assert.match(await page.locator("#retention-status").innerText(),/Read-only inventory/);
+    assert.match(await page.locator("#retention-checks").innerText(),/Expired sessions/);
+    assert.match(await page.locator("#retention-checks").innerText(),/Open at least 30 days/);
+    await retention.locator("summary").click();
+    await page.locator(".integrity-details").filter({hasText:"Order and payment consistency details"}).locator("summary").click();
     assert.match(await page.locator("#integrity-status").innerText(),/1 failed checks/);
     assert.equal(await page.locator("#integrity-checks .launch-check").count(),2);
     assert.match(await page.locator("#integrity-checks").innerText(),/Paid orders without eligible evidence/);
     const checkOverflow=await horizontalOverflow(page);
     assert(checkOverflow.measured<=checkOverflow.available+3,JSON.stringify(checkOverflow));
-    await page.locator(".integrity-details summary").click();
+    await page.locator(".integrity-details").filter({hasText:"Order and payment consistency details"}).locator("summary").click();
     const nav=page.locator(".nav-tabs");
     const area=await nav.boundingBox();
     assert(area,"admin navigation must be rendered");
