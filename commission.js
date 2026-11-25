@@ -123,6 +123,9 @@
       : "Quote after artist review";
   }
 
+  const preferredPackage=new URLSearchParams(location.search).get("package");
+  const validPreferredPackage=typeof preferredPackage==="string"&&/^[a-z0-9][a-z0-9-]{1,79}$/.test(preferredPackage)?preferredPackage:null;
+  let initialPackageUsed=false;
   function renderCatalog() {
     const tiers = Array.isArray(state.catalog?.tiers) ? state.catalog.tiers : [];
     const addons = Array.isArray(state.catalog?.addons) ? state.catalog.addons : [];
@@ -150,11 +153,25 @@
       label.append(input,copy);
       addonWrap.append(label);
     }
+    const updateEstimate=()=>{
+      const tier=tiers.find(x=>String(x.id)===tierSelect.value);
+      const chosen=addons.filter(x=>[...addonWrap.querySelectorAll("input:checked:not(:disabled)")].some(input=>input.value===String(x.id)));
+      const box=$("request-estimate"),output=$("request-estimate-value");
+      if(!tier){box.hidden=true;output.textContent="";return;}
+      box.hidden=false;
+      const selected=[tier,...chosen],same=selected.every(x=>x.currency===tier.currency&&Number.isSafeInteger(x.estimate_min_minor)&&Number.isSafeInteger(x.estimate_max_minor)&&x.estimate_min_minor>=0&&x.estimate_max_minor>=x.estimate_min_minor);
+      if(!same){output.textContent="Individual quote required — selected prices use different currencies or are unavailable.";return;}
+      const low=selected.reduce((sum,x)=>sum+x.estimate_min_minor,0),high=selected.reduce((sum,x)=>sum+x.estimate_max_minor,0);
+      output.textContent=tier.currency+" "+money(low,tier.currency)+(low===high?"":" – "+money(high,tier.currency));
+    };
     const describeTier = () => {
       const tier = tiers.find(x => String(x.id) === tierSelect.value);
       $("tier-note").textContent = tier ?
         (tier.description || "Estimated price is subject to an individual quote.")
         : "Choose a package or describe a custom idea.";
+      const features=$("request-tier-features");features.replaceChildren();
+      for(const value of Array.isArray(tier?.features)?tier.features.slice(0,20):[]){if(typeof value==="string")features.append(renderText("li",value));}
+      features.hidden=!features.childElementCount;
       // If tier/add-on compatibility is supplied, hide incompatible add-ons.
       const supported = Array.isArray(tier?.available_addon_ids)
         ? new Set(tier.available_addon_ids.map(String)) : null;
@@ -164,8 +181,14 @@
         if (!available) checkbox.checked = false;
         checkbox.closest(".addon-entry").hidden = !available;
       }
+      $("addons-empty").hidden=!!addonWrap.querySelector("input:not(:disabled)");
+      updateEstimate();
     };
-    tierSelect.addEventListener("change", describeTier);
+    tierSelect.onchange=describeTier;addonWrap.onchange=updateEstimate;
+    if(!initialPackageUsed){
+      initialPackageUsed=true;
+      if(validPreferredPackage){const matched=tiers.find(x=>x.slug===validPreferredPackage&&Number.isSafeInteger(x.id)&&x.id>0);if(matched){tierSelect.value=String(matched.id);$("request-package-handoff").textContent="Package selected from the services page. You can change it before submitting.";}else{$("request-package-handoff").textContent="That package is no longer available. Choose another package or a custom idea.";} }
+    }else $("request-package-handoff").textContent="";
     describeTier();
   }
 
@@ -1110,6 +1133,7 @@
       loadMyRequests();
     }else if(state.service.requests_open&&me?.authenticated!==true){
       $("request-signin").hidden=false;$("request-closed").hidden=true;
+      if(validPreferredPackage)$("request-signin-link").href="./account.html?"+new URLSearchParams({package:validPreferredPackage});
       displayStatus("Customer sign-in is required before submitting an idea.");
     }else{
       $("request-closed").hidden=false;$("request-signin").hidden=true;

@@ -361,7 +361,10 @@
     }
   }
   async function initialize() {
-    const reason=new URLSearchParams(location.search).get("session");
+    const params=new URLSearchParams(location.search),reason=params.get("session"),requestedPackage=params.get("package");
+    if(typeof requestedPackage==="string"&&/^[a-z0-9][a-z0-9-]{1,79}$/.test(requestedPackage)){
+      document.querySelector(".account-commission-link").href="./commission.html?"+new URLSearchParams({package:requestedPackage});
+    }
     if(reason)history.replaceState(null,"",location.pathname+location.hash);
     const fragment = new URLSearchParams(location.hash.slice(1));
     const verificationToken = fragment.get("verify");

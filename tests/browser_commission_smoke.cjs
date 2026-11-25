@@ -80,7 +80,7 @@ async function installMocks(page,options={}) {
     if(endpoint==="/api/catalog.php") return answer(route,{
       ok:true,requests_open:!!options.open,currency_pricing_approved:false,
       tiers:[{
-        id:12,name:"Portrait",description:"A simple portrait.",
+        id:12,slug:"portrait",name:"Portrait",description:"A simple portrait.",features:["One portrait"],
         estimate_min_minor:5000,estimate_max_minor:15000,currency:"CAD",
         available_addon_ids:[31]
       }],
@@ -359,6 +359,8 @@ async function openIntake(browser) {
     assert.equal(await page.locator("#request-submit").isEnabled(),true);
     await page.locator("#request-tier").selectOption("12");
     await page.locator('#addons-options input[value="31"]').check();
+    assert.match(await page.locator("#request-estimate-value").innerText(),/CAD.*70.*170/);
+    assert.match(await page.locator("#request-tier-features").innerText(),/One portrait/);
     assert.equal(await page.locator('#addons-options input[value="32"]').isVisible(),false,
       "incompatible add-on hidden");
     assert.equal(await page.locator('#addons-options input[value="32"]').isDisabled(),true);
@@ -384,6 +386,20 @@ async function openIntake(browser) {
     console.log("PASS: synthetic signed-in commission form, tier/addon compatibility, single idempotent POST");
   } finally {await context.close();}
 }
+async function verifyPackageHandoff(browser){
+  for(const [slug,expected] of [["portrait","12"],["retired-package",""]]){
+    const page=await browser.newPage({viewport:{width:320,height:844}});
+    await installMocks(page,{signedIn:true,open:true});
+    try{
+      await page.goto(base+"/commission.html?package="+slug);
+      await page.locator("#request-submit").waitFor({state:"visible"});
+      await page.waitForFunction(()=>document.querySelector("#request-submit")?.disabled===false);
+      assert.equal(await page.locator("#request-tier").inputValue(),expected);
+      assert.match(await page.locator("#request-package-handoff").innerText(),expected?/selected from/:/no longer available/);
+    }finally{await page.close();}
+  }
+}
+
 async function verifySubmissionConflict(browser){
   const page=await browser.newPage({viewport:{width:390,height:844}});
   await installMocks(page,{signedIn:true,open:true});
@@ -701,6 +717,7 @@ async function openWithoutLogin(browser) {
   try {
     for(const width of [320,390,768,1440]) await signedInClosed(browser,width);
     await openIntake(browser);
+    await verifyPackageHandoff(browser);
     await verifySubmissionConflict(browser);
     await verifyClosedIntakeReceiptLookup(browser);
     await openWithoutLogin(browser);

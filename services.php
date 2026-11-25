@@ -13,12 +13,13 @@ function dmo_service_price(array $item): string
     $min=$amount($item['estimate_min_minor']);$max=$amount($item['estimate_max_minor']);
     return $item['currency'].' '.$min.($min===$max?'':' – '.$max);
 }
-function dmo_service_offer(array $item): void
+function dmo_service_offer(array $item,bool $choose=false): void
 {
     echo '<article class="offer"><h3>'.dmo_info_escape($item['name']).'</h3><p class="price">'.dmo_info_escape(dmo_service_price($item)).'</p><p>'.nl2br(dmo_info_escape($item['description']),false).'</p>';
     if(!empty($item['features'])){
         echo '<ul>';foreach($item['features'] as $feature)echo '<li>'.dmo_info_escape($feature).'</li>';echo '</ul>';
     }
+    if($choose)echo '<p class="actions"><a href="/commission.html?package='.dmo_info_escape(rawurlencode($item['slug'])).'">Choose this package</a></p>';
     echo '</article>';
 }
 dmo_info_head('Commission services','Explore published drawing services and learn how custom commissions work.');
@@ -43,7 +44,7 @@ dmo_info_head('Commission services','Explore published drawing services and lear
 <section class="section" aria-labelledby="packages"><h2 id="packages">Drawing packages</h2>
 <?php if($failed): ?><p>Prices could not be loaded.</p>
 <?php elseif(!$catalog['tiers']): ?><p>No package estimates are published at present. Prices are agreed individually in an artist-issued quote when commissions are available.</p>
-<?php else: ?><p class="muted">Published estimates, not final prices. Currency is shown explicitly; the accepted quote determines the actual amount and scope.</p><div class="cards"><?php foreach($catalog['tiers'] as $item)dmo_service_offer($item); ?></div>
+<?php else: ?><p class="muted">Published estimates, not final prices. Currency is shown explicitly; the accepted quote determines the actual amount and scope.</p><div class="cards"><?php foreach($catalog['tiers'] as $item)dmo_service_offer($item,$intake['requests_open']===true); ?></div>
 <?php endif; ?>
 </section>
 <?php if(!$failed&&$catalog['addons']): ?>

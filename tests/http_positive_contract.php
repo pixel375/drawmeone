@@ -1016,6 +1016,7 @@ try {
     qa_positive($code===200&&count($catalog['tiers'])===1&&$catalog['tiers'][0]['name']===$item['name']&&!isset($catalog['tiers'][0]['revision'])&&$catalog['requests_open']===false,'catalog_public_approved_and_paused');
     [$code,,$serviceHtml]=qa_http('/services.php');
     qa_positive($code===200&&str_contains($serviceHtml,'CI Portrait')&&str_contains($serviceHtml,'CAD 10.00 – 20.00')&&str_contains($serviceHtml,'Requests temporarily paused'),'services_html_published_estimates_and_pause');
+    qa_positive(!str_contains($serviceHtml,'Choose this package'),'paused_services_no_package_handoff');
     [$code,$private]=qa_http('/api/admin/packages.php',$tokenAdmin,'__Host-dmo_admin');
     $row=array_values(array_filter($private['catalog']['tiers'],fn($r)=>$r['id']===$item['id']))[0];
     $current=$row['revision'];

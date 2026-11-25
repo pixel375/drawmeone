@@ -9,8 +9,8 @@
 <meta name="description" content="Request an original custom drawing through Draw Me One when commissions open.">
 <title>Commission a drawing · Draw Me One</title>
 <link rel="icon" href="./favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="./commission.css?v=30">
-<script defer src="./commission.js?v=53"></script>
+<link rel="stylesheet" href="./commission.css?v=31">
+<script defer src="./commission.js?v=54"></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
@@ -41,7 +41,7 @@
     <span class="eyebrow">YOUR CREATIVE CORNER</span>
     <h2>Sign in to send your idea.</h2>
     <p>Your private customer account keeps commission details separate from public artwork. A confirmed email address is required.</p>
-    <a href="./account.html" class="primary-link">Sign in or create an account</a>
+    <a id="request-signin-link" href="./account.html" class="primary-link">Sign in or create an account</a>
   </section>
   <div id="customer-workspace" class="workspace" hidden>
     <section id="request-recovery" class="request-form-panel" hidden aria-labelledby="request-recovery-heading">
@@ -65,7 +65,7 @@
             <select id="request-tier" name="tier">
               <option value="">Custom idea — discuss with artist</option>
             </select>
-            <small id="tier-note">Choose a package or describe a custom idea.</small>
+            <small id="tier-note">Choose a package or describe a custom idea.</small><ul id="request-tier-features" class="request-tier-features" hidden></ul><p id="request-package-handoff" class="small" role="status"></p>
           </div>
           <div class="field">
             <label for="request-subject">Type of drawing</label>
@@ -82,6 +82,7 @@
           <p class="small" id="addons-empty">No add-ons are currently available.</p>
           <div id="addons-options" class="addon-options"></div>
         </fieldset>
+        <section id="request-estimate" class="request-estimate" hidden aria-label="Package estimate"><strong>Selected package and extras estimate</strong><p id="request-estimate-value" role="status"></p><small>Not a final price, invoice or payment request. The artist must review the scope and issue an individual quote.</small></section>
         <div class="field">
           <label for="request-brief">Describe your drawing</label>
           <textarea id="request-brief" minlength="30" maxlength="6000" rows="8" required placeholder="Who or what should be in the artwork? What mood, pose, colours, details or setting are important?"></textarea>
