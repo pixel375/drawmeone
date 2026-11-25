@@ -20,6 +20,8 @@ $allowed = [
     '/api/admin/overview.php',
     '/api/site-settings.php',
     '/api/admin/design.php',
+    '/api/admin/packages.php',
+    '/api/catalog.php',
     '/api/admin/intake.php',
     '/api/request-status.php',
     '/api/policy.php',

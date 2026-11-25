@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 require_once dirname(__DIR__) . '/app/requests.php';
+require_once dirname(__DIR__).'/app/catalog.php';
 
 $method = $_SERVER['REQUEST_METHOD'] ?? '';
 if (!in_array($method, ['GET','POST'], true)) {
@@ -101,15 +102,18 @@ try {
         }
 
         $tierId = $request['tier_id'];
+        if(($tierId!==null||$request['addon_ids'])&&!dmo_catalog_approved()){
+            $db->rollBack();dmo_json(422,['ok'=>false,'error'=>'catalog_no_longer_available']);
+        }
         $tierSnapshot = null;
         if ($tierId !== null) {
             $tier = $db->prepare(
-                'SELECT id, name, currency, estimate_min_minor, estimate_max_minor ' .
+                'SELECT id, name, description, currency, estimate_min_minor, estimate_max_minor ' .
                 'FROM dmo_commission_tiers WHERE id = :id AND is_active = 1 LIMIT 1'
             );
             $tier->execute(['id' => $tierId]);
             $tierRow = $tier->fetch();
-            if (!is_array($tierRow)) {
+            if (!is_array($tierRow)||!dmo_catalog_offer_valid($tierRow)) {
                 $db->rollBack();
                 dmo_json(422, ['ok' => false, 'error' => 'tier_no_longer_available']);
             }
@@ -118,13 +122,13 @@ try {
 
         $selected = [];
         $selectAddon = $db->prepare(
-            'SELECT id, name, currency, estimate_min_minor, estimate_max_minor ' .
+            'SELECT id, name, description, currency, estimate_min_minor, estimate_max_minor ' .
             'FROM dmo_addons WHERE id = :id AND is_active = 1 LIMIT 1'
         );
         foreach ($request['addon_ids'] as $addonId) {
             $selectAddon->execute(['id' => $addonId]);
             $addon = $selectAddon->fetch();
-            if (!is_array($addon)) {
+            if (!is_array($addon)||!dmo_catalog_offer_valid($addon)) {
                 $db->rollBack();
                 dmo_json(422, ['ok' => false, 'error' => 'addon_no_longer_available']);
             }

@@ -127,6 +127,7 @@ function dmo_packages_list(PDO $db): array
         'FROM dmo_commission_tiers ORDER BY sort_order, id LIMIT 100'
     )->fetchAll();
     foreach ($tiers as &$tier) {
+        $tier['revision']=dmo_package_revision($tier,true);
         $values = json_decode((string) ($tier['features_json'] ?? '[]'), true);
         $tier['features'] = is_array($values) && array_is_list($values) ? $values : [];
         unset($tier['features_json']);
@@ -144,6 +145,7 @@ function dmo_packages_list(PDO $db): array
         'ORDER BY sort_order, id LIMIT 100'
     )->fetchAll();
     foreach ($addons as &$addon) {
+        $addon['revision']=dmo_package_revision($addon,false);
         $addon['id'] = (int) $addon['id'];
         $addon['is_active'] = (bool) $addon['is_active'];
         $addon['sort_order'] = (int) $addon['sort_order'];
@@ -153,4 +155,22 @@ function dmo_packages_list(PDO $db): array
     }
     unset($addon);
     return ['tiers' => $tiers, 'addons' => $addons];
+}
+
+/** Content-based optimistic revision, identical for list and locked row. */
+function dmo_package_revision(array $row,bool $tier): string
+{
+    $keys=['id','slug','name','description','currency','estimate_min_minor','estimate_max_minor','sort_order','is_active'];
+    if($tier)$keys[]='features_json';
+    $snapshot=[];
+    foreach($keys as $key)$snapshot[$key]=isset($row[$key])?(string)$row[$key]:null;
+    return hash('sha256',json_encode($snapshot,JSON_THROW_ON_ERROR));
+}
+function dmo_package_check_revision(PDO $db,array $row,bool $tier,mixed $expected): void
+{
+    if(!is_string($expected)||!preg_match('/^[a-f0-9]{64}$/D',$expected)||
+        !hash_equals(dmo_package_revision($row,$tier),$expected)){
+        $db->rollBack();
+        dmo_json(409,['ok'=>false,'error'=>'stale_catalog_reload_required']);
+    }
 }

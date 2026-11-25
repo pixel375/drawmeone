@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 require_once dirname(__DIR__, 2) . '/app/packages.php';
+require_once dirname(__DIR__, 2) . '/app/catalog.php';
 
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 if (!in_array($method, ['GET', 'POST'], true)) {
@@ -41,6 +42,7 @@ try {
     }
     $table = $kind === 'tier' ? 'dmo_commission_tiers' : 'dmo_addons';
 
+    $fields='id,slug,name,description,currency,estimate_min_minor,estimate_max_minor,sort_order,is_active'.($kind==='tier'?',features_json':'');
     $db->beginTransaction();
     try {
         if ($action === 'set_active') {
@@ -54,8 +56,7 @@ try {
                 dmo_package_fail('invalid_active_status');
             }
             $select = $db->prepare(
-                'SELECT id, name, description, currency, estimate_min_minor, ' .
-                'estimate_max_minor FROM ' . $table . ' WHERE id = :id FOR UPDATE'
+                'SELECT '.$fields.' FROM ' . $table . ' WHERE id = :id FOR UPDATE'
             );
             $select->execute(['id' => $id]);
             $current = $select->fetch();
@@ -63,10 +64,8 @@ try {
                 $db->rollBack();
                 dmo_json(404, ['ok' => false, 'error' => 'item_not_found']);
             }
-            if ($active && ($current['estimate_min_minor'] === null ||
-                $current['estimate_max_minor'] === null ||
-                trim((string) $current['name']) === '' ||
-                trim((string) $current['description']) === '')) {
+            dmo_package_check_revision($db,$current,$kind==='tier',$input['expected_revision']??null);
+            if ($active && !dmo_catalog_offer_valid($current)) {
                 $db->rollBack();
                 dmo_json(422, ['ok' => false, 'error' => 'complete_price_and_description_first']);
             }
@@ -89,7 +88,7 @@ try {
         $exists = false;
         if ($id !== null) {
             $select = $db->prepare(
-                'SELECT id, is_active FROM ' . $table . ' WHERE id = :id FOR UPDATE'
+                'SELECT '.$fields.' FROM ' . $table . ' WHERE id = :id FOR UPDATE'
             );
             $select->execute(['id' => $id]);
             $existing = $select->fetch();
@@ -98,11 +97,15 @@ try {
                 dmo_json(404, ['ok' => false, 'error' => 'item_not_found']);
             }
             $exists = true;
+            dmo_package_check_revision($db,$existing,$kind==='tier',$input['expected_revision']??null);
             // Editing a published item changes the public catalog instantly.
             // Never permit that through the ordinary draft editing switch.
             if ((bool) $existing['is_active'] && !dmo_packages_publish_enabled()) {
                 $db->rollBack();
                 dmo_json(503, ['ok' => false, 'error' => 'published_item_locked']);
+            }
+            if((bool)$existing['is_active']&&!dmo_catalog_offer_valid($item)){
+                $db->rollBack();dmo_package_fail('complete_price_and_description_first');
             }
         }
         $params = [

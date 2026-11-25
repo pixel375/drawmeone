@@ -105,7 +105,7 @@ try {
 
     // All fake business flags are scoped to the ephemeral local server.
     foreach ([
-        'DMO_AUTH_ENABLED'=>'1','DMO_ADMIN_ENABLED'=>'1','DMO_DESIGN_WRITES_ENABLED'=>'1','DMO_PUBLIC_DESIGN_ENABLED'=>'1',
+        'DMO_AUTH_ENABLED'=>'1','DMO_ADMIN_ENABLED'=>'1','DMO_DESIGN_WRITES_ENABLED'=>'1','DMO_PUBLIC_DESIGN_ENABLED'=>'1','DMO_PACKAGE_WRITES_ENABLED'=>'1','DMO_PACKAGE_PUBLISH_ENABLED'=>'1','DMO_PRICING_APPROVED'=>'1',
         'DMO_MAIL_ENABLED'=>'1','DMO_MAIL_TRANSPORT'=>'php',
         'DMO_ALLOW_PHP_MAIL'=>'1','DMO_MAIL_FROM'=>'support@drawmeone.com',
         'DMO_TURNSTILE_SITE_KEY'=>'ci-only-site-key',
@@ -798,6 +798,48 @@ try {
     qa_positive($code===200&&$private['draft']['settings']===$settings,'design_restored_draft_matches_snapshot');
     [$code,$public]=qa_http('/api/site-settings.php');
     qa_positive($code===200&&$public['version']===2&&$public['settings']['color_theme']==='canvas'&&!isset($public['history']),'design_restore_does_not_change_public');
+    // Real catalog endpoints: draft isolation, stale revision, publication validity.
+    $item=['id'=>null,'slug'=>'ci-new-tier','name'=>'CI Portrait','description'=>'Synthetic portrait package','currency'=>'CAD','estimate_min_minor'=>1000,'estimate_max_minor'=>2000,'sort_order'=>0,'features'=>['Synthetic feature']];
+    [$code]=qa_http('/api/admin/packages.php');
+    qa_positive($code===401,'catalog_admin_private');
+    [$code]=qa_http('/api/admin/packages.php',$tokenAdmin,'__Host-dmo_admin',['action'=>'save_tier','item'=>$item]);
+    qa_positive($code===403,'catalog_requires_csrf');
+    [$code,$new]=qa_http('/api/admin/packages.php',$tokenAdmin,'__Host-dmo_admin',['action'=>'save_tier','item'=>$item],$csrfAdmin);
+    qa_positive($code===200,'catalog_new_draft');
+    $item['id']=$new['id'];
+    [$code,$catalog]=qa_http('/api/catalog.php');
+    qa_positive($code===200&&!in_array($item['id'],array_column($catalog['tiers'],'id'),true),'catalog_draft_private');
+    [$code,$private]=qa_http('/api/admin/packages.php',$tokenAdmin,'__Host-dmo_admin');
+    $row=array_values(array_filter($private['catalog']['tiers'],fn($r)=>$r['id']===$item['id']))[0];
+    $revision=$row['revision'];
+    $publish=['action'=>'set_active','kind'=>'tier','id'=>$item['id'],'active'=>true,'expected_revision'=>$revision];
+    [$code]=qa_http('/api/admin/packages.php',$tokenAdmin,'__Host-dmo_admin',array_replace($publish,['expected_revision'=>str_repeat('0',64)]),$csrfAdmin);
+    qa_positive($code===409,'catalog_stale_publish_rejected');
+    [$code]=qa_http('/api/admin/packages.php',$tokenAdmin,'__Host-dmo_admin',$publish,$csrfAdmin);
+    qa_positive($code===200,'catalog_explicit_publish');
+    [$code,$catalog]=qa_http('/api/catalog.php');
+    qa_positive($code===200&&count($catalog['tiers'])===1&&$catalog['tiers'][0]['name']===$item['name']&&!isset($catalog['tiers'][0]['revision'])&&$catalog['requests_open']===false,'catalog_public_approved_and_paused');
+    [$code,$private]=qa_http('/api/admin/packages.php',$tokenAdmin,'__Host-dmo_admin');
+    $row=array_values(array_filter($private['catalog']['tiers'],fn($r)=>$r['id']===$item['id']))[0];
+    $current=$row['revision'];
+    qa_positive($revision!==$current,'catalog_revision_changes_with_visibility');
+    [$code]=qa_http('/api/admin/packages.php',$tokenAdmin,'__Host-dmo_admin',['action'=>'save_tier','expected_revision'=>$current,'item'=>array_replace($item,['description'=>''])],$csrfAdmin);
+    qa_positive($code===422,'catalog_published_incomplete_edit_rejected');
+    [$code]=qa_http('/api/admin/packages.php',$tokenAdmin,'__Host-dmo_admin',['action'=>'save_tier','expected_revision'=>$revision,'item'=>$item],$csrfAdmin);
+    qa_positive($code===409,'catalog_stale_edit_rejected');
+    [$code]=qa_http('/api/admin/packages.php',$tokenAdmin,'__Host-dmo_admin',array_replace($publish,['active'=>false,'expected_revision'=>$current]),$csrfAdmin);
+    qa_positive($code===200,'catalog_unpublish');
+    [$code,$catalog]=qa_http('/api/catalog.php');
+    qa_positive($code===200&&$catalog['tiers']===[],'catalog_unpublished_hidden');
+    require_once dirname(__DIR__).'/app/catalog.php';
+    $db->beginTransaction();
+    try{
+    $db->prepare('UPDATE dmo_commission_tiers SET is_active=1 WHERE id=:id')->execute(['id'=>$item['id']]);
+    qa_positive(count(dmo_catalog_public($db)['tiers'])===1,'catalog_approved_fixture_visible');
+    putenv('DMO_PRICING_APPROVED=0');
+    qa_positive(dmo_catalog_public($db)===['tiers'=>[],'addons'=>[]],'catalog_approval_revocation_hides_offers');
+    putenv('DMO_PRICING_APPROVED=1');
+    }finally{$db->rollBack();}
     echo "DISPOSABLE_POSITIVE_HTTP=PASS\n";
 } catch(Throwable $error) {
     fwrite(STDERR,'DISPOSABLE_POSITIVE_HTTP=FAIL ('.get_class($error).

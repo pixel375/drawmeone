@@ -1853,6 +1853,7 @@
   let packageWrite = false;
   let packagePublish = false;
   let packageBusy = false;
+  let packageGeneration=0;
 
   function packageRows(kind) {
     return kind === "tier" ? packageCatalog.tiers : packageCatalog.addons;
@@ -1913,7 +1914,7 @@
   }
 
   function packageSelect(kind, id = null) {
-    if (!["tier", "addon"].includes(kind)) return;
+    if (packageBusy||!["tier", "addon"].includes(kind)) return;
     const record = id === null ? null : packageRows(kind).find(row => row.id === id);
     if (id !== null && !record) return;
     packageSelected = { kind, id };
@@ -1953,8 +1954,12 @@
   }
 
   async function packagesLoad() {
+    const generation=++packageGeneration;
+    packageWrite=false;packagePublish=false;
+    $("package-save").disabled=true;$("package-visibility").disabled=true;
     packageShow("Loading existing commission tiers and add-ons…");
     const { response, data } = await get("packages.php");
+    if(generation!==packageGeneration||leavingSession)return;
     if (response.status === 401) return sessionExpired();
     if (!response.ok || !data.ok) {
       packageShow("Unable to load commission packages. Please retry.", true);
@@ -1966,7 +1971,8 @@
     const found = packageRows(packageSelected.kind).some(
       row => row.id === packageSelected.id
     );
-    packageSelect(packageSelected.kind, found ? packageSelected.id : null);
+    packageSelected.id=found?packageSelected.id:null;
+    if(!packageBusy)packageSelect(packageSelected.kind,packageSelected.id);
     packageShow(packageWrite
       ? (packagePublish
         ? "Editing and publication available. Confirm rates before publishing."
@@ -2012,9 +2018,9 @@
 
   $("package-new-tier").addEventListener("click", () => packageSelect("tier"));
   $("package-new-addon").addEventListener("click", () => packageSelect("addon"));
-  $("package-refresh").addEventListener("click", () => packagesLoad().catch(() => {
+  $("package-refresh").addEventListener("click", () => {if(!packageBusy)packagesLoad().catch(() => {
     packageShow("Unable to refresh packages.",true);
-  }));
+  });});
   $("package-form").addEventListener("submit", async event => {
     event.preventDefault();
     if (!packageWrite || packageBusy) return;
@@ -2027,11 +2033,13 @@
       return;
     }
     packageBusy = true;
-    $("package-save").disabled = true;
+    $("package-save").disabled = true;$("package-visibility").disabled=true;
     packageShow("Saving package without publishing…");
     try {
       const action = packageSelected.kind === "tier" ? "save_tier" : "save_addon";
-      const { response, data } = await post("packages.php", {action,item}, csrf);
+      const { response, data } = await post("packages.php", {action,item,expected_revision:current?.revision??null}, csrf);
+      if(response.status===401)return sessionExpired();
+      if(response.status===409&&data.error==="stale_catalog_reload_required"){packageWrite=false;packagePublish=false;packageShow("This item changed. Reload before editing again.",true);return;}
       if (!response.ok || !data.ok) {
         packageShow(data.error === "duplicate_slug_or_conflict"
           ? "That slug is already used. Choose another one."
@@ -2060,12 +2068,14 @@
       ? "Publish " + name + " to the public catalog? Confirm its prices are approved."
       : "Remove " + name + " from the public catalog?")) return;
     packageBusy = true;
-    $("package-visibility").disabled = true;
+    $("package-visibility").disabled = true;$("package-save").disabled=true;
     try {
       const { response, data } = await post("packages.php", {
         action:"set_active",kind:packageSelected.kind,
-        id:packageSelected.id,active,
+        id:packageSelected.id,active,expected_revision:row.revision??null,
       },csrf);
+      if(response.status===401)return sessionExpired();
+      if(response.status===409&&data.error==="stale_catalog_reload_required"){packageWrite=false;packagePublish=false;packageShow("This item changed. Reload before editing again.",true);return;}
       if (!response.ok || !data.ok) {
         packageShow("Unable to change visibility: " +
           (data.error || "not approved"), true);
@@ -2115,6 +2125,7 @@
     ++requestListGeneration;
     ++messageGeneration;
     ++designGeneration;
+    ++packageGeneration;
     clearPrivacyQueue();
     $("workspace").hidden = true;
     const url = new URL(location.href);

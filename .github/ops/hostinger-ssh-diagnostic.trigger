@@ -1,1 +1,1 @@
-Verify authentic public gallery fallback and server-rendered directory; read-only.
+Verify pricing catalog source and artist settings; read-only.

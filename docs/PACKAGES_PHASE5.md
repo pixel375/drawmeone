@@ -54,3 +54,7 @@ DMO_PRICING_APPROVED=0
 - [ ] Phone and desktop layout, keyboard navigation, error feedback and session expiry are tested with a controlled artist account.
 
 **Important:** The dashboard and the endpoints have been implemented; they are not end-to-end verified with an authenticated administrator yet. Do not call them production-ready until this checklist passes.
+
+## Catalog publication integrity follow-up
+
+Pricing approval now gates every public catalog read and every new selected package/add-on request; custom requests and idempotent retries remain available under their own gates. Incomplete or invalid active offers are filtered, and active edits must retain complete price ranges and descriptions. Catalog intake status now reflects pause/capacity. Tier restrictions are computed independently of published add-ons, without the old global mapping truncation. Existing items return a private content revision; every edit or visibility change must match the locked row revision, with reload on conflict. The dashboard disables concurrent writes and retains historical request snapshots. No pricing approval or production flag was changed. Disposable HTTP coverage added for real draft/publish/unpublish and stale edits. Existing clients using admin catalog writes must reload the updated dashboard.
