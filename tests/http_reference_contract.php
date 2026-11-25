@@ -216,7 +216,17 @@ try {
     $originalBytes=file_get_contents($displayPath);
     file_put_contents($displayPath,$originalBytes.'unexpected bytes');clearstatcache(true,$displayPath);
     ref_assert(dmo_integrity_media($db)['references']['invalid']===1,'reference_size_mismatch_detected');
+    [$code]=ref_http('/api/reference.php?id='.$id.'&variant=display',$cookieA);
+    ref_assert($code===404,'damaged_reference_not_served_to_owner');
     file_put_contents($displayPath,$originalBytes);chmod($displayPath,0600);clearstatcache(true,$displayPath);
+    $thumbPath=dmo_refs_storage_file($record['storage_key'],'thumb');$thumbBytes=file_get_contents($thumbPath);
+    file_put_contents($thumbPath,'not a valid WebP image');clearstatcache(true,$thumbPath);
+    [$code]=ref_http('/api/reference.php?id='.$id.'&variant=thumb',$cookieA);
+    ref_assert($code===404,'malformed_reference_thumbnail_not_served');
+    ref_assert(dmo_integrity_media($db)['references']['invalid']===1,'malformed_reference_thumbnail_detected');
+    file_put_contents($thumbPath,$thumbBytes);chmod($thumbPath,0600);clearstatcache(true,$thumbPath);
+    [$code]=ref_http('/api/reference.php?id='.$id.'&variant=thumb',$cookieA);
+    ref_assert($code===200,'restored_reference_thumbnail_served');
     [$code,$json,$bytes,$headers] = ref_http(
         '/api/reference.php?id='.$id.'&variant=display',$cookieA);
     ref_assert($code===200 && str_contains(strtolower($headers),'image/webp') &&

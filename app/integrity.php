@@ -89,10 +89,8 @@ function dmo_integrity_media(PDO $db,int $limit=10000): array
                             $bad=true;break;
                         }
                         if($kind==='portfolio'&&!dmo_artwork_variant_valid($row)){$bad=true;break;}
-                        if(($kind==='references'&&str_ends_with($file,'/display.webp'))||$kind==='deliveries'){
-                            if(filesize($file)!==(int)$row['byte_size']||(int)$info[0]!==(int)$row['pixel_width']||(int)$info[1]!==(int)$row['pixel_height']||
-                                ($kind==='references'&&$row['mime_type']!=='image/webp')){$bad=true;break;}
-                        }
+                        if($kind==='references'&&!dmo_refs_variant_valid($row,str_ends_with($file,'/display.webp')?'display':'thumb')){$bad=true;break;}
+                        if($kind==='deliveries'&&(filesize($file)!==(int)$row['byte_size']||(int)$info[0]!==(int)$row['pixel_width']||(int)$info[1]!==(int)$row['pixel_height'])){$bad=true;break;}
                         if($kind==='deliveries'&&(filesize($file)!==(int)$row['byte_size']||
                             !hash_equals($row['sha256'],(string)hash_file('sha256',$file)))){
                             $bad=true;break;

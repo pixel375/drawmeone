@@ -20,6 +20,7 @@ try{
         !hash_equals($row['sha256'],(string)hash_file('sha256',$path)))
         dmo_json(404,['ok'=>false,'error'=>'delivery_not_found']);
     header('Content-Type: image/webp');
+    header('X-Robots-Tag: noindex, nofollow');
     header('Content-Length: '.filesize($path));
     header('Content-Disposition: attachment; filename="commission-artwork-'.$id.'.webp"');
     header('X-Content-Type-Options: nosniff');

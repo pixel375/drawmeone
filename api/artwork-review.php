@@ -30,6 +30,7 @@ try{
         imagestring($proof,4,$x,$y,'DRAWMEONE PROOF',$light);
     }
     header('Content-Type: image/webp');header('X-Content-Type-Options: nosniff');
+    header('X-Robots-Tag: noindex, nofollow');header('X-Frame-Options: DENY');header("Content-Security-Policy: default-src 'none'");
     header('Cross-Origin-Resource-Policy: same-origin');header('Referrer-Policy: no-referrer');
     imagewebp($proof,null,72);imagedestroy($proof);exit;
 }catch(Throwable $e){dmo_log_problem($e,'customer artwork review');dmo_json(503,['ok'=>false,'error'=>'review_unavailable']);}

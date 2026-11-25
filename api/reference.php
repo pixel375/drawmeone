@@ -24,7 +24,7 @@ try {
         dmo_json(404, ['ok' => false, 'error' => 'reference_not_found']);
     }
     $stmt = $db->prepare(
-        'SELECT a.storage_key, r.customer_id FROM dmo_request_attachments a ' .
+        'SELECT a.storage_key,a.mime_type,a.byte_size,a.pixel_width,a.pixel_height,r.customer_id FROM dmo_request_attachments a ' .
         'JOIN dmo_commission_requests r ON r.id = a.request_id ' .
         'WHERE a.id = :id LIMIT 1'
     );
@@ -34,11 +34,12 @@ try {
         (int) $item['customer_id'] !== (int) $customer['user_id'])) {
         dmo_json(404, ['ok' => false, 'error' => 'reference_not_found']);
     }
-    $file = dmo_refs_storage_file((string) $item['storage_key'], $variant);
-    if (!is_file($file) || !is_readable($file)) {
+    if(!dmo_refs_variant_valid($item,$variant)){
         dmo_json(404, ['ok' => false, 'error' => 'reference_not_found']);
     }
+    $file=dmo_refs_storage_file((string)$item['storage_key'],$variant);
     header('Content-Type: image/webp');
+    header('X-Robots-Tag: noindex, nofollow');
     header('Content-Length: ' . filesize($file));
     header('Cache-Control: private, no-store, max-age=0');
     header('Content-Disposition: inline');

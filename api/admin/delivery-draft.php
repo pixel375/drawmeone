@@ -20,6 +20,7 @@ try {
         if(!is_file($path)||!is_readable($path)||filesize($path)!==(int)$row['byte_size']||
             !hash_equals($row['sha256'],(string)hash_file('sha256',$path)))dmo_json(404,['ok'=>false,'error'=>'draft_not_found']);
         header('Content-Type: image/webp');
+        header('X-Robots-Tag: noindex, nofollow');
         header('Content-Length: '.filesize($path));
         $view=$_GET['view']??'download';
         if(!is_string($view)||!in_array($view,['download','preview'],true))dmo_json(422,['ok'=>false,'error'=>'invalid_view']);

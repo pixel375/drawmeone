@@ -1,1 +1,1 @@
-Verify bounded scroll gallery and strict hosted manifest validation.
+Verify private reference validation and private media headers.

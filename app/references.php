@@ -77,3 +77,22 @@ function dmo_refs_metadata(PDO $db, int $requestId): array
         'created_at' => (string) $row['created_at'],
     ], $rows);
 }
+
+/** Validate both variants with the same read-only contract used by diagnostics.
+ * Only the display variant has stored exact dimensions and byte length.
+ */
+function dmo_refs_variant_valid(array $row,string $variant): bool
+{
+    try{
+        $path=dmo_refs_storage_file((string)$row['storage_key'],$variant);
+        clearstatcache(true,$path);
+        if(!is_file($path)||!is_readable($path)||is_link($path)||
+            $row['mime_type']!=='image/webp')return false;
+        $bytes=@filesize($path);$info=@getimagesize($path);
+        if(!is_int($bytes)||$bytes<1||!is_array($info)||($info['mime']??null)!=='image/webp'||
+            $info[0]<1||$info[1]<1)return false;
+        if($variant==='thumb')return max($info[0],$info[1])<=480;
+        return max($info[0],$info[1])<=1600&&$bytes===(int)$row['byte_size']&&
+            $info[0]===(int)$row['pixel_width']&&$info[1]===(int)$row['pixel_height'];
+    }catch(Throwable $e){return false;}
+}
