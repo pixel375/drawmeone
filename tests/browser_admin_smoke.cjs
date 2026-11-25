@@ -28,6 +28,7 @@ const mockAdmin = {
       requests_for_review: 0, active_orders: 0,
       payments_to_verify: 0, messages_last_seven_days: 0
     },
+    integrity:{checks:{order_quote_mismatch:0,paid_without_evidence:1},issue_count:1,scope:"database_only"},
     readiness: [
       {key:"mail",label:"Transactional email",status:"ready",detail:"CI mock only"},
       {key:"accounts",label:"Customer accounts",status:"blocked",detail:"Closed"},
@@ -119,6 +120,13 @@ async function verifyArtistDesk(browser, width) {
     assert.equal(await page.locator("#stat-orders").innerText(),"0");
     assert.equal(await page.locator("#launch-checks .launch-check").count(),3);
     assert.match(await page.locator("#launch-status").innerText(),/1 of 3/);
+    await page.locator(".integrity-details summary").click();
+    assert.match(await page.locator("#integrity-status").innerText(),/1 failed checks/);
+    assert.equal(await page.locator("#integrity-checks .launch-check").count(),2);
+    assert.match(await page.locator("#integrity-checks").innerText(),/Paid orders without eligible evidence/);
+    const checkOverflow=await horizontalOverflow(page);
+    assert(checkOverflow.measured<=checkOverflow.available+3,JSON.stringify(checkOverflow));
+    await page.locator(".integrity-details summary").click();
     const nav=page.locator(".nav-tabs");
     const area=await nav.boundingBox();
     assert(area,"admin navigation must be rendered");

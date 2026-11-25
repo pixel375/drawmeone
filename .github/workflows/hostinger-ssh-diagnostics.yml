@@ -488,6 +488,12 @@ jobs:
             exit 1
           }
           echo "a11y_public_assets=deployed"
+          [[ "$desk_page" == *'id="integrity-checks"'* ]] &&
+          [[ "$desk_js" == *'Database consistency results unavailable.'* ]] || {
+            echo "integrity_dashboard=stale_assets"
+            exit 1
+          }
+          echo "integrity_dashboard=deployed"
           php "$site/app/cli-integrity.php" check
           echo "READ_ONLY_DIAGNOSTIC_COMPLETED"
           REMOTE

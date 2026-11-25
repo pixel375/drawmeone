@@ -1,1 +1,1 @@
-2026-11-24 v3.6 safe live regression: exercise the current encrypted backup CLI after adding verified ciphertext-only export support, validate pre-promotion restore and latest encrypted snapshot. Also verify success-path GitHub backup incident monitor. No offsite transfer and no key export.
+Post-migration 004/005 local encrypted backup and existing isolated archive restore verification; no offsite export.
