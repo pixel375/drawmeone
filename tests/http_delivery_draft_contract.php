@@ -47,14 +47,10 @@ function ref_http(
         $headers[] = 'Content-Type: application/json';
     } elseif ($upload !== null) {
         $opts[CURLOPT_POST] = true;
-        $opts[CURLOPT_POSTFIELDS] = [
-            'request_id' => (string)$upload['request_id'], 'order_id'=>(string)$upload['order_id'],
-            'artwork' => new CURLFile(
-                $upload['path'],
-                $upload['type'],
-                basename($upload['path'])
-            ),
-        ];
+        $file=new CURLFile($upload['path'],$upload['type'],basename($upload['path']));
+        $opts[CURLOPT_POSTFIELDS] = isset($upload['ref'])?
+            ['ref'=>$upload['ref'],'reference'=>$file]:
+            ['request_id'=>(string)$upload['request_id'],'order_id'=>(string)$upload['order_id'],'artwork'=>$file];
     }
     $opts[CURLOPT_HTTPHEADER] = $headers;
     curl_setopt_array($handle, $opts);
@@ -106,6 +102,7 @@ try {
     putenv('DMO_ENV_FILE=' . $env);
     foreach ([
         'DMO_AUTH_ENABLED' => '1',
+        'DMO_REQUESTS_ENABLED'=>'1','DMO_QUOTE_DELIVERY_ENABLED'=>'1','DMO_QUOTE_RESPONSES_ENABLED'=>'1','DMO_MANUAL_PAYMENT_ENABLED'=>'1','DMO_MANUAL_PAYMENT_TERMS_APPROVED'=>'1','DMO_CHECKOUT_LINKS_ENABLED'=>'1','DMO_CHECKOUT_TERMS_APPROVED'=>'1','DMO_CHECKOUT_HOST'=>'checkout.example.invalid','DMO_CHECKOUT_PATH_PREFIX'=>'/invoice/','DMO_PRIVACY_SELF_SERVICE_ENABLED'=>'1','DMO_CUSTOMER_MESSAGING_ENABLED'=>'1',
         'DMO_REGISTRATION_ENABLED' => '0',
         'DMO_MAIL_ENABLED' => '1',
         'DMO_MAIL_TRANSPORT' => 'php',
@@ -349,6 +346,71 @@ try {
     ref_assert(dmo_integrity_media($db)['deliveries']['invalid']===1,'integrity_detects_exposed_image_directory');
     chmod(dirname($file),0700);clearstatcache(true);
     ref_assert(dmo_integrity_media($db)['deliveries']['invalid']===0,'integrity_accepts_resecured_directory');
+    // One uninterrupted journey through public HTTP endpoints using a verified
+    // synthetic customer, not a seeded request, quote, order, payment or proof.
+    $brief=['idempotency_key'=>'1d4c9c0e-1b63-4aa0-a2d4-f5d72b0bde24','tier_id'=>null,'addon_ids'=>[],'subject_type'=>'portrait','brief'=>'Synthetic end-to-end portrait with private reference and one revision.','preferred_contact'=>'onsite','preferred_deadline'=>null,'policy_version'=>'qa-policy-v1','policy_sha256'=>dmo_config('DMO_REQUEST_POLICY_SHA256'),'acknowledge_review'=>true];
+    [$code,$created]=ref_http('/api/requests.php',$cookieB,$brief,$csrfB);
+    ref_assert($code===201,'journey_customer_submits_new_request');
+    $journeyRef=$created['public_ref'];
+    $q=$db->prepare('SELECT id FROM dmo_commission_requests WHERE public_ref=:ref AND customer_id=:customer');
+    $q->execute(['ref'=>$journeyRef,'customer'=>$customerB]);$journey=(int)$q->fetchColumn();
+    ref_assert($journey>0,'journey_persisted_customer_owned_request');
+    [$code,$refUpload]=ref_http('/api/request-attachment.php',$cookieB,null,$csrfB,['ref'=>$journeyRef,'path'=>$png,'type'=>'image/png']);
+    ref_assert($code===201,'journey_upload_private_reference');
+    [$code]=ref_http('/api/reference.php?id='.$refUpload['attachment_id'],$cookieA);
+    ref_assert($code===404,'journey_reference_cross_account_denied');
+    [$code,$draft]=ref_http('/api/admin/request-actions.php',$artistCookie,['action'=>'create_quote_draft','request_id'=>$journey,'currency'=>'CAD','scope'=>'Synthetic end-to-end portrait','revision_allowance'=>1,'lines'=>[['description'=>'Portrait','amount_minor'=>4200],['description'=>'Background','amount_minor'=>800]]],$artistCsrf);
+    ref_assert($code===201&&$draft['total_minor']===5000,'journey_artist_itemizes_quote');
+    $journeyQuote=$draft['quote_id'];
+    [$code,$sent]=ref_http('/api/admin/quote-send.php',$artistCookie,['request_id'=>$journey,'quote_id'=>$journeyQuote,'validity_days'=>7],$artistCsrf);
+    ref_assert($code===200&&$sent['payment_collected']===false,'journey_artist_sends_quote');
+    [$code]=ref_http('/api/quote-response.php',$cookieB,['ref'=>$journeyRef,'quote_id'=>$journeyQuote,'decision'=>'accept','policy_version'=>'qa-policy-v1','acknowledge_quote'=>true],$csrfB);
+    ref_assert($code===200,'journey_customer_accepts_quote');
+    [$code,$confirmed]=ref_http('/api/admin/order-create.php',$artistCookie,['request_id'=>$journey,'accepted_quote_id'=>$journeyQuote,'confirm_unpaid'=>true],$artistCsrf);
+    ref_assert($code===201&&$confirmed['payment_status']==='unverified','journey_artist_confirms_unpaid_order');
+    $journeyOrder=$confirmed['order_id'];
+    $invoice=['action'=>'issue_checkout_link','request_id'=>$journey,'order_id'=>$journeyOrder,'expected_link_id'=>null,'url'=>'https://checkout.example.invalid/invoice/journey-only','currency'=>'CAD','amount_minor'=>5000,'confirm_invoice'=>true];
+    [$code,$published]=ref_http('/api/admin/request-actions.php',$artistCookie,$invoice,$artistCsrf);
+    ref_assert($code===201,'journey_artist_issues_external_invoice');
+    $journeyLink=$published['link_id'];
+    [$code,$json,$bytes,$headers]=ref_http('/api/checkout.php?id='.$journeyLink,$cookieB);
+    ref_assert($code===303&&str_contains($headers,'https://checkout.example.invalid/invoice/journey-only'),'journey_customer_redirects_to_synthetic_invoice_without_following');
+    [$code,$state]=ref_http('/api/request.php?ref='.$journeyRef,$cookieB);
+    ref_assert($code===200&&$state['orders'][0]['payment_status']==='unverified','journey_redirect_does_not_confirm_payment');
+    $advanceJourney=['action'=>'set_production_status','request_id'=>$journey,'order_id'=>$journeyOrder,'expected_status'=>'awaiting_arrangement','status'=>'in_progress'];
+    [$code]=ref_http('/api/admin/request-actions.php',$artistCookie,$advanceJourney,$artistCsrf);
+    ref_assert($code===409,'journey_unpaid_cannot_start');
+    $evidence=['action'=>'record_payment_evidence','request_id'=>$journey,'order_id'=>$journeyOrder,'method'=>'bank_transfer','reference'=>'CI-JOURNEY-TRANSACTION-5000','currency'=>'CAD','amount_minor'=>5000];
+    [$code,$pending]=ref_http('/api/admin/request-actions.php',$artistCookie,$evidence,$artistCsrf);
+    ref_assert($code===201&&$pending['status']==='pending_verification','journey_artist_records_pending_evidence');
+    [$code]=ref_http('/api/checkout.php?id='.$journeyLink,$cookieB);
+    ref_assert($code===404,'journey_pending_evidence_removes_invoice');
+    [$code,$paid]=ref_http('/api/admin/request-actions.php',$artistCookie,array_replace($evidence,['action'=>'verify_payment_evidence','payment_id'=>$pending['payment_id'],'confirm_received'=>true]),$artistCsrf);
+    ref_assert($code===200&&$paid['payment_status']==='paid'&&$paid['money_moved']===false,'journey_full_manual_reconciliation');
+    [$code]=ref_http('/api/admin/request-actions.php',$artistCookie,['action'=>'revoke_checkout_link','request_id'=>$journey,'order_id'=>$journeyOrder,'expected_link_id'=>$journeyLink,'confirm_external_closed'=>true],$artistCsrf);
+    ref_assert($code===200,'journey_external_invoice_closure_recorded');
+    [$code]=ref_http('/api/admin/request-actions.php',$artistCookie,$advanceJourney,$artistCsrf);
+    ref_assert($code===200,'journey_artist_starts_production');
+    $journeyUpload=['request_id'=>$journey,'order_id'=>$journeyOrder,'path'=>$png,'type'=>'image/png'];
+    [$code,$draft]=ref_http('/api/admin/delivery-draft.php',$artistCookie,null,$artistCsrf,$journeyUpload);
+    ref_assert($code===201,'journey_artist_stages_artwork');
+    $journeyDraft=$draft['draft_id'];
+    [$code,$proof]=ref_http('/api/admin/request-actions.php',$artistCookie,['action'=>'offer_artwork_review','request_id'=>$journey,'order_id'=>$journeyOrder,'draft_id'=>$journeyDraft],$artistCsrf);
+    ref_assert($code===201,'journey_artist_offers_proof');
+    [$code]=ref_http('/api/artwork-review.php',$cookieB,['review_id'=>$proof['review_id'],'decision'=>'approve','feedback'=>''],$csrfB);
+    ref_assert($code===200,'journey_customer_approves_proof');
+    [$code]=ref_http('/api/admin/request-actions.php',$artistCookie,array_replace($advanceJourney,['expected_status'=>'in_progress','status'=>'ready_for_delivery']),$artistCsrf);
+    ref_assert($code===200,'journey_artist_marks_ready');
+    [$code,$released]=ref_http('/api/admin/request-actions.php',$artistCookie,['action'=>'release_delivery','request_id'=>$journey,'order_id'=>$journeyOrder,'draft_id'=>$journeyDraft,'confirm_final'=>true],$artistCsrf);
+    ref_assert($code===201,'journey_final_artwork_released');
+    [$code,$json,$bytes,$headers]=ref_http('/api/delivery.php?id='.$released['delivery_id'],$cookieB);
+    ref_assert($code===200&&substr($bytes,8,4)==='WEBP'&&str_contains(strtolower($headers),'no-store'),'journey_owner_downloads_final');
+    [$code]=ref_http('/api/delivery.php?id='.$released['delivery_id'],$cookieA);
+    ref_assert($code===404,'journey_cross_account_download_denied');
+    [$code,$export]=ref_http('/api/auth/privacy.php',$cookieB,['action'=>'export','current_password'=>'Reference-only-CI-password-2026'],$csrfB);
+    ref_assert($code===200&&count($export['export']['delivery_metadata'])===1&&!str_contains(json_encode($export,JSON_THROW_ON_ERROR),'journey-only'),'journey_export_contains_delivery_metadata_without_invoice_secret');
+    ref_assert(array_sum(dmo_integrity_records($db))===0,'journey_final_database_integrity');
+    echo "DISPOSABLE_COMMISSION_JOURNEY=PASS\n";
     echo "DISPOSABLE_DELIVERY_DRAFTS=PASS\n";
 } catch(Throwable $error){
     fwrite(STDERR,"DISPOSABLE_DELIVERY_DRAFTS=FAIL ".$error->getMessage()."\n");exit(1);

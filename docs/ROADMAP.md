@@ -565,3 +565,5 @@ See `docs/ART_DIRECTION.md` and `docs/COMMISSION_PRODUCT_SPEC.md`.
 
 ## November 24 implementation checkpoint
 The commission lifecycle, accounts, historical agreement continuity, private delivery, manual payment exceptions, intake capacity and privacy request/export workflows are implemented and verified in disposable integration and browser/live diagnostics. They remain gated pending owner approval and real production onboarding. Retention inventory is read-only; deletion schedules remain undecided. Independent off-site recovery and approved payment setup remain major launch blockers. This checkpoint supersedes outdated implementation-status checkboxes above; the original requirements and owner choices remain relevant.
+
+Hosted order-specific invoice workflow passed all five suites and schema 006 was applied. The controlled launch runbook documents actual owner/provider/recovery decisions rather than treating a green CI result as public launch approval. Provider-specific automated verification remains blocked until a provider/account is selected.
