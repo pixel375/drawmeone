@@ -238,3 +238,22 @@ function dmo_requests_list_summary(array $row): array
     unset($row['visible_quote_expired']);
     return $row;
 }
+
+/** The latest financial exception is derived from immutable audit events. */
+function dmo_order_exception_sql(string $alias='o'): string
+{
+    // Internal aliases only; never passed a request parameter.
+    if($alias!=='o')throw new InvalidArgumentException('Invalid order alias');
+    return "(SELECT a.action FROM dmo_audit_log a WHERE a.entity_type='commission_request'
+        AND a.entity_id=o.request_id AND a.action IN ('payment.access_held','payment.access_restored','payment.full_refund_recorded')
+        AND JSON_UNQUOTE(JSON_EXTRACT(a.details_json,'$.order_id'))=CAST(o.id AS CHAR)
+        ORDER BY a.id DESC LIMIT 1)";
+}
+function dmo_order_exception_status(mixed $action): ?string
+{
+    return match($action){
+        'payment.access_held'=>'on_hold',
+        'payment.full_refund_recorded'=>'refunded',
+        default=>null,
+    };
+}
