@@ -2,6 +2,7 @@
 declare(strict_types=1);
 require_once dirname(__DIR__, 2) . '/app/admin.php';
 require_once dirname(__DIR__, 2) . '/app/orders.php';
+require_once dirname(__DIR__, 2) . '/app/checkout.php';
 dmo_reject_non_get();
 
 try {
@@ -13,7 +14,7 @@ try {
     if (!is_string($search) || strlen($search) > 160 ||
         preg_match('/[\x00-\x1f\x7f]/', $search) ||
         !is_string($pageText) || !preg_match('/^[1-9][0-9]{0,3}$/D', $pageText) ||
-        !is_string($filter) || !in_array($filter, ['all','review','other','orders','quote_waiting','accepted','due','quote_followup','payment_review','payment_hold'], true)) {
+        !is_string($filter) || !in_array($filter, ['all','review','other','orders','quote_waiting','accepted','due','quote_followup','payment_review','payment_hold','checkout_followup'], true)) {
         dmo_json(422, ['ok'=>false,'error'=>'invalid_request_list_filter']);
     }
     $search = trim($search);
@@ -30,6 +31,7 @@ try {
     if ($filter === 'review') $where[] = '(' . $review . ')';
     if ($filter === 'other') $where[] = 'NOT (' . $review . ')';
     $activeOrders = "o.status IN ('awaiting_arrangement','in_progress','ready_for_delivery','queued','drawing','awaiting_feedback','revision')";
+    if ($filter === 'checkout_followup') $where[] = dmo_checkout_schema_ready($db) ? dmo_checkout_followup_sql() : '1=0';
     if ($filter === 'payment_review') $where[] = "EXISTS (SELECT 1 FROM dmo_payments p WHERE p.order_id=o.id AND p.status='pending_verification')";
     if ($filter === 'payment_hold') $where[] = dmo_order_exception_sql() . "='payment.access_held'";
     if ($filter === 'orders') $where[] = $activeOrders;

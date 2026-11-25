@@ -121,3 +121,12 @@ function dmo_checkout_apply(PDO $db,array $admin,int $request,array $input): nev
     catch(Throwable $e){if($db->inTransaction())$db->rollBack();throw $e;}
     dmo_json($issue?201:200,['ok'=>true,'link_id'=>$id,'status'=>$status,'money_moved'=>false]);
 }
+
+/** Local follow-up only; an expired or suspended link is not proof of external closure. */
+function dmo_checkout_followup_sql(): string {
+    return "EXISTS (SELECT 1 FROM dmo_checkout_links cl WHERE cl.order_id=o.id
+        AND cl.id=(SELECT MAX(x.id) FROM dmo_checkout_links x WHERE x.order_id=o.id)
+        AND (cl.status='suspended' OR (cl.status='active' AND (cl.expires_at<=UTC_TIMESTAMP()
+        OR o.payment_status<>'unverified' OR o.status<>'awaiting_arrangement'
+        OR r.status NOT IN ('submitted','clarification_needed')))))";
+}

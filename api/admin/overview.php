@@ -32,6 +32,7 @@ try {
         'messages_last_seven_days' => "SELECT COUNT(*) FROM dmo_messages " .
             "WHERE created_at >= DATE_SUB(UTC_TIMESTAMP(), INTERVAL 7 DAY)",
     ];
+    if(dmo_checkout_schema_ready($db))$queries['checkout_followup']="SELECT COUNT(*) FROM dmo_orders o JOIN dmo_commission_requests r ON r.id=o.request_id WHERE ".dmo_checkout_followup_sql();
     $counts = [];
     foreach ($queries as $name => $sql) {
         $counts[$name] = (int) $db->query($sql)->fetchColumn();

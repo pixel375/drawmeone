@@ -423,6 +423,8 @@ try {
     $db->prepare("UPDATE dmo_checkout_links SET expires_at=DATE_SUB(UTC_TIMESTAMP(),INTERVAL 1 MINUTE) WHERE id=:id")->execute(['id'=>$checkoutId]);
     [$code]=qa_http('/api/checkout.php?id='.$checkoutId,$tokenA);
     qa_positive($code===404,'expired_checkout_denied');
+    [$code,$queue]=qa_http('/api/admin/requests.php?filter=checkout_followup',$tokenAdmin,'__Host-dmo_admin');
+    qa_positive($code===200&&count($queue['requests'])===1&&$queue['requests'][0]['id']===$requestA,'expired_invoice_in_followup_queue');
     $db->prepare("UPDATE dmo_checkout_links SET expires_at=DATE_ADD(UTC_TIMESTAMP(),INTERVAL 1 DAY) WHERE id=:id")->execute(['id'=>$checkoutId]);
     $deadline=(new DateTimeImmutable('today',new DateTimeZone('UTC')))->modify('+5 days')->format('Y-m-d');
     $schedule=['action'=>'set_order_deadline','request_id'=>$requestA,'order_id'=>$orderId,
@@ -561,6 +563,12 @@ try {
     qa_positive($code===200 && $paid['payment_status']==='paid' && $paid['provider_verified']===false && $paid['money_moved']===false,'manual_full_payment_reconciled_without_charge');
     [$code]=qa_http('/api/checkout.php?id='.$checkoutId,$tokenA);
     qa_positive($code===404,'paid_order_checkout_denied');
+    [$code,$queue]=qa_http('/api/admin/requests.php?filter=checkout_followup',$tokenAdmin,'__Host-dmo_admin');
+    qa_positive($code===200&&count($queue['requests'])===1,'suspended_invoice_needs_external_closure_review');
+    [$code,$closed]=qa_http('/api/admin/request-actions.php',$tokenAdmin,'__Host-dmo_admin',array_replace($revoke,['expected_link_id'=>$checkoutId]),$csrfAdmin);
+    qa_positive($code===200&&$closed['status']==='revoked','settled_external_invoice_closed_locally');
+    [$code,$queue]=qa_http('/api/admin/requests.php?filter=checkout_followup',$tokenAdmin,'__Host-dmo_admin');
+    qa_positive($code===200&&$queue['requests']===[],'closed_invoice_leaves_followup_queue');
     [$code,$customerPaid]=qa_http('/api/request.php?ref='.urlencode($referenceA),$tokenA);
     qa_positive($code===200 && $customerPaid['orders'][0]['payment_status']==='paid' &&
         !str_contains(json_encode($customerPaid,JSON_THROW_ON_ERROR),'CI-ONLY-TRANSACTION') &&

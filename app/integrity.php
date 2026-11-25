@@ -2,6 +2,7 @@
 declare(strict_types=1);
 require_once __DIR__.'/deliveries.php';
 require_once __DIR__.'/references.php';
+require_once __DIR__.'/checkout.php';
 
 /**
  * Read-only operational checks; return counts and fixed identifiers only.
@@ -16,6 +17,12 @@ function dmo_integrity_records(PDO $db): array
         'duplicate_verified_payment'=>"SELECT COUNT(*) FROM (SELECT order_id FROM dmo_payments WHERE status='verified' GROUP BY order_id HAVING COUNT(*)>1) duplicates",
         'multiple_orders'=>"SELECT COUNT(*) FROM (SELECT request_id FROM dmo_orders GROUP BY request_id HAVING COUNT(*)>1) duplicates",
     ];
+    if(dmo_checkout_schema_ready($db)){
+        $checks['checkout_amount_mismatch']="SELECT COUNT(*) FROM dmo_checkout_links l JOIN dmo_orders o ON o.id=l.order_id JOIN dmo_quotes q ON q.id=o.accepted_quote_id WHERE l.currency<>q.currency OR l.amount_minor<>q.total_minor";
+        $checks['checkout_multiple_unclosed']="SELECT COUNT(*) FROM (SELECT order_id FROM dmo_checkout_links WHERE status IN ('active','suspended') GROUP BY order_id HAVING COUNT(*)>1) duplicates";
+        $checks['checkout_invalid_storage']="SELECT COUNT(*) FROM dmo_checkout_links WHERE status NOT IN ('active','suspended','revoked') OR (status='active' AND (url_ciphertext='' OR revoked_at IS NOT NULL)) OR (status IN ('suspended','revoked') AND url_ciphertext<>'') OR (status='revoked' AND revoked_at IS NULL)";
+        $checks['checkout_active_after_evidence']="SELECT COUNT(*) FROM dmo_checkout_links l WHERE l.status='active' AND EXISTS (SELECT 1 FROM dmo_payments p WHERE p.order_id=l.order_id AND p.status IN ('pending_verification','verified'))";
+    }
     if(dmo_delivery_schema_ready($db)){
         $checks['draft_order_mismatch']="SELECT COUNT(*) FROM dmo_delivery_drafts d JOIN dmo_orders o ON o.id=d.order_id WHERE d.request_id<>o.request_id";
         $checks['delivery_missing_draft']="SELECT COUNT(*) FROM dmo_deliverables f JOIN dmo_orders o ON o.id=f.order_id LEFT JOIN dmo_delivery_drafts d ON d.order_id=o.id AND d.request_id=o.request_id AND d.storage_key=f.storage_key WHERE d.id IS NULL OR f.byte_size<>d.byte_size OR f.mime_type<>'image/webp'";

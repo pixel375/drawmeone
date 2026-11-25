@@ -165,6 +165,7 @@
       "stat-due": data.counts?.orders_due_soon,
       "stat-quote-followup": data.counts?.quotes_to_follow_up,
       "stat-payments": data.counts?.payments_to_verify,
+      "stat-checkout": data.counts?.checkout_followup,
       "stat-holds": data.counts?.payment_holds,
       "stat-privacy": data.counts?.privacy_open,
       "stat-messages": data.counts?.messages_last_seven_days,
@@ -193,7 +194,7 @@
     }else $("retention-status").textContent="Retention inventory unavailable.";
     const integrity=$("integrity-checks");integrity.replaceChildren();
     const checksMap=data.integrity?.checks;
-    const labels={order_quote_mismatch:"Order / accepted quote mismatch",paid_without_evidence:"Paid orders without eligible evidence",paid_order_exception_conflict:"Paid flag conflicts with payment hold or refund",duplicate_verified_payment:"Multiple verified payments per order",multiple_orders:"Multiple orders per request",draft_order_mismatch:"Draft attached to unrelated request",delivery_missing_draft:"Missing or inconsistent delivery record",delivery_state_mismatch:"Released artwork with incomplete order",completed_without_delivery:"Completed order without deliverable",review_draft_mismatch:"Pending or approved proof without matching draft",review_pending_multiple:"Multiple pending proofs",review_allowance_exceeded:"Included revision allowance exceeded",delivery_approval_mismatch:"Released drawing differs from approved proof"};
+    const labels={order_quote_mismatch:"Order / accepted quote mismatch",paid_without_evidence:"Paid orders without eligible evidence",paid_order_exception_conflict:"Paid flag conflicts with payment hold or refund",duplicate_verified_payment:"Multiple verified payments per order",multiple_orders:"Multiple orders per request",draft_order_mismatch:"Draft attached to unrelated request",delivery_missing_draft:"Missing or inconsistent delivery record",delivery_state_mismatch:"Released artwork with incomplete order",completed_without_delivery:"Completed order without deliverable",review_draft_mismatch:"Pending or approved proof without matching draft",review_pending_multiple:"Multiple pending proofs",review_allowance_exceeded:"Included revision allowance exceeded",delivery_approval_mismatch:"Released drawing differs from approved proof",checkout_amount_mismatch:"Invoice amount differs from accepted quote",checkout_multiple_unclosed:"Multiple unclosed invoices",checkout_invalid_storage:"Invalid invoice storage state",checkout_active_after_evidence:"Active invoice after payment evidence"};
     if(checksMap&&typeof checksMap==="object"&&Object.keys(checksMap).length){
       $("integrity-status").textContent=data.integrity.issue_count===0?"No database inconsistencies detected.":String(data.integrity.issue_count)+" failed checks require review.";
       for(const [key,value] of Object.entries(checksMap)){

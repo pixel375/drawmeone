@@ -1,1 +1,1 @@
-Verify hosted invoice UI and unchanged closed gates; no real invoice or provider calls.
+Verify post-migration invoice follow-up and integrity checks. No provider calls.

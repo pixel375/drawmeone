@@ -306,7 +306,7 @@ jobs:
             echo "mobile_artist_desk=stale_or_missing_mobile_layout"
             exit 1
           }
-          [[ "$desk_page" == *'panel.js?v=43'* ]] &&
+          [[ "$desk_page" == *'panel.js?v=44'* ]] &&
           [[ "$desk_page" == *'id="artwork-filter"'* ]] &&
           [[ "$desk_page" == *'id="artwork-unpublish-selected"'* ]] || {
             echo "artist_artwork_library=stale_html"
@@ -316,7 +316,7 @@ jobs:
             echo "artist_artwork_library=stale_css"
             exit 1
           }
-          desk_js=$(curl -fsSL --max-time 15 "https://drawmeone.com/studio-admin/panel.js?v=43")
+          desk_js=$(curl -fsSL --max-time 15 "https://drawmeone.com/studio-admin/panel.js?v=44")
           [[ "$desk_js" == *'artwork-unpublish-selected'* ]] &&
           [[ "$desk_js" == *'No artworks match this view.'* ]] || {
             echo "artist_artwork_library=stale_js"
@@ -506,6 +506,7 @@ jobs:
           echo "integrity_dashboard=deployed"
           [[ "$desk_page" == *'id="retention-checks"'* ]] && [[ "$desk_js" == *'Retention inventory unavailable.'* ]] || { echo "retention_review=stale_assets"; exit 1; }
           [[ "$desk_js" == *'Publish invoice link'* ]] && [[ "$commission_js" == *'Open external invoice'* ]] || { echo "checkout_links=stale_assets"; exit 1; }
+          [[ "$desk_page" == *'id="stat-checkout"'* ]] || { echo "checkout_followup=stale_assets"; exit 1; }
           echo "checkout_links=deployed"
           php "$site/app/cli-retention.php" report
           php "$site/app/cli-integrity.php" check
