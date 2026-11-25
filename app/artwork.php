@@ -11,6 +11,15 @@ function dmo_artwork_upload_lock_name(PDO $db): string
 {
     return 'dmo-artwork-upload-'.substr(hash('sha256',(string)$db->query('SELECT DATABASE()')->fetchColumn()),0,40);
 }
+/** Read-only capability check, not proof of a successful disk write or image upload. */
+function dmo_artwork_runtime(): array
+{
+    $required=['imagecreatefromjpeg','imagecreatefrompng','imagecreatefromwebp','imagewebp','imagecreatetruecolor','imagecopyresampled','imageflip','imagerotate','getimagesize','hash_file'];
+    $missing=array_values(array_filter($required,static fn($name)=>!function_exists($name)));
+    return ['ready'=>extension_loaded('gd')&&class_exists('finfo')&&$missing===[],
+        'jpeg_orientation'=>function_exists('exif_read_data'),'missing_function_count'=>count($missing)];
+}
+
 function dmo_artwork_writes_enabled(): bool
 {
     return dmo_config('DMO_ARTWORK_WRITES_ENABLED') === '1';

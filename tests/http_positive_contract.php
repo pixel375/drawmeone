@@ -368,6 +368,13 @@ try {
     qa_positive($code===200&&in_array($replyId,array_map('intval',array_column($inbox['messages'],'id')),true),'reply_due_inbox_latest_only');
     [$code,$overview]=qa_http('/api/admin/overview.php',$tokenAdmin,'__Host-dmo_admin');
     qa_positive($code===200&&$overview['counts']['reply_due']===count($queue['requests']),'reply_due_count_matches_queue');
+    $checks=array_column($overview['readiness'],null,'key');
+    qa_positive(isset($checks['image_processor'])&&in_array($checks['image_processor']['status'],['ready','blocked'],true),'image_processing_readiness_present');
+    qa_positive($overview['launch_evidence']['authorizes_launch']===false,'runtime_report_never_authorizes_launch');
+    $opening=array_column($overview['launch_evidence']['stages'],null,'key')['opening'];
+    foreach(['pricing','mail','accounts','configuration_review','image_processor'] as $required){
+        if($checks[$required]['status']!=='ready')qa_positive(in_array($checks[$required]['label'],$opening['configuration_pending'],true),'opening_includes_'.$required);
+    }
     $db->prepare("UPDATE dmo_commission_requests SET status='in_progress' WHERE id=:id")->execute(['id'=>$requestA]);
     [$code,$productionQueue]=qa_http('/api/admin/requests.php?filter=reply_due',$tokenAdmin,'__Host-dmo_admin');
     qa_positive($code===200&&in_array($requestA,array_map('intval',array_column($productionQueue['requests'],'id')),true),'production_request_reply_due_visible');

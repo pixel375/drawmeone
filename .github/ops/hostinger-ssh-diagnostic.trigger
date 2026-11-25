@@ -1,1 +1,1 @@
-Verify retained delivery draft recovery and EXIF capability; read-only.
+Verify artist production queues, activity, customer follow-up and launch readiness; read-only.

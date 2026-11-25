@@ -57,7 +57,10 @@ function dmo_launch_overview(PDO $db): array
     $publicPresentation=dmo_design_presentation()==='published';
     $catalog=dmo_catalog_public($db);
     $configuration=dmo_config_review();
+    $media=dmo_artwork_runtime();
     $readiness = [
+        ['key'=>'image_processor','label'=>'Image processing runtime','status'=>$media['ready']?'ready':'blocked',
+         'detail'=>$media['ready']?'JPEG, PNG and WebP functions available; automatic JPEG orientation '.($media['jpeg_orientation']?'available':'unavailable').'; no upload or disk-write proof':'Required PHP image-processing functions or MIME inspection are unavailable'],
         ['key'=>'configuration_review','label'=>'Private configuration review','status'=>$configuration['issue_count']===0?'ready':'blocked','detail'=>$configuration['issue_count'].' configuration warning(s); review only, never launch approval'],
         ['key'=>'pricing','label'=>'Approved published estimates','status'=>dmo_catalog_approved()&&count($catalog['tiers'])>0?'ready':'blocked',
          'detail'=>count($catalog['tiers']).' valid public packages; custom quotes remain separate'],
@@ -141,7 +144,7 @@ function dmo_launch_evidence(array $readiness,array $intake,int $artworkCount,in
     $byKey=[];
     foreach($readiness as $check)$byKey[$check['key']]=$check;
     $spec=[
-        ['prepare','1. Preparation',['public_design','artwork','pricing','policy','backup','integrity','configuration_review'],[
+        ['prepare','1. Preparation',['public_design','artwork','pricing','policy','backup','integrity','configuration_review','image_processor'],[
             'Confirm final artwork permissions, service scope, price currency, business policies and artist-approved branding.',
             'Complete independent encrypted backup custody and recovery outside the hosting account.']],
         ['onboarding','2. Controlled onboarding',['mail','accounts'],[
@@ -152,11 +155,12 @@ function dmo_launch_evidence(array $readiness,array $intake,int $artworkCount,in
         ['payments','4. Payment arrangements',['manual_payments','hosted_checkout','payment_exceptions'],[
             'Select a receiving account/provider and verify the exact invoice amount, currency, account and external closure.',
             'Document manual reconciliation or provider-specific authenticated automatic verification before accepting payments.']],
-        ['delivery','5. Delivery and operations',['fulfillment','delivery_drafts','privacy_self_service'],[
+        ['delivery','5. Delivery and operations',['fulfillment','delivery_drafts','privacy_self_service','image_processor'],[
             'Verify private proof/final delivery, download authorization, financial hold and recovery with controlled accounts.',
             'Review retention, privacy, refunds and incident procedures.']],
-        ['opening','6. Public opening',['public_design','artwork','policy','integrity','backup'],[
+        ['opening','6. Public opening',['public_design','artwork','pricing','policy','integrity','backup','configuration_review','image_processor','mail','accounts','requests','quotes','orders','fulfillment','delivery_drafts','privacy_self_service'],[
             'Obtain explicit owner approval, review launch rollback settings, and separately approve search indexing.',
+            'Confirm independent recovery and the chosen payment arrangement; review all preceding stages and optional features before opening.',
             'Do not interpret configuration readiness as approval to open.']],
     ];
     $stages=[];
