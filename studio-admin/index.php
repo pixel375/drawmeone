@@ -20,7 +20,7 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
 <meta name="theme-color" content="#151317">
 <title>Artist's Desk · Draw Me One</title>
 <link rel="stylesheet" href="./panel.css?v=49">
-<script defer src="./panel.js?v=77"></script>
+<script defer src="./panel.js?v=78"></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to dashboard</a>
@@ -155,9 +155,11 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
       <div class="section-intro"><h2>Orders & requests</h2><p>Review customer briefs, private artist notes, and quote drafts. Customer submissions and quote sending stay closed.</p></div>
       <div id="request-customer-scope" hidden><p id="request-customer-label" class="small"></p><button id="request-customer-clear" type="button" class="quiet">Show all customers</button></div>
       <form id="request-list-filters" class="request-list-filters">
-        <label for="request-list-query">Find by reference or customer name
+        <label for="request-list-query">Find commissions
           <input id="request-list-query" type="search" maxlength="80" placeholder="Search commissions">
         </label>
+        <label for="request-list-scope">Search in<select id="request-list-scope"><option value="identity">Reference or customer name</option><option value="brief">Private commission brief</option><option value="package">Drawing type or package</option></select></label>
+        <label for="request-list-sort">Order by<select id="request-list-sort"><option value="queue">Queue priority</option><option value="newest">Newest first</option><option value="oldest">Oldest first</option><option value="deadline">Agreed delivery date</option></select></label>
         <label for="request-list-filter">Request status
           <select id="request-list-filter"><option value="all">All requests</option><option value="review">Needs review</option><option value="quote_waiting">Awaiting quote decision</option><option value="quote_followup">Quotes needing follow-up</option><option value="accepted">Accepted quote, no order</option><option value="orders">Active orders</option><option value="payment_review">Payments to reconcile</option><option value="payment_hold">Payment holds</option><option value="checkout_followup">Invoice follow-up</option><option value="due">Due soon or overdue</option><option value="reply_due">Customer reply needed</option><option value="overdue">Overdue</option><option value="upcoming">Due in next seven days</option><option value="revision_due">Revision requested</option><option value="proof_waiting">Proof awaiting customer</option><option value="scheduled">Agreed delivery agenda</option><option value="requested_dates">Requested dates (not agreed)</option><option value="needs_schedule">Active orders without agreed date</option><option value="paid_to_start">Paid orders awaiting production</option><option value="ready_to_deliver">Ready for delivery (paid)</option><option value="other">Other statuses</option></select>
         </label>

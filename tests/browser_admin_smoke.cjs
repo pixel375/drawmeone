@@ -519,7 +519,7 @@ async function verifyRequestList(browser) {
   await page.route("**/api/admin/requests.php*",route=>{
     const url=new URL(route.request().url());const q=url.searchParams.get("q");
     const n=Number(url.searchParams.get("page"));const filter=url.searchParams.get("filter");
-    queries.push({q,n,filter,...(url.searchParams.has('from_date')?{from:url.searchParams.get('from_date')}:{}),...(url.searchParams.has('to_date')?{to:url.searchParams.get('to_date')}:{})});
+    queries.push({q,n,filter,...(url.searchParams.has('from_date')?{from:url.searchParams.get('from_date')}:{}),...(url.searchParams.has('to_date')?{to:url.searchParams.get('to_date')}:{}),...(url.searchParams.has("scope")?{scope:url.searchParams.get("scope")}:{}),...(url.searchParams.has("sort")?{sort:url.searchParams.get("sort")}:{})});
     if(url.searchParams.get("format")==="calendar")return route.fulfill({status:200,contentType:"text/calendar",body:"BEGIN:VCALENDAR\r\nVERSION:2.0\r\nEND:VCALENDAR\r\n"});
     const row={id:n,public_ref:"CI-"+n,customer_name:q||"CI Customer",status:"submitted",order_deadline:"2027-01-10"};
     return route.fulfill({status:200,contentType:"application/json",
@@ -554,6 +554,10 @@ async function verifyRequestList(browser) {
     assert.equal(await page.locator(".request-agenda-date").innerText(),"2027-01-10");
     page.once("dialog",d=>d.accept());const download=page.waitForEvent("download");await page.locator("#request-agenda-export").click();
     assert.equal((await download).suggestedFilename(),"drawmeone-delivery-agenda.ics");
+    await page.locator("#request-schedule-from").fill("2027-01-02");assert.equal(await page.locator("#request-agenda-export").isEnabled(),false);
+    await page.locator("#request-list-filter").selectOption("all");await page.locator("#request-list-scope").selectOption("brief");await page.locator("#request-list-sort").selectOption("oldest");
+    await page.locator("#request-list-filters button[type=submit]").click();await page.waitForFunction(()=>document.querySelector("#request-list")?.textContent.includes("Synthetic name"));
+    assert.deepEqual(queries.at(-1),{q:"Synthetic name",n:1,filter:"all",scope:"brief",sort:"oldest"});
     const overflow=await horizontalOverflow(page);
     assert(overflow.measured<=overflow.available+3,JSON.stringify(overflow));
     assert.deepEqual(posts,[]);

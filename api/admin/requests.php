@@ -25,6 +25,8 @@ try {
     $format=$_GET['format']??'json';
     if(!is_string($format)||!in_array($format,['json','calendar'],true))dmo_json(422,['ok'=>false,'error'=>'invalid_request_list_format']);
     if($format==='calendar'&&($filter!=='scheduled'||$fromDate===null||$toDate===null||(new DateTimeImmutable($fromDate))->diff(new DateTimeImmutable($toDate))->days>365))dmo_json(422,['ok'=>false,'error'=>'calendar_range_required']);
+    $scope=$_GET['scope']??'identity';$order=$_GET['sort']??'queue';
+    if(!is_string($scope)||!in_array($scope,['identity','brief','package'],true)||!is_string($order)||!in_array($order,['queue','newest','oldest','deadline'],true)||!preg_match('//u',$search))dmo_json(422,['ok'=>false,'error'=>'invalid_request_search_options']);
     $search = trim($search);
     $page = (int) $pageText;
     $size = 40;
@@ -32,8 +34,11 @@ try {
     $params = [];
     if ($search !== '') {
         // LOCATE treats wildcard characters literally, and values are bound.
-        $where[] = '(LOCATE(:ref, r.public_ref) > 0 OR LOCATE(:name, u.display_name) > 0)';
-        $params = ['ref'=>$search, 'name'=>$search];
+        if($scope==='brief'){$where[]='LOCATE(:brief,r.brief)>0';$params['brief']=$search;}
+        elseif($scope==='package'){
+            $where[]="(LOCATE(:subject,REPLACE(r.subject_type,'_',' '))>0 OR LOCATE(:tier,COALESCE(NULLIF(TRIM(CASE WHEN JSON_VALID(r.tier_snapshot_json) THEN JSON_UNQUOTE(JSON_EXTRACT(r.tier_snapshot_json,'$.name')) ELSE NULL END),''),t.name,''))>0)";
+            $params=['subject'=>$search,'tier'=>$search];
+        }else{$where[]='(LOCATE(:ref, r.public_ref) > 0 OR LOCATE(:name, u.display_name) > 0)';$params=['ref'=>$search,'name'=>$search];}
     }
     if($customer!==null){$where[]="r.customer_id=:customer AND u.role='customer'";$params['customer']=(int)$customer;}
     $review = "r.status IN ('submitted','clarification_needed') AND NOT EXISTS (SELECT 1 FROM dmo_quotes q WHERE q.request_id=r.id AND q.status IN ('sent','accepted')) AND NOT EXISTS (SELECT 1 FROM dmo_orders o WHERE o.request_id=r.id)";
@@ -59,6 +64,7 @@ try {
     if($filter==='reply_due')$sort="(SELECT MAX(m.id) FROM dmo_messages m JOIN dmo_conversations c ON c.id=m.conversation_id WHERE c.request_id=r.id AND m.is_internal=0) ASC,r.id ASC";
     if(in_array($filter,['needs_schedule','paid_to_start','ready_to_deliver','revision_due'],true))$sort='o.agreed_deadline IS NULL ASC,o.agreed_deadline ASC,r.submitted_at ASC,r.id ASC';
     if(in_array($filter,['scheduled','requested_dates'],true))$sort=$dateColumn.' ASC,r.id ASC';
+    if(!in_array($filter,['scheduled','requested_dates'],true))$sort=match($order){'newest'=>'r.submitted_at DESC,r.id DESC','oldest'=>'r.submitted_at ASC,r.id ASC','deadline'=>'o.agreed_deadline IS NULL ASC,o.agreed_deadline ASC,r.id ASC',default=>$sort};
     if($format==='calendar'){
         $calendar=$db->prepare('SELECT r.public_ref,o.agreed_deadline AS order_deadline'.$from.$conditions.'ORDER BY '.$sort.' LIMIT 501');
         $calendar->execute($params);$events=$calendar->fetchAll();

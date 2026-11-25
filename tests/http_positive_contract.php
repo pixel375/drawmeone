@@ -143,6 +143,14 @@ try {
     qa_positive($code===200&&count($history['requests'])===1&&$history['requests'][0]['id']===$requestA,'customer_history_exact_id_scope');
     [$code,$history]=qa_http('/api/admin/requests.php?customer_id='.$admin,$tokenAdmin,'__Host-dmo_admin');
     qa_positive($code===200&&$history['requests']===[],'customer_history_excludes_admin');
+    [$code,$matches]=qa_http('/api/admin/requests.php?scope=brief&q='.urlencode('A private test drawing').'&sort=oldest',$tokenAdmin,'__Host-dmo_admin');
+    qa_positive($code===200&&array_column($matches['requests'],'id')===[$requestA],'artist_brief_search');
+    [$code,$matches]=qa_http('/api/admin/requests.php?scope=package&q=portrait&sort=oldest',$tokenAdmin,'__Host-dmo_admin');
+    qa_positive($code===200&&array_column($matches['requests'],'id')===[$requestA,$requestB],'artist_subject_search_and_oldest');
+    [$code]=qa_http('/api/admin/requests.php?scope=brief&q=portrait',$tokenA);
+    qa_positive(in_array($code,[401,403],true),'private_brief_search_artist_only');
+    [$code]=qa_http('/api/admin/requests.php?scope=invalid',$tokenAdmin,'__Host-dmo_admin');
+    qa_positive($code===422,'invalid_artist_search_scope');
     [$code]=qa_http('/api/admin/customers.php?state=invalid',$tokenAdmin,'__Host-dmo_admin');
     qa_positive($code===422,'customer_directory_invalid_filter_denied');
     [$code,$archived]=qa_http('/api/policy.php?version=qa-policy-v0&sha256='.$oldPin);

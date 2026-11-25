@@ -315,6 +315,9 @@
   let requestListPage = 1;
   let requestListQuery = "";
   let requestListFilter = "all";
+  let requestListScope="identity",requestListSort="queue";
+  function resetRequestSearchOptions(){requestListScope="identity";requestListSort="queue";$("request-list-scope").value="identity";$("request-list-sort").value="queue";}
+  function requestOptionsApplied(){return $("request-list-query").value.trim()===requestListQuery&&$("request-list-filter").value===requestListFilter&&$("request-list-scope").value===requestListScope&&$("request-list-sort").value===requestListSort&&$("request-schedule-from").value===requestScheduleFrom&&$("request-schedule-to").value===requestScheduleTo;}
   let requestListGeneration = 0;
   let requestScheduleFrom="",requestScheduleTo="";
   function isScheduleFilter(value){return ["scheduled","requested_dates"].includes(value);}
@@ -322,15 +325,18 @@
   function syncAgendaExport(){
     const button=$("request-agenda-export");
     button.hidden=requestListFilter!=="scheduled";
-    button.disabled=agendaExportBusy||requestListFilter!=="scheduled"||!requestScheduleFrom||!requestScheduleTo||requestScheduleFrom>requestScheduleTo;
+    button.disabled=agendaExportBusy||requestListFilter!=="scheduled"||!requestScheduleFrom||!requestScheduleTo||requestScheduleFrom>requestScheduleTo||!requestOptionsApplied();
   }
   function syncScheduleFilter(reset=false){
     const visible=isScheduleFilter($("request-list-filter").value);
     $("request-schedule-range").hidden=!visible;
-    if(reset||!visible){$("request-schedule-from").value="";$("request-schedule-to").value="";requestScheduleFrom=requestScheduleTo="";}
+    if(reset||!visible){$("request-schedule-from").value="";$("request-schedule-to").value="";if(reset)requestScheduleFrom=requestScheduleTo="";}
+    $("request-list-sort").disabled=visible;
     syncAgendaExport();
   }
   $("request-list-filter").addEventListener("change",()=>syncScheduleFilter());
+  $("request-list-filters").addEventListener("input",syncAgendaExport);
+  $("request-list-filters").addEventListener("change",syncAgendaExport);
 
   function workflowLabel(stage) {
     const labels={submitted:"Awaiting review",clarification_needed:"Clarification needed",
@@ -357,6 +363,8 @@
       const query = new URLSearchParams({page:String(requestListPage),
         q:requestListQuery,filter:requestListFilter});
       if(requestCustomerId!==null)query.set("customer_id",String(requestCustomerId));
+      if(requestListScope!=="identity")query.set("scope",requestListScope);
+      if(requestListSort!=="queue")query.set("sort",requestListSort);
       if(isScheduleFilter(requestListFilter)){
         if(requestScheduleFrom)query.set("from_date",requestScheduleFrom);
         if(requestScheduleTo)query.set("to_date",requestScheduleTo);
@@ -412,16 +420,15 @@
     requestListFilter=button.dataset.requestQueue;
     $("request-list-query").value="";
     $("request-list-filter").value=requestListFilter;
-    syncScheduleFilter(true);
+    resetRequestSearchOptions();syncScheduleFilter(true);
     selectPanel("requests");
   }));
   $("request-list-filters").addEventListener("submit", event => {
     event.preventDefault();
-    requestListPage = 1;
-    requestListQuery = $("request-list-query").value.trim();
     const nextFilter=$("request-list-filter").value;
     const from=isScheduleFilter(nextFilter)?$("request-schedule-from").value:"",to=isScheduleFilter(nextFilter)?$("request-schedule-to").value:"";
     if(from&&to&&from>to){$("request-list-status").textContent="From date must not be after through date.";return;}
+    requestListPage=1;requestListQuery=$("request-list-query").value.trim();requestListScope=$("request-list-scope").value;requestListSort=$("request-list-sort").value;
     requestListFilter=nextFilter;requestScheduleFrom=from;requestScheduleTo=to;
     requests();
   });
@@ -437,6 +444,7 @@
     if(!window.confirm("Download agreed dates and commission references for the applied search and date range? This file can contain private business information. Import only into a trusted calendar; future changes are not synchronized."))return;
     const query=new URLSearchParams({filter:"scheduled",format:"calendar",q:requestListQuery,from_date:requestScheduleFrom,to_date:requestScheduleTo});
     if(requestCustomerId!==null)query.set("customer_id",String(requestCustomerId));
+    if(requestListScope!=="identity")query.set("scope",requestListScope);
     agendaExportBusy=true;syncAgendaExport();
     try{
       const response=await fetch("../api/admin/requests.php?"+query,{cache:"no-store",credentials:"same-origin"});
@@ -2495,7 +2503,7 @@
         const card=document.createElement("article");card.className="notification-card";card.dataset.customerId=String(row.id);
         card.append(textNode("strong",row.display_name||"Customer"),textNode("p",row.email||"","small"),textNode("p","Account #"+row.id+" · "+String(row.account_status).replaceAll("_"," ")+" · "+(row.email_verified?"Email verified":"Email not verified"),"small"),textNode("p",row.request_count+" commission request(s)"+(row.last_request_at?" · Latest: "+row.last_request_at:""),"small"));
         const btn=textNode("button","View commission history","quiet");btn.type="button";btn.disabled=row.request_count===0;
-        btn.addEventListener("click",()=>{if(!setRequestCustomer(row.id))return;requestListPage=1;requestListQuery="";requestListFilter="all";$("request-list-query").value="";$("request-list-filter").value="all";syncScheduleFilter(true);selectPanel("requests");});card.append(btn);list.append(card);
+        btn.addEventListener("click",()=>{if(!setRequestCustomer(row.id))return;requestListPage=1;requestListQuery="";requestListFilter="all";$("request-list-query").value="";$("request-list-filter").value="all";resetRequestSearchOptions();syncScheduleFilter(true);selectPanel("requests");});card.append(btn);list.append(card);
       }
       customerCursor=Number.isSafeInteger(data.next_before)?data.next_before:null;next.hidden=customerCursor===null;status.textContent=list.children.length+" customer(s) loaded.";
     }catch(_){if(generation===customerGeneration){clearCustomers();next.disabled=false;status.textContent="Customer directory unavailable. Search again to retry.";}}
@@ -2542,7 +2550,7 @@
         card.append(textNode("strong",financeLabels[item.record_state]+" · "+financeAmount(item.amount_minor,item.currency)),
           textNode("p","Order #"+item.order_id+" · "+item.public_ref+" · "+String(item.method).replaceAll("_"," "),"small"),
           textNode("p","Recorded: "+item.created_at+(item.verified_at?" · Reviewed: "+item.verified_at:""),"small"));
-        const button=textNode("button","Open commission","quiet");button.type="button";button.addEventListener("click",()=>{if(!setRequestCustomer())return;requestListPage=1;requestListQuery="";requestListFilter="all";$("request-list-query").value="";$("request-list-filter").value="all";syncScheduleFilter(true);selectPanel("requests");openRequest(item.request_id);});card.append(button);$("finance-records").append(card);
+        const button=textNode("button","Open commission","quiet");button.type="button";button.addEventListener("click",()=>{if(!setRequestCustomer())return;requestListPage=1;requestListQuery="";requestListFilter="all";$("request-list-query").value="";$("request-list-filter").value="all";resetRequestSearchOptions();syncScheduleFilter(true);selectPanel("requests");openRequest(item.request_id);});card.append(button);$("finance-records").append(card);
       }
       financeCursor=Number.isSafeInteger(data.next_before)?data.next_before:null;
       financeReport={scope:"local_records_only",as_of:data.as_of,filter,currency};
