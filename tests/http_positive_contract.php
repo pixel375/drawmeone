@@ -618,6 +618,10 @@ try {
     qa_positive($code===200 && count($recent['detail']['messages'])===100 && $recent['detail']['messages_have_older']===true,'artist_recent_thread_bounded');
     [$code,$full]=qa_http('/api/admin/request.php?id='.$requestA.'&thread=full',$tokenAdmin,'__Host-dmo_admin');
     qa_positive($code===200 && count($full['detail']['messages'])===113,'artist_full_thread_includes_internal');
+    $activity=$full['detail']['activity'];
+    qa_positive(count($activity['events'])<=50&&in_array('Quote released to customer',array_column($activity['events'],'label'),true),'artist_activity_includes_quote_release');
+    foreach($activity['events'] as $event)qa_positive(array_keys($event)===['label','created_at'],'activity_event_minimal_fields');
+    qa_positive(!isset($customerDetail['activity']),'customer_detail_excludes_artist_activity');
     [$code,$messages]=qa_http('/api/admin/messages.php?filter=internal&page=1',$tokenAdmin,'__Host-dmo_admin');
     qa_positive($code===200 && count($messages['messages'])===50 && $messages['has_more']===true &&
         count(array_filter($messages['messages'],fn($m)=>(int)$m['is_internal']!==1))===0,'artist_message_filter_and_page');

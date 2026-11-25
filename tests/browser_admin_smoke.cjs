@@ -737,7 +737,7 @@ async function verifyDeliveryDraftManagement(browser) {
   let drafts=[];
   const answer=(route,data)=>route.fulfill({status:200,contentType:"application/json",body:JSON.stringify(data)});
   await page.route("**/api/admin/requests.php*",route=>answer(route,{ok:true,requests:[row]}));
-  await page.route("**/api/admin/request.php?*",route=>answer(route,{ok:true,delivery_staging_enabled:true,delivery_drafts:drafts,detail:{request:row,orders:[order],messages:[],quotes:[],references:[],addons:[]}}));
+  await page.route("**/api/admin/request.php?*",route=>answer(route,{ok:true,delivery_staging_enabled:true,delivery_drafts:drafts,detail:{request:row,orders:[order],messages:[],quotes:[],references:[],addons:[],activity:{events:[{label:"Unpaid order confirmed",created_at:"2026-11-25 12:00:00"}],has_older:true}}}));
   const stageKeys=[];
   await page.route("**/api/admin/delivery-draft.php",route=>{
     assert.equal(route.request().method(),"POST");
@@ -756,6 +756,9 @@ async function verifyDeliveryDraftManagement(browser) {
     await page.locator("#workspace").waitFor({state:"visible"});
     await page.locator('[data-view="requests"]').click();
     await page.locator("#request-list .request-open").first().click();
+    await page.locator("#request-activity-panel summary").click();
+    assert.match(await page.locator("#request-activity-list").innerText(),/Unpaid order confirmed/);
+    assert.equal(await page.locator("#request-activity-limit").isVisible(),true);
     await page.locator(".delivery-draft-form input").setInputFiles({name:"fixture.png",mimeType:"image/png",buffer:Buffer.from("synthetic image fixture")});
     await page.getByRole("button",{name:"Stage privately",exact:true}).click();
     await page.waitForFunction(()=>document.querySelector("#request-detail-status")?.textContent.includes("Draft upload not confirmed"));

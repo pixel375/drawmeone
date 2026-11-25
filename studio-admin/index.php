@@ -19,8 +19,8 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
 <meta name="robots" content="noindex,nofollow">
 <meta name="theme-color" content="#151317">
 <title>Artist's Desk · Draw Me One</title>
-<link rel="stylesheet" href="./panel.css?v=46">
-<script defer src="./panel.js?v=72"></script>
+<link rel="stylesheet" href="./panel.css?v=47">
+<script defer src="./panel.js?v=73"></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to dashboard</a>
@@ -224,6 +224,12 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
           <p class="small">Optional account-update notices for verified customers who prefer email. No brief, quote price, attachment or payment link is included.</p>
           <div id="request-notifications"><p class="small">No available notices.</p></div>
         </section>
+        <details class="request-brief request-activity" id="request-activity-panel">
+          <summary>Commission activity history</summary>
+          <p class="small">Most recent recorded workflow events. Artist-only; no message text or payment details.</p>
+          <ol id="request-activity-list" class="request-activity-list"></ol>
+          <p id="request-activity-limit" class="small" hidden>Showing the latest 50 recorded events; older records are retained.</p>
+        </details>
         <div class="request-columns">
           <section class="request-workpanel">
             <h4>Conversation & internal notes</h4>

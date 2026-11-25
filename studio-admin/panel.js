@@ -537,6 +537,19 @@
     }
   }
 
+  function renderRequestActivity(activity){
+    const root=$("request-activity-list");root.replaceChildren();
+    $("request-activity-limit").hidden=activity?.has_older!==true;
+    if(!Array.isArray(activity?.events)||!activity.events.length){
+      root.append(textNode("li","No recorded workflow events.","small"));return;
+    }
+    for(const event of activity.events){
+      if(typeof event.label!=="string"||typeof event.created_at!=="string")continue;
+      const entry=document.createElement("li");
+      entry.append(textNode("strong",event.label),textNode("small",event.created_at+" UTC"));
+      root.append(entry);
+    }
+  }
   function renderQuotes(records) {
     const root = $("request-quotes");
     root.replaceChildren();
@@ -1200,7 +1213,8 @@
       "request-tier","request-contact","request-deadline","request-brief-text","request-policy-status"]) {
       requestText(id, "—");
     }
-    for (const id of ["request-thread","request-quotes","request-references","request-orders","request-notifications","request-delivery-drafts","request-payment-records"]) {
+    $("request-activity-limit").hidden=true;
+    for (const id of ["request-thread","request-quotes","request-references","request-orders","request-notifications","request-delivery-drafts","request-payment-records","request-activity-list"]) {
       $(id).replaceChildren();
     }
   }
@@ -1281,6 +1295,7 @@
     requestText("request-brief-text", info.brief || "");
     renderThread(item.messages);
     renderQuotes(item.quotes);
+    renderRequestActivity(item.activity);
     renderRequestReferences(item.references);
     renderAdminOrders(item.orders, item.quotes);
     renderNotifications(data.notification_options,data.notifications_enabled===true);

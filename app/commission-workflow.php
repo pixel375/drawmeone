@@ -73,6 +73,36 @@ function dmo_workflow_review_choices(string $status, array $quotes, array $order
     };
 }
 
+/** Private, bounded event history. Never return raw audit JSON, identifiers or actor names. */
+function dmo_workflow_activity(PDO $db,int $id): array
+{
+    $labels=[
+        'request.submitted'=>'Commission submitted','request.review_status_changed'=>'Review status changed',
+        'request.customer_withdrawn'=>'Customer withdrew request','request.private_note_created'=>'Private artist note added',
+        'request.customer_message_sent'=>'Private conversation updated','request.reference_uploaded'=>'Reference image uploaded',
+        'request.reference_deleted'=>'Reference image removed','quote.draft_created'=>'Quote draft created',
+        'quote.published_to_customer'=>'Quote released to customer','quote.withdrawn'=>'Quote withdrawn',
+        'quote.customer_accepted'=>'Customer accepted quote','quote.customer_declined'=>'Customer declined quote',
+        'order.confirmed_unpaid'=>'Unpaid order confirmed','order.agreed_deadline_changed'=>'Agreed date changed',
+        'order.production_changed'=>'Production status changed','order.unpaid_cancelled'=>'Unpaid order cancelled',
+        'payment.manual_pending_verification'=>'Payment evidence recorded','payment.manual_verified'=>'Payment evidence verified by artist',
+        'payment.manual_rejected'=>'Payment evidence rejected','payment.access_held'=>'Payment access held',
+        'payment.access_restored'=>'Payment access restored','payment.full_refund_recorded'=>'External full refund recorded',
+        'checkout.active'=>'Hosted invoice recorded','checkout.revoked'=>'Hosted invoice revoked locally',
+        'delivery.draft_staged'=>'Artwork staged privately','delivery.draft_removed'=>'Private artwork draft removed',
+        'artwork.review_offered'=>'Watermarked proof offered','artwork.review_approved'=>'Proof approved',
+        'artwork.review_revision_requested'=>'Revision requested','delivery.released'=>'Final artwork released',
+        'notification.reserved'=>'Email notice attempt reserved','notification.accepted'=>'Mail server accepted notice',
+        'notification.failed'=>'Mail notice not confirmed',
+    ];
+    $placeholders=implode(',',array_fill(0,count($labels),'?'));
+    $q=$db->prepare("SELECT action,created_at FROM dmo_audit_log WHERE entity_type='commission_request' AND entity_id=? AND action IN ($placeholders) ORDER BY id DESC LIMIT 51");
+    $q->execute(array_merge([$id],array_keys($labels)));
+    $rows=$q->fetchAll();$older=count($rows)>50;
+    if($older)array_pop($rows);
+    return ['events'=>array_map(static fn($r)=>['label'=>$labels[$r['action']],'created_at'=>$r['created_at']],$rows),'has_older'=>$older];
+}
+
 function dmo_workflow_load(PDO $db, int $id, bool $fullThread = false): ?array
 {
     $request = dmo_workflow_request($db, $id);
@@ -140,6 +170,7 @@ function dmo_workflow_load(PDO $db, int $id, bool $fullThread = false): ?array
     return [
         'review_choices' => dmo_workflow_review_choices((string)$request['status'], $quotes, $orders),
         'messages_have_older' => $hasOlder,
+        'activity'=>dmo_workflow_activity($db,$id),
         'request' => $request,
         'addons' => $extra,
         'messages' => $thread,
