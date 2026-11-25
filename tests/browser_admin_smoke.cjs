@@ -642,6 +642,32 @@ async function verifyFinancialException(browser) {
   }finally{await page.close();}
 }
 
+async function verifyIntakeControl(browser){
+  const page=await browser.newPage({viewport:{width:320,height:844},reducedMotion:"reduce"});
+  const posts=[];await simulateBackend(page,posts);
+  const intake={control_enabled:true,version:3,paused:false,capacity:4,active_requests:2,requests_open:true,reason:"open"};
+  await page.route("**/api/admin/overview.php*",route=>route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({...mockAdmin["overview.php"],intake})}));
+  await page.route("**/api/admin/intake.php",route=>{
+    const body=route.request().postDataJSON();
+    assert.deepEqual(body,{expected_version:3,paused:true,capacity:6,confirm_change:true});
+    Object.assign(intake,{version:4,paused:true,capacity:6,requests_open:false,reason:"paused"});
+    return route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({ok:true,intake})});
+  });
+  try{
+    await page.goto(base+"/studio-admin/index.php",{waitUntil:"domcontentloaded"});
+    await page.locator("#intake-form").waitFor({state:"visible"});
+    assert.match(await page.locator("#intake-status").innerText(),/2 \/ 4 active/);
+    await page.locator("#intake-mode").selectOption("paused");
+    await page.locator("#intake-capacity").fill("6");
+    page.once("dialog",dialog=>dialog.accept());
+    await page.locator("#intake-save").click();
+    await page.waitForFunction(()=>document.querySelector("#intake-status")?.textContent.includes("Paused by artist"));
+    assert.match(await page.locator("#intake-status").innerText(),/2 \/ 6 active/);
+    assert.deepEqual(posts,[]);
+    console.log("PASS: artist intake control and mobile capacity form");
+  }finally{await page.close();}
+}
+
 async function verifyClosedDesk(browser) {
   const page=await browser.newPage({viewport:{width:390,height:844}});
   await page.route("**/api/admin/status.php*",route=>route.fulfill({
@@ -675,6 +701,7 @@ async function verifyClosedDesk(browser) {
     await verifyCustomerNotice(browser);
     await verifyDeliveryDraftManagement(browser);
     await verifyFinancialException(browser);
+    await verifyIntakeControl(browser);
     console.log("ADMIN_BROWSER_SMOKE=PASS");
   } finally {await browser.close();}
 })().catch(error=>{

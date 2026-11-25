@@ -19,8 +19,8 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
 <meta name="robots" content="noindex,nofollow">
 <meta name="theme-color" content="#151317">
 <title>Artist's Desk · Draw Me One</title>
-<link rel="stylesheet" href="./panel.css?v=35">
-<script defer src="./panel.js?v=37"></script>
+<link rel="stylesheet" href="./panel.css?v=36">
+<script defer src="./panel.js?v=38"></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to dashboard</a>
@@ -86,6 +86,19 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
         <article><span>MESSAGE ACTIVITY</span><strong id="stat-messages">—</strong><small>Last seven days, not an unread count</small></article>
       </div>
       <p class="small">Activity reflects actual records. No placeholder orders, customers or payments are created.</p>
+      <section class="launch-overview" aria-labelledby="intake-title">
+        <h3 id="intake-title">Commission availability</h3>
+        <p class="small" id="intake-status" role="status">Checking intake…</p>
+        <form id="intake-form" class="intake-form" hidden>
+          <label for="intake-mode">New requests</label>
+          <select id="intake-mode"><option value="paused">Paused</option><option value="open">Accept when capacity and launch gates allow</option></select>
+          <label for="intake-capacity">Maximum simultaneous active requests</label>
+          <input id="intake-capacity" type="number" min="1" max="100" step="1" required>
+          <p class="small">The limit counts requests that are not closed. Existing orders and customer access remain available when new requests are paused.</p>
+          <button class="quiet" type="submit" id="intake-save">Save intake settings</button>
+        </form>
+        <p class="small">This setting cannot enable customer registration, policy approval or commercial launch.</p>
+      </section>
       <section class="launch-overview" aria-labelledby="launch-overview-title">
         <div class="launch-overview-heading">
           <div>

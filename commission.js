@@ -846,7 +846,8 @@
         return;
       }
       const errors = {
-        commissions_closed:"New commission submissions are closed.",
+        commissions_closed:"New commission submissions are closed. Your existing requests are unaffected.",
+        commissions_at_capacity:"The artist is currently at capacity. Your form has been preserved; please try again later.",
         too_many_requests:"Too many attempts. Please try again later.",
         daily_request_limit:"Maximum three new requests per 24 hours.",
         customer_login_required:"Please sign in again to submit a request.",
@@ -903,7 +904,7 @@
           $("request-submit").disabled = false;
           displayStatus("Signed in · New commission requests are open for artist review.");
         } else {
-          displayStatus("New commissions are closed. You can still review your existing requests.");
+          displayStatus(state.service.intake_reason==="at_capacity"?"The artist is currently at capacity. You can still review your existing requests.":state.service.intake_reason==="paused"?"New requests are temporarily paused. Your existing commissions are unaffected.":"New commissions are closed. You can still review your existing requests.");
         }
         loadMyRequests();
       } else if (state.service.requests_open) {
@@ -913,7 +914,7 @@
       } else {
         $("request-closed").hidden = false;
         $("request-signin").hidden = true;
-        displayStatus("Commission intake is closed while the artist prepares the service.");
+        displayStatus(state.service.intake_reason==="at_capacity"?"The artist is currently at capacity. Please check back later.":state.service.intake_reason==="paused"?"The artist has temporarily paused new commissions. Please check back later.":"Commission intake is closed while the artist prepares the service.");
       }
     } catch (_) {
       $("request-closed").hidden = false;

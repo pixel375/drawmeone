@@ -296,17 +296,17 @@ jobs:
           echo "alternate_contact_layouts=3"
           # Verify mobile Artist Desk stylesheet was deployed and cache-busted.
           desk_page=$(curl -fsSL --max-time 15 "https://drawmeone.com/studio-admin/index.php")
-          [[ "$desk_page" == *'panel.css?v=35'* ]] || {
+          [[ "$desk_page" == *'panel.css?v=36'* ]] || {
             echo "mobile_artist_desk=stale_stylesheet_reference"
             exit 1
           }
-          desk_css=$(curl -fsSL --max-time 15 "https://drawmeone.com/studio-admin/panel.css?v=35")
+          desk_css=$(curl -fsSL --max-time 15 "https://drawmeone.com/studio-admin/panel.css?v=36")
           [[ "$desk_css" == *'v3.3: All six Artist Desk sections'* ]] &&
           [[ "$desk_css" == *'grid-template-columns:repeat(3,minmax(0,1fr))'* ]] || {
             echo "mobile_artist_desk=stale_or_missing_mobile_layout"
             exit 1
           }
-          [[ "$desk_page" == *'panel.js?v=37'* ]] &&
+          [[ "$desk_page" == *'panel.js?v=38'* ]] &&
           [[ "$desk_page" == *'id="artwork-filter"'* ]] &&
           [[ "$desk_page" == *'id="artwork-unpublish-selected"'* ]] || {
             echo "artist_artwork_library=stale_html"
@@ -316,7 +316,7 @@ jobs:
             echo "artist_artwork_library=stale_css"
             exit 1
           }
-          desk_js=$(curl -fsSL --max-time 15 "https://drawmeone.com/studio-admin/panel.js?v=37")
+          desk_js=$(curl -fsSL --max-time 15 "https://drawmeone.com/studio-admin/panel.js?v=38")
           [[ "$desk_js" == *'artwork-unpublish-selected'* ]] &&
           [[ "$desk_js" == *'No artworks match this view.'* ]] || {
             echo "artist_artwork_library=stale_js"
@@ -361,14 +361,14 @@ jobs:
           # Public commission intake remains closed, but its signed-in history
           # assets must include the new browser-only filters and status labels.
           commission_page=$(curl -fsSL --max-time 15 "https://drawmeone.com/commission.html")
-          [[ "$commission_page" == *'commission.js?v=34'* ]] &&
+          [[ "$commission_page" == *'commission.js?v=35'* ]] &&
           [[ "$commission_page" == *'commission.css?v=28'* ]] &&
           [[ "$commission_page" == *'id="request-history-search"'* ]] &&
           [[ "$commission_page" == *'id="request-history-filter"'* ]] || {
             echo "customer_history=stale_html"
             exit 1
           }
-          commission_js=$(curl -fsSL --max-time 15 "https://drawmeone.com/commission.js?v=34")
+          commission_js=$(curl -fsSL --max-time 15 "https://drawmeone.com/commission.js?v=35")
           [[ "$commission_js" == *'function renderRequestHistory()'* ]] &&
           [[ "$commission_js" == *'readableRequestStatus(r.workflow_stage || r.status)'* ]] &&
           [[ "$commission_js" == *'requestsFetchSequence'* ]] || {
@@ -495,6 +495,8 @@ jobs:
             echo "integrity_dashboard=stale_assets"
             exit 1
           }
+          [[ "$desk_page" == *'id="intake-form"'* ]] && [[ "$desk_js" == *'function renderIntake(data)'* ]] && [[ "$commission_js" == *'commissions_at_capacity'* ]] || { echo "intake_control=stale_assets"; exit 1; }
+          echo "intake_control=deployed"
           echo "integrity_dashboard=deployed"
           php "$site/app/cli-integrity.php" check
           echo "READ_ONLY_DIAGNOSTIC_COMPLETED"

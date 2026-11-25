@@ -1,1 +1,1 @@
-Verify account security assets, integrity checks and unchanged commercial gates. Read-only.
+Verify artist intake controls, public status and existing closed commercial gates. Read-only.

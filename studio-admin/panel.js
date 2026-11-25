@@ -67,10 +67,45 @@
     container.appendChild(item);
   }
 
+  let intakeVersion=null,intakeBusy=false;
+  function renderIntake(data){
+    const form=$("intake-form"),notice=$("intake-status");
+    const configured=data?.control_enabled===true;
+    form.hidden=!configured;intakeVersion=configured&&Number.isSafeInteger(data.version)?data.version:null;
+    if(!configured){notice.textContent=data?.requests_open?"Open under existing launch configuration. Artist capacity control is not enabled.":"New commissions are closed. Artist capacity control is not enabled.";return;}
+    $("intake-mode").value=data.paused?"paused":"open";
+    $("intake-capacity").value=String(data.capacity);
+    const label={open:"Accepting new requests",paused:"Paused by artist",at_capacity:"At capacity",not_available:"Commercial launch gates remain closed"};
+    notice.textContent=(label[data.reason]||"Unavailable")+" · "+data.active_requests+" / "+data.capacity+" active requests.";
+    $("intake-save").disabled=intakeBusy||intakeVersion===null;
+  }
+  $("intake-form").addEventListener("submit",async event=>{
+    event.preventDefault();
+    if(intakeBusy||intakeVersion===null||!csrf||!$("intake-form").reportValidity())return;
+    const paused=$("intake-mode").value==="paused",capacity=Number($("intake-capacity").value);
+    if(!Number.isSafeInteger(capacity)||capacity<1||capacity>100)return;
+    if(!window.confirm("Save these intake settings? Existing orders and commercial launch gates remain unchanged."))return;
+    intakeBusy=true;
+    for(const field of $("intake-form").querySelectorAll("input,select,button"))field.disabled=true;
+    try{
+      const {response,data}=await post("intake.php",{expected_version:intakeVersion,paused,capacity,confirm_change:true},csrf);
+      if(response.status===401)return sessionExpired();
+      if(!response.ok||!data.ok){
+        $("intake-status").textContent=response.status===409?"Settings changed elsewhere. Refresh readiness before retrying.":"Settings not confirmed. Refresh readiness before retrying.";
+        intakeVersion=null;return;
+      }
+      renderIntake(data.intake);
+    }catch(_){intakeVersion=null;$("intake-status").textContent="Outcome uncertain. Refresh readiness before retrying.";}
+    finally{
+      intakeBusy=false;for(const field of $("intake-form").querySelectorAll("input,select,button"))field.disabled=false;
+      $("intake-save").disabled=intakeVersion===null;
+    }
+  });
   async function overview() {
     const { response, data } = await get("overview.php");
     if (response.status === 401) return sessionExpired();
     if (!response.ok || !data.ok) return showError("Unable to load live studio counts.");
+    if(!intakeBusy)renderIntake(data.intake);
     const counters = {
       "stat-requests": data.counts?.requests_for_review,
       "stat-orders": data.counts?.active_orders,
