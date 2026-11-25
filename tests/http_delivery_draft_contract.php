@@ -251,6 +251,12 @@ try {
     [$code,$offered]=ref_http('/api/admin/request-actions.php',$artistCookie,$offer,$artistCsrf);
     ref_assert($code===201,'artist_offers_private_proof');
     $reviewId=$offered['review_id'];
+    require_once dirname(__DIR__).'/app/notifications.php';
+    $db->prepare("UPDATE dmo_commission_requests SET preferred_contact='email' WHERE id=:id")->execute(['id'=>$requestA]);
+    ref_assert(dmo_notification_target($db,$requestA,'proof',$reviewId)!==null,'proof_notice_target_eligible');
+    ref_assert(dmo_notification_target($db,$requestB,'proof',$reviewId)===null,'proof_notice_cross_request_denied');
+    [$code,$noticeDetail]=ref_http('/api/admin/request.php?id='.$requestA,$artistCookie);
+    ref_assert($code===200&&count(array_filter($noticeDetail['notification_options'],fn($n)=>$n['kind']==='proof'&&$n['event_id']===$reviewId))===1,'proof_notice_listed');
     [$code,$json,$bytes,$headers]=ref_http('/api/artwork-review.php?id='.$reviewId,$cookieA);
     ref_assert($code===200 && substr($bytes,8,4)==='WEBP' && str_contains(strtolower($headers),'no-store'),'customer_sees_watermarked_proof');
     [$code]=ref_http('/api/artwork-review.php?id='.$reviewId,$cookieB);
@@ -264,6 +270,7 @@ try {
     ref_assert($code===403,'review_requires_csrf');
     [$code]=ref_http('/api/artwork-review.php',$cookieA,$decision,$csrfA);
     ref_assert($code===200,'customer_uses_included_revision');
+    ref_assert(dmo_notification_target($db,$requestA,'proof',$reviewId)===null,'responded_proof_notice_denied');
     [$code]=ref_http('/api/artwork-review.php',$cookieA,$decision,$csrfA);
     ref_assert($code===409,'revision_replay_denied');
     [$code,$saved]=ref_http('/api/admin/delivery-draft.php',$artistCookie,null,$artistCsrf,$upload);
@@ -290,6 +297,8 @@ try {
     [$code,$result]=ref_http('/api/admin/request-actions.php',$artistCookie,$release,$artistCsrf);
     ref_assert($code===201 && $result['status']==='completed' && $result['customer_visible']===true,'final_release_completes_order');
     $delivery=$result['delivery_id'];
+    ref_assert(dmo_notification_target($db,$requestA,'delivery',$delivery)!==null,'completed_delivery_notice_eligible');
+    ref_assert(dmo_notification_target($db,$requestB,'delivery',$delivery)===null,'delivery_notice_cross_request_denied');
     [$code,$data]=ref_http('/api/request.php?ref='.$refA,$cookieA);
     ref_assert($code===200 && count($data['deliveries'])===1 && $data['deliveries'][0]['id']===$delivery && !isset($data['deliveries'][0]['storage_key']),'owner_sees_safe_delivery_metadata');
     [$code,$json,$bytes,$headers]=ref_http('/api/delivery.php?id='.$delivery,$cookieA);
@@ -307,6 +316,7 @@ try {
     ref_assert(in_array($code,[401,403],true),'customer_cannot_change_payment_hold');
     [$code]=ref_http('/api/admin/request-actions.php',$artistCookie,$hold,$artistCsrf);
     ref_assert($code===200,'artist_records_payment_hold');
+    ref_assert(dmo_notification_target($db,$requestA,'delivery',$delivery)===null,'payment_hold_blocks_delivery_notice');
     [$code]=ref_http('/api/delivery.php?id='.$delivery,$cookieA);
     ref_assert($code===404,'hold_revokes_future_download');
     [$code,$data]=ref_http('/api/request.php?ref='.$refA,$cookieA);

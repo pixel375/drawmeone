@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 require_once __DIR__ . '/commission-workflow.php';
+require_once __DIR__.'/deliveries.php';
 
 // Optional, explicit artist-triggered transactional notices. No automatic mail,
 // no arbitrary recipient/body, and no payment or order state mutation.
@@ -17,6 +18,9 @@ function dmo_notification_template(string $kind): array
             "A commission quote is available in your private Draw Me One account."],
         'order' => ['Draw Me One - order update',
             "There is an order update in your private Draw Me One account."],
+        'message' => ['Draw Me One - new account message',"There is a new message from the artist in your private Draw Me One account."],
+        'proof' => ['Draw Me One - artwork review',"Artwork is available for review in your private Draw Me One account."],
+        'delivery' => ['Draw Me One - artwork update',"Your finished artwork is available in your private Draw Me One account."],
         default => throw new InvalidArgumentException('Unknown notification kind'),
     };
 }
@@ -38,14 +42,14 @@ function dmo_notification_status(PDO $db,int $requestId,string $kind,int $eventI
 
 function dmo_notification_target(PDO $db,int $requestId,string $kind,int $eventId): ?array
 {
-    $query=$db->prepare("SELECT r.status,r.preferred_contact,r.policy_version,u.email " .
+    $query=$db->prepare("SELECT r.status,r.preferred_contact,r.policy_version,r.customer_id,u.email " .
         "FROM dmo_commission_requests r JOIN dmo_users u ON u.id=r.customer_id " .
         "WHERE r.id=:id AND u.role='customer' AND u.account_status='active' " .
         "AND u.email_verified_at IS NOT NULL LIMIT 1");
     $query->execute(['id'=>$requestId]);
     $row=$query->fetch(PDO::FETCH_ASSOC);
     if (!is_array($row) || $row['preferred_contact']!=='email' ||
-        !dmo_messages_request_open((string)$row['status']) ||
+        ($kind==='delivery'?$row['status']!=='completed':!dmo_messages_request_open((string)$row['status'])) ||
         !dmo_policy_request_eligible($db,$requestId,(string)$row['policy_version']) ||
         filter_var($row['email'],FILTER_VALIDATE_EMAIL)===false) return null;
     if ($kind==='quote') {
@@ -56,8 +60,21 @@ function dmo_notification_target(PDO $db,int $requestId,string $kind,int $eventI
     } elseif ($kind==='order') {
         $event=$db->prepare("SELECT id FROM dmo_orders WHERE request_id=:id AND id=:event " .
             "AND status='awaiting_arrangement' AND payment_status='unverified'");
+    } elseif($kind==='message'){
+        if(!dmo_workflow_messaging_enabled())return null;
+        $event=$db->prepare("SELECT m.id FROM dmo_messages m JOIN dmo_conversations c ON c.id=m.conversation_id JOIN dmo_users u ON u.id=m.sender_id
+            WHERE c.request_id=:id AND m.id=:event AND m.is_internal=0 AND u.role='admin'
+            AND NOT EXISTS(SELECT 1 FROM dmo_messages later WHERE later.conversation_id=c.id AND later.is_internal=0 AND later.id>m.id)");
+    } elseif($kind==='proof'){
+        if(!dmo_review_enabled($db))return null;
+        $event=$db->prepare('SELECT v.id'.dmo_review_owner_query().' AND r.id=:id AND v.id=:event');
+    } elseif($kind==='delivery'){
+        if(!dmo_delivery_release_ready($db))return null;
+        $event=$db->prepare('SELECT f.id'.dmo_delivery_customer_query().' AND r.id=:id AND f.id=:event');
     } else return null;
-    $event->execute(['id'=>$requestId,'event'=>$eventId]);
+    $args=['id'=>$requestId,'event'=>$eventId];
+    if(in_array($kind,['proof','delivery'],true))$args['customer']=(int)$row['customer_id'];
+    $event->execute($args);
     return $event->fetchColumn()===false ? null : $row;
 }
 
@@ -75,6 +92,24 @@ function dmo_notification_options(PDO $db,array $detail): array
                 'can_send'=>$status==='not_sent' && dmo_notifications_enabled() &&
                     dmo_notification_target($db,$id,$kind,$eventId)!==null];
         }
+    }
+    // Only the latest public artist message is a current message notice.
+    $q=$db->prepare("SELECT m.id,u.role FROM dmo_messages m JOIN dmo_conversations c ON c.id=m.conversation_id
+        JOIN dmo_users u ON u.id=m.sender_id WHERE c.request_id=:id AND m.is_internal=0 ORDER BY m.id DESC LIMIT 1");
+    $q->execute(['id'=>$id]);$latest=$q->fetch(PDO::FETCH_ASSOC);
+    $events=[];
+    if(is_array($latest)&&$latest['role']==='admin')$events[]=['message',(int)$latest['id']];
+    if(dmo_review_schema_ready($db)){
+        $q=$db->prepare("SELECT v.id FROM dmo_artwork_reviews v JOIN dmo_orders o ON o.id=v.order_id WHERE o.request_id=:id AND v.status='pending' ORDER BY v.id DESC LIMIT 4");
+        $q->execute(['id'=>$id]);foreach($q->fetchAll(PDO::FETCH_COLUMN) as $event)$events[]=['proof',(int)$event];
+    }
+    if(dmo_delivery_schema_ready($db)){
+        $q=$db->prepare("SELECT f.id FROM dmo_deliverables f JOIN dmo_orders o ON o.id=f.order_id WHERE o.request_id=:id AND o.status='completed' ORDER BY f.id DESC LIMIT 4");
+        $q->execute(['id'=>$id]);foreach($q->fetchAll(PDO::FETCH_COLUMN) as $event)$events[]=['delivery',(int)$event];
+    }
+    foreach($events as [$kind,$eventId]){
+        $status=dmo_notification_status($db,$id,$kind,$eventId);
+        $options[]=['kind'=>$kind,'event_id'=>$eventId,'status'=>$status,'can_send'=>$status==='not_sent'&&dmo_notifications_enabled()&&dmo_notification_target($db,$id,$kind,$eventId)!==null];
     }
     return $options;
 }
@@ -119,7 +154,7 @@ function dmo_notification_send(PDO $db,array $admin,int $requestId,array $input)
 {
     if (count($input)!==5 || array_diff(array_keys($input),
         ['action','request_id','kind','event_id','confirm_send'])!==[] ||
-        !in_array($input['kind']??null,['quote','order'],true) ||
+        !in_array($input['kind']??null,['quote','order','message','proof','delivery'],true) ||
         ($input['confirm_send']??null)!==true) {
         dmo_json(422,['ok'=>false,'error'=>'invalid_notification_request']);
     }

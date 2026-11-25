@@ -1016,7 +1016,7 @@
     root.replaceChildren();
     if(!enabled)root.append(textNode("p","Customer email notices are disabled until approved.","small"));
     if(!Array.isArray(options)||!options.length){
-      root.append(textNode("p","No current quote or unpaid order notice is available.","small"));
+      root.append(textNode("p","No current account-update notice is available.","small"));
       return;
     }
     const statusLabels={not_sent:"Not sent",accepted:"Accepted by mail server; inbox delivery not confirmed",
@@ -1025,7 +1025,7 @@
     for(const option of options){
       const card=document.createElement("article");
       card.className="notification-card";
-      card.append(textNode("strong",(option.kind==="quote"?"Quote":"Order")+" #"+option.event_id),
+      card.append(textNode("strong",({quote:"Quote",order:"Order",message:"Private message",proof:"Artwork review",delivery:"Final artwork"}[option.kind]||"Account update")+" #"+option.event_id),
         textNode("p",statusLabels[option.status]||"Unknown status","small"));
       if(option.can_send===true&&enabled){
         const button=textNode("button","Send account-update email","quiet");
@@ -1034,7 +1034,7 @@
         button.addEventListener("click",()=>sendCustomerNotice(option));
         card.append(button);
       }else if(enabled&&option.status==="not_sent"){
-        card.append(textNode("p","Not eligible: check customer email preference, verification and current offer/order status.","small"));
+        card.append(textNode("p","Not eligible: check customer email preference, verification and current account-update status.","small"));
       }
       root.append(card);
     }

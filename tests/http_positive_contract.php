@@ -320,6 +320,18 @@ try {
     qa_positive(dmo_notification_reserve($db,$admin,$requestB,'quote',$quoteId)['status']==='ineligible',
         'cross_request_notice_rejected');
     $db->prepare("UPDATE dmo_commission_requests SET preferred_contact='onsite' WHERE id=:id")->execute(['id'=>$requestA]);
+    // A private artist note never qualifies for a customer email.
+    $db->prepare("UPDATE dmo_commission_requests SET preferred_contact='email' WHERE id=:id")->execute(['id'=>$requestA]);
+    $q=$db->prepare("SELECT id FROM dmo_conversations WHERE request_id=:id");$q->execute(['id'=>$requestA]);$conv=(int)$q->fetchColumn();
+    if(!$conv){$conv=qa_seed($db,"INSERT INTO dmo_conversations (request_id) VALUES (:id)",['id'=>$requestA]);}
+    $messageId=qa_seed($db,"INSERT INTO dmo_messages (conversation_id,sender_id,body,is_internal) VALUES (:conv,:sender,'Synthetic notice message',0)",['conv'=>$conv,'sender'=>$admin]);
+    $internalId=qa_seed($db,"INSERT INTO dmo_messages (conversation_id,sender_id,body,is_internal) VALUES (:conv,:sender,'Synthetic internal note',1)",['conv'=>$conv,'sender'=>$admin]);
+    qa_positive(dmo_notification_target($db,$requestA,'message',$messageId)!==null,'latest_public_artist_message_notice');
+    qa_positive(dmo_notification_target($db,$requestA,'message',$internalId)===null,'internal_note_never_notified');
+    $replyId=qa_seed($db,"INSERT INTO dmo_messages (conversation_id,sender_id,body,is_internal) VALUES (:conv,:sender,'Synthetic customer response',0)",['conv'=>$conv,'sender'=>$a]);
+    qa_positive(dmo_notification_target($db,$requestA,'message',$messageId)===null,'customer_reply_invalidates_message_notice');
+    $db->prepare("DELETE FROM dmo_messages WHERE id IN (:a,:b,:c)")->execute(['a'=>$messageId,'b'=>$internalId,'c'=>$replyId]);
+    $db->prepare("UPDATE dmo_commission_requests SET preferred_contact='onsite' WHERE id=:id")->execute(['id'=>$requestA]);
     $oldQuote=$quoteId;
     $db->prepare('UPDATE dmo_quotes SET validity_ends_at=DATE_SUB(UTC_TIMESTAMP(),INTERVAL 1 DAY) WHERE id=:id')->execute(['id'=>$oldQuote]);
     [$code,$expired]=qa_http('/api/request.php?ref='.urlencode($referenceA),$tokenA);

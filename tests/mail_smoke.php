@@ -24,4 +24,12 @@ if (in_array(false, $checks, true)) {
     fwrite(STDERR, "MAIL_FORMAT_SMOKE=FAIL\n");
     exit(1);
 }
+require_once dirname(__DIR__).'/app/notifications.php';
+foreach(['quote','order','message','proof','delivery'] as $kind){
+    [$subject,$body]=dmo_notification_template($kind);
+    if(!str_starts_with($subject,'Draw Me One - ')||!str_contains($body,'private Draw Me One account')||str_contains($body,'
+)){
+        fwrite(STDERR,"NOTICE_FORMAT_SMOKE=FAIL\n");exit(1);
+    }
+}
 echo "MAIL_FORMAT_SMOKE=PASS\n";

@@ -1,1 +1,1 @@
-Verify launch configuration reporting and bounded live deployment synchronization; read-only.
+Verify extended opt-in notice templates and assets, read-only.
