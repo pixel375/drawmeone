@@ -1,1 +1,1 @@
-Verify customer and artist privacy history.
+Verify artist read-only finance report and corrected privacy browser regression.

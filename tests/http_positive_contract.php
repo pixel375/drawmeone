@@ -592,6 +592,11 @@ try {
     qa_positive($code===409,'partial_payment_not_accepted');
     [$code,$pending]=qa_http('/api/admin/request-actions.php',$tokenAdmin,'__Host-dmo_admin',$evidence,$csrfAdmin);
     qa_positive($code===201 && $pending['status']==='pending_verification' && $pending['payment_status']==='unverified','payment_evidence_not_payment_confirmation');
+    [$code]=qa_http('/api/admin/finance.php',$tokenA,'__Host-dmo_admin');
+    qa_positive(in_array($code,[401,403],true),'finance_admin_only');
+    [$code,$finance]=qa_http('/api/admin/finance.php?state=pending&currency=CAD',$tokenAdmin,'__Host-dmo_admin');
+    qa_positive($code===200&&count($finance['records'])===1&&$finance['records'][0]['record_state']==='pending'&&$finance['summary'][0]['amount_minor']===3000,'finance_pending_not_reconciled');
+    qa_positive(!str_contains(json_encode($finance,JSON_THROW_ON_ERROR),'manual-hmac-v1')&&!str_contains(json_encode($finance,JSON_THROW_ON_ERROR),'CI-ONLY-TRANSACTION'),'finance_excludes_provider_reference');
     [$code]=qa_http('/api/checkout.php?id='.$checkoutId,$tokenA);
     qa_positive($code===404,'pending_evidence_suspends_invoice');
     $q=$db->prepare('SELECT status,url_ciphertext FROM dmo_checkout_links WHERE id=:id');$q->execute(['id'=>$checkoutId]);$suspended=$q->fetch(PDO::FETCH_ASSOC);
@@ -619,6 +624,14 @@ try {
     qa_positive($code===200 && $customerPaid['orders'][0]['payment_status']==='paid' &&
         !str_contains(json_encode($customerPaid,JSON_THROW_ON_ERROR),'CI-ONLY-TRANSACTION') &&
         !str_contains(json_encode($customerPaid,JSON_THROW_ON_ERROR),'manual-hmac-v1'),'customer_sees_paid_without_private_evidence');
+    [$code,$finance]=qa_http('/api/admin/finance.php?state=reconciled&currency=CAD',$tokenAdmin,'__Host-dmo_admin');
+    qa_positive($code===200&&count($finance['records'])===1&&$finance['records'][0]['record_state']==='reconciled','finance_reconciled_record');
+    [$code,$none]=qa_http('/api/admin/finance.php?state=reconciled&currency=USD',$tokenAdmin,'__Host-dmo_admin');
+    qa_positive($code===200&&$none['records']===[],'finance_currency_filter');
+    [$code,$none]=qa_http('/api/admin/finance.php?before='.$finance['records'][0]['id'],$tokenAdmin,'__Host-dmo_admin');
+    qa_positive($code===200&&$none['records']===[],'finance_cursor');
+    [$code]=qa_http('/api/admin/finance.php?state=invalid',$tokenAdmin,'__Host-dmo_admin');
+    qa_positive($code===422,'finance_invalid_filter_denied');
     [$code]=qa_http('/api/admin/request-actions.php',$tokenAdmin,'__Host-dmo_admin',$confirm,$csrfAdmin);
     qa_positive($code===409,'paid_reconciliation_replay_denied');
     $db->prepare("UPDATE dmo_commission_requests SET status='completed' WHERE id=:id")

@@ -2183,6 +2183,65 @@
     finally{packageBusy=false;if(!leavingSession)packageSelect(packageSelected.kind,packageSelected.id);}
   });
 
+  let financeGeneration=0,financeCursor=null,financeRecords=[],financeReport=null;
+  const financeLabels={pending:"Awaiting verification",reconciled:"Reconciled",held:"On hold",refunded:"Full refund recorded",rejected:"Rejected evidence",review:"Needs review"};
+  function financeAmount(value,currency){
+    if(!Number.isSafeInteger(value)||value<0)return "Unavailable";
+    if(!["CAD","USD"].includes(currency))return String(value)+" minor units ("+String(currency)+")";
+    return currency+" "+(value/100).toLocaleString("en-CA",{minimumFractionDigits:2,maximumFractionDigits:2});
+  }
+  function clearFinance(){
+    ++financeGeneration;financeCursor=null;financeRecords=[];financeReport=null;
+    $("finance-summary").replaceChildren();$("finance-records").replaceChildren();
+    $("finance-next").hidden=true;$("finance-export").disabled=true;
+  }
+  async function loadFinance(older=false){
+    if(leavingSession||!csrf||(older&&financeCursor===null))return;
+    if(!older)clearFinance();
+    const generation=++financeGeneration,filter=$("finance-state").value,currency=$("finance-currency").value;
+    $("finance-next").disabled=$("finance-refresh").disabled=true;$("finance-export").disabled=true;
+    $("finance-status").textContent="Loading payment records…";
+    try{
+      const params=new URLSearchParams({state:filter,currency});
+      if(older)params.set("before",String(financeCursor));
+      const {response,data}=await get("finance.php?"+params);
+      if(generation!==financeGeneration||leavingSession)return;
+      if(response.status===401)return sessionExpired();
+      if(!response.ok||!data.ok||data.scope!=="local_records_only"||!Array.isArray(data.summary)||!Array.isArray(data.records))throw Error("finance_unavailable");
+      $("finance-summary").replaceChildren();
+      for(const group of data.summary){
+        if(!financeLabels[group.record_state])continue;
+        const card=document.createElement("article");card.className="launch-check";
+        card.append(textNode("strong",String(group.currency)+" · "+financeLabels[group.record_state]),textNode("p",financeAmount(group.amount_minor,group.currency)+" · "+group.record_count+" record(s)","small"));$("finance-summary").append(card);
+      }
+      for(const item of data.records){
+        if(!Number.isSafeInteger(item.id)||!Number.isSafeInteger(item.request_id)||!financeLabels[item.record_state]||financeRecords.some(row=>row.id===item.id))continue;
+        const clean={id:item.id,order_id:item.order_id,request_id:item.request_id,public_ref:item.public_ref,method:item.method,currency:item.currency,amount_minor:item.amount_minor,status:item.status,record_state:item.record_state,created_at:item.created_at,verified_at:item.verified_at};
+        financeRecords.push(clean);
+        const card=document.createElement("article");card.className="notification-card";
+        card.append(textNode("strong",financeLabels[item.record_state]+" · "+financeAmount(item.amount_minor,item.currency)),
+          textNode("p","Order #"+item.order_id+" · "+item.public_ref+" · "+String(item.method).replaceAll("_"," "),"small"),
+          textNode("p","Recorded: "+item.created_at+(item.verified_at?" · Reviewed: "+item.verified_at:""),"small"));
+        const button=textNode("button","Open commission","quiet");button.type="button";button.addEventListener("click",()=>{selectPanel("requests");openRequest(item.request_id);});card.append(button);$("finance-records").append(card);
+      }
+      financeCursor=Number.isSafeInteger(data.next_before)?data.next_before:null;
+      financeReport={scope:"local_records_only",as_of:data.as_of,filter,currency};
+      $("finance-next").hidden=financeCursor===null;
+      $("finance-status").textContent=financeRecords.length+" payment record(s) loaded · local evidence only.";
+      $("finance-export").disabled=financeRecords.length===0;
+    }catch(_){if(generation===financeGeneration){clearFinance();$("finance-status").textContent="Payment records unavailable. Refresh to retry.";}}
+    finally{if(generation===financeGeneration||financeReport===null){$("finance-next").disabled=$("finance-refresh").disabled=false;}}
+  }
+  $("finance-state").addEventListener("change",()=>loadFinance());
+  $("finance-currency").addEventListener("change",()=>loadFinance());
+  $("finance-refresh").addEventListener("click",()=>loadFinance());
+  $("finance-next").addEventListener("click",()=>loadFinance(true));
+  $("finance-export").addEventListener("click",()=>{
+    if(!financeReport||leavingSession||!financeRecords.length)return;
+    const url=URL.createObjectURL(new Blob([JSON.stringify({...financeReport,loaded_records_only:true,records:financeRecords},null,2)],{type:"application/json"}));
+    const link=document.createElement("a");link.href=url;link.download="drawmeone-payment-records.json";document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+  });
+
   function selectPanel(name) {
     clearError();
     document.querySelectorAll("[data-panel]").forEach(section => {
@@ -2198,6 +2257,7 @@
     if (name === "overview") overview().catch(() => showError("Connection unavailable."));
     if (name === "requests") requests().catch(() => showError("Connection unavailable."));
     if (name === "messages") messages().catch(() => showError("Connection unavailable."));
+    if(name==="finance")loadFinance();
     if (name === "settings") designLoad().catch(() => showError("Settings unavailable."));
     if (name === "settings") emailDiagnosticsLoad().catch(() => {
       $("mail-check-status").textContent = "Email diagnostics unavailable.";
@@ -2222,7 +2282,7 @@
     ++artworkGeneration;
     artworkRecords=[];artworkWriteEnabled=false;$("artwork-list").replaceChildren();
     renderLaunchEvidence(null);
-    clearPrivacyQueue();
+    clearPrivacyQueue();clearFinance();
     $("workspace").hidden = true;
     const url = new URL(location.href);
     url.search = "";

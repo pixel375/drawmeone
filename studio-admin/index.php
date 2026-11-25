@@ -19,8 +19,8 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
 <meta name="robots" content="noindex,nofollow">
 <meta name="theme-color" content="#151317">
 <title>Artist's Desk · Draw Me One</title>
-<link rel="stylesheet" href="./panel.css?v=42">
-<script defer src="./panel.js?v=54"></script>
+<link rel="stylesheet" href="./panel.css?v=43">
+<script defer src="./panel.js?v=55"></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to dashboard</a>
@@ -68,6 +68,7 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
       <button type="button" data-view="overview" aria-current="page">Overview</button>
       <button type="button" data-view="requests">Orders & quotes</button>
       <button type="button" data-view="messages">Messages</button>
+      <button type="button" data-view="finance">Payments</button>
       <button type="button" data-view="artwork">Artwork</button>
       <button type="button" data-view="packages">Services & pricing</button>
       <button type="button" data-view="settings">Website settings</button>
@@ -269,6 +270,20 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
         <span id="message-list-status" role="status" aria-live="polite">Loading messages…</span>
         <button type="button" class="quiet" id="message-list-next" disabled>Next</button>
       </div>
+    </section>
+
+    <section data-panel="finance" class="content-panel" hidden>
+      <div class="section-intro"><h2>Payment records</h2><p>Local reconciliation evidence only. No provider balances, accounting profit, fees, taxes or automatic payment verification. Amounts are never combined across currencies.</p></div>
+      <p class="small">All-time recorded evidence by current state. Refunded, held, pending, rejected and inconsistent amounts are separate from reconciled records. Totals are not a bank statement.</p>
+      <div id="finance-summary" class="launch-checks"></div>
+      <div class="request-list-filters">
+        <label for="finance-state">Record state<select id="finance-state"><option value="all">All records</option><option value="pending">Awaiting verification</option><option value="reconciled">Reconciled</option><option value="held">On hold</option><option value="refunded">Full refund recorded</option><option value="rejected">Rejected evidence</option><option value="review">Needs review</option></select></label>
+        <label for="finance-currency">Currency<select id="finance-currency"><option value="all">All currencies</option><option value="CAD">CAD</option><option value="USD">USD</option></select></label>
+        <button type="button" class="quiet" id="finance-refresh">Refresh records</button>
+      </div>
+      <p id="finance-status" class="small" role="status">Select Payments to load records.</p>
+      <div id="finance-records" class="record-list"></div>
+      <div class="request-list-pagination"><button type="button" class="quiet" id="finance-next" hidden>Load older records</button><button type="button" class="quiet" id="finance-export" disabled>Export loaded records (JSON)</button></div>
     </section>
 
     <section data-panel="artwork" class="content-panel" hidden>

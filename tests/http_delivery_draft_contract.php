@@ -325,6 +325,8 @@ try {
     ref_assert(in_array($code,[401,403],true),'customer_cannot_change_payment_hold');
     [$code]=ref_http('/api/admin/request-actions.php',$artistCookie,$hold,$artistCsrf);
     ref_assert($code===200,'artist_records_payment_hold');
+    [$code,$finance]=ref_http('/api/admin/finance.php?state=held',$artistCookie);
+    ref_assert($code===200&&count($finance['records'])===1&&$finance['records'][0]['record_state']==='held','finance_held_separate_from_reconciled');
     ref_assert(dmo_notification_target($db,$requestA,'delivery',$delivery)===null,'payment_hold_blocks_delivery_notice');
     [$code,$history]=ref_http('/api/requests.php',$cookieA);
     ref_assert($code===200&&!in_array($refA,$history['attention']['deliveries'],true),'customer_attention_hold_blocks_delivery');
@@ -342,6 +344,8 @@ try {
     $refund=array_replace($hold,['decision'=>'refund','reason'=>'full_external_refund']);
     [$code]=ref_http('/api/admin/request-actions.php',$artistCookie,$refund,$artistCsrf);
     ref_assert($code===200,'external_full_refund_recorded');
+    [$code,$finance]=ref_http('/api/admin/finance.php?state=refunded',$artistCookie);
+    ref_assert($code===200&&count($finance['records'])===1&&$finance['records'][0]['record_state']==='refunded','finance_refund_separate_from_reconciled');
     [$code]=ref_http('/api/delivery.php?id='.$delivery,$cookieA);
     ref_assert($code===404,'refund_blocks_future_download');
     [$code]=ref_http('/api/admin/request-actions.php',$artistCookie,$restore,$artistCsrf);

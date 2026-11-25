@@ -39,6 +39,7 @@ const mockAdmin = {
   },
   "requests.php": {ok:true,readonly:true,requests:[]},
   "messages.php": {ok:true,readonly:true,messages:[]},
+  "finance.php":{ok:true,readonly:true,scope:"local_records_only",as_of:"2026-11-25",summary:[{currency:"CAD",record_state:"reconciled",record_count:1,amount_minor:3000}],records:[{id:88,order_id:87,request_id:86,public_ref:"CI-86",method:"bank_transfer",currency:"CAD",amount_minor:3000,status:"verified",record_state:"reconciled",created_at:"2026-11-25",verified_at:"2026-11-25"}],next_before:null},
   "artworks.php": {
     ok:true,write_enabled:false,
     artworks:[
@@ -61,7 +62,7 @@ const mockAdmin = {
     customer_login_enabled:false,customer_registration_enabled:false
   }
 };
-const tabs = ["overview","requests","messages","artwork","packages","settings"];
+const tabs = ["overview","requests","messages","finance","artwork","packages","settings"];
 async function simulateBackend(page, observedPosts) {
   await page.route("**/api/admin/**", route => {
     if (route.request().method() !== "GET") {
@@ -165,6 +166,10 @@ async function verifyArtistDesk(browser, width) {
         assert.equal(await page.locator("#request-detail").isVisible(),false);
       } else if(name==="messages"){
         await page.locator("#message-list .empty-state").waitFor();
+      } else if(name==="finance"){
+        await page.locator("#finance-records article").first().waitFor();
+        assert.match(await page.locator("#finance-summary").innerText(),/CAD 30.00/);
+        assert.equal(await page.locator("#finance-export").isEnabled(),true);
       } else if(name==="artwork"){
         await page.locator("#artwork-list .artwork-library-card").first()
           .waitFor({state:"visible",timeout:12000});
@@ -666,10 +671,6 @@ async function verifyFinancialException(browser) {
     await form.getByRole("button",{name:"Record financial exception"}).click();
     await page.waitForFunction(()=>document.querySelector("#request-payment-records")?.textContent.includes("Full external refund recorded"));
     assert.equal(await form.count(),0);
-    await page.locator("#privacy-queue-view").selectOption("closed");
-    await page.waitForFunction(()=>document.querySelector("#privacy-queue-status")?.textContent.includes("1 closed"));
-    assert.equal(await form.count(),0);
-    assert.match(await page.locator("#privacy-queue").innerText(),/resolved/);
     assert.deepEqual(posts,[]);
     console.log("PASS: financial hold, restore and full external refund UI");
   }finally{await page.close();}
@@ -734,6 +735,10 @@ async function verifyPrivacyQueue(browser){
     assert.equal(await form.count(),0);
     assert.deepEqual(posts,[]);
     const result=await horizontalOverflow(page);assert(result.measured<=result.available+3,JSON.stringify(result));
+    await page.locator("#privacy-queue-view").selectOption("closed");
+    await page.waitForFunction(()=>document.querySelector("#privacy-queue-status")?.textContent.includes("1 closed"));
+    assert.equal(await form.count(),0);
+    assert.match(await page.locator("#privacy-queue").innerText(),/resolved/);
     console.log("PASS: artist privacy queue review and non-destructive outcome");
   }finally{await page.close();}
 }
