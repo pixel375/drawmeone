@@ -326,6 +326,7 @@ try {
     art_assert($status===200 && $list['artworks'][0]['featured']===true &&
         $list['artworks'][0]['sort_order']===-15,
         'artist_metadata_reflects_featured_and_sort_updates');
+    art_assert($list['artworks'][0]['display_bytes']>0&&$list['artworks'][0]['thumb_bytes']>0&&array_key_exists('published_at',$list['artworks'][0]),'private_library_reports_optimized_sizes_and_publication_date');
     [$status,$result]=art_http('/api/admin/artworks.php',$token,$csrf,
         ['id'=>$id,'action'=>'set_visibility','visibility'=>'draft']);
     art_assert($status===200,'published_drawing_can_be_unpublished');

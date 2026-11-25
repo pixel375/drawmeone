@@ -46,9 +46,9 @@ const mockAdmin = {
     ok:true,write_enabled:false,
     artworks:[
       {id:4,visibility:"draft",featured:false,sort_order:0,
-       width:620,height:420,created_at:"2026-11-24"},
+       width:620,height:420,display_bytes:1024,thumb_bytes:512,created_at:"2026-11-24"},
       {id:5,visibility:"published",featured:true,sort_order:2,
-       width:320,height:240,created_at:"2026-11-24"}
+       width:240,height:320,display_bytes:2048,thumb_bytes:512,created_at:"2026-11-24"}
     ]
   },
   "packages.php": {
@@ -205,6 +205,13 @@ async function verifyArtistDesk(browser, width) {
           "published filter selects only public drawings");
         assert.match(await page.locator("#artwork-visible-count").innerText(),/1 of 2/);
         await page.locator("#artwork-filter").selectOption("all");
+        await page.locator("#artwork-orientation").selectOption("portrait");
+        assert.equal(await page.locator("#artwork-list .artwork-library-card").count(),1);
+        assert.match(await page.locator("#artwork-list").innerText(),/Drawing #5/);
+        await page.locator("#artwork-orientation").selectOption("all");
+        await page.locator("#artwork-sort-mode").selectOption("largest");
+        assert.match(await page.locator("#artwork-list .artwork-library-card").first().innerText(),/Drawing #5/);
+        await page.locator("#artwork-sort-mode").selectOption("recent");
         await page.locator("#artwork-search").fill("#4");
         assert.equal(await page.locator("#artwork-list .artwork-library-card").count(),1);
         assert.match(await page.locator("#artwork-list").innerText(),/Drawing #4/);

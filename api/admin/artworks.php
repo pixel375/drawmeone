@@ -12,8 +12,9 @@ try {
     if ($method === 'GET') {
         $query = $db->query(
             'SELECT a.id, a.slug, a.visibility, a.is_featured, a.sort_order, a.alt_text, ' .
-            'a.created_at, d.pixel_width, d.pixel_height FROM dmo_portfolio_artworks a ' .
+            'a.created_at, a.published_at, d.pixel_width, d.pixel_height, d.byte_size AS display_bytes, t.byte_size AS thumb_bytes FROM dmo_portfolio_artworks a ' .
             "LEFT JOIN dmo_artwork_files d ON d.artwork_id = a.id AND d.variant = 'display' " .
+            "LEFT JOIN dmo_artwork_files t ON t.artwork_id = a.id AND t.variant = 'thumb' " .
             'ORDER BY a.created_at DESC, a.id DESC LIMIT 2001'
         );
         $rows=$query->fetchAll();
@@ -27,6 +28,9 @@ try {
                 'featured' => (bool) $row['is_featured'],
                 'sort_order' => (int) $row['sort_order'],
                 'created_at' => $row['created_at'],
+                'published_at' => $row['published_at'],
+                'display_bytes' => $row['display_bytes']===null?null:(int)$row['display_bytes'],
+                'thumb_bytes' => $row['thumb_bytes']===null?null:(int)$row['thumb_bytes'],
                 'alt' => (string)($row['alt_text']??''),
                 'width' => $row['pixel_width'] === null ? null : (int) $row['pixel_width'],
                 'height' => $row['pixel_height'] === null ? null : (int) $row['pixel_height'],

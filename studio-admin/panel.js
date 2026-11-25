@@ -1670,13 +1670,17 @@
       return;
     }
     const filter = $("artwork-filter").value;
+    const orientation=$("artwork-orientation").value;
+    const shape=w=>!Number.isSafeInteger(w.width)||!Number.isSafeInteger(w.height)||w.width<1||w.height<1?"unknown":w.width===w.height?"square":w.width>w.height?"landscape":"portrait";
+    const bytes=w=>Number.isSafeInteger(w.display_bytes)&&Number.isSafeInteger(w.thumb_bytes)?w.display_bytes+w.thumb_bytes:-1;
     const query=$("artwork-search").value.trim().toLocaleLowerCase();
     const matching=artworkRecords.filter(work=>(filter==="all"||
       (filter==="featured"?work.featured===true:filter==="missing_alt"?!String(work.alt||"").trim():work.visibility===filter))&&
-      (!query||String(work.id)===query.replace(/^#/,"")||String(work.alt||"").toLocaleLowerCase().includes(query)));
+      (orientation==="all"||shape(work)===orientation)&&(!query||String(work.id)===query.replace(/^#/,"")||String(work.alt||"").toLocaleLowerCase().includes(query)));
     const mode=$("artwork-sort-mode").value;
     if(mode==="gallery")matching.sort((a,b)=>Number(b.featured)-Number(a.featured)||a.sort_order-b.sort_order||b.id-a.id);
     if(mode==="oldest")matching.reverse();
+    if(mode==="largest")matching.sort((a,b)=>bytes(b)-bytes(a)||b.id-a.id);
     const published=artworkRecords.filter(w=>w.visibility==="published").sort((a,b)=>Number(b.featured)-Number(a.featured)||a.sort_order-b.sort_order||b.id-a.id);
     const pages=Math.max(1,Math.ceil(matching.length/60));artworkPage=Math.max(1,Math.min(pages,artworkPage));
     const visible=matching.slice((artworkPage-1)*60,artworkPage*60);
@@ -1711,7 +1715,9 @@
       title.textContent = "Drawing #" + work.id;
       const state = document.createElement("small");
       state.textContent = work.visibility === "published" ? "PUBLIC GALLERY" : "PRIVATE DRAFT";
-      const dimensions=textNode("small",Number.isSafeInteger(work.width)&&Number.isSafeInteger(work.height)?work.width+" × "+work.height+" px":"Image dimensions unavailable");
+      const dimensions=textNode("small",shape(work)!=="unknown"?work.width+" × "+work.height+" px · "+shape(work):"Image dimensions unavailable");
+      if(bytes(work)>=0)dimensions.textContent+=" · "+(bytes(work)/1024).toFixed(1)+" KiB optimized";
+      if(work.visibility==="published"&&typeof work.published_at==="string")dimensions.textContent+=" · Published "+work.published_at.slice(0,10);
       const inspect=textNode("a","Inspect private full image","small");
       inspect.href="../api/admin/artwork-preview.php?id="+work.id+"&v=display";
       inspect.target="_blank";inspect.rel="noopener noreferrer";
@@ -1864,6 +1870,7 @@
 
   $("artwork-search").addEventListener("input",()=>{artworkPage=1;renderArtwork();});
   $("artwork-sort-mode").addEventListener("change",()=>{artworkPage=1;renderArtwork();});
+  $("artwork-orientation").addEventListener("change",()=>{artworkPage=1;renderArtwork();});
   $("artwork-prev").addEventListener("click",()=>{artworkPage--;renderArtwork();});
   $("artwork-next").addEventListener("click",()=>{artworkPage++;renderArtwork();});
   $("artwork-filter").addEventListener("change", () => {

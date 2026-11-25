@@ -20,7 +20,7 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
 <meta name="theme-color" content="#151317">
 <title>Artist's Desk · Draw Me One</title>
 <link rel="stylesheet" href="./panel.css?v=49">
-<script defer src="./panel.js?v=78"></script>
+<script defer src="./panel.js?v=79"></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to dashboard</a>
@@ -358,10 +358,11 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
             <option value="published">Published drawings</option><option value="featured">Featured drawings</option><option value="missing_alt">Without accessibility description</option>
           </select>
         </label>
+        <label for="artwork-orientation">Image shape<select id="artwork-orientation"><option value="all">All shapes</option><option value="portrait">Portrait</option><option value="landscape">Landscape</option><option value="square">Square</option><option value="unknown">Unknown dimensions</option></select></label>
         <label class="artwork-search-field" for="artwork-search">Find drawing
           <input id="artwork-search" type="search" maxlength="240" placeholder="Drawing ID or description" autocomplete="off">
         </label>
-        <label for="artwork-sort-mode">Order by<select id="artwork-sort-mode"><option value="recent">Recently uploaded</option><option value="gallery">Public gallery order (move drawings)</option><option value="oldest">Oldest first</option></select></label>
+        <label for="artwork-sort-mode">Order by<select id="artwork-sort-mode"><option value="recent">Recently uploaded</option><option value="gallery">Public gallery order (move drawings)</option><option value="oldest">Oldest first</option><option value="largest">Largest optimized files</option></select></label>
         <span id="artwork-visible-count" class="small" role="status" aria-live="polite"></span>
       </div>
       <div id="artwork-unsaved" hidden><p id="artwork-unsaved-count" class="small" role="status"></p><button type="button" id="artwork-discard-edits" class="quiet">Discard unsaved artwork edits</button></div>
