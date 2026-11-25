@@ -23,6 +23,7 @@
   let leavingSession = false;
   const proofDrafts=new Map();
   let pendingReply=null,remainingReferences=[],referenceStopRequested=false;
+  const referenceUploadKeys=new WeakMap();
   function customerSessionExpired() {
     if (leavingSession) return;
     leavingSession = true;
@@ -66,7 +67,7 @@
   $("detail-reply-body").addEventListener("input",updateDetailDraftWarning);
   function syncReferenceResume(){
     $("detail-reference-resume").hidden=!remainingReferences.length;
-    $("detail-reference-resume").disabled=state.uploadBusy||$("detail-reference-form").hidden;
+    $("detail-reference-resume").disabled=state.uploadBusy||($("detail-reference-form").hidden&&!remainingReferences.some(file=>referenceUploadKeys.has(file)));
     $("detail-reference-resume").textContent="Upload "+remainingReferences.length+" remaining image(s)";
     $("detail-reference-stop").hidden=!state.uploadBusy;
     $("detail-reference-stop").disabled=referenceStopRequested;
@@ -823,7 +824,7 @@
   $("detail-reference-resume").addEventListener("click",()=>uploadReferences([...remainingReferences]));
   async function uploadReferences(files){
     const ref=state.selectedRef;
-    if(!ref||detailMutationBusy()||!state.csrf||$("detail-reference-form").hidden)return;
+    if(!ref||detailMutationBusy()||!state.csrf||($("detail-reference-form").hidden&&!files.some(file=>referenceUploadKeys.has(file))))return;
     if(!files.length||files.length>8||files.some(file=>file.size>4*1024*1024||file.size<1||
       !(["image/jpeg","image/png","image/webp"].includes(file.type)||(!file.type&&/\.(jpe?g|png|webp)$/i.test(file.name))))){
       $("detail-reference-feedback").textContent="Choose up to eight JPEG, PNG or WebP images, maximum 4 MB each.";
@@ -838,7 +839,11 @@
     try{
       for(let i=0;i<files.length;i++){
         if(referenceStopRequested||leavingSession){reason="Upload stopped.";break;}
-        const payload=new FormData();payload.append("ref",ref);payload.append("reference",files[i]);
+        if(!referenceUploadKeys.has(files[i])){
+          if($("detail-reference-form").hidden){reason="New reference uploads unavailable.";break;}
+          referenceUploadKeys.set(files[i],newKey());
+        }
+        const payload=new FormData();payload.append("ref",ref);payload.append("reference",files[i]);payload.append("operation_key",referenceUploadKeys.get(files[i]));
         try{
           const response=await fetch("./api/request-attachment.php",{method:"POST",credentials:"same-origin",cache:"no-store",headers:{"X-DMO-CSRF":state.csrf},body:payload});
           if(response.status===401)return customerSessionExpired();
@@ -849,11 +854,12 @@
           }else if(response.status>=400&&response.status<500&&data.ok===false){
             rejected++;reason="Upload stopped ("+(data.error||response.status)+").";
           }else{
-            uncertain++;reason="Upload outcome not confirmed. Check the reference list before reselecting that image.";
+            uncertain++;reason="Upload outcome not confirmed. Resume uses the original upload ID.";
           }
         }catch(_){
-          uncertain++;reason="Connection interrupted. Check the reference list before reselecting the unconfirmed image.";
+          uncertain++;reason="Connection interrupted. Resume uses the original upload ID.";
         }
+        if(uncertain)break;
         attempted=i+1;progress.value=attempted;
         status.textContent="Processed "+attempted+" of "+files.length+" reference images.";
         if(reason)break;

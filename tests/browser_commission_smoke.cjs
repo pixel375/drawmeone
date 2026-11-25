@@ -479,9 +479,10 @@ async function verifyReferenceRecovery(browser){
   const page=await browser.newPage({viewport:{width:390,height:844}});
   await installMocks(page,{signedIn:true,open:false});
   await page.route("**/api/request.php?*",route=>answer(route,{...detail(A),can_upload_references:true,can_reply:true}));
-  const uploaded=[];
+  const uploaded=[],uploadKeys=[];
   await page.route("**/api/request-attachment.php",route=>{
     const body=route.request().postData()||"";
+    uploadKeys.push(body.match(/name="operation_key"\r?\n\r?\n([0-9a-f-]{36})/)?.[1]);
     uploaded.push(body.includes("first.png")?"first":body.includes("second.png")?"second":body.includes("third.png")?"third":"unknown");
     if(uploaded.length===2)return route.fulfill({status:502,contentType:"text/plain",body:"Gateway failure"});
     return answer(route,{ok:true,attachment_id:uploaded.length},201);
@@ -497,11 +498,12 @@ async function verifyReferenceRecovery(browser){
     await page.locator("#detail-reference-form").waitFor({state:"visible"});
     await page.locator("#detail-reference-files").setInputFiles(["first.png","second.png","third.png"].map(name=>({name,mimeType:"image/png",buffer:Buffer.from("synthetic reference")})));
     await page.locator("#detail-reference-upload").click();
-    await page.waitForFunction(()=>document.querySelector("#detail-reference-feedback")?.textContent.includes("1 unconfirmed · 1 remaining"));
+    await page.waitForFunction(()=>document.querySelector("#detail-reference-feedback")?.textContent.includes("1 unconfirmed · 2 remaining"));
     assert.deepEqual(uploaded,["first","second"]);
     await page.locator("#detail-reference-resume").click();
     await page.waitForFunction(()=>document.querySelector("#detail-reference-feedback")?.textContent.includes("0 unconfirmed · 0 remaining"));
-    assert.deepEqual(uploaded,["first","second","third"]);
+    assert.deepEqual(uploaded,["first","second","second","third"]);
+    assert.match(uploadKeys[1]||"",/^[0-9a-f-]{36}$/);assert.equal(uploadKeys[1],uploadKeys[2]);
     await page.locator("#detail-reply-body").fill("Synthetic retry message");
     await page.locator("#detail-reply-send").click();
     await page.waitForFunction(()=>document.querySelector("#detail-reply-feedback")?.textContent.includes("Retry the unchanged"));

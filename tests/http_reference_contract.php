@@ -55,6 +55,7 @@ function ref_http(
                 basename($upload['path'])
             ),
         ];
+        if(isset($upload['operation_key']))$opts[CURLOPT_POSTFIELDS]['operation_key']=$upload['operation_key'];
     }
     $opts[CURLOPT_HTTPHEADER] = $headers;
     curl_setopt_array($handle, $opts);
@@ -185,11 +186,15 @@ try {
         ['ref'=>$refA,'path'=>$png,'type'=>'image/png']);
     ref_assert($code===404, 'cross_customer_upload_denied');
 
-    [$code,$uploaded] = ref_http('/api/request-attachment.php',
-        $cookieA,null,$csrfA,['ref'=>$refA,'path'=>$png,'type'=>'image/png']);
+    $upload=['ref'=>$refA,'path'=>$png,'type'=>'image/png','operation_key'=>'10000000-0000-4000-8000-000000000012'];
+    [$code,$uploaded] = ref_http('/api/request-attachment.php',$cookieA,null,$csrfA,$upload);
     ref_assert($code===201 && is_int($uploaded['attachment_id']??null),
         'owner_private_image_uploaded');
     $id = $uploaded['attachment_id'];
+    [$code,$replay]=ref_http('/api/request-attachment.php',$cookieA,null,$csrfA,$upload);
+    ref_assert($code===200&&($replay['attachment_id']??null)===$id&&($replay['already_saved']??false),'private_reference_receipt_replay');
+    [$code]=ref_http('/api/request-attachment.php',$cookieB,null,$csrfB,$upload);
+    ref_assert($code===404,'private_reference_receipt_ownership');
     $stmt = $db->prepare(
         'SELECT storage_key,mime_type,pixel_width,pixel_height,byte_size ' .
         'FROM dmo_request_attachments WHERE id=:id AND request_id=:request');
@@ -255,6 +260,8 @@ try {
     $stmt->execute(['id'=>$id,'request'=>$requestA]);
     ref_assert($stmt->fetch(PDO::FETCH_ASSOC)===false,
         'deleted_reference_database_row_removed');
+    [$code,$removedReceipt]=ref_http('/api/request-attachment.php',$cookieA,null,$csrfA,$upload);
+    ref_assert($code===409&&($removedReceipt['error']??null)==='reference_receipt_removed','deleted_reference_not_recreated_by_retry');
 
     $db->prepare(
         "UPDATE dmo_commission_requests SET status='completed' WHERE id=:id"

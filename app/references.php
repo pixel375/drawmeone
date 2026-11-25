@@ -96,3 +96,24 @@ function dmo_refs_variant_valid(array $row,string $variant): bool
             $info[0]===(int)$row['pixel_width']&&$info[1]===(int)$row['pixel_height'];
     }catch(Throwable $e){return false;}
 }
+
+/** Request row must be locked. Never recreate a deliberately removed attachment. */
+function dmo_reference_upload_replay(PDO $db,int $request,int $actor,?string $operation,?string $digest): ?array
+{
+    if($operation===null)return null;
+    $q=$db->prepare("SELECT details_json FROM dmo_audit_log WHERE entity_type='commission_request'
+        AND entity_id=:request AND actor_id=:actor AND action='request.reference_uploaded'
+        AND JSON_UNQUOTE(JSON_EXTRACT(details_json,'$.operation_key'))=:operation ORDER BY id DESC LIMIT 1");
+    $q->execute(['request'=>$request,'actor'=>$actor,'operation'=>$operation]);$json=$q->fetchColumn();
+    if($json===false)return null;
+    $details=json_decode((string)$json,true);
+    if(!is_string($details['payload_digest']??null)||!hash_equals($details['payload_digest'],(string)$digest)){
+        $db->rollBack();dmo_json(409,['ok'=>false,'error'=>'operation_key_conflict']);
+    }
+    $q=$db->prepare('SELECT id,pixel_width,pixel_height FROM dmo_request_attachments WHERE id=:id AND request_id=:request AND uploaded_by=:actor');
+    $q->execute(['id'=>$details['attachment_id'],'request'=>$request,'actor'=>$actor]);$row=$q->fetch();
+    if(!is_array($row)){
+        $db->rollBack();dmo_json(409,['ok'=>false,'error'=>'reference_receipt_removed']);
+    }
+    return ['ok'=>true,'attachment_id'=>(int)$row['id'],'width'=>(int)$row['pixel_width'],'height'=>(int)$row['pixel_height'],'already_saved'=>true];
+}
