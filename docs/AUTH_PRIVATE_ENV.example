@@ -58,3 +58,6 @@ DMO_MAIL_TRANSPORT=
 
 # Optional explicit artist-triggered customer notices; keep disabled until approved.
 DMO_CUSTOMER_NOTIFICATIONS_ENABLED=0
+
+# Private artist-only delivery draft staging. No customer release exists yet.
+DMO_DELIVERY_DRAFTS_ENABLED=0

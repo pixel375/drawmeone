@@ -304,3 +304,5 @@ footer{padding:28px 0 70px;border-top:1px solid var(--line);color:var(--muted);f
 .notification-card{display:grid;gap:6px;padding:12px;border:1px solid var(--line);border-radius:8px;margin-top:8px;min-width:0}
 .notification-card p{margin:0;overflow-wrap:anywhere}
 .notification-card button{min-height:44px;max-width:100%;white-space:normal;justify-self:start}
+
+.delivery-draft-form{display:grid;gap:8px;min-width:0;margin-top:12px}.delivery-draft-form label{display:grid;gap:6px;min-width:0}.delivery-draft-form input[type=file]{min-width:0;width:100%;max-width:100%}.delivery-draft-form button{min-height:44px;max-width:100%;white-space:normal}.delivery-draft-form p{margin:0}

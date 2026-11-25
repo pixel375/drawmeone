@@ -103,6 +103,10 @@ jobs:
         run: php tests/ci_reset.php
       - name: Test artist artwork draft, publish, private preview and unpublish
         run: php tests/http_artwork_contract.php
+      - name: Reset disposable records before delivery draft QA
+        run: php tests/ci_reset.php
+      - name: Test artist-only staged delivery upload and access
+        run: php tests/http_delivery_draft_contract.php
       - name: Create isolated recovery database and reset source fixtures
         shell: bash
         run: |

@@ -594,6 +594,56 @@
     }
   }
 
+  function renderDeliveryDrafts(orders,drafts,enabled) {
+    const root=$("request-delivery-drafts");
+    root.replaceChildren();
+    if(!enabled)root.append(textNode("p","Private staging is disabled until approved.","small"));
+    for(const draft of drafts||[]){
+      if(!Number.isSafeInteger(draft.id)||draft.id<1)continue;
+      const card=document.createElement("article");
+      card.className="notification-card";
+      card.append(textNode("strong","Draft #"+draft.id+" · Order #"+draft.order_id),
+        textNode("small",draft.width+" × "+draft.height+" · "+draft.created_at));
+      const link=textNode("a","Download private WebP draft","quiet");
+      link.href="../api/admin/delivery-draft.php?id="+draft.id;
+      link.rel="noopener noreferrer";card.append(link);root.append(card);
+    }
+    if(!enabled)return;
+    for(const order of orders||[]){
+      if(!["awaiting_arrangement","in_progress","ready_for_delivery","queued","drawing","awaiting_feedback","revision"].includes(order.status))continue;
+      if((drafts||[]).filter(d=>d.order_id===order.id).length>=4)continue;
+      const form=document.createElement("form");
+      form.className="delivery-draft-form";
+      const label=textNode("label","Stage artwork for order #"+order.id);
+      const file=document.createElement("input");file.type="file";file.required=true;
+      file.accept="image/jpeg,image/png,image/webp";label.append(file);
+      const button=textNode("button","Stage privately","quiet");button.type="submit";
+      form.append(label,textNode("p","JPEG, PNG or WebP; up to 8 MB. Re-encoded to high-quality WebP without embedded metadata.","small"),button);
+      form.addEventListener("submit",event=>{
+        event.preventDefault();
+        if(requestBusy||!file.files?.length)return;
+        stageDeliveryDraft(order.id,file.files[0]);
+      });
+      root.append(form);
+    }
+  }
+  async function stageDeliveryDraft(orderId,file){
+    if(requestBusy||selectedRequestId===null)return;
+    if(file.size>8*1024*1024){requestText("request-detail-status","Draft must be 8 MB or smaller.");return;}
+    const id=selectedRequestId,body=new FormData();
+    body.append("request_id",String(id));body.append("order_id",String(orderId));body.append("artwork",file);
+    requestBusy=true;updateRequestButtons();
+    try{
+      const response=await fetch("../api/admin/delivery-draft.php",{method:"POST",credentials:"same-origin",cache:"no-store",headers:{"X-DMO-CSRF":csrf},body});
+      if(response.status===401)return sessionExpired();
+      const data=await response.json();
+      if(!response.ok||!data.ok){requestText("request-detail-status","Draft not staged ("+(data.error||response.status)+").");return;}
+      await openRequest(id);
+      requestText("request-detail-status","Artwork staged privately. Customer access and payment status unchanged.");
+    }catch(_){requestText("request-detail-status","Draft upload not confirmed. Refresh before retrying.");}
+    finally{requestBusy=false;updateRequestButtons();}
+  }
+
   function renderNotifications(options,enabled) {
     const root=$("request-notifications");
     root.replaceChildren();
@@ -644,6 +694,7 @@
     $("request-review-save").disabled = requestBusy || !reviewStatus;
     $("request-review-status").disabled = requestBusy || !reviewStatus;
     for(const button of $("request-notifications").querySelectorAll("button"))button.disabled=requestBusy;
+    for(const field of $("request-delivery-drafts").querySelectorAll("input,button"))field.disabled=requestBusy;
     for(const button of $("request-quotes").querySelectorAll("button[data-quote-withdraw]"))button.disabled=requestBusy;
     for(const field of $("request-orders").querySelectorAll(".order-date-form input,.order-date-form button"))field.disabled=requestBusy;
     for (const field of $("request-note-form").querySelectorAll("textarea")) {
@@ -677,7 +728,7 @@
       "request-tier","request-contact","request-deadline","request-brief-text"]) {
       requestText(id, "—");
     }
-    for (const id of ["request-thread","request-quotes","request-references","request-orders","request-notifications"]) {
+    for (const id of ["request-thread","request-quotes","request-references","request-orders","request-notifications","request-delivery-drafts"]) {
       $(id).replaceChildren();
     }
   }
@@ -752,6 +803,7 @@
     renderRequestReferences(item.references);
     renderAdminOrders(item.orders, item.quotes);
     renderNotifications(data.notification_options,data.notifications_enabled===true);
+    renderDeliveryDrafts(item.orders,data.delivery_drafts,data.delivery_staging_enabled===true);
     requestText("request-detail-status", requestWriteEnabled
       ? "Admin draft editing available. Nothing is sent to the customer."
       : "Viewing only. Private note and quote creation are disabled on the server.");

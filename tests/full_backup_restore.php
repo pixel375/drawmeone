@@ -132,6 +132,12 @@ try {
         }
         chmod($file,0600);
     }
+    $deliveryKey=bin2hex(random_bytes(16));
+    $deliveryRoot=$workspace.'/drawmeone-deliveries';
+    mkdir($deliveryRoot,0700);mkdir($deliveryRoot.'/'.$deliveryKey,0700);
+    $deliveryFile=$deliveryRoot.'/'.$deliveryKey.'/display.webp';
+    if(!imagewebp($im,$deliveryFile,95))throw new RuntimeException('Synthetic delivery image failed');
+    chmod($deliveryFile,0600);
     imagedestroy($im);
     $db->prepare("INSERT INTO dmo_portfolio_artworks (slug,visibility)
                   VALUES (:slug,'published')")
@@ -252,6 +258,7 @@ try {
         $restored.'/drawmeone-artworks/'.$key.'/display.webp',
         $restored.'/drawmeone-references/'.$refKey.'/thumb.webp',
         $restored.'/drawmeone-references/'.$refKey.'/display.webp',
+        $restored.'/drawmeone-deliveries/'.$deliveryKey.'/display.webp',
     ];
     foreach ($expected as $image) {
         if (!is_file($image) || !is_readable($image) ||
@@ -259,7 +266,7 @@ try {
             throw new RuntimeException('Recovered image is absent or malformed');
         }
     }
-    drill_assert(count($expected)===4,'artwork_and_reference_variants_restored');
+    drill_assert(count($expected)===5,'artwork_reference_and_delivery_variants_restored');
     // Imported separately from the source CI schema. The restore schema is
     // granted to ci_user only by the disposable Actions service setup.
     $client = $restored.'/mariadb.cnf';

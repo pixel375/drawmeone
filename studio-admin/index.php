@@ -19,8 +19,8 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
 <meta name="robots" content="noindex,nofollow">
 <meta name="theme-color" content="#151317">
 <title>Artist's Desk · Draw Me One</title>
-<link rel="stylesheet" href="./panel.css?v=29">
-<script defer src="./panel.js?v=29"></script>
+<link rel="stylesheet" href="./panel.css?v=30">
+<script defer src="./panel.js?v=30"></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to dashboard</a>
@@ -152,6 +152,11 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
           <h4>Order progress</h4>
           <p class="small">An accepted quote requires separate artist confirmation. Confirming an order does not verify or collect payment.</p>
           <div id="request-orders"><p class="small">No confirmed order.</p></div>
+        </section>
+        <section class="request-brief" aria-label="Private staged artwork">
+          <h4>Private artwork staging</h4>
+          <p class="small">Stage a drawing for an order. Only the artist can download it; this does not deliver the artwork or verify payment.</p>
+          <div id="request-delivery-drafts"></div>
         </section>
         <section class="request-brief" aria-label="Optional customer email notices">
           <h4>Customer email notices</h4>
