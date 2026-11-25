@@ -1,0 +1,3 @@
+# Portfolio upload receipts
+
+Optional UUID operation keys bind each uploaded file to a keyed digest of its original bytes. The existing database-scoped upload lock serializes replay and insert. A retry returns the original drawing ID and current visibility; changed bytes for the same key are rejected. The audit contains only the keyed digest, UUID and oriented dimensions, not original filenames or source image data. Browser resume retains the ambiguous file with the same operation key in memory. A newly selected file is a new operation; no global image deduplication is attempted. Older clients remain compatible. Uploads remain private drafts, and no schema or gate changes are needed.

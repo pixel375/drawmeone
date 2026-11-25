@@ -20,7 +20,7 @@ function art_assert(bool $yes, string $name): void {
 }
 function art_http(string $route, ?string $cookie = null, ?string $csrf = null,
     ?array $body = null, ?string $file = null, string $origin = 'https://drawmeone.com',
-    ?string $ifNoneMatch = null): array {
+    ?string $ifNoneMatch = null,?string $operationKey=null): array {
     $handle = curl_init('http://127.0.0.1:18865' . $route);
     if ($handle === false) throw new RuntimeException('Missing localhost cURL');
     $headers = ['Accept: application/json'];
@@ -36,6 +36,7 @@ function art_http(string $route, ?string $cookie = null, ?string $csrf = null,
         $options[CURLOPT_POST] = true;
         if ($file !== null) {
             $options[CURLOPT_POSTFIELDS] = ['artwork' => new CURLFile($file)];
+            if($operationKey!==null)$options[CURLOPT_POSTFIELDS]['operation_key']=$operationKey;
         } else {
             $headers[] = 'Content-Type: application/json';
             $options[CURLOPT_POSTFIELDS] = json_encode($body, JSON_THROW_ON_ERROR);
@@ -166,11 +167,17 @@ try {
     }finally{
         $unlock=$db->prepare('SELECT RELEASE_LOCK(:name)');$unlock->execute(['name'=>dmo_artwork_upload_lock_name($db)]);
     }
-    [$status,$uploaded] = art_http('/api/admin/artwork-upload.php',$token,$csrf,null,$png);
+    $uploadKey='10000000-0000-4000-8000-000000000011';
+    [$status,$uploaded] = art_http('/api/admin/artwork-upload.php',$token,$csrf,null,$png,operationKey:$uploadKey);
     art_assert($status===201 && is_int($uploaded['artwork_id']??null) &&
         ($uploaded['visibility']??'')==='draft',
         'valid_image_uploaded_as_private_draft');
     $id=$uploaded['artwork_id'];
+    [$status,$replay]=art_http('/api/admin/artwork-upload.php',$token,$csrf,null,$png,operationKey:$uploadKey);
+    art_assert($status===200&&($replay['artwork_id']??null)===$id&&($replay['already_saved']??false),'same_upload_key_recovers_original_drawing');
+    [$status,$conflict]=art_http('/api/admin/artwork-upload.php',$token,$csrf,null,$bad,operationKey:$uploadKey);
+    art_assert($status===409&&($conflict['error']??null)==='operation_key_conflict','changed_upload_content_rejected');
+    art_assert((int)$db->query('SELECT COUNT(*) FROM dmo_portfolio_artworks')->fetchColumn()===1,'upload_retry_does_not_duplicate_drawing');
     $stmt=$db->prepare(
         "SELECT a.visibility,f.variant,f.storage_key,f.mime_type,f.pixel_width,
          f.pixel_height,f.byte_size FROM dmo_portfolio_artworks a

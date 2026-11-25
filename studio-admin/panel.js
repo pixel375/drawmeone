@@ -1493,6 +1493,7 @@
   // In-memory drafts survive filtering, paging and server refreshes, but never a sign-in session.
   const artworkDrafts=new Map();
   let artworkPendingFiles=[],artworkUploadRunning=false,artworkStopRequested=false;
+  const artworkUploadKeys=new WeakMap();
   function artworkDraftKey(id,field){return id+":"+field;}
   function artworkDraftInput(work,field,input){
     const key=artworkDraftKey(work.id,field),base=String(work[field]??"");
@@ -1807,12 +1808,13 @@
         rejected++;entry.textContent+="Skipped (unsupported format or file too large).";
       }else{
         try{
-          const body=new FormData();body.append("artwork",file);
+          if(!artworkUploadKeys.has(file))artworkUploadKeys.set(file,crypto.randomUUID());
+          const body=new FormData();body.append("artwork",file);body.append("operation_key",artworkUploadKeys.get(file));
           const response=await fetch(api+"artwork-upload.php",{method:"POST",credentials:"same-origin",cache:"no-store",headers:{"X-DMO-CSRF":csrf},body});
           if(response.status===401){sessionExpired();return;}
           const data=await response.json();
           if(response.ok&&data.ok===true&&Number.isSafeInteger(data.artwork_id)&&data.artwork_id>0){
-            success++;entry.textContent+="Saved privately as draft #"+data.artwork_id;
+            success++;entry.textContent+=data.already_saved?"Existing drawing #"+data.artwork_id+" recovered ("+data.visibility+").":"Saved privately as draft #"+data.artwork_id;
           }else if(response.status===409&&data.error==="artwork_upload_busy"){
             entry.textContent+="Not attempted by server (another upload is active).";
             stopReason="Another upload is active. Resume the remaining files later.";
@@ -1821,22 +1823,23 @@
             rejected++;entry.textContent+="Rejected ("+(data.error||response.status)+")";
             if(response.status===403||response.status===429||data.error==="artwork_library_limit")stopReason="Uploads stopped by server.";
           }else{
-            uncertain++;entry.textContent+="Upload outcome not confirmed. Check the library before selecting this file again.";
+            uncertain++;entry.textContent+="Upload outcome not confirmed. Resume uses the same upload receipt.";
             stopReason="Upload interrupted.";
           }
         }catch(_){
-          uncertain++;entry.textContent+="Upload outcome not confirmed. Check the library before selecting this file again.";
+          uncertain++;entry.textContent+="Upload outcome not confirmed. Resume uses the same upload receipt.";
           stopReason="Upload interrupted.";
         }
       }
+      if(uncertain)break;
       attempted=i+1;progress.value=attempted;
       $("artwork-upload-message").textContent="Processed "+attempted+" of "+selected.length+" images.";
       if(stopReason)break;
     }
     if(leavingSession)return;
     if(artworkStopRequested&&!stopReason&&attempted<selected.length)stopReason="Upload stopped.";
-    // Never automatically retry a file with an ambiguous outcome. Only untouched
-    // files (including an explicit busy rejection before insertion) can resume.
+    // Keep an ambiguous file with its original operation key; resume is explicit.
+    // The server returns the original receipt if it already committed.
     artworkPendingFiles=selected.slice(attempted);
     artworkUploadRunning=false;artworkStopRequested=false;
     $("artwork-files").value="";
@@ -1844,7 +1847,7 @@
     artworkBusy=false;artworkControls();
     if(leavingSession)return;
     $("artwork-upload-message").textContent=(stopReason?stopReason+" ":"")+success+" saved as private drafts · "+rejected+" rejected/skipped · "+uncertain+" unconfirmed · "+artworkPendingFiles.length+" remaining."+
-      (uncertain?" Review the library for the unconfirmed file before reselecting it.":"")+
+      (uncertain?" Resume to recover the unconfirmed file using the same upload ID.":"")+
       (refreshed?"":" Library refresh failed; refresh before continuing.");
   }
 

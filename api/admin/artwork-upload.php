@@ -24,6 +24,9 @@ try {
     if ((int) ($_SERVER['CONTENT_LENGTH'] ?? 0) > DMO_ARTWORK_MAX_BYTES + 1048576) {
         dmo_json(413, ['ok' => false, 'error' => 'upload_too_large']);
     }
+    if(array_diff(array_keys($_POST),['operation_key'])!==[]||count($_FILES)!==1)
+        dmo_json(422,['ok'=>false,'error'=>'unexpected_fields']);
+    $operation=dmo_upload_operation_key($_POST);
     $file = $_FILES['artwork'] ?? null;
     if (!is_array($file) || is_array($file['tmp_name'] ?? null) ||
         (int) ($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK ||
@@ -36,6 +39,9 @@ try {
     $lock=$db->prepare('SELECT GET_LOCK(:name,3)');
     $lock->execute(['name'=>dmo_artwork_upload_lock_name($db)]);
     if((int)$lock->fetchColumn()!==1)dmo_json(409,['ok'=>false,'error'=>'artwork_upload_busy']);
+    $digest=$operation===null?null:dmo_upload_payload_digest((string)$file['tmp_name'],'portfolio-upload');
+    $prior=dmo_artwork_upload_replay($db,(int)$admin['user_id'],$operation,$digest);
+    if($prior!==null)dmo_json(200,$prior);
     $count = (int) $db->query('SELECT COUNT(*) FROM dmo_portfolio_artworks')->fetchColumn();
     if ($count >= 2000) {
         dmo_json(422, ['ok' => false, 'error' => 'artwork_library_limit']);
@@ -96,7 +102,8 @@ try {
                 ]);
             }
             dmo_artwork_record_audit(
-                $db, (int) $admin['user_id'], $artworkId, 'artwork.uploaded_as_draft'
+                $db, (int) $admin['user_id'], $artworkId, 'artwork.uploaded_as_draft',
+                $operation===null?null:['operation_key'=>$operation,'payload_digest'=>$digest,'width'=>$width,'height'=>$height]
             );
             $db->commit();
         } catch (Throwable $error) {

@@ -134,14 +134,48 @@ function dmo_artwork_make_webp(
     return ['width' => $w, 'height' => $h, 'bytes' => filesize($path)];
 }
 
-function dmo_artwork_record_audit(PDO $db, int $adminId, int $artworkId, string $action): void
+/** Optional multipart operation key, scoped by the authenticated uploader. */
+function dmo_upload_operation_key(array $fields): ?string
+{
+    if(!array_key_exists('operation_key',$fields))return null;
+    $key=$fields['operation_key'];
+    if(!is_string($key)||!preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/D',$key))
+        dmo_json(422,['ok'=>false,'error'=>'invalid_operation_key']);
+    return $key;
+}
+function dmo_upload_payload_digest(string $tmp,string $domain): string
+{
+    $hash=hash_file('sha256',$tmp);
+    if(!is_string($hash))throw new RuntimeException('Upload digest unavailable.');
+    return hash_hmac('sha256',$domain.'|'.$hash,dmo_config('DMO_APP_KEY'));
+}
+function dmo_artwork_upload_replay(PDO $db,int $admin,?string $key,?string $digest): ?array
+{
+    if($key===null)return null;
+    $q=$db->prepare("SELECT a.entity_id, a.details_json, p.visibility FROM dmo_audit_log a
+        LEFT JOIN dmo_portfolio_artworks p ON p.id=a.entity_id
+        WHERE a.actor_id=:actor AND a.entity_type='portfolio_artwork' AND a.action='artwork.uploaded_as_draft'
+        AND JSON_UNQUOTE(JSON_EXTRACT(a.details_json,'$.operation_key'))=:operation ORDER BY a.id DESC LIMIT 1");
+    $q->execute(['actor'=>$admin,'operation'=>$key]);$row=$q->fetch();
+    if(!is_array($row))return null;
+    $detail=json_decode((string)$row['details_json'],true);
+    if(!is_string($detail['payload_digest']??null)||!hash_equals($detail['payload_digest'],(string)$digest))
+        dmo_json(409,['ok'=>false,'error'=>'operation_key_conflict']);
+    if(!in_array($row['visibility'],['draft','published'],true))
+        dmo_json(409,['ok'=>false,'error'=>'artwork_receipt_unavailable']);
+    return ['ok'=>true,'artwork_id'=>(int)$row['entity_id'],'visibility'=>$row['visibility'],
+        'width'=>(int)$detail['width'],'height'=>(int)$detail['height'],'already_saved'=>true];
+}
+
+function dmo_artwork_record_audit(PDO $db, int $adminId, int $artworkId, string $action,?array $details=null): void
 {
     $stmt = $db->prepare(
-        "INSERT INTO dmo_audit_log (actor_id, action, entity_type, entity_id) " .
-        "VALUES (:admin, :action, 'portfolio_artwork', :artwork)"
+        "INSERT INTO dmo_audit_log (actor_id, action, entity_type, entity_id,details_json) " .
+        "VALUES (:admin, :action, 'portfolio_artwork', :artwork,:details)"
     );
     $stmt->execute([
         'admin' => $adminId, 'action' => $action, 'artwork' => $artworkId,
+        'details'=>$details===null?null:json_encode($details,JSON_THROW_ON_ERROR),
     ]);
 }
 
