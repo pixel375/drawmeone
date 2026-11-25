@@ -13,6 +13,8 @@ on:
       - main
     paths:
       - .github/ops/hostinger-ssh-diagnostic.trigger
+      - .github/workflows/hostinger-ssh-diagnostics.yml
+      - ops/deployment_expectations.py
 
 permissions:
   contents: read
@@ -35,6 +37,7 @@ jobs:
       SSH_PRIVATE_KEY: ${{ secrets.HOSTINGER_SSH_PRIVATE_KEY }}
       SSH_KNOWN_HOSTS: ${{ secrets.HOSTINGER_KNOWN_HOSTS }}
     steps:
+      - uses: actions/checkout@v4
       - name: Inspect Hostinger without making any changes
         shell: bash
         run: |
@@ -58,10 +61,8 @@ jobs:
           ssh-keygen -y -P '' -f "$dir/key" >/dev/null || {
             echo "::error::SSH private key is not a valid unencrypted OpenSSH key"; exit 1;
           }
-          ssh -T -o BatchMode=yes -o ConnectTimeout=15 -o ConnectionAttempts=3 \
-            -o StrictHostKeyChecking=yes -o "UserKnownHostsFile=$dir/known_hosts" \
-            -o IdentitiesOnly=yes -i "$dir/key" -p "$SSH_PORT" \
-            "$SSH_USER@$SSH_HOST" 'bash -se' <<'REMOTE'
+          python3 ops/deployment_expectations.py > "$dir/expected"
+          { cat "$dir/expected"; cat <<'REMOTE'
           set -Eeuo pipefail
           site="$HOME/domains/drawmeone.com/public_html"
           [[ -d "$site" && -f "$site/app/cli-admin.php" && -f "$site/app/bootstrap.php" ]] || {
@@ -291,11 +292,35 @@ jobs:
             desk_page=$(curl -fsSL --max-time 5 -H "Cache-Control: no-cache" "https://drawmeone.com/studio-admin/index.php" || true)
             commission_page=$(curl -fsSL --max-time 5 -H "Cache-Control: no-cache" "https://drawmeone.com/commission.html" || true)
             customer_page=$(curl -fsSL --max-time 5 -H "Cache-Control: no-cache" "https://drawmeone.com/account.html" || true)
-            if [[ "$public_home" == *'concepts.js?v=13'* && "$public_home" == *'studio.js?v=14'* && "$public_home" == *'gallery.js?v=19'* && "$public_home" == *'styles.css?v=14'* && "$desk_page" == *'panel.js?v=61'* && "$desk_page" == *'panel.css?v=45'* && "$commission_page" == *'commission.js?v=42'* && "$customer_page" == *'account.js?v=23'* ]]; then synced=yes; break; fi
+            if [[ "$public_home" == *"$expected_concepts\""* && "$public_home" == *"$expected_studio\""* && "$public_home" == *"$expected_gallery\""* && "$public_home" == *"$expected_home_css\""* && "$desk_page" == *"$expected_desk_js\""* && "$desk_page" == *"$expected_desk_css\""* && "$commission_page" == *"$expected_commission_js\""* && "$customer_page" == *"$expected_customer_js\""* ]]; then synced=yes; break; fi
             sleep 4
           done
           [[ "$synced" == "yes" ]] || { echo "deployment_sync=expected_versions_unavailable"; exit 1; }
           echo "deployment_sync=expected_versions_present"
+          # Compare the live static response to the exact checked-out bytes.
+          # This catches an unchanged version number or stale CDN response.
+          verify_asset() {
+            local path="$1" expected="$2" actual
+            actual=$(curl -fsSL --max-time 15 -H "Cache-Control: no-cache" "https://drawmeone.com/$path" | sha256sum | cut -d' ' -f1)
+            [[ "$actual" == "$expected" ]] || { echo "deployment_asset_mismatch=${path%%\?*}"; return 1; }
+          }
+          for attempt in {1..6}; do
+            if verify_asset "$expected_concepts" "$digest_concepts" && \
+              verify_asset "$expected_studio" "$digest_studio" && \
+              verify_asset "$expected_gallery" "$digest_gallery" && \
+              verify_asset "$expected_home_css" "$digest_home_css" && \
+              verify_asset "studio-admin/$expected_desk_js" "$digest_desk_js" && \
+              verify_asset "studio-admin/$expected_desk_css" "$digest_desk_css" && \
+              verify_asset "$expected_commission_js" "$digest_commission_js" && \
+              verify_asset "$expected_commission_css" "$digest_commission_css" && \
+              verify_asset "$expected_customer_js" "$digest_customer_js" && \
+              verify_asset "$expected_recover_js" "$digest_recover_js"; then
+              echo "deployment_asset_digests=matched"
+              break
+            fi
+            [[ "$attempt" != "6" ]] || exit 1
+            sleep 4
+          done
           for endpoint in finance customers privacy overview security; do
             status=$(curl -sS --max-time 12 -o /dev/null -w '%{http_code}' "https://drawmeone.com/api/admin/$endpoint.php")
             [[ "$status" == "401" || "$status" == "503" ]] || { echo "admin_route_${endpoint}=unexpected_$status"; exit 1; }
@@ -303,35 +328,35 @@ jobs:
           done
           # The three alternate layouts render their contact CTAs from JS.
           # Check that Hostinger serves the newly versioned asset, not stale code.
-          [[ "$public_home" == *'concepts.js?v=13'* ]] || {
+          [[ "$public_home" == *"$expected_concepts\""* ]] || {
             echo "alternate_contact_asset=stale_homepage"
             exit 1
           }
-          alt_js=$(curl -fsSL --max-time 15 "https://drawmeone.com/concepts.js?v=13")
+          alt_js=$(curl -fsSL --max-time 15 "https://drawmeone.com/$expected_concepts")
           alt_count=$(printf '%s' "$alt_js" | grep -o 'class="concept-email-actions"' | wc -l)
           [[ "$alt_count" == "3" ]] || {
             echo "alternate_contact_asset=missing_layout_action"
             exit 1
           }
           echo "alternate_contact_layouts=3"
-          [[ "$public_home" == *'studio.js?v=14'* ]] && [[ "$alt_js" == *'data-intake-description'* ]] || { echo "homepage_intake=stale_assets"; exit 1; }
-          studio_js=$(curl -fsSL --max-time 15 "https://drawmeone.com/studio.js?v=14")
+          [[ "$public_home" == *"$expected_studio\""* ]] && [[ "$alt_js" == *'data-intake-description'* ]] || { echo "homepage_intake=stale_assets"; exit 1; }
+          studio_js=$(curl -fsSL --max-time 15 "https://drawmeone.com/$expected_studio")
           [[ "$studio_js" == *'function refreshIntake()'* ]] && [[ "$studio_js" == *'Start a commission request'* ]] || { echo "homepage_intake=stale_script"; exit 1; }
           echo "homepage_intake=deployed"
           [[ "$studio_js" == *'function loadPresentation()'* ]] && [[ "$public_home" == *'id="design-lab" hidden'* ]] || { echo "public_design_runtime=stale_assets"; exit 1; }
           curl -fsSL --max-time 15 https://drawmeone.com/api/site-settings.php | php -r '$d=json_decode(stream_get_contents(STDIN),true); if (!is_array($d)||($d["ok"]??false)!==true||!in_array($d["presentation"]??null,["preview","published"],true)) exit(1); echo "public_design_runtime=".$d["presentation"]."\\n";'
           # Verify mobile Artist Desk stylesheet was deployed and cache-busted.
-          [[ "$desk_page" == *'panel.css?v=45'* ]] || {
+          [[ "$desk_page" == *"$expected_desk_css\""* ]] || {
             echo "mobile_artist_desk=stale_stylesheet_reference"
             exit 1
           }
-          desk_css=$(curl -fsSL --max-time 15 "https://drawmeone.com/studio-admin/panel.css?v=45")
+          desk_css=$(curl -fsSL --max-time 15 "https://drawmeone.com/studio-admin/$expected_desk_css")
           [[ "$desk_css" == *'v3.3: All six Artist Desk sections'* ]] &&
           [[ "$desk_css" == *'grid-template-columns:repeat(3,minmax(0,1fr))'* ]] || {
             echo "mobile_artist_desk=stale_or_missing_mobile_layout"
             exit 1
           }
-          [[ "$desk_page" == *'panel.js?v=61'* ]] &&
+          [[ "$desk_page" == *"$expected_desk_js\""* ]] &&
           [[ "$desk_page" == *'id="artwork-filter"'* ]] &&
           [[ "$desk_page" == *'id="artwork-unpublish-selected"'* ]] || {
             echo "artist_artwork_library=stale_html"
@@ -341,7 +366,7 @@ jobs:
             echo "artist_artwork_library=stale_css"
             exit 1
           }
-          desk_js=$(curl -fsSL --max-time 15 "https://drawmeone.com/studio-admin/panel.js?v=61")
+          desk_js=$(curl -fsSL --max-time 15 "https://drawmeone.com/studio-admin/$expected_desk_js")
           [[ "$desk_js" == *'artwork-unpublish-selected'* ]] &&
           [[ "$desk_js" == *'No artworks match this view.'* ]] || {
             echo "artist_artwork_library=stale_js"
@@ -383,11 +408,11 @@ jobs:
           }
           echo "artist_checkbox_sizing=deployed"
           gallery_page=$(curl -fsSL --max-time 15 "https://drawmeone.com/")
-          [[ "$gallery_page" == *'gallery.js?v=19'* ]] || {
+          [[ "$gallery_page" == *"$expected_gallery\""* ]] || {
             echo "published_gallery=stale_html"
             exit 1
           }
-          gallery_js=$(curl -fsSL --max-time 15 "https://drawmeone.com/gallery.js?v=19")
+          gallery_js=$(curl -fsSL --max-time 15 "https://drawmeone.com/$expected_gallery")
           [[ "$gallery_js" == *'if (!unique.has(item.src)) unique.set(item.src,item)'* ]] &&
           [[ "$gallery_js" == *'if (!hosted.length) throw issue'* ]] &&
           [[ "$gallery_js" == *'delete big.dataset.fallback'* ]] || {
@@ -409,14 +434,14 @@ jobs:
           echo "mobile_artist_desk=deployed"
           # Public commission intake remains closed, but its signed-in history
           # assets must include the new browser-only filters and status labels.
-          [[ "$commission_page" == *'commission.js?v=42'* ]] &&
-          [[ "$commission_page" == *'commission.css?v=29'* ]] &&
+          [[ "$commission_page" == *"$expected_commission_js\""* ]] &&
+          [[ "$commission_page" == *"$expected_commission_css\""* ]] &&
           [[ "$commission_page" == *'id="request-history-search"'* ]] &&
           [[ "$commission_page" == *'id="request-history-filter"'* ]] || {
             echo "customer_history=stale_html"
             exit 1
           }
-          commission_js=$(curl -fsSL --max-time 15 "https://drawmeone.com/commission.js?v=42")
+          commission_js=$(curl -fsSL --max-time 15 "https://drawmeone.com/$expected_commission_js")
           [[ "$commission_js" == *'function renderRequestHistory()'* ]] &&
           [[ "$commission_js" == *'readableRequestStatus(r.workflow_stage || r.status)'* ]] &&
           [[ "$commission_js" == *'requestsFetchSequence'* ]] || {
@@ -505,25 +530,25 @@ jobs:
           echo "admin_security_ui=deployed"
           # v3.9 registration remains closed, but verify the versioned
           # customer signup and recovery assets are deployed safely.
-          [[ "$customer_page" == *'account.js?v=23'* ]] &&
+          [[ "$customer_page" == *"$expected_customer_js\""* ]] &&
           [[ "$customer_page" == *'id="signup-password-confirm"'* ]] || {
             echo "customer_onboarding_assets=stale_signup"
             exit 1
           }
-          customer_js=$(curl -fsSL --max-time 15 "https://drawmeone.com/account.js?v=23")
+          customer_js=$(curl -fsSL --max-time 15 "https://drawmeone.com/$expected_customer_js")
           [[ "$customer_js" == *'signupPasswordConfirm.setCustomValidity'* ]] &&
           [[ "$customer_js" == *'Too many sign-in attempts'* ]] || {
             echo "customer_onboarding_assets=stale_signup_script"
             exit 1
           }
           recover_page=$(curl -fsSL --max-time 15 "https://drawmeone.com/password-reset.html")
-          [[ "$recover_page" == *'password-reset.js?v=13'* ]] &&
+          [[ "$recover_page" == *"$expected_recover_js\""* ]] &&
           [[ "$recover_page" == *'id="reset-request-another"'* ]] &&
           [[ "$recover_page" == *'id="reset-back-to-signin"'* ]] || {
             echo "customer_onboarding_assets=stale_recovery"
             exit 1
           }
-          recover_js=$(curl -fsSL --max-time 15 "https://drawmeone.com/password-reset.js?v=13")
+          recover_js=$(curl -fsSL --max-time 15 "https://drawmeone.com/$expected_recover_js")
           [[ "$recover_js" == *'response.status === 422'* ]] &&
           [[ "$recover_js" == *'requestAnother.hidden=false'* ]] || {
             echo "customer_onboarding_assets=stale_recovery_script"
@@ -535,11 +560,11 @@ jobs:
           # v4.0 public accessibility: validate deployed revised theme
           # picker contrast and skip-to-main links. Read-only assets only.
           home_html=$(curl -fsSL --max-time 15 "https://drawmeone.com/")
-          [[ "$home_html" == *'styles.css?v=14'* ]] || {
+          [[ "$home_html" == *"$expected_home_css\""* ]] || {
             echo "a11y_homepage=stale_version"
             exit 1
           }
-          home_css=$(curl -fsSL --max-time 15 "https://drawmeone.com/styles.css?v=14")
+          home_css=$(curl -fsSL --max-time 15 "https://drawmeone.com/$expected_home_css")
           [[ "$home_css" == *'.lab-label small{font-size:10px'* ]] &&
           [[ "$home_css" == *'opacity:1;color:var(--ink)'* ]] || {
             echo "a11y_homepage=stale_accessibility_css"
@@ -584,6 +609,10 @@ jobs:
           [[ "$integrity_output" == *"integrity_checkout_crypto_complete=yes"* ]] && [[ "$integrity_output" == *"integrity_checkout_crypto_invalid=0"* ]] || { echo "invoice_integrity_scan=missing_or_failed"; exit 1; }
           echo "READ_ONLY_DIAGNOSTIC_COMPLETED"
           REMOTE
+          } | ssh -T -o BatchMode=yes -o ConnectTimeout=15 -o ConnectionAttempts=3 \
+            -o StrictHostKeyChecking=yes -o "UserKnownHostsFile=$dir/known_hosts" \
+            -o IdentitiesOnly=yes -i "$dir/key" -p "$SSH_PORT" \
+            "$SSH_USER@$SSH_HOST" 'bash -se'
       - name: Report diagnostic status back to GitHub commit
         if: always()
         shell: bash

@@ -1,1 +1,1 @@
-Verify artwork editing, concurrent upload and commission composer release; read-only inspection only.
+Commit-derived asset version and digest verification; read-only.

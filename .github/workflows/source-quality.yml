@@ -67,4 +67,5 @@ jobs:
           php tests/config_review_contract.php
           php tests/apache_route_contract.php
           python3 tests/backup_freshness_contract.py
+          python3 ops/deployment_expectations.py >/dev/null
           DMO_CI_INTEGRATION=1 php tests/backup_health_contract.php
