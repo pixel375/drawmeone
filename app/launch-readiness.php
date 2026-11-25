@@ -60,7 +60,7 @@ function dmo_launch_overview(PDO $db): array
          'detail'=>count($catalog['tiers']).' valid public packages; custom quotes remain separate'],
         ['key'=>'public_design','label'=>'Published public presentation','status'=>$publicPresentation&&$designPublished['exists']?'ready':'blocked',
          'detail'=>$publicPresentation?($designPublished['exists']?'Published design v'.$designPublished['version'].'; visitor mode override only':'Public defaults active; no artist design published'):'Development Design Lab remains available; public presentation switch is off'],
-        ['key'=>'integrity','label'=>'Order and payment record consistency','status'=>$integrityIssues===0?'ready':'blocked',
+        ['key'=>'integrity','label'=>'Order, payment and artwork record consistency','status'=>$integrityIssues===0?'ready':'blocked',
          'detail'=>$integrityIssues===0?'No inconsistencies detected in current database checks; private-file and invoice authentication checks run separately':$integrityIssues.' affected records or missing schema checks require operator review'],
         ['key'=>'review_schema','label'=>'Artwork review schema','status'=>dmo_review_schema_ready($db)?'ready':'blocked','detail'=>'Required for optional proof approval and included revisions'],
         ['key'=>'review','label'=>'Customer proof review','status'=>dmo_review_enabled($db)?'ready':'blocked','detail'=>'Optional watermarked proof and quote-based revision allowances'],

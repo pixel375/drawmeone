@@ -16,7 +16,7 @@ if (!is_string($idText) || !preg_match('/^[1-9][0-9]{0,17}$/D', $idText) ||
 try {
     $db = dmo_database();
     $query = $db->prepare(
-        "SELECT a.id, a.alt_text, f.pixel_width, f.pixel_height, f.storage_key " .
+        "SELECT a.id, a.alt_text, f.pixel_width, f.pixel_height, f.storage_key,f.mime_type,f.byte_size,f.variant " .
         "FROM dmo_portfolio_artworks a JOIN dmo_artwork_files f " .
         "ON f.artwork_id = a.id AND f.variant = 'display' " .
         "WHERE a.id = :id AND a.visibility = 'published' LIMIT 1"
@@ -24,7 +24,7 @@ try {
     $query->execute(['id' => (int) $idText]);
     $work = $query->fetch(PDO::FETCH_ASSOC);
     if (!is_array($work) ||
-        !is_file(dmo_artwork_storage_file((string) $work['storage_key']))) {
+        !dmo_artwork_variant_valid($work)) {
         http_response_code(404);
         header('X-Robots-Tag: noindex');
         echo 'Drawing not found.';

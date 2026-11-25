@@ -127,7 +127,7 @@ function dmo_artwork_send_file(PDO $db, int $id, string $variant, bool $admin): 
         exit;
     }
     $stmt = $db->prepare(
-        'SELECT f.storage_key, f.byte_size FROM dmo_artwork_files f ' .
+        'SELECT f.storage_key,f.byte_size,f.mime_type,f.pixel_width,f.pixel_height,f.variant FROM dmo_artwork_files f ' .
         'JOIN dmo_portfolio_artworks a ON a.id = f.artwork_id ' .
         'WHERE a.id = :id AND f.variant = :variant ' .
         ($admin ? '' : "AND a.visibility = 'published' ") .
@@ -140,7 +140,7 @@ function dmo_artwork_send_file(PDO $db, int $id, string $variant, bool $admin): 
         exit;
     }
     $path = dmo_artwork_storage_file((string) $found['storage_key']);
-    if (!is_file($path) || !is_readable($path)) {
+    if (!dmo_artwork_variant_valid($found)) {
         http_response_code(404);
         exit;
     }
@@ -181,6 +181,8 @@ function dmo_artwork_variant_valid(array $row): bool
 {
     try{
         $path=dmo_artwork_storage_file((string)$row['storage_key']);
+        clearstatcache(true,$path);
+        if(isset($row['variant'])&&(!in_array($row['variant'],['thumb','display'],true)||!str_ends_with($path,'/'.$row['variant'].'.webp')))return false;
         if(is_link($path)||is_link(dirname($path))||is_link(dirname(dirname($path)))||
             !is_file($path)||!is_readable($path)||$row['mime_type']!=='image/webp'||
             filesize($path)!==(int)$row['byte_size'])return false;

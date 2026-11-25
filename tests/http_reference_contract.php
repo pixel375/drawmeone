@@ -210,6 +210,13 @@ try {
         is_file(dmo_refs_storage_file($record['storage_key'],'display')),
         'variants_stored_outside_public_webroot');
 
+    require_once dirname(__DIR__).'/app/integrity.php';
+    ref_assert(dmo_integrity_media($db)['references']['invalid']===0,'reference_media_metadata_consistent');
+    $displayPath=dmo_refs_storage_file($record['storage_key'],'display');
+    $originalBytes=file_get_contents($displayPath);
+    file_put_contents($displayPath,$originalBytes.'unexpected bytes');clearstatcache(true,$displayPath);
+    ref_assert(dmo_integrity_media($db)['references']['invalid']===1,'reference_size_mismatch_detected');
+    file_put_contents($displayPath,$originalBytes);chmod($displayPath,0600);clearstatcache(true,$displayPath);
     [$code,$json,$bytes,$headers] = ref_http(
         '/api/reference.php?id='.$id.'&variant=display',$cookieA);
     ref_assert($code===200 && str_contains(strtolower($headers),'image/webp') &&

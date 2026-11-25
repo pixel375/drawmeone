@@ -1,1 +1,1 @@
-Verify atomic artwork batch visibility and assets.
+Verify expanded media metadata and record integrity checks.

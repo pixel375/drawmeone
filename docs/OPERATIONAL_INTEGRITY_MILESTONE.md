@@ -9,3 +9,7 @@ The CLI authenticates each active invoice's encrypted URL using its order bindin
 Disposable integration deliberately creates inconsistent states in transactions and rolls them back. Coverage includes a missing checkout migration marker, cancelled request/order conflicts, valid invoice cryptography, wrong order binding, invalid fingerprint and malformed ciphertext. No live customer records are altered. Commercial gates remain unchanged.
 
 Independent storage and separate recovery/application-key custody, final policy approvals, real onboarding and provider validation remain outstanding.
+
+## Portfolio and reference media consistency
+
+Database checks now detect missing optimized artwork variants, invalid metadata and mismatched storage folders. The scheduled bounded media scan checks portfolio file size, MIME and dimensions against the records; reference display size/dimensions and delivery dimensions are also checked. Public image and detail responses refuse invalid portfolio bytes rather than returning the previous cache validator or serving mismatched files. These are metadata/type checks, not cryptographic authentication for portfolio or reference images; delivery SHA-256 remains unchanged. Full independent synthetic restore tests compare recovered image metadata and verify reference thumbnails. No files are automatically deleted or repaired.

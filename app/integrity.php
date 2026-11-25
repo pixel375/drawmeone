@@ -20,6 +20,9 @@ function dmo_integrity_records(PDO $db): array
         'cancelled_order_conflict'=>"SELECT COUNT(*) FROM dmo_orders o JOIN dmo_commission_requests r ON r.id=o.request_id WHERE o.status='cancelled' AND (r.status<>'cancelled' OR o.payment_status<>'unverified' OR EXISTS(SELECT 1 FROM dmo_payments p WHERE p.order_id=o.id AND p.status<>'rejected'))",
         'multiple_orders'=>"SELECT COUNT(*) FROM (SELECT request_id FROM dmo_orders GROUP BY request_id HAVING COUNT(*)>1) duplicates",
     ];
+    $checks['portfolio_missing_variants']="SELECT COUNT(*) FROM dmo_portfolio_artworks a WHERE NOT EXISTS(SELECT 1 FROM dmo_artwork_files f WHERE f.artwork_id=a.id AND f.variant='thumb') OR NOT EXISTS(SELECT 1 FROM dmo_artwork_files f WHERE f.artwork_id=a.id AND f.variant='display')";
+    $checks['portfolio_invalid_metadata']="SELECT COUNT(*) FROM dmo_artwork_files WHERE variant NOT IN ('thumb','display') OR mime_type<>'image/webp' OR byte_size<100 OR pixel_width<1 OR pixel_height<1 OR storage_key NOT LIKE CONCAT('%/',variant,'.webp')";
+    $checks['portfolio_variant_folder_mismatch']="SELECT COUNT(*) FROM dmo_artwork_files t JOIN dmo_artwork_files d ON d.artwork_id=t.artwork_id AND d.variant='display' WHERE t.variant='thumb' AND SUBSTRING_INDEX(t.storage_key,'/',1)<>SUBSTRING_INDEX(d.storage_key,'/',1)";
     $checks['cancelled_request_live_quote']="SELECT COUNT(*) FROM dmo_quotes q JOIN dmo_commission_requests r ON r.id=q.request_id WHERE r.status='cancelled' AND q.status='sent'";
     $checks['cancelled_request_live_order']="SELECT COUNT(*) FROM dmo_orders o JOIN dmo_commission_requests r ON r.id=o.request_id WHERE r.status='cancelled' AND o.status<>'cancelled'";
     if($schemas['checkout']){
@@ -54,11 +57,11 @@ function dmo_integrity_media(PDO $db,int $limit=10000): array
 {
     if($limit<1||$limit>10000)throw new InvalidArgumentException('Invalid media scan limit');
     $specs=[
-        'portfolio'=>['sql'=>'SELECT id,storage_key FROM dmo_artwork_files','paths'=>static fn($row)=>[dmo_artwork_storage_file($row['storage_key'])]],
+        'portfolio'=>['sql'=>'SELECT id,storage_key,variant,mime_type,byte_size,pixel_width,pixel_height FROM dmo_artwork_files','paths'=>static fn($row)=>[dmo_artwork_storage_file($row['storage_key'])]],
     ];
-    if(dmo_refs_schema_ready($db))$specs['references']=['sql'=>'SELECT id,storage_key FROM dmo_request_attachments',
+    if(dmo_refs_schema_ready($db))$specs['references']=['sql'=>'SELECT id,storage_key,mime_type,byte_size,pixel_width,pixel_height FROM dmo_request_attachments',
         'paths'=>static fn($row)=>[dmo_refs_storage_file($row['storage_key'],'display'),dmo_refs_storage_file($row['storage_key'],'thumb')]];
-    if(dmo_delivery_schema_ready($db))$specs['deliveries']=['sql'=>'SELECT id,storage_key,byte_size,sha256 FROM dmo_delivery_drafts',
+    if(dmo_delivery_schema_ready($db))$specs['deliveries']=['sql'=>'SELECT id,storage_key,byte_size,sha256,pixel_width,pixel_height FROM dmo_delivery_drafts',
         'paths'=>static fn($row)=>[dmo_delivery_file($row['storage_key'])]];
     $result=[];
     foreach($specs as $kind=>$spec){
@@ -84,6 +87,11 @@ function dmo_integrity_media(PDO $db,int $limit=10000): array
                         $info=@getimagesize($file);
                         if(!is_array($info)||($info['mime']??null)!=='image/webp'){
                             $bad=true;break;
+                        }
+                        if($kind==='portfolio'&&!dmo_artwork_variant_valid($row)){$bad=true;break;}
+                        if(($kind==='references'&&str_ends_with($file,'/display.webp'))||$kind==='deliveries'){
+                            if(filesize($file)!==(int)$row['byte_size']||(int)$info[0]!==(int)$row['pixel_width']||(int)$info[1]!==(int)$row['pixel_height']||
+                                ($kind==='references'&&$row['mime_type']!=='image/webp')){$bad=true;break;}
                         }
                         if($kind==='deliveries'&&(filesize($file)!==(int)$row['byte_size']||
                             !hash_equals($row['sha256'],(string)hash_file('sha256',$file)))){

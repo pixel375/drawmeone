@@ -224,6 +224,23 @@ try {
         preg_match('/^ETag:\s*("[a-f0-9]{64}")\s*$/mi',$headers,$matches)===1,
         'public_image_requires_revalidation_with_etag');
     $etag=$matches[1];
+    require_once dirname(__DIR__).'/app/integrity.php';
+    art_assert(dmo_integrity_media($db)['portfolio']['invalid']===0,'valid_portfolio_media_scan');
+    $displayPath=dmo_artwork_storage_file($variants[0]['storage_key']);
+    $savedBytes=file_get_contents($displayPath);
+    file_put_contents($displayPath,$savedBytes.'unexpected bytes');
+    clearstatcache(true,$displayPath);
+    art_assert(dmo_integrity_media($db)['portfolio']['invalid']===1,'portfolio_size_mismatch_detected');
+    [$status]=art_http('/api/artwork.php?id='.$id.'&v=display');
+    art_assert($status===404,'damaged_published_image_not_served');
+    [$status]=art_http('/artwork.php?id='.$id);
+    art_assert($status===404,'damaged_published_detail_not_served');
+    file_put_contents($displayPath,$savedBytes);chmod($displayPath,0600);clearstatcache(true,$displayPath);
+    $db->beginTransaction();
+    $db->prepare("DELETE FROM dmo_artwork_files WHERE artwork_id=:id AND variant='thumb'")->execute(['id'=>$id]);
+    art_assert(dmo_integrity_records($db)['portfolio_missing_variants']===1,'missing_portfolio_variant_detected');
+    $db->rollBack();
+    art_assert(dmo_integrity_records($db)['portfolio_missing_variants']===0,'restored_portfolio_variant_consistent');
     [$status,,$cached]=art_http('/api/artwork.php?id='.$id.'&v=thumb',
         ifNoneMatch:$etag);
     art_assert($status===304 && $cached==='','published_image_conditional_get');

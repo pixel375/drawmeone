@@ -332,19 +332,18 @@ try {
         'SELECT COUNT(*) FROM dmo_request_attachments')->fetchColumn()===1 &&
         (int)$restore->query('SELECT COUNT(*) FROM dmo_users')->fetchColumn()===2,
         'restored_database_contains_customer_reference');
-    $files=$restore->query(
-        'SELECT storage_key FROM dmo_artwork_files')->fetchAll(PDO::FETCH_COLUMN);
-    foreach ($files as $storageKey) {
-        if (!is_file($restored.'/drawmeone-artworks/'.$storageKey)) {
-            throw new RuntimeException('Restored artwork record has no recovered file');
-        }
+    $files=$restore->query('SELECT storage_key,byte_size,pixel_width,pixel_height FROM dmo_artwork_files')->fetchAll(PDO::FETCH_ASSOC);
+    foreach($files as $record){
+        $file=$restored.'/drawmeone-artworks/'.$record['storage_key'];
+        $info=is_file($file)?getimagesize($file):false;
+        drill_assert(is_array($info)&&($info['mime']??null)==='image/webp'&&filesize($file)===(int)$record['byte_size']&&$info[0]===(int)$record['pixel_width']&&$info[1]===(int)$record['pixel_height'],'restored_portfolio_variant_metadata_matches');
     }
-    $references=$restore->query(
-        'SELECT storage_key FROM dmo_request_attachments')->fetchAll(PDO::FETCH_COLUMN);
-    foreach ($references as $storageKey) {
-        if (!is_file($restored.'/drawmeone-references/'.$storageKey)) {
-            throw new RuntimeException('Restored private-reference record has no recovered file');
-        }
+    $references=$restore->query('SELECT storage_key,byte_size,pixel_width,pixel_height FROM dmo_request_attachments')->fetchAll(PDO::FETCH_ASSOC);
+    foreach($references as $record){
+        $file=$restored.'/drawmeone-references/'.$record['storage_key'];
+        $info=is_file($file)?getimagesize($file):false;
+        drill_assert(is_array($info)&&($info['mime']??null)==='image/webp'&&filesize($file)===(int)$record['byte_size']&&$info[0]===(int)$record['pixel_width']&&$info[1]===(int)$record['pixel_height'],'restored_reference_metadata_matches');
+        drill_assert(is_file(dirname($file).'/thumb.webp'),'restored_reference_thumbnail_present');
     }
     $draft=$restore->query('SELECT storage_key,sha256,byte_size FROM dmo_delivery_drafts')->fetch(PDO::FETCH_ASSOC);
     $draftPath=$restored.'/drawmeone-deliveries/'.$draft['storage_key'];
