@@ -192,6 +192,7 @@
   function syncReceiptRecovery(){
     $("request-recovery").hidden=!(state.pendingKey||storedRequestKey());
     $("request-recovery-check").disabled=state.sending||receiptBusy;
+    $("request-recovery-open").disabled=state.sending||receiptBusy;
     $("request-recovery-dismiss").disabled=state.sending||receiptBusy;
   }
   let receiptBusy=false;
@@ -933,6 +934,7 @@
     try{sessionStorage.removeItem("dmo_request_pending_key");}catch(_){}
     $("request-new-key").hidden=true;
     $("request-recovery-open").hidden=true;
+    $("request-recovery-open").onclick=null;
     $("request-recovery-status").textContent="";
     syncReceiptRecovery();
   }
@@ -949,8 +951,9 @@
       if(!response.ok||data.ok!==true)throw Error("Receipt unavailable");
       if(data.found===true&&typeof data.receipt?.public_ref==="string"&&/^DMO-[0-9a-f]{20}$/.test(data.receipt.public_ref)){
         status.textContent="Existing request found: "+data.receipt.public_ref+". Review it before sending another request. No new request was created.";
-        open.hidden=false;open.onclick=()=>openDetail(data.receipt.public_ref);
+        open.onclick=()=>openDetail(data.receipt.public_ref);
         await loadMyRequests();
+        if(!leavingSession)open.hidden=false;
       }else if(data.found===false)status.textContent="No saved request was found for this submission ID. An unfinished upload may still be processing; wait for confirmation before starting a separate request.";
       else throw Error("Invalid receipt");
     }catch(_){status.textContent="Could not check the receipt. Your submission ID is retained; try again.";}

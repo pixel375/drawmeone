@@ -420,11 +420,13 @@ async function verifyClosedIntakeReceiptLookup(browser){
     assert.equal(await page.locator("#request-create-panel").isVisible(),false);
     await page.locator("#request-recovery-check").click();
     await page.locator("#request-recovery-open").waitFor({state:"visible"});
+    await page.waitForFunction(()=>!document.querySelector("#request-recovery-dismiss")?.disabled&&!document.querySelector("#request-recovery-open")?.disabled);
     await page.locator("#request-recovery-open").click();
     await page.waitForFunction(ref=>document.querySelector("#detail-ref")?.textContent===ref,A);
     assert.equal(calls,1);
     page.once("dialog",d=>d.accept());
     await page.locator("#request-recovery-dismiss").click();
+    await page.locator("#request-recovery").waitFor({state:"hidden"});
     assert.equal(await page.locator("#request-recovery").isVisible(),false);
     assert.equal(await page.evaluate(()=>sessionStorage.getItem("dmo_request_pending_key")),null);
     console.log("PASS: authenticated submission receipt recovery with intake closed");
