@@ -20,7 +20,7 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
 <meta name="theme-color" content="#151317">
 <title>Artist's Desk · Draw Me One</title>
 <link rel="stylesheet" href="./panel.css?v=40">
-<script defer src="./panel.js?v=48"></script>
+<script defer src="./panel.js?v=49"></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to dashboard</a>
@@ -119,6 +119,12 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
         </div>
         <p id="launch-status" class="small" role="status" aria-live="polite">Checking launch requirements…</p>
         <div id="launch-checks" class="launch-checks"></div>
+        <details class="integrity-details"><summary>Controlled launch stages and evidence</summary>
+          <p id="launch-evidence-status" class="small" role="status">Not checked yet.</p>
+          <p class="small">Configuration indicators cannot verify owner approval, real customer tests, an external payment provider or independent recovery. Complete the separate evidence requirements before opening.</p>
+          <div id="launch-evidence-stages" class="launch-checks"></div>
+          <button id="launch-evidence-export" type="button" class="quiet" disabled>Export configuration report</button>
+        </details>
         <details class="integrity-details"><summary>Retention review (read-only)</summary>
           <p id="retention-status" class="small" role="status">Not checked yet.</p>
           <p class="small">These are operational review thresholds, not approved deletion periods or legal deadlines. No records are removed by this report. Older privacy requests are measured from the original submission.</p>

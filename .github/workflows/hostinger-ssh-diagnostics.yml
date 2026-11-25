@@ -67,7 +67,7 @@ jobs:
           [[ -d "$site" && -f "$site/app/cli-admin.php" && -f "$site/app/bootstrap.php" ]] || {
             echo "Expected DrawMeOne PHP deployment is missing"; exit 1;
           }
-          for file in artwork.php portfolio.php sitemap.php services.php policy.php app/public-info.php app/policies.php api/policy.php app/bootstrap.php app/catalog.php app/packages.php api/catalog.php api/admin/packages.php app/backup-health.php app/auth.php app/mailer.php app/admin.php app/cli-admin.php app/cli-backup.php app/backup-archive.php app/cli-recovery-check.php app/integrity.php app/cli-integrity.php app/cli-mail-config.php app/cli-smtp-probe.php app/commission-workflow.php app/quotes.php app/orders.php app/artwork.php app/requests.php app/references.php app/cli-migrate-references.php app/deliveries.php app/artwork-reviews.php app/cli-migrate-reviews.php app/cli-migrate-deliveries.php app/notifications.php app/payments.php app/checkout.php app/cli-migrate-checkout.php api/checkout.php api/admin/delivery-draft.php api/delivery.php api/artwork-review.php api/request-status.php api/requests.php api/request.php api/request-message.php api/quote-response.php api/request-attachment.php api/reference.php api/reference-delete.php api/auth/signup.php api/auth/login.php api/auth/logout.php api/auth/me.php api/auth/status.php api/auth/verify.php api/auth/resend-verification.php api/auth/reset-request.php api/auth/reset-confirm.php api/admin/login.php api/admin/email.php api/admin/request.php api/admin/request-actions.php api/admin/quote-send.php api/admin/order-create.php api/portfolio.php api/artwork.php api/admin/artworks.php api/admin/artwork-preview.php api/admin/artwork-upload.php; do
+          for file in artwork.php portfolio.php sitemap.php services.php policy.php app/public-info.php app/policies.php api/policy.php app/bootstrap.php app/launch-readiness.php app/cli-launch-readiness.php app/catalog.php app/packages.php api/catalog.php api/admin/packages.php app/backup-health.php app/auth.php app/mailer.php app/admin.php app/cli-admin.php app/cli-backup.php app/backup-archive.php app/cli-recovery-check.php app/integrity.php app/cli-integrity.php app/cli-mail-config.php app/cli-smtp-probe.php app/commission-workflow.php app/quotes.php app/orders.php app/artwork.php app/requests.php app/references.php app/cli-migrate-references.php app/deliveries.php app/artwork-reviews.php app/cli-migrate-reviews.php app/cli-migrate-deliveries.php app/notifications.php app/payments.php app/checkout.php app/cli-migrate-checkout.php api/checkout.php api/admin/delivery-draft.php api/delivery.php api/artwork-review.php api/request-status.php api/requests.php api/request.php api/request-message.php api/quote-response.php api/request-attachment.php api/reference.php api/reference-delete.php api/auth/signup.php api/auth/login.php api/auth/logout.php api/auth/me.php api/auth/status.php api/auth/verify.php api/auth/resend-verification.php api/auth/reset-request.php api/auth/reset-confirm.php api/admin/login.php api/admin/email.php api/admin/request.php api/admin/request-actions.php api/admin/quote-send.php api/admin/order-create.php api/portfolio.php api/artwork.php api/admin/artworks.php api/admin/artwork-preview.php api/admin/artwork-upload.php; do
             valid=no
             for attempt in 1 2 3 4 5 6 7 8 9 10; do
               if [[ -f "$site/$file" ]] && php -l "$site/$file" >/dev/null 2>&1; then
@@ -95,6 +95,7 @@ jobs:
           php "$site/tests/private_reference_smoke.php"
           php "$site/tests/mail_dns_check.php"
           echo "PHP syntax: PASS"
+          php "$site/app/cli-launch-readiness.php" check
           if command -v mariadb-dump >/dev/null 2>&1 || command -v mysqldump >/dev/null 2>&1; then
             echo "backup_sql_dump_cli=yes"
           else
@@ -280,9 +281,22 @@ jobs:
             }
           done
           echo "auth_recovery_get_guards=closed"
+          # Hostinger auto-deploy can lag behind the push-triggered CI run.
+          # Require exact current markers before checking versioned assets; never
+          # treat an older page as success. Retry the complete set together.
+          synced=no
+          for attempt in {1..12}; do
+            public_home=$(curl -fsSL --max-time 5 -H "Cache-Control: no-cache" "https://drawmeone.com/" || true)
+            desk_page=$(curl -fsSL --max-time 5 -H "Cache-Control: no-cache" "https://drawmeone.com/studio-admin/index.php" || true)
+            commission_page=$(curl -fsSL --max-time 5 -H "Cache-Control: no-cache" "https://drawmeone.com/commission.html" || true)
+            customer_page=$(curl -fsSL --max-time 5 -H "Cache-Control: no-cache" "https://drawmeone.com/account.html" || true)
+            if [[ "$public_home" == *'concepts.js?v=13'* && "$public_home" == *'studio.js?v=14'* && "$public_home" == *'gallery.js?v=14'* && "$public_home" == *'styles.css?v=14'* && "$desk_page" == *'panel.js?v=49'* && "$desk_page" == *'panel.css?v=40'* && "$commission_page" == *'commission.js?v=39'* && "$customer_page" == *'account.js?v=20'* ]]; then synced=yes; break; fi
+            sleep 4
+          done
+          [[ "$synced" == "yes" ]] || { echo "deployment_sync=expected_versions_unavailable"; exit 1; }
+          echo "deployment_sync=expected_versions_present"
           # The three alternate layouts render their contact CTAs from JS.
           # Check that Hostinger serves the newly versioned asset, not stale code.
-          public_home=$(curl -fsSL --max-time 15 "https://drawmeone.com/")
           [[ "$public_home" == *'concepts.js?v=13'* ]] || {
             echo "alternate_contact_asset=stale_homepage"
             exit 1
@@ -301,7 +315,6 @@ jobs:
           [[ "$studio_js" == *'function loadPresentation()'* ]] && [[ "$public_home" == *'id="design-lab" hidden'* ]] || { echo "public_design_runtime=stale_assets"; exit 1; }
           curl -fsSL --max-time 15 https://drawmeone.com/api/site-settings.php | php -r '$d=json_decode(stream_get_contents(STDIN),true); if (!is_array($d)||($d["ok"]??false)!==true||!in_array($d["presentation"]??null,["preview","published"],true)) exit(1); echo "public_design_runtime=".$d["presentation"]."\\n";'
           # Verify mobile Artist Desk stylesheet was deployed and cache-busted.
-          desk_page=$(curl -fsSL --max-time 15 "https://drawmeone.com/studio-admin/index.php")
           [[ "$desk_page" == *'panel.css?v=40'* ]] || {
             echo "mobile_artist_desk=stale_stylesheet_reference"
             exit 1
@@ -312,7 +325,7 @@ jobs:
             echo "mobile_artist_desk=stale_or_missing_mobile_layout"
             exit 1
           }
-          [[ "$desk_page" == *'panel.js?v=48'* ]] &&
+          [[ "$desk_page" == *'panel.js?v=49'* ]] &&
           [[ "$desk_page" == *'id="artwork-filter"'* ]] &&
           [[ "$desk_page" == *'id="artwork-unpublish-selected"'* ]] || {
             echo "artist_artwork_library=stale_html"
@@ -322,7 +335,7 @@ jobs:
             echo "artist_artwork_library=stale_css"
             exit 1
           }
-          desk_js=$(curl -fsSL --max-time 15 "https://drawmeone.com/studio-admin/panel.js?v=48")
+          desk_js=$(curl -fsSL --max-time 15 "https://drawmeone.com/studio-admin/panel.js?v=49")
           [[ "$desk_js" == *'artwork-unpublish-selected'* ]] &&
           [[ "$desk_js" == *'No artworks match this view.'* ]] || {
             echo "artist_artwork_library=stale_js"
@@ -333,6 +346,8 @@ jobs:
           echo "design_history=deployed"
           [[ "$desk_page" == *'id="package-compatibility"'* ]] && [[ "$desk_js" == *'expected_compatibility_revision'* ]] || { echo "package_compatibility=stale_assets"; exit 1; }
           echo "package_compatibility=deployed"
+          [[ "$desk_page" == *'id="launch-evidence-export"'* ]] && [[ "$desk_js" == *'configuration_only'* ]] || { echo "launch_evidence=stale_assets"; exit 1; }
+          echo "launch_evidence=deployed"
           [[ "$desk_page" == *'id="request-list-query"'* ]] &&
           [[ "$desk_page" == *'id="request-list-next"'* ]] &&
           [[ "$desk_js" == *'requestListGeneration'* ]] &&
@@ -379,7 +394,6 @@ jobs:
           echo "mobile_artist_desk=deployed"
           # Public commission intake remains closed, but its signed-in history
           # assets must include the new browser-only filters and status labels.
-          commission_page=$(curl -fsSL --max-time 15 "https://drawmeone.com/commission.html")
           [[ "$commission_page" == *'commission.js?v=39'* ]] &&
           [[ "$commission_page" == *'commission.css?v=28'* ]] &&
           [[ "$commission_page" == *'id="request-history-search"'* ]] &&
@@ -462,7 +476,6 @@ jobs:
           echo "customer_history=deployed"
           # v3.9 registration remains closed, but verify the versioned
           # customer signup and recovery assets are deployed safely.
-          customer_page=$(curl -fsSL --max-time 15 "https://drawmeone.com/account.html")
           [[ "$customer_page" == *'account.js?v=20'* ]] &&
           [[ "$customer_page" == *'id="signup-password-confirm"'* ]] || {
             echo "customer_onboarding_assets=stale_signup"

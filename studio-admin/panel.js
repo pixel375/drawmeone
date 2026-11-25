@@ -154,11 +154,50 @@
   }
   $("privacy-queue-refresh").addEventListener("click",()=>loadPrivacyQueue(false));
   $("privacy-queue-next").addEventListener("click",()=>loadPrivacyQueue(true));
+  let overviewGeneration=0,launchEvidence=null;
+  function renderLaunchEvidence(report){
+    launchEvidence=null;
+    const list=$("launch-evidence-stages"),status=$("launch-evidence-status"),button=$("launch-evidence-export");
+    list.replaceChildren();button.disabled=true;
+    if(report?.scope!=="configuration_only"||report.authorizes_launch!==false||!Array.isArray(report.stages)){
+      status.textContent="Configuration report unavailable.";return;
+    }
+    const clean={generated_at:String(report.generated_at||""),scope:"configuration_only",authorizes_launch:false,
+      published_artwork_count:Number.isSafeInteger(report.published_artwork_count)?report.published_artwork_count:null,
+      published_package_count:Number.isSafeInteger(report.published_package_count)?report.published_package_count:null,
+      intake_open:report.intake_open===true,stages:[]};
+    for(const stage of report.stages){
+      if(typeof stage.label!=="string"||!Array.isArray(stage.configuration_pending)||!Array.isArray(stage.external_evidence_required))continue;
+      const row={key:String(stage.key||""),label:stage.label,configuration_ready:stage.configuration_ready===true,
+        configuration_pending:stage.configuration_pending.filter(x=>typeof x==="string"),
+        external_evidence_required:stage.external_evidence_required.filter(x=>typeof x==="string")};
+      clean.stages.push(row);
+      const card=document.createElement("article");card.className="launch-check";
+      card.append(textNode("strong",row.label),textNode("p",row.configuration_ready?"Configuration present; external evidence still required":"Configuration pending: "+row.configuration_pending.join(", "),"small"));
+      const evidence=document.createElement("ul");
+      for(const item of row.external_evidence_required)evidence.append(textNode("li",item,"small"));
+      card.append(evidence);list.append(card);
+    }
+    if(!clean.stages.length){status.textContent="Configuration report unavailable.";return;}
+    launchEvidence=clean;
+    status.textContent="Configuration only · "+clean.generated_at+" · no launch authorization";
+    button.disabled=false;
+  }
+  $("launch-evidence-export").addEventListener("click",()=>{
+    if(!launchEvidence||leavingSession)return;
+    const url=URL.createObjectURL(new Blob([JSON.stringify(launchEvidence,null,2)+"\\n"],{type:"application/json"}));
+    const link=document.createElement("a");link.href=url;link.download="drawmeone-launch-configuration.json";document.body.append(link);link.click();link.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),1000);
+  });
   async function overview() {
+    const generation=++overviewGeneration;
+    renderLaunchEvidence(null);
     const { response, data } = await get("overview.php");
+    if(generation!==overviewGeneration||leavingSession)return;
     if (response.status === 401) return sessionExpired();
     if (!response.ok || !data.ok) return showError("Unable to load live studio counts.");
     if(!intakeBusy)renderIntake(data.intake);
+    renderLaunchEvidence(data.launch_evidence);
     const counters = {
       "stat-requests": data.counts?.requests_for_review,
       "stat-orders": data.counts?.active_orders,
@@ -2176,6 +2215,8 @@
     ++messageGeneration;
     ++designGeneration;
     ++packageGeneration;
+    ++overviewGeneration;
+    renderLaunchEvidence(null);
     clearPrivacyQueue();
     $("workspace").hidden = true;
     const url = new URL(location.href);

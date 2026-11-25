@@ -893,6 +893,14 @@ try {
     qa_positive($code===200,'catalog_unrestricted_restored');
     [$code,$catalog]=qa_http('/api/catalog.php');
     qa_positive($code===200&&array_key_exists('available_addon_ids',$catalog['tiers'][0])&&$catalog['tiers'][0]['available_addon_ids']===null,'catalog_unrestricted_public_null');
+    [$code,$report]=qa_http('/api/admin/overview.php',$tokenAdmin,'__Host-dmo_admin');
+    $evidence=$report['launch_evidence']??null;
+    qa_positive($code===200&&is_array($evidence)&&$evidence['scope']==='configuration_only'&&$evidence['authorizes_launch']===false&&count($evidence['stages'])===6,'launch_configuration_report_not_authorization');
+    qa_positive($evidence['published_package_count']===1&&$evidence['intake_open']===false,'launch_report_reflects_catalog_and_intake');
+    foreach($evidence['stages'] as $stage)qa_positive(count($stage['external_evidence_required'])>0,'launch_stage_requires_external_evidence');
+    qa_positive(!str_contains(json_encode($evidence,JSON_THROW_ON_ERROR),'positive-a@example.invalid')&&!str_contains(json_encode($evidence,JSON_THROW_ON_ERROR),$tokenAdmin),'launch_evidence_excludes_private_identity_and_credentials');
+    [$code]=qa_http('/api/admin/overview.php');
+    qa_positive($code===401,'launch_evidence_requires_admin');
     echo "DISPOSABLE_POSITIVE_HTTP=PASS\n";
 } catch(Throwable $error) {
     fwrite(STDERR,'DISPOSABLE_POSITIVE_HTTP=FAIL ('.get_class($error).

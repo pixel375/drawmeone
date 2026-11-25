@@ -1,1 +1,1 @@
-Verify artist package compatibility editor and versioned assets; read-only.
+Verify launch configuration reporting and bounded live deployment synchronization; read-only.

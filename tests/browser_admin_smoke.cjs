@@ -30,6 +30,7 @@ const mockAdmin = {
     },
     retention:{mode:"review_only",counts:{expired_sessions:3,privacy_open_30d:1,closed_no_order_365d:2}},
     integrity:{checks:{order_quote_mismatch:0,paid_without_evidence:1},issue_count:1,scope:"database_only"},
+    launch_evidence:{generated_at:"2026-11-25T00:00:00+00:00",scope:"configuration_only",authorizes_launch:false,published_artwork_count:1,published_package_count:0,intake_open:false,stages:[{key:"prepare",label:"1. Preparation",configuration_ready:false,configuration_pending:["Approved policies"],external_evidence_required:["Independent recovery test"]}]},
     readiness: [
       {key:"mail",label:"Transactional email",status:"ready",detail:"CI mock only"},
       {key:"accounts",label:"Customer accounts",status:"blocked",detail:"Closed"},
@@ -121,6 +122,12 @@ async function verifyArtistDesk(browser, width) {
     assert.equal(await page.locator("#stat-orders").innerText(),"0");
     assert.equal(await page.locator("#launch-checks .launch-check").count(),3);
     assert.match(await page.locator("#launch-status").innerText(),/1 of 3/);
+    const evidence=page.locator(".integrity-details").filter({hasText:"Controlled launch stages and evidence"});
+    await evidence.locator("summary").click();
+    assert.match(await page.locator("#launch-evidence-status").innerText(),/no launch authorization/);
+    assert.match(await page.locator("#launch-evidence-stages").innerText(),/Independent recovery test/);
+    assert.equal(await page.locator("#launch-evidence-export").isEnabled(),true);
+    await evidence.locator("summary").click();
     const retention=page.locator(".integrity-details").filter({hasText:"Retention review (read-only)"});
     await retention.locator("summary").click();
     assert.match(await page.locator("#retention-status").innerText(),/Read-only inventory/);
