@@ -1120,7 +1120,7 @@
     if(typeof info.policy_version==="string"){
       policy.append(document.createTextNode("Agreement: "+info.policy_version+" · "+(data.policy_eligible===true?"Eligible for continuation":data.policy_eligible===false?"Continuation not approved or receipt unavailable":"Not checked")));
       if(typeof info.policy_sha256==="string"&&/^[a-f0-9]{64}$/.test(info.policy_sha256)){
-        const link=document.createElement("a");link.href="../policy.html?"+new URLSearchParams({version:info.policy_version,sha256:info.policy_sha256});link.textContent=" Read recorded agreement";link.target="_blank";link.rel="noopener noreferrer";policy.append(link);
+        const link=document.createElement("a");link.href="../policy.php?"+new URLSearchParams({version:info.policy_version,sha256:info.policy_sha256});link.textContent=" Read recorded agreement";link.target="_blank";link.rel="noopener noreferrer";policy.append(link);
       }
     }
     requestText("request-detail-ref", info.public_ref || "COMMISSION REQUEST");
@@ -1913,6 +1913,34 @@
     }
   }
 
+  function packageCompatibilityControls(){
+    const record=packageSelected.kind==="tier"?packageRows("tier").find(row=>row.id===packageSelected.id):null;
+    const state=record?.compatibility;
+    const enabled=!!state&&state.editable===true&&packageWrite&&!packageBusy&&(!record.is_active||packagePublish);
+    const selected=$("package-compatibility-mode").value==="selected";
+    $("package-compatibility-mode").disabled=!enabled;
+    $("package-compatibility-options").querySelectorAll("input").forEach(input=>input.disabled=!enabled||!selected);
+    $("package-compatibility-save").disabled=!enabled||(selected&&packageRows("addon").length===0);
+  }
+  function renderPackageCompatibility(record,kind){
+    const panel=$("package-compatibility"),options=$("package-compatibility-options"),status=$("package-compatibility-status");
+    panel.hidden=kind!=="tier"||!record;
+    options.replaceChildren();status.textContent="";
+    if(panel.hidden)return;
+    const state=record.compatibility;
+    $("package-compatibility-mode").value=state?.mode==="selected"?"selected":"all";
+    const allowed=new Set(Array.isArray(state?.allowed_addon_ids)?state.allowed_addon_ids:[]);
+    for(const addon of packageRows("addon")){
+      const label=document.createElement("label"),input=document.createElement("input");
+      input.type="checkbox";input.value=String(addon.id);input.checked=allowed.has(addon.id);
+      label.append(input,document.createTextNode(addon.name+(addon.is_active?"":" (unpublished)")));options.append(label);
+    }
+    if(!options.childElementCount)options.append(textNode("p","Create extras before restricting a package.","small"));
+    if(state?.editable!==true)status.textContent="Compatibility editing unavailable for this inventory.";
+    else status.textContent=record.is_active?"Changes affect this published package after confirmation.":"Draft package; changes are not public until publication.";
+    packageCompatibilityControls();
+  }
+
   function packageSelect(kind, id = null) {
     if (packageBusy||!["tier", "addon"].includes(kind)) return;
     const record = id === null ? null : packageRows(kind).find(row => row.id === id);
@@ -1949,14 +1977,15 @@
       (record?.is_active === true && !packagePublish);
     $("package-visibility").textContent = record?.is_active
       ? "Unpublish" : "Publish";
-    $("package-visibility").disabled = !packagePublish || packageBusy || !record;
+    $("package-visibility").disabled = !packagePublish || packageBusy || !record || (kind==="tier"&&!record?.is_active&&record?.compatibility?.editable!==true);
+    renderPackageCompatibility(record,kind);
     renderPackageLists();
   }
 
   async function packagesLoad() {
     const generation=++packageGeneration;
     packageWrite=false;packagePublish=false;
-    $("package-save").disabled=true;$("package-visibility").disabled=true;
+    $("package-save").disabled=true;$("package-visibility").disabled=true;packageCompatibilityControls();
     packageShow("Loading existing commission tiers and add-ons…");
     const { response, data } = await get("packages.php");
     if(generation!==packageGeneration||leavingSession)return;
@@ -2033,7 +2062,7 @@
       return;
     }
     packageBusy = true;
-    $("package-save").disabled = true;$("package-visibility").disabled=true;
+    $("package-save").disabled = true;$("package-visibility").disabled=true;packageCompatibilityControls();
     packageShow("Saving package without publishing…");
     try {
       const action = packageSelected.kind === "tier" ? "save_tier" : "save_addon";
@@ -2068,11 +2097,12 @@
       ? "Publish " + name + " to the public catalog? Confirm its prices are approved."
       : "Remove " + name + " from the public catalog?")) return;
     packageBusy = true;
-    $("package-visibility").disabled = true;$("package-save").disabled=true;
+    $("package-visibility").disabled = true;$("package-save").disabled=true;packageCompatibilityControls();
     try {
       const { response, data } = await post("packages.php", {
         action:"set_active",kind:packageSelected.kind,
         id:packageSelected.id,active,expected_revision:row.revision??null,
+        expected_compatibility_revision:row.compatibility?.revision??null,
       },csrf);
       if(response.status===401)return sessionExpired();
       if(response.status===409&&data.error==="stale_catalog_reload_required"){packageWrite=false;packagePublish=false;packageShow("This item changed. Reload before editing again.",true);return;}
@@ -2089,6 +2119,26 @@
       packageBusy = false;
       packageSelect(packageSelected.kind,packageSelected.id);
     }
+  });
+
+  $("package-compatibility-mode").addEventListener("change",packageCompatibilityControls);
+  $("package-compatibility-save").addEventListener("click",async()=>{
+    const record=packageSelected.kind==="tier"?packageRows("tier").find(row=>row.id===packageSelected.id):null;
+    if(!record||packageBusy||!packageWrite||!record.compatibility?.editable||(record.is_active&&!packagePublish))return;
+    const mode=$("package-compatibility-mode").value;
+    const ids=mode==="selected"?[...$("package-compatibility-options").querySelectorAll("input:checked")].map(input=>Number(input.value)):[];
+    if(mode==="selected"&&!packageRows("addon").length)return;
+    if(!window.confirm("Save extra availability for this package?"+(record.is_active?" This changes the public catalog immediately.":"")))return;
+    packageBusy=true;$("package-save").disabled=true;$("package-visibility").disabled=true;packageCompatibilityControls();
+    try{
+      const {response,data}=await post("packages.php",{action:"set_compatibility",kind:"tier",id:record.id,mode,allowed_addon_ids:ids,
+        expected_revision:record.revision,expected_compatibility_revision:record.compatibility.revision},csrf);
+      if(response.status===401)return sessionExpired();
+      if(!response.ok||!data.ok){packageWrite=false;packagePublish=false;packageShow("Change not confirmed. Reload before editing.",true);return;}
+      await packagesLoad();
+      if(!leavingSession&&packageWrite)packageShow("Extra availability saved.");
+    }catch(_){packageWrite=false;packagePublish=false;packageShow("Connection failed. Reload before editing.",true);}
+    finally{packageBusy=false;if(!leavingSession)packageSelect(packageSelected.kind,packageSelected.id);}
   });
 
   function selectPanel(name) {

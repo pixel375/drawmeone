@@ -142,8 +142,10 @@ function dmo_packages_list(PDO $db): array
     $addons = $db->query(
         'SELECT id, slug, name, description, currency, estimate_min_minor, ' .
         'estimate_max_minor, sort_order, is_active FROM dmo_addons ' .
-        'ORDER BY sort_order, id LIMIT 100'
+        'ORDER BY sort_order, id LIMIT 101'
     )->fetchAll();
+    $addonIds=array_map('intval',array_column($addons,'id'));sort($addonIds,SORT_NUMERIC);
+    $addons=array_slice($addons,0,100);
     foreach ($addons as &$addon) {
         $addon['revision']=dmo_package_revision($addon,false);
         $addon['id'] = (int) $addon['id'];
@@ -154,6 +156,8 @@ function dmo_packages_list(PDO $db): array
         }
     }
     unset($addon);
+    foreach($tiers as &$tier)$tier['compatibility']=dmo_package_compatibility($db,$tier['id'],$addonIds);
+    unset($tier);
     return ['tiers' => $tiers, 'addons' => $addons];
 }
 
@@ -172,5 +176,34 @@ function dmo_package_check_revision(PDO $db,array $row,bool $tier,mixed $expecte
         !hash_equals(dmo_package_revision($row,$tier),$expected)){
         $db->rollBack();
         dmo_json(409,['ok'=>false,'error'=>'stale_catalog_reload_required']);
+    }
+}
+
+/** An empty mapping means unrestricted; a mapping with all false means none.
+ * Include the complete add-on ID inventory in the revision so a stale tab
+ * cannot accidentally omit newly created add-ons when saving restrictions.
+ */
+function dmo_package_compatibility(PDO $db,int $tierId,array $addonIds,bool $lock=false): array
+{
+    $q=$db->prepare('SELECT addon_id,is_available FROM dmo_tier_addons WHERE tier_id=:tier ORDER BY addon_id LIMIT 101'.($lock?' FOR UPDATE':''));
+    $q->execute(['tier'=>$tierId]);$rows=$q->fetchAll(PDO::FETCH_ASSOC);
+    $pairs=[];$allowed=[];
+    foreach($rows as $row){
+        $id=(int)$row['addon_id'];$yes=(int)$row['is_available']===1;
+        $pairs[]=[$id,$yes];if($yes)$allowed[]=$id;
+    }
+    $editable=count($addonIds)<=100&&count($rows)<=100;
+    return ['mode'=>$rows?'selected':'all','allowed_addon_ids'=>$allowed,'editable'=>$editable,
+        'revision'=>$editable?hash('sha256',json_encode([$addonIds,$pairs],JSON_THROW_ON_ERROR)):null];
+}
+function dmo_package_compatibility_locked(PDO $db,int $tierId): array
+{
+    $ids=array_map('intval',$db->query('SELECT id FROM dmo_addons ORDER BY id LIMIT 101 FOR UPDATE')->fetchAll(PDO::FETCH_COLUMN));
+    return [$ids,dmo_package_compatibility($db,$tierId,$ids,true)];
+}
+function dmo_package_check_compatibility(PDO $db,array $state,mixed $revision): void
+{
+    if(!$state['editable']||!is_string($revision)||!is_string($state['revision'])||!hash_equals($state['revision'],$revision)){
+        $db->rollBack();dmo_json(409,['ok'=>false,'error'=>'stale_catalog_reload_required']);
     }
 }

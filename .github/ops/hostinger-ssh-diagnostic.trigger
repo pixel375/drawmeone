@@ -1,1 +1,1 @@
-Verify service/policy pages and updated customer navigation; read-only.
+Verify artist package compatibility editor and versioned assets; read-only.

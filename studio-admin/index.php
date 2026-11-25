@@ -19,8 +19,8 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
 <meta name="robots" content="noindex,nofollow">
 <meta name="theme-color" content="#151317">
 <title>Artist's Desk · Draw Me One</title>
-<link rel="stylesheet" href="./panel.css?v=39">
-<script defer src="./panel.js?v=47"></script>
+<link rel="stylesheet" href="./panel.css?v=40">
+<script defer src="./panel.js?v=48"></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to dashboard</a>
@@ -332,8 +332,17 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
             <button type="submit" class="quiet" id="package-save" disabled>Save unpublished</button>
             <button type="button" class="primary" id="package-visibility" disabled>Publish</button>
           </div>
+          <fieldset id="package-compatibility" class="package-compatibility" hidden>
+            <legend>Available optional extras</legend>
+            <p class="small">Choose all extras or only selected extras. Unpublished extras never appear to customers. New extras are excluded from a restricted package until selected.</p>
+            <label for="package-compatibility-mode">Availability</label>
+            <select id="package-compatibility-mode"><option value="all">All current and future extras</option><option value="selected">Only selected extras</option></select>
+            <div id="package-compatibility-options" class="package-compatibility-options"></div>
+            <button type="button" class="quiet" id="package-compatibility-save" disabled>Save extra availability</button>
+            <p id="package-compatibility-status" class="small" role="status"></p>
+          </fieldset>
           <p id="package-message" class="notice" role="status" aria-live="polite">Edits and publication are disabled until the admin security setup and pricing are approved.</p>
-          <p class="small">New items are always created unpublished. Publishing requires a separate server-side switch and artist approval. No prices are seeded, and customers cannot submit commissions yet.</p>
+          <p class="small">New items are always created unpublished. Publishing requires a separate server-side switch and artist approval. No prices are seeded. New request availability is controlled separately.</p>
         </form>
       </div>
     </section>

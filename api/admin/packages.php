@@ -31,7 +31,7 @@ try {
     dmo_auth_verify_csrf($admin);
     $action = $input['action'] ?? null;
 
-    if (!in_array($action, ['save_tier','save_addon','set_active'], true)) {
+    if (!in_array($action, ['save_tier','save_addon','set_active','set_compatibility'], true)) {
         dmo_package_fail('invalid_action');
     }
 
@@ -40,11 +40,40 @@ try {
     if (!in_array($kind, ['tier', 'addon'], true)) {
         dmo_package_fail('invalid_kind');
     }
+    if($action==='set_compatibility'&&$kind!=='tier')dmo_package_fail('invalid_kind');
     $table = $kind === 'tier' ? 'dmo_commission_tiers' : 'dmo_addons';
 
     $fields='id,slug,name,description,currency,estimate_min_minor,estimate_max_minor,sort_order,is_active'.($kind==='tier'?',features_json':'');
     $db->beginTransaction();
     try {
+        if($action==='set_compatibility'){
+            $id=dmo_package_id($input['id']??null,false);
+            $mode=$input['mode']??null;$allowed=$input['allowed_addon_ids']??null;
+            if(!in_array($mode,['all','selected'],true)||!is_array($allowed)||!array_is_list($allowed)||count($allowed)>100||
+                ($mode==='all'&&$allowed!==[]))dmo_package_fail('invalid_compatibility');
+            foreach($allowed as $addonId)if(!is_int($addonId)||$addonId<1)dmo_package_fail('invalid_compatibility');
+            if(count(array_unique($allowed))!==count($allowed))dmo_package_fail('invalid_compatibility');
+            $q=$db->prepare('SELECT '.$fields.' FROM dmo_commission_tiers WHERE id=:id FOR UPDATE');
+            $q->execute(['id'=>$id]);$tier=$q->fetch();
+            if(!is_array($tier)){$db->rollBack();dmo_json(404,['ok'=>false,'error'=>'item_not_found']);}
+            dmo_package_check_revision($db,$tier,true,$input['expected_revision']??null);
+            if((bool)$tier['is_active']&&!dmo_packages_publish_enabled()){
+                $db->rollBack();dmo_json(503,['ok'=>false,'error'=>'published_item_locked']);
+            }
+            [$ids,$state]=dmo_package_compatibility_locked($db,$id);
+            dmo_package_check_compatibility($db,$state,$input['expected_compatibility_revision']??null);
+            if(array_diff($allowed,$ids)||($mode==='selected'&&!$ids)){
+                $db->rollBack();dmo_package_fail('invalid_compatibility');
+            }
+            $db->prepare('DELETE FROM dmo_tier_addons WHERE tier_id=:tier')->execute(['tier'=>$id]);
+            if($mode==='selected'){
+                $insert=$db->prepare('INSERT INTO dmo_tier_addons (tier_id,addon_id,is_available) VALUES (:tier,:addon,:available)');
+                foreach($ids as $addonId)$insert->execute(['tier'=>$id,'addon'=>$addonId,'available'=>in_array($addonId,$allowed,true)?1:0]);
+            }
+            dmo_admin_audit($db,(int)$admin['user_id'],'catalog.tier.compatibility_updated');
+            $db->commit();
+            dmo_json(200,['ok'=>true,'id'=>$id]);
+        }
         if ($action === 'set_active') {
             if (!dmo_packages_publish_enabled()) {
                 $db->rollBack();
@@ -65,6 +94,10 @@ try {
                 dmo_json(404, ['ok' => false, 'error' => 'item_not_found']);
             }
             dmo_package_check_revision($db,$current,$kind==='tier',$input['expected_revision']??null);
+            if($active&&$kind==='tier'){
+                [, $compatibility]=dmo_package_compatibility_locked($db,$id);
+                dmo_package_check_compatibility($db,$compatibility,$input['expected_compatibility_revision']??null);
+            }
             if ($active && !dmo_catalog_offer_valid($current)) {
                 $db->rollBack();
                 dmo_json(422, ['ok' => false, 'error' => 'complete_price_and_description_first']);

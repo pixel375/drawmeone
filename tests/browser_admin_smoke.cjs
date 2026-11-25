@@ -814,6 +814,37 @@ async function verifyDesignHistory(browser){
     console.log("PASS: artist restores historical appearance into draft without publishing");
   }finally{await page.close();}
 }
+async function verifyPackageCompatibility(browser){
+  const page=await browser.newPage({viewport:{width:390,height:844}}),posts=[];
+  let mode="all",allowed=[],revision="a".repeat(64);
+  const tier={id:10,slug:"ci-tier",name:"CI Tier",description:"Synthetic tier",currency:"CAD",estimate_min_minor:1000,estimate_max_minor:2000,sort_order:0,is_active:false,features:[],revision:"b".repeat(64)};
+  const extras=[{id:11,slug:"extra-a",name:"Extra A",is_active:true},{id:12,slug:"extra-b",name:"Extra B",is_active:false}];
+  try{
+    await simulateBackend(page,posts);
+    await page.route("**/api/admin/packages.php*",async route=>{
+      const respond=(status,data)=>route.fulfill({status,contentType:"application/json",body:JSON.stringify(data)});
+      if(route.request().method()==="GET")return respond(200,{ok:true,write_enabled:true,publish_enabled:false,catalog:{tiers:[{...tier,compatibility:{mode,allowed_addon_ids:allowed,editable:true,revision}}],addons:extras}});
+      assert.deepEqual(route.request().postDataJSON(),{action:"set_compatibility",kind:"tier",id:10,mode:"selected",allowed_addon_ids:[11],expected_revision:tier.revision,expected_compatibility_revision:revision});
+      mode="selected";allowed=[11];revision="c".repeat(64);
+      return respond(200,{ok:true,id:10});
+    });
+    await page.goto(base+"/studio-admin/index.php",{waitUntil:"domcontentloaded"});
+    await page.locator("#workspace").waitFor({state:"visible"});
+    await page.locator('[data-view="packages"]').click();
+    await page.locator("#package-tier-list .package-list-item").first().click();
+    await page.locator("#package-compatibility-mode").selectOption("selected");
+    await page.locator('#package-compatibility-options input[value="11"]').check();
+    page.once("dialog",dialog=>dialog.accept());
+    await page.locator("#package-compatibility-save").click();
+    await page.waitForFunction(()=>document.querySelector("#package-message")?.textContent==="Extra availability saved.");
+    assert.equal(await page.locator("#package-compatibility-mode").inputValue(),"selected");
+    assert.equal(await page.locator('#package-compatibility-options input[value="11"]').isChecked(),true);
+    assert.equal(await page.locator('#package-compatibility-options input[value="12"]').isChecked(),false);
+    assert.equal(await page.locator("#package-visibility").isEnabled(),false);
+    assert.deepEqual(posts,[]);
+    console.log("PASS: artist configures extra compatibility without publishing");
+  }finally{await page.close();}
+}
 async function verifyClosedDesk(browser) {
   const page=await browser.newPage({viewport:{width:390,height:844}});
   await page.route("**/api/admin/status.php*",route=>route.fulfill({
@@ -852,6 +883,7 @@ async function verifyClosedDesk(browser) {
     await verifyCheckoutLinks(browser);
     await verifyUnpaidCancellation(browser);
     await verifyDesignHistory(browser);
+    await verifyPackageCompatibility(browser);
     console.log("ADMIN_BROWSER_SMOKE=PASS");
   } finally {await browser.close();}
 })().catch(error=>{

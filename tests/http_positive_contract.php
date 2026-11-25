@@ -821,7 +821,7 @@ try {
     [$code,$private]=qa_http('/api/admin/packages.php',$tokenAdmin,'__Host-dmo_admin');
     $row=array_values(array_filter($private['catalog']['tiers'],fn($r)=>$r['id']===$item['id']))[0];
     $revision=$row['revision'];
-    $publish=['action'=>'set_active','kind'=>'tier','id'=>$item['id'],'active'=>true,'expected_revision'=>$revision];
+    $publish=['action'=>'set_active','kind'=>'tier','id'=>$item['id'],'active'=>true,'expected_revision'=>$revision,'expected_compatibility_revision'=>$row['compatibility']['revision']];
     [$code]=qa_http('/api/admin/packages.php',$tokenAdmin,'__Host-dmo_admin',array_replace($publish,['expected_revision'=>str_repeat('0',64)]),$csrfAdmin);
     qa_positive($code===409,'catalog_stale_publish_rejected');
     [$code]=qa_http('/api/admin/packages.php',$tokenAdmin,'__Host-dmo_admin',$publish,$csrfAdmin);
@@ -853,6 +853,46 @@ try {
     qa_positive(dmo_catalog_public($db)===['tiers'=>[],'addons'=>[]],'catalog_approval_revocation_hides_offers');
     putenv('DMO_PRICING_APPROVED=1');
     }finally{$db->rollBack();}
+    // Manage restricted add-ons through the same real admin endpoint.
+    $extra=['id'=>null,'slug'=>'ci-extra','name'=>'CI Extra','description'=>'Synthetic extra','currency'=>'CAD','estimate_min_minor'=>200,'estimate_max_minor'=>300,'sort_order'=>0];
+    [$code,$newExtra]=qa_http('/api/admin/packages.php',$tokenAdmin,'__Host-dmo_admin',['action'=>'save_addon','item'=>$extra],$csrfAdmin);
+    qa_positive($code===200,'catalog_extra_created');
+    [$code,$private]=qa_http('/api/admin/packages.php',$tokenAdmin,'__Host-dmo_admin');
+    $row=array_values(array_filter($private['catalog']['tiers'],fn($r)=>$r['id']===$item['id']))[0];
+    $extraRow=array_values(array_filter($private['catalog']['addons'],fn($r)=>$r['id']===$newExtra['id']))[0];
+    [$code]=qa_http('/api/admin/packages.php',$tokenAdmin,'__Host-dmo_admin',['action'=>'set_active','kind'=>'addon','id'=>$extraRow['id'],'active'=>true,'expected_revision'=>$extraRow['revision']],$csrfAdmin);
+    qa_positive($code===200,'catalog_extra_published');
+    $restrict=['action'=>'set_compatibility','kind'=>'tier','id'=>$row['id'],'mode'=>'selected','allowed_addon_ids'=>[],'expected_revision'=>$row['revision'],'expected_compatibility_revision'=>$row['compatibility']['revision']];
+    [$code]=qa_http('/api/admin/packages.php',$tokenAdmin,'__Host-dmo_admin',array_replace($restrict,['expected_compatibility_revision'=>str_repeat('0',64)]),$csrfAdmin);
+    qa_positive($code===409,'catalog_stale_compatibility_rejected');
+    [$code]=qa_http('/api/admin/packages.php',$tokenAdmin,'__Host-dmo_admin',array_replace($restrict,['allowed_addon_ids'=>[PHP_INT_MAX]]),$csrfAdmin);
+    qa_positive($code===422,'catalog_unknown_extra_rejected');
+    [$code]=qa_http('/api/admin/packages.php',$tokenAdmin,'__Host-dmo_admin',$restrict,$csrfAdmin);
+    qa_positive($code===200,'catalog_draft_restricts_all_extras');
+    [$code,$private]=qa_http('/api/admin/packages.php',$tokenAdmin,'__Host-dmo_admin');
+    $row=array_values(array_filter($private['catalog']['tiers'],fn($r)=>$r['id']===$item['id']))[0];
+    $publish=['action'=>'set_active','kind'=>'tier','id'=>$row['id'],'active'=>true,'expected_revision'=>$row['revision'],'expected_compatibility_revision'=>$row['compatibility']['revision']];
+    [$code]=qa_http('/api/admin/packages.php',$tokenAdmin,'__Host-dmo_admin',array_replace($publish,['expected_compatibility_revision'=>$restrict['expected_compatibility_revision']]),$csrfAdmin);
+    qa_positive($code===409,'catalog_publish_checks_compatibility_revision');
+    [$code]=qa_http('/api/admin/packages.php',$tokenAdmin,'__Host-dmo_admin',$publish,$csrfAdmin);
+    qa_positive($code===200,'catalog_restricted_tier_published');
+    [$code,$catalog]=qa_http('/api/catalog.php');
+    qa_positive($code===200&&$catalog['tiers'][0]['available_addon_ids']===[]&&count($catalog['addons'])===1,'catalog_restriction_public_empty_not_unrestricted');
+    [$code,$private]=qa_http('/api/admin/packages.php',$tokenAdmin,'__Host-dmo_admin');
+    $row=array_values(array_filter($private['catalog']['tiers'],fn($r)=>$r['id']===$item['id']))[0];
+    $restrict['expected_revision']=$row['revision'];$restrict['expected_compatibility_revision']=$row['compatibility']['revision'];
+    $restrict['allowed_addon_ids']=[$extraRow['id']];
+    [$code]=qa_http('/api/admin/packages.php',$tokenAdmin,'__Host-dmo_admin',$restrict,$csrfAdmin);
+    qa_positive($code===200,'catalog_live_extra_selection_saved');
+    [$code,$catalog]=qa_http('/api/catalog.php');
+    qa_positive($code===200&&$catalog['tiers'][0]['available_addon_ids']===[$extraRow['id']],'catalog_selected_extra_visible');
+    [$code,$private]=qa_http('/api/admin/packages.php',$tokenAdmin,'__Host-dmo_admin');
+    $row=array_values(array_filter($private['catalog']['tiers'],fn($r)=>$r['id']===$item['id']))[0];
+    $restrict['expected_compatibility_revision']=$row['compatibility']['revision'];$restrict['mode']='all';$restrict['allowed_addon_ids']=[];
+    [$code]=qa_http('/api/admin/packages.php',$tokenAdmin,'__Host-dmo_admin',$restrict,$csrfAdmin);
+    qa_positive($code===200,'catalog_unrestricted_restored');
+    [$code,$catalog]=qa_http('/api/catalog.php');
+    qa_positive($code===200&&array_key_exists('available_addon_ids',$catalog['tiers'][0])&&$catalog['tiers'][0]['available_addon_ids']===null,'catalog_unrestricted_public_null');
     echo "DISPOSABLE_POSITIVE_HTTP=PASS\n";
 } catch(Throwable $error) {
     fwrite(STDERR,'DISPOSABLE_POSITIVE_HTTP=FAIL ('.get_class($error).
