@@ -257,6 +257,18 @@ function dmo_requests_stage_columns(): string
         'THEN 1 ELSE 0 END AS visible_quote_expired ';
 }
 
+/** SQL equivalent of the customer-visible workflow stage. */
+function dmo_requests_history_stage_sql(): string
+{
+    return "CASE WHEN payment_exception='payment.access_held' THEN 'payment_on_hold'
+        WHEN payment_exception='payment.full_refund_recorded' THEN 'payment_refunded'
+        WHEN status IN ('cancelled','canceled','rejected','declined','completed','closed','archived','refunded') THEN status
+        WHEN order_status IS NOT NULL THEN order_status
+        WHEN visible_quote_status='accepted' THEN 'quote_accepted'
+        WHEN visible_quote_status='sent' THEN IF(visible_quote_expired=1,'quote_expired','quote_available')
+        WHEN visible_quote_status='declined' THEN 'quote_declined'
+        WHEN visible_quote_status='superseded' THEN 'quote_inactive' ELSE status END";
+}
 function dmo_requests_list_summary(array $row): array
 {
     $row=dmo_requests_historical_tier($row);

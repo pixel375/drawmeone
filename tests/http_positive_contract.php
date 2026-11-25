@@ -247,6 +247,16 @@ try {
         array_intersect(array_column($first['requests'],'public_ref'),array_column($second['requests'],'public_ref'))===[] &&
         !in_array($referenceB,array_column(array_merge($first['requests'],$second['requests']),'public_ref'),true),
         'customer_history_pages_no_overlap_or_other_customer');
+    [$code,$found]=qa_http('/api/requests.php?q='.urlencode($referenceA).'&status=active&sort=oldest',$tokenA);
+    qa_positive($code===200&&array_column($found['requests'],'public_ref')===[$referenceA]&&!isset($found['requests'][0]['history_id']),'full_history_finds_older_owned_reference');
+    [$code,$found]=qa_http('/api/requests.php?q='.urlencode($referenceA),$tokenB);
+    qa_positive($code===200&&$found['requests']===[],'full_history_search_cross_account_denied');
+    [$code,$found]=qa_http('/api/requests.php?status=closed',$tokenA);
+    qa_positive($code===200&&$found['requests']===[],'full_history_closed_filter_excludes_active');
+    [$code,$found]=qa_http('/api/requests.php?sort=oldest',$tokenA);
+    qa_positive($code===200&&$found['requests'][0]['public_ref']===$referenceA,'full_history_oldest_order_applied_before_pagination');
+    [$code]=qa_http('/api/requests.php?sort=invalid',$tokenA);
+    qa_positive($code===422,'invalid_history_sort_rejected');
     [$code,$other]=qa_http('/api/requests.php?page=2',$tokenB);
     qa_positive($code===200 && $other['requests']===[],'other_customer_cannot_page_into_first_customer_history');
     [$code]=qa_http('/api/requests.php?page=0',$tokenA);

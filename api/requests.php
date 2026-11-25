@@ -23,16 +23,38 @@ try {
         $page = (int) $pageText;
         $size = 40;
         $offset = ($page - 1) * $size;
-        $stmt = $db->prepare(
-            'SELECT r.public_ref, r.subject_type, r.status, ' .
+        $search=$_GET['q']??'';$filter=$_GET['status']??'all';$sort=$_GET['sort']??'recent';
+        if(!is_string($search)||strlen($search)>360||!preg_match('//u',$search)||preg_match('/[\x00-\x1f\x7f]/',$search)||
+            !is_string($filter)||!in_array($filter,['all','active','closed'],true)||
+            !is_string($sort)||!in_array($sort,['recent','oldest','deadline'],true))
+            dmo_json(422,['ok'=>false,'error'=>'invalid_history_filter']);
+        $search=trim($search);
+        $base='SELECT r.id AS history_id,r.public_ref, r.subject_type, r.status, ' .
             'r.submitted_at, r.preferred_deadline, r.tier_snapshot_json, t.name AS tier_name, ' . dmo_requests_stage_columns() .
             'FROM dmo_commission_requests r ' .
             'LEFT JOIN dmo_commission_tiers t ON t.id = r.tier_id ' . dmo_requests_stage_joins() .
-            'WHERE r.customer_id = :customer ' .
-            'ORDER BY r.submitted_at DESC, r.id DESC LIMIT 41 OFFSET ' . $offset
-        );
-        $stmt->execute(['customer' => $customer]);
+            'WHERE r.customer_id = :customer ';
+        $stage=dmo_requests_history_stage_sql();
+        $closed="('cancelled','canceled','rejected','declined','completed','closed','archived','refunded','payment_refunded')";
+        $conditions=[];$params=['customer'=>$customer];
+        if($filter==='active')$conditions[]="history_stage NOT IN ".$closed;
+        if($filter==='closed')$conditions[]="history_stage IN ".$closed;
+        if($search!==''){
+            // Customer-visible metadata only, never private messages or briefs.
+            $tier="COALESCE(NULLIF(TRIM(CASE WHEN JSON_VALID(tier_snapshot_json) THEN JSON_UNQUOTE(JSON_EXTRACT(tier_snapshot_json,'$.name')) ELSE NULL END),''),tier_name,'')";
+            $conditions[]="(LOCATE(:ref,public_ref)>0 OR LOCATE(:subject,REPLACE(subject_type,'_',' '))>0 OR LOCATE(:tier,".$tier.")>0 OR LOCATE(:stage,REPLACE(history_stage,'_',' '))>0)";
+            foreach(['ref','subject','tier','stage'] as $key)$params[$key]=$search;
+        }
+        $where=$conditions?' WHERE '.implode(' AND ',$conditions):'';
+        $order=match($sort){
+            'oldest'=>'submitted_at ASC,history_id ASC',
+            'deadline'=>"CASE WHEN history_stage IN ".$closed." OR order_deadline IS NULL THEN '9999-12-31' ELSE DATE(order_deadline) END ASC,submitted_at DESC,history_id DESC",
+            default=>'submitted_at DESC,history_id DESC',
+        };
+        $stmt=$db->prepare('SELECT * FROM (SELECT owned.*,'.$stage.' AS history_stage FROM ('.$base.') owned) history'.$where.' ORDER BY '.$order.' LIMIT 41 OFFSET '.$offset);
+        $stmt->execute($params);
         $rows = $stmt->fetchAll();
+        foreach($rows as &$row){unset($row['history_id'],$row['history_stage']);}unset($row);
         $hasMore = count($rows) > $size;
         if ($hasMore) array_pop($rows);
         dmo_json(200, [
