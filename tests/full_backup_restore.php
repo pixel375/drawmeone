@@ -233,6 +233,40 @@ try {
         hash_file('sha256',$cipherExport)===hash_file('sha256',$candidates[0]) &&
         substr((string)file_get_contents($cipherExport,false,null,0,6),0,6)==='DMOBK2',
         'verified_export_contains_exact_ciphertext_only');
+    // Exercise the exact disconnected operator CLI on the exported bytes.
+    // No database credentials or app bootstrap are required by this command.
+    $offlineScript=dirname(__DIR__).'/app/cli-recovery-check.php';
+    $offlineScratch=$workspace.'/offline-private';
+    mkdir($offlineScratch,0700);
+    chmod($cipherExport,0600);
+    $keyPath=$workspace.'/drawmeone-backup-recovery.key';
+    drill_exec([PHP_BINARY,$offlineScript,$cipherExport,$keyPath,$offlineScratch]);
+    drill_assert(count(scandir($offlineScratch))===2,'offline_verified_export_and_scratch_cleanup');
+    $wrongKey=$workspace.'/wrong-recovery.key';
+    file_put_contents($wrongKey,random_bytes(32));chmod($wrongKey,0600);
+    $trailing=$workspace.'/trailing.bak';
+    copy($cipherExport,$trailing);chmod($trailing,0600);
+    file_put_contents($trailing,'unexpected',FILE_APPEND);
+    $truncated=$workspace.'/truncated.bak';
+    copy($cipherExport,$truncated);chmod($truncated,0600);
+    $fh=fopen($truncated,'r+b');
+    ftruncate($fh,filesize($truncated)-1);fclose($fh);
+    $publicScratch=$workspace.'/unsafe-scratch';
+    mkdir($publicScratch,0755);chmod($publicScratch,0755);
+    $keyLink=$workspace.'/linked.key';symlink($keyPath,$keyLink);
+    foreach ([
+        [$cipherExport,$wrongKey,$offlineScratch],
+        [$trailing,$keyPath,$offlineScratch],
+        [$truncated,$keyPath,$offlineScratch],
+        [$cipherExport,$keyPath,$publicScratch],
+        [$cipherExport,$keyLink,$offlineScratch],
+    ] as $invalid) {
+        $denied=false;
+        try { drill_exec(array_merge([PHP_BINARY,$offlineScript],$invalid)); }
+        catch (RuntimeException $expectedError) { $denied=true; }
+        drill_assert($denied,'offline_recovery_invalid_input_rejected');
+        drill_assert(count(scandir($offlineScratch))===2,'offline_failure_scratch_cleaned');
+    }
     unlink($cipherExport);
     // Stale files must never be exported as a misleading recoverable copy.
     touch($candidates[0],time()-40*3600);

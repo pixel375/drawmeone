@@ -8,7 +8,7 @@ All five hosted-invoice suites passed on d5222f26. Additive production schema 00
 
 - Confirm real portfolio artwork and permissions, design, service scope, actual prices/currency, licensing, revisions, refunds, privacy/retention and final legal text. Publish immutable policy bundle and pin its digest only after approval.
 - Select provider and receiving account. Verify that an order-specific invoice can charge exactly the agreed total once, cannot be adjusted, tipped or subscribed, and is compatible with the restricted host/path grammar. No API or webhook is connected yet.
-- Configure independent encrypted backup destination and key custody; run isolated recovery outside the hosting account. Local encrypted backup alone is not enough.
+- Configure independent encrypted backup destination and key custody; run isolated recovery outside the hosting account. Local encrypted backup alone is not enough. See [independent recovery workstation preparation](INDEPENDENT_RECOVERY_MILESTONE.md), including separate custody of DMO_APP_KEY for encrypted invoice URLs.
 - Before any opening, review live readiness, integrity and backup indicators and verify deployment commit. Retain a rollback configuration outside public_html.
 
 ## Stage 1 — Controlled onboarding
