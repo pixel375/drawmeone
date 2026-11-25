@@ -51,6 +51,7 @@ function ref_http(
         $opts[CURLOPT_POSTFIELDS] = isset($upload['ref'])?
             ['ref'=>$upload['ref'],'reference'=>$file]:
             ['request_id'=>(string)$upload['request_id'],'order_id'=>(string)$upload['order_id'],'artwork'=>$file];
+        if(isset($upload['operation_key']))$opts[CURLOPT_POSTFIELDS]['operation_key']=$upload['operation_key'];
     }
     $opts[CURLOPT_HTTPHEADER] = $headers;
     curl_setopt_array($handle, $opts);
@@ -197,9 +198,12 @@ try {
     ref_assert($code===403,'artist_upload_requires_csrf');
     [$code]=ref_http('/api/admin/delivery-draft.php',$artistCookie,null,$artistCsrf,array_replace($upload,['order_id'=>$order+99]));
     ref_assert($code===409,'unrelated_order_rejected');
-    [$code,$saved]=ref_http('/api/admin/delivery-draft.php',$artistCookie,null,$artistCsrf,$upload);
+    $keyedUpload=$upload+['operation_key'=>'10000000-0000-4000-8000-000000000013'];
+    [$code,$saved]=ref_http('/api/admin/delivery-draft.php',$artistCookie,null,$artistCsrf,$keyedUpload);
     ref_assert($code===201 && $saved['customer_visible']===false,'artist_stages_private_draft');
     $id=$saved['draft_id'];
+    [$code,$replay]=ref_http('/api/admin/delivery-draft.php',$artistCookie,null,$artistCsrf,$keyedUpload);
+    ref_assert($code===200&&($replay['draft_id']??null)===$id&&($replay['already_saved']??false)&&($replay['released']??null)===false,'delivery_stage_receipt_replay');
     [$code,$json,$bytes,$headers]=ref_http('/api/admin/delivery-draft.php?id='.$id,$artistCookie);
     ref_assert($code===200 && str_contains(strtolower($headers),'no-store') && substr($bytes,8,4)==='WEBP','artist_downloads_private_webp');
     foreach([$cookieA,$cookieB,null] as $cookie){
@@ -231,6 +235,8 @@ try {
     ref_assert($code===200 && $result['draft_removed']===true && $result['storage_cleanup_complete']===true && !file_exists($path),'artist_removes_private_draft_and_file');
     [$code]=ref_http('/api/admin/delivery-draft.php?id='.$id,$artistCookie);
     ref_assert($code===404,'removed_draft_cannot_be_downloaded');
+    [$code,$removedReceipt]=ref_http('/api/admin/delivery-draft.php',$artistCookie,null,$artistCsrf,$keyedUpload);
+    ref_assert($code===409&&($removedReceipt['error']??null)==='draft_receipt_removed','removed_delivery_not_recreated_by_replay');
     ref_assert($db->query('SELECT payment_status FROM dmo_orders')->fetchColumn()==='unverified','staging_does_not_verify_payment');
     $advance=['action'=>'set_production_status','request_id'=>$requestA,'order_id'=>$order,'expected_status'=>'awaiting_arrangement','status'=>'in_progress'];
     [$code]=ref_http('/api/admin/request-actions.php',$artistCookie,$advance,$artistCsrf);

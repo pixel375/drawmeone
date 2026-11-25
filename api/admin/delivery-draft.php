@@ -38,17 +38,29 @@ try {
         !str_starts_with(strtolower($_SERVER['CONTENT_TYPE']??''),'multipart/form-data'))
         dmo_json(403,['ok'=>false,'error'=>'secure_upload_required']);
     dmo_auth_verify_csrf($admin);
-    if(count($_POST)!==2||count($_FILES)!==1)dmo_json(422,['ok'=>false,'error'=>'invalid_upload_fields']);
+    if(array_diff(array_keys($_POST),['request_id','order_id','operation_key'])!==[]||count($_FILES)!==1)dmo_json(422,['ok'=>false,'error'=>'invalid_upload_fields']);
+    $operation=dmo_upload_operation_key($_POST);
     $requestId=dmo_workflow_id($_POST['request_id']??null);
     $orderId=dmo_workflow_id($_POST['order_id']??null);
-    if(!dmo_delivery_order_eligible($db,$requestId,$orderId))dmo_json(409,['ok'=>false,'error'=>'order_not_eligible']);
     $file=$_FILES['artwork']??null;
     if((int)($_SERVER['CONTENT_LENGTH']??0)>DMO_ARTWORK_MAX_BYTES+1048576||
         !is_array($file)||!is_string($file['tmp_name']??null)||($file['error']??null)!==UPLOAD_ERR_OK||
         !is_int($file['size']??null)||$file['size']<1||$file['size']>DMO_ARTWORK_MAX_BYTES)
         dmo_json(422,['ok'=>false,'error'=>'invalid_upload']);
-    if(!dmo_auth_rate_limit($db,'delivery-stage',(string)$admin['user_id'],12,60))
-        dmo_json(429,['ok'=>false,'error'=>'too_many_uploads']);
+    $payloadDigest=$operation===null?null:dmo_upload_payload_digest($file['tmp_name'],'delivery-draft-upload');
+    $db->beginTransaction();
+    $lock=$db->prepare('SELECT id FROM dmo_commission_requests WHERE id=:id FOR UPDATE');
+    $lock->execute(['id'=>$requestId]);
+    if($lock->fetchColumn()===false){$db->rollBack();dmo_json(409,['ok'=>false,'error'=>'order_not_eligible']);}
+    $prior=dmo_delivery_draft_replay($db,$requestId,$orderId,(int)$admin['user_id'],$operation,$payloadDigest);
+    if($prior!==null){$db->commit();dmo_json(200,$prior);}
+    if(!dmo_delivery_order_eligible($db,$requestId,$orderId)){$db->rollBack();dmo_json(409,['ok'=>false,'error'=>'order_not_eligible']);}
+    $count=$db->prepare('SELECT COUNT(*) FROM dmo_delivery_drafts WHERE order_id=:id');
+    $count->execute(['id'=>$orderId]);
+    if((int)$count->fetchColumn()>=DMO_DELIVERY_DRAFT_LIMIT){$db->rollBack();dmo_json(409,['ok'=>false,'error'=>'draft_limit_reached']);}
+    if(!dmo_auth_rate_limit($db,'delivery-stage',(string)$admin['user_id'],12,60)){
+        $db->rollBack();dmo_json(429,['ok'=>false,'error'=>'too_many_uploads']);
+    }
     [$source,$w,$h]=dmo_artwork_open_image($file['tmp_name']);
     $folder='';$committed=false;
     try{
@@ -61,20 +73,12 @@ try {
         if(!chmod($path,0600))throw new RuntimeException('Private file permissions failed');
         $digest=hash_file('sha256',$path);
         if(!is_string($digest))throw new RuntimeException('Draft checksum unavailable');
-        $db->beginTransaction();
-        $lock=$db->prepare('SELECT id FROM dmo_commission_requests WHERE id=:id FOR UPDATE');
-        $lock->execute(['id'=>$requestId]);
-        if($lock->fetchColumn()===false||!dmo_delivery_order_eligible($db,$requestId,$orderId))
-            throw new DmoDeliveryRejected(409,'order_not_eligible');
-        $count=$db->prepare('SELECT COUNT(*) FROM dmo_delivery_drafts WHERE order_id=:id');
-        $count->execute(['id'=>$orderId]);
-        if((int)$count->fetchColumn()>=DMO_DELIVERY_DRAFT_LIMIT)throw new DmoDeliveryRejected(409,'draft_limit_reached');
         $db->prepare('INSERT INTO dmo_delivery_drafts (request_id,order_id,uploaded_by,storage_key,pixel_width,pixel_height,byte_size,sha256) ' .
             'VALUES (:request,:order,:actor,:key,:w,:h,:bytes,:sha)')->execute([
                 'request'=>$requestId,'order'=>$orderId,'actor'=>(int)$admin['user_id'],'key'=>$key.'/display.webp',
                 'w'=>$meta['width'],'h'=>$meta['height'],'bytes'=>$meta['bytes'],'sha'=>$digest]);
         $id=(int)$db->lastInsertId();
-        dmo_workflow_audit($db,(int)$admin['user_id'],$requestId,'delivery.draft_staged',['draft_id'=>$id,'order_id'=>$orderId]);
+        dmo_workflow_audit($db,(int)$admin['user_id'],$requestId,'delivery.draft_staged',['draft_id'=>$id,'order_id'=>$orderId,'operation_key'=>$operation,'payload_digest'=>$payloadDigest]);
         $db->commit();$committed=true;
     }finally{
         imagedestroy($source);
@@ -87,6 +91,7 @@ try {
 }catch(DmoDeliveryRejected $error){
     dmo_json($error->status,['ok'=>false,'error'=>$error->reason]);
 }catch(Throwable $error){
+    if(isset($db)&&$db->inTransaction())$db->rollBack();
     dmo_log_problem($error,'private delivery draft');
     dmo_json(503,['ok'=>false,'error'=>'delivery_draft_unavailable']);
 }

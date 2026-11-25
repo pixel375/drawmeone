@@ -244,3 +244,25 @@ function dmo_delivery_customer_rows(PDO $db,int $customerId,int $requestId): arr
 }
 
 require_once __DIR__.'/artwork-reviews.php';
+
+/** Caller holds the parent request lock; receipts are scoped to artist, request and order. */
+function dmo_delivery_draft_replay(PDO $db,int $request,int $order,int $actor,?string $operation,?string $digest): ?array
+{
+    if($operation===null)return null;
+    $q=$db->prepare("SELECT details_json FROM dmo_audit_log WHERE entity_type='commission_request'
+        AND entity_id=:request AND actor_id=:actor AND action='delivery.draft_staged'
+        AND JSON_UNQUOTE(JSON_EXTRACT(details_json,'$.operation_key'))=:operation ORDER BY id DESC LIMIT 1");
+    $q->execute(['request'=>$request,'actor'=>$actor,'operation'=>$operation]);$json=$q->fetchColumn();
+    if($json===false)return null;
+    $detail=json_decode((string)$json,true);
+    if((int)($detail['order_id']??0)!==$order||!is_string($detail['payload_digest']??null)||!hash_equals($detail['payload_digest'],(string)$digest)){
+        $db->rollBack();dmo_json(409,['ok'=>false,'error'=>'operation_key_conflict']);
+    }
+    $q=$db->prepare('SELECT d.id, EXISTS(SELECT 1 FROM dmo_deliverables f WHERE f.order_id=d.order_id AND f.storage_key=d.storage_key) AS released
+        FROM dmo_delivery_drafts d WHERE d.id=:id AND d.request_id=:request AND d.order_id=:order AND d.uploaded_by=:actor');
+    $q->execute(['id'=>$detail['draft_id'],'request'=>$request,'order'=>$order,'actor'=>$actor]);$row=$q->fetch();
+    if(!is_array($row)){
+        $db->rollBack();dmo_json(409,['ok'=>false,'error'=>'draft_receipt_removed']);
+    }
+    return ['ok'=>true,'draft_id'=>(int)$row['id'],'released'=>(bool)$row['released'],'already_saved'=>true];
+}

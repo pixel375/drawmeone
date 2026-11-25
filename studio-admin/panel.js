@@ -1028,11 +1028,13 @@
     }catch(_){requestText("request-detail-status","Draft removal outcome uncertain. Refresh before retrying.");}
     finally{requestBusy=false;updateRequestButtons();}
   }
+  const deliveryDraftUploadKeys=new WeakMap();
   async function stageDeliveryDraft(orderId,file){
     if(requestBusy||selectedRequestId===null)return;
     if(file.size>8*1024*1024){requestText("request-detail-status","Draft must be 8 MB or smaller.");return;}
     const id=selectedRequestId,body=new FormData();
-    body.append("request_id",String(id));body.append("order_id",String(orderId));body.append("artwork",file);
+    if(!deliveryDraftUploadKeys.has(file))deliveryDraftUploadKeys.set(file,crypto.randomUUID());
+    body.append("request_id",String(id));body.append("order_id",String(orderId));body.append("artwork",file);body.append("operation_key",deliveryDraftUploadKeys.get(file));
     requestBusy=true;updateRequestButtons();
     requestText("request-detail-status","Uploading and processing private artwork…");
     try{
@@ -1041,8 +1043,8 @@
       const data=await response.json();
       if(!response.ok||!data.ok){requestText("request-detail-status","Draft not staged ("+(data.error||response.status)+").");return;}
       await openRequest(id);
-      requestText("request-detail-status","Artwork staged privately. Customer access and payment status unchanged.");
-    }catch(_){requestText("request-detail-status","Draft upload not confirmed. Refresh before retrying.");}
+      requestText("request-detail-status",data.already_saved?"Existing artwork #"+data.draft_id+" recovered ("+(data.released?"released":"staged") + "). No additional draft created.":"Artwork staged privately. Customer access and payment status unchanged.");
+    }catch(_){requestText("request-detail-status","Draft upload not confirmed. Retry the same selected file to recover the original receipt.");}
     finally{requestBusy=false;updateRequestButtons();}
   }
 

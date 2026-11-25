@@ -1,0 +1,3 @@
+# Private delivery draft receipts
+
+The artist can retry an unchanged selected file after an uncertain staging response. The server locks the parent request, checks the scoped UUID and HMAC receipt before capacity/eligibility checks, and returns the original draft ID and whether it was released. It rejects a changed order or file and refuses to restore deliberately removed drafts. The staging gate remains required. The browser key is held with the File object only; changing selection or refreshing the request loses this recovery context. No automatic customer delivery, payment or email occurs. Disposable tests cover recovery and removal.

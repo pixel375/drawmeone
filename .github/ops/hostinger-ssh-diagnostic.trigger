@@ -1,1 +1,1 @@
-Verify receipt lookup, quote retries, artwork inspection and orientation; read-only diagnostics.
+Verify upload receipts for portfolio, customer references and private delivery drafts; read-only.
