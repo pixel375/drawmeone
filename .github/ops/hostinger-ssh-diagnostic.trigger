@@ -1,1 +1,1 @@
-Retest customer attention, notifications and work queues with explicit second-account fixture.
+Verify isolated customer history and public service failure fallback.

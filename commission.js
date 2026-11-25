@@ -30,6 +30,7 @@
     state.requests = [];
     ++requestsFetchSequence;
     ++detailRequestSequence;
+    renderCustomerAttention(null);
     $("customer-workspace").hidden = true;
     location.replace("./account.html");
   }
@@ -369,6 +370,7 @@
       // another request while a quote decision was in flight.
       if (state.selectedRef !== ref) return;
       await openDetail(ref);
+      await loadMyRequests();
       if (state.selectedRef !== ref || $("detail-content").hidden) return;
       $("detail-quote-feedback").textContent =
         decision === "accept"
@@ -918,63 +920,54 @@
     }
   });
 
-  async function init() {
-    $("request-deadline").min = localTomorrow();
+  async function optionalStatus(url) {
     try {
-      const [s,c,a] = await Promise.all([
-        getJSON("./api/request-status.php"),
-        getJSON("./api/catalog.php"),
-        getJSON("./api/auth/status.php"),
-      ]);
-      if (!s.response.ok || !s.body.ok ||
-          !c.response.ok || !c.body.ok ||
-          !a.response.ok || !a.body.ok) {
-        throw new Error("Site status unavailable");
-      }
-      state.service = s.body;
+      const {response,body}=await getJSON(url);
+      return response.ok&&body?.ok===true?body:null;
+    }catch(_){return null;}
+  }
+  async function init() {
+    $("request-deadline").min=localTomorrow();
+    // Public catalog and intake failures must not prevent access to a valid
+    // private session. A new request still requires positive current gates.
+    const [service,catalog,auth,me]=await Promise.all([
+      optionalStatus("./api/request-status.php"),
+      optionalStatus("./api/catalog.php"),
+      optionalStatus("./api/auth/status.php"),
+      optionalStatus("./api/auth/me.php"),
+    ]);
+    if(leavingSession)return;
+    state.auth=auth;
+    state.catalog=catalog;
+    state.service=service?{...service}:{requests_open:false,intake_reason:"not_available"};
+    const validPolicy=typeof state.service.policy_version==="string"&&/^[a-zA-Z0-9][a-zA-Z0-9._-]{2,39}$/.test(state.service.policy_version)&&typeof state.service.policy_sha256==="string"&&/^[a-f0-9]{64}$/.test(state.service.policy_sha256);
+    const intakeUnavailable=!service||!catalog||(service.requests_open===true&&!validPolicy);
+    state.service.requests_open=service?.requests_open===true&&!intakeUnavailable&&auth?.auth_available===true;
+    if(state.service.requests_open)$("request-policy-link").href="./policy.php?"+new URLSearchParams({version:state.service.policy_version,sha256:state.service.policy_sha256});
+    if(me?.authenticated===true&&me.user?.role==="customer"&&typeof me.csrf_token==="string"&&me.csrf_token){
+      state.account=me.user;state.csrf=me.csrf_token;
+    }
+    if(state.account){
+      $("customer-workspace").hidden=false;
+      $("request-create-panel").hidden=!state.service.requests_open;
+      $("request-closed").hidden=true;
+      $("request-signin").hidden=true;
       if(state.service.requests_open){
-        if(typeof s.body.policy_version!=="string"||!/^[a-zA-Z0-9][a-zA-Z0-9._-]{2,39}$/.test(s.body.policy_version)||typeof s.body.policy_sha256!=="string"||!/^[a-f0-9]{64}$/.test(s.body.policy_sha256))state.service.requests_open=false;
-        else $("request-policy-link").href="./policy.php?"+new URLSearchParams({version:s.body.policy_version,sha256:s.body.policy_sha256});
+        renderCatalog();$("request-submit").disabled=false;
+        displayStatus("Signed in · New commission requests are open for artist review.");
+      }else if(intakeUnavailable||!auth){
+        displayStatus("New-request availability could not be checked. Your existing commissions remain accessible.",true);
+      }else{
+        displayStatus(state.service.intake_reason==="at_capacity"?"The artist is currently at capacity. You can still review your existing requests.":state.service.intake_reason==="paused"?"New requests are temporarily paused. Your existing commissions are unaffected.":"New commissions are closed. You can still review your existing requests.");
       }
-      state.catalog = c.body;
-      state.auth = a.body;
-
-      if (state.auth.auth_available) {
-        const me = await getJSON("./api/auth/me.php");
-        if (me.response.ok && me.body.authenticated &&
-            me.body.user?.role === "customer" &&
-            typeof me.body.csrf_token === "string") {
-          state.account = me.body.user;
-          state.csrf = me.body.csrf_token;
-        }
-      }
-
-      if (state.account) {
-        $("customer-workspace").hidden = false;
-        $("request-create-panel").hidden = !state.service.requests_open;
-        $("request-closed").hidden = true;
-        $("request-signin").hidden = true;
-        if (state.service.requests_open) {
-          renderCatalog();
-          $("request-submit").disabled = false;
-          displayStatus("Signed in · New commission requests are open for artist review.");
-        } else {
-          displayStatus(state.service.intake_reason==="at_capacity"?"The artist is currently at capacity. You can still review your existing requests.":state.service.intake_reason==="paused"?"New requests are temporarily paused. Your existing commissions are unaffected.":"New commissions are closed. You can still review your existing requests.");
-        }
-        loadMyRequests();
-      } else if (state.service.requests_open) {
-        $("request-signin").hidden = false;
-        $("request-closed").hidden = true;
-        displayStatus("Customer sign-in is required before submitting an idea.");
-      } else {
-        $("request-closed").hidden = false;
-        $("request-signin").hidden = true;
-        displayStatus(state.service.intake_reason==="at_capacity"?"The artist is currently at capacity. Please check back later.":state.service.intake_reason==="paused"?"The artist has temporarily paused new commissions. Please check back later.":"Commission intake is closed while the artist prepares the service.");
-      }
-    } catch (_) {
-      $("request-closed").hidden = false;
-      $("request-signin").hidden = true;
-      displayStatus("The commission service is currently unavailable. Please return later.",true);
+      loadMyRequests();
+    }else if(state.service.requests_open&&me?.authenticated!==true){
+      $("request-signin").hidden=false;$("request-closed").hidden=true;
+      displayStatus("Customer sign-in is required before submitting an idea.");
+    }else{
+      $("request-closed").hidden=false;$("request-signin").hidden=true;
+      if(intakeUnavailable||!auth)displayStatus("New-request availability could not be checked. Please try again later.",true);
+      else displayStatus(state.service.intake_reason==="at_capacity"?"The artist is currently at capacity. Please check back later.":state.service.intake_reason==="paused"?"The artist has temporarily paused new commissions. Please check back later.":"Commission intake is closed while the artist prepares the service.");
     }
   }
   init();

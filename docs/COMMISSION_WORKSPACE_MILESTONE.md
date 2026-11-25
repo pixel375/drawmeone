@@ -6,3 +6,7 @@ Phase 38 passed browser, source, database and Hostinger checks. This batch repla
 - Needs-review dashboard and list exclude sent/accepted quotes and orders. Existing historical status fields remain unchanged.
 - Both private conversation views can explicitly expand their recent message window to the full bounded 500-message thread. Customer results always exclude artist-only notes. Artist message inbox has type filters and 50-record pagination.
 - Browser asset versions, disposable HTTP tests and live read-only verification updated. No production flags changed. Initial CI pending.
+
+## Public-service failure isolation
+
+The private workspace now evaluates the signed-in session independently from public intake, pricing and registration-status reads. A temporary public service failure closes new submission controls but no longer hides authenticated history. New submissions still require positively confirmed intake, auth availability, catalog and valid pinned policy. Quote decisions refresh both detail and history/attention shortcuts, and session expiration clears the shortcut DOM before navigation. Browser regression uses an interrupted intake request and invalid JSON catalog response; no live service outage was induced.

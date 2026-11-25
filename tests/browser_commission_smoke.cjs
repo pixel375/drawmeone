@@ -527,6 +527,23 @@ async function verifyCustomerAttention(browser){
     console.log("PASS: attention shortcut opens older request without loading history");
   }finally{await page.close();}
 }
+async function verifyPublicServiceFailureIsolation(browser){
+  const page=await browser.newPage({viewport:{width:390,height:844}});
+  const mock=await installMocks(page,{signedIn:true,open:true});
+  await page.route("**/api/catalog.php",route=>route.fulfill({status:503,body:"temporarily unavailable"}));
+  await page.route("**/api/request-status.php",route=>route.abort("failed"));
+  try{
+    await page.goto(base+"/commission.html",{waitUntil:"domcontentloaded"});
+    await page.locator("#my-request-list .request-list-item").first().waitFor({state:"visible"});
+    assert.equal(await page.locator("#customer-workspace").isVisible(),true);
+    assert.equal(await page.locator("#request-create-panel").isVisible(),false);
+    assert.match(await page.locator("#request-status").innerText(),/existing commissions remain accessible/);
+    await page.locator('#my-request-list button[aria-label$="'+A+'"]').click();
+    await page.locator("#detail-content").waitFor({state:"visible"});
+    assert.deepEqual(mock.posts,[]);
+    console.log("PASS: public service failure does not hide signed-in history");
+  }finally{await page.close();}
+}
 async function openWithoutLogin(browser) {
   const page=await browser.newPage({viewport:{width:390,height:844}});
   await installMocks(page,{signedIn:false,open:true});
@@ -554,6 +571,7 @@ async function openWithoutLogin(browser) {
     await verifyOrderHistoryStage(browser);
     await verifyRequestWithdrawal(browser);
     await verifyCustomerAttention(browser);
+    await verifyPublicServiceFailureIsolation(browser);
     console.log("COMMISSION_BROWSER_SMOKE=PASS");
   } finally {await browser.close();}
 })().catch(err=>{console.error(err.stack||String(err));process.exitCode=1;});
