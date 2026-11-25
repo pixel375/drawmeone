@@ -264,6 +264,10 @@ try {
         'action'=>'set_review_status','request_id'=>$requestB,'expected_status'=>'submitted','status'=>'clarification_needed'
     ],$csrfAdmin);
     qa_positive($code===200 && $status['status']==='clarification_needed','artist_marks_clarification_needed');
+    [$code,$clarification]=qa_http('/api/requests.php',$tokenB);
+    qa_positive($code===200&&in_array($referenceB,$clarification['attention']['clarifications'],true),'customer_clarification_shortcut');
+    [$code,$clarification]=qa_http('/api/requests.php',$tokenA);
+    qa_positive($code===200&&!in_array($referenceB,$clarification['attention']['clarifications'],true),'clarification_shortcut_isolated');
     [$code]=qa_http('/api/admin/request-actions.php',$tokenAdmin,'__Host-dmo_admin',[
         'action'=>'set_review_status','request_id'=>$requestB,'expected_status'=>'submitted','status'=>'rejected'
     ],$csrfAdmin);
@@ -350,8 +354,14 @@ try {
     $internalId=qa_seed($db,"INSERT INTO dmo_messages (conversation_id,sender_id,body,is_internal) VALUES (:conv,:sender,'Synthetic internal note',1)",['conv'=>$conv,'sender'=>$admin]);
     qa_positive(dmo_notification_target($db,$requestA,'message',$messageId)!==null,'latest_public_artist_message_notice');
     qa_positive(dmo_notification_target($db,$requestA,'message',$internalId)===null,'internal_note_never_notified');
+    [$code,$replyAttention]=qa_http('/api/requests.php',$tokenA);
+    qa_positive($code===200&&in_array($referenceA,$replyAttention['attention']['artist_replies'],true),'latest_artist_reply_shortcut_ignores_private_note');
+    [$code,$replyAttention]=qa_http('/api/requests.php',$tokenB);
+    qa_positive($code===200&&!in_array($referenceA,$replyAttention['attention']['artist_replies'],true),'artist_reply_shortcut_isolated');
     $replyId=qa_seed($db,"INSERT INTO dmo_messages (conversation_id,sender_id,body,is_internal) VALUES (:conv,:sender,'Synthetic customer response',0)",['conv'=>$conv,'sender'=>$a]);
     qa_positive(dmo_notification_target($db,$requestA,'message',$messageId)===null,'customer_reply_invalidates_message_notice');
+    [$code,$replyAttention]=qa_http('/api/requests.php',$tokenA);
+    qa_positive($code===200&&!in_array($referenceA,$replyAttention['attention']['artist_replies'],true),'customer_response_clears_recent_artist_reply_shortcut');
     [$code,$queue]=qa_http('/api/admin/requests.php?filter=reply_due',$tokenAdmin,'__Host-dmo_admin');
     qa_positive($code===200&&in_array($requestA,array_map('intval',array_column($queue['requests'],'id')),true),'reply_due_queue_customer_latest');
     [$code,$inbox]=qa_http('/api/admin/messages.php?filter=reply_due',$tokenAdmin,'__Host-dmo_admin');

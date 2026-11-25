@@ -8,7 +8,19 @@ require_once __DIR__.'/checkout.php';
  * or internal record identifiers. Detail endpoints remain authoritative. */
 function dmo_customer_attention(PDO $db,int $customer): array
 {
-    $result=['quotes'=>[],'proofs'=>[],'deliveries'=>[],'invoices'=>[]];
+    $result=['quotes'=>[],'proofs'=>[],'deliveries'=>[],'invoices'=>[],'clarifications'=>[],'artist_replies'=>[]];
+    $q=$db->prepare("SELECT public_ref FROM dmo_commission_requests WHERE customer_id=:customer AND status='clarification_needed' ORDER BY updated_at DESC,id DESC LIMIT 10");
+    $q->execute(['customer'=>$customer]);$result['clarifications']=$q->fetchAll(PDO::FETCH_COLUMN);
+    // This is a recent-reply shortcut, not an unread or response-required flag.
+    // Private notes never affect the latest customer-visible message.
+    $q=$db->prepare("SELECT r.public_ref FROM dmo_commission_requests r
+        JOIN dmo_conversations c ON c.request_id=r.id JOIN dmo_messages m ON m.conversation_id=c.id
+        JOIN dmo_users u ON u.id=m.sender_id
+        WHERE r.customer_id=:customer AND r.status NOT IN ('cancelled','canceled','rejected','declined','completed','closed','archived','refunded')
+        AND m.is_internal=0 AND u.role='admin' AND m.created_at>=DATE_SUB(UTC_TIMESTAMP(),INTERVAL 14 DAY)
+        AND NOT EXISTS(SELECT 1 FROM dmo_messages later WHERE later.conversation_id=c.id AND later.is_internal=0 AND later.id>m.id)
+        ORDER BY m.id DESC LIMIT 10");
+    $q->execute(['customer'=>$customer]);$result['artist_replies']=$q->fetchAll(PDO::FETCH_COLUMN);
     if(dmo_quote_response_enabled()){
         $q=$db->prepare("SELECT r.id,r.public_ref,r.policy_version FROM dmo_commission_requests r
           JOIN dmo_quotes q ON q.request_id=r.id WHERE r.customer_id=:customer

@@ -619,11 +619,14 @@ async function verifyRequestWithdrawal(browser){
 async function verifyCustomerAttention(browser){
   const page=await browser.newPage({viewport:{width:320,height:844}});
   const mock=await installMocks(page,{signedIn:true,open:false});
-  await page.route("**/api/requests.php?*",route=>answer(route,{ok:true,requests:[requests[1]],attention:{quotes:[A],proofs:[],deliveries:[],invoices:[]}}));
+  await page.route("**/api/requests.php?*",route=>answer(route,{ok:true,requests:[requests[1]],attention:{quotes:[A],proofs:[],deliveries:[],invoices:[],clarifications:[A],artist_replies:[A]}}));
   try{
     await page.goto(base+"/commission.html",{waitUntil:"domcontentloaded"});
     await page.locator("#customer-attention").waitFor({state:"visible"});
     assert.equal(await page.locator("#my-request-list button").count(),1);
+    await page.getByRole("button",{name:"Clarification requested for "+A}).waitFor();
+    await page.getByRole("button",{name:"Recent artist reply for "+A}).waitFor();
+    await page.locator("#request-history-sort").selectOption("deadline");
     await page.getByRole("button",{name:"Review quote for "+A}).click();
     await page.waitForFunction(ref=>document.querySelector("#detail-ref")?.textContent.includes(ref),A);
     await checkOverflow(page,"customer attention");

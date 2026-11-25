@@ -253,6 +253,12 @@
         readableRequestStatus(item.workflow_stage || item.status),
       ].some(value => String(value || "").toLocaleLowerCase().includes(query));
     });
+    const sort=$("request-history-sort").value;
+    if(sort==="oldest")matches.reverse();
+    if(sort==="deadline")matches.sort((a,b)=>{
+      const date=item=>closedRequestStatuses.has(item.workflow_stage||item.status)?"9999-12-31":item.order_deadline||"9999-12-31";
+      return date(a).localeCompare(date(b));
+    });
     target.replaceChildren();
     $("request-history-count").textContent = rows.length
       ? "Showing " + matches.length + " of " + rows.length + (historyHasMore ? " loaded requests · Older requests available" : " requests")
@@ -293,7 +299,7 @@
     const root=$("customer-attention"),list=$("customer-attention-items");
     list.replaceChildren();root.hidden=true;
     if(!attention||typeof attention!=="object"||leavingSession)return;
-    const labels={quotes:"Review quote",proofs:"Review artwork proof",invoices:"Review payment arrangements",deliveries:"View finished artwork"};
+    const labels={clarifications:"Clarification requested",quotes:"Review quote",proofs:"Review artwork proof",invoices:"Review payment arrangements",artist_replies:"Recent artist reply",deliveries:"View finished artwork"};
     for(const [key,label] of Object.entries(labels)){
       const refs=Array.isArray(attention[key])?attention[key].filter(ref=>typeof ref==="string"&&/^DMO-[0-9a-f]{20}$/.test(ref)).slice(0,10):[];
       for(const ref of new Set(refs)){
@@ -371,6 +377,7 @@
   $("request-history-older").addEventListener("click", () => loadMyRequests(true));
   $("request-history-search").addEventListener("input", renderRequestHistory);
   $("request-history-filter").addEventListener("change", renderRequestHistory);
+  $("request-history-sort").addEventListener("change", renderRequestHistory);
 
 
   function syncQuoteButtons() {

@@ -10,7 +10,7 @@
 <title>Commission a drawing · Draw Me One</title>
 <link rel="icon" href="./favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="./commission.css?v=29">
-<script defer src="./commission.js?v=48"></script>
+<script defer src="./commission.js?v=49"></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
@@ -123,7 +123,7 @@
       </div>
       <section id="customer-attention" class="customer-attention" aria-labelledby="customer-attention-title" hidden>
         <h3 id="customer-attention-title">Your commission updates</h3>
-        <p class="small">Recent available items across your history. Open details to confirm the latest status.</p>
+        <p class="small">Recent available items across your history. Artist replies from the last 14 days are shortcuts, not unread indicators. Open details to confirm the latest status.</p>
         <div id="customer-attention-items" class="customer-attention-items"></div>
       </section>
       <div class="request-history-toolbar">
@@ -138,6 +138,9 @@
               <option value="active">Active requests</option>
               <option value="closed">Completed or closed</option>
             </select>
+          </label>
+          <label for="request-history-sort">Order by
+            <select id="request-history-sort"><option value="recent">Most recent</option><option value="deadline">Agreed date (active)</option><option value="oldest">Oldest first</option></select>
           </label>
         </div>
         <button type="button" id="refresh-requests" class="text-button">Refresh requests</button>
