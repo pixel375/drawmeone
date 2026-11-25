@@ -20,8 +20,8 @@ try{
     }
     if($prior['version']===0||$prior['paused']!==$input['paused']||$prior['capacity']!==$input['capacity']){
         $q=$db->prepare("INSERT INTO dmo_audit_log (actor_id,action,entity_type,entity_id,details_json)
-            VALUES (:actor,'intake.settings_changed','studio_intake',1,:details)");
-        $q->execute(['actor'=>$admin['user_id'],'details'=>json_encode(['paused'=>$input['paused'],'capacity'=>$input['capacity']],JSON_THROW_ON_ERROR)]);
+            VALUES (:actor,'intake.settings_changed','user',:entity,:details)");
+        $q->execute(['actor'=>$admin['user_id'],'entity'=>$admin['user_id'],'details'=>json_encode(['paused'=>$input['paused'],'capacity'=>$input['capacity']],JSON_THROW_ON_ERROR)]);
     }
     $db->commit();
     dmo_json(200,['ok'=>true,'intake'=>dmo_intake_state($db)]);

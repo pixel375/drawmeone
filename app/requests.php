@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/auth.php';
+require_once __DIR__ . '/policies.php';
 
 /**
  * Phase 8: customer-owned, TEXT-ONLY commission requests.
@@ -21,7 +22,7 @@ function dmo_requests_open(): bool
         && dmo_config('DMO_REQUESTS_ENABLED') === '1'
         && dmo_config('DMO_REQUEST_TERMS_APPROVED') === '1'
         && dmo_config('DMO_PRIVACY_PUBLISHED') === '1'
-        && dmo_requests_policy_version() !== '';
+        && dmo_policy_current() !== null;
 }
 
 function dmo_customer_require(PDO $db): array
@@ -76,7 +77,7 @@ function dmo_requests_validate(array $input): array
     $expected = [
         'idempotency_key', 'tier_id', 'addon_ids', 'subject_type',
         'brief', 'preferred_contact', 'preferred_deadline',
-        'policy_version', 'acknowledge_review',
+        'policy_version', 'policy_sha256', 'acknowledge_review',
     ];
     if (array_diff(array_keys($input), $expected) !== []) {
         dmo_json(422, ['ok' => false, 'error' => 'unexpected_fields']);
@@ -111,8 +112,10 @@ function dmo_requests_validate(array $input): array
         $ids[] = $id;
     }
     $version = $input['policy_version'] ?? null;
+    $policy=dmo_policy_current();
+    $digest=$input['policy_sha256']??null;
     if (!is_string($version) || $version !== dmo_requests_policy_version() ||
-        ($input['acknowledge_review'] ?? false) !== true) {
+        ($input['acknowledge_review'] ?? false) !== true || $policy===null || !is_string($digest) || !hash_equals($policy['sha256'],$digest)) {
         dmo_json(422, ['ok' => false, 'error' => 'policy_acknowledgement_required']);
     }
     return [
@@ -124,6 +127,7 @@ function dmo_requests_validate(array $input): array
         'preferred_contact' => $contact,
         'preferred_deadline' => dmo_requests_deadline($input['preferred_deadline'] ?? null),
         'policy_version' => $version,
+        'policy_sha256' => $digest,
     ];
 }
 
@@ -183,7 +187,7 @@ function dmo_messages_enabled(): bool
     return dmo_auth_configured() &&
         dmo_config('DMO_CUSTOMER_MESSAGING_ENABLED') === '1' &&
         dmo_config('DMO_PRIVACY_PUBLISHED') === '1' &&
-        dmo_config('DMO_REQUEST_TERMS_APPROVED') === '1';
+        dmo_config('DMO_REQUEST_TERMS_APPROVED') === '1' && dmo_policy_current()!==null;
 }
 
 /** Closed requests remain readable but do not accept further messages. */
@@ -272,7 +276,7 @@ function dmo_intake_lock(PDO $db): void
 }
 function dmo_intake_settings(PDO $db): array
 {
-    $q=$db->query("SELECT id,details_json FROM dmo_audit_log WHERE entity_type='studio_intake' AND entity_id=1 AND action='intake.settings_changed' ORDER BY id DESC LIMIT 1");
+    $q=$db->query("SELECT id,details_json FROM dmo_audit_log WHERE entity_type='user' AND action='intake.settings_changed' ORDER BY id DESC LIMIT 1");
     $row=$q->fetch(PDO::FETCH_ASSOC);
     if(!is_array($row))return ['version'=>0,'paused'=>true,'capacity'=>10];
     $data=json_decode($row['details_json'],true,8,JSON_THROW_ON_ERROR);

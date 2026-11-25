@@ -514,6 +514,7 @@ try {
         ],$csrfA);
     qa_positive($code===409,'closed_request_rejects_new_messages');
 
+    $db->prepare("UPDATE dmo_commission_requests SET status='submitted' WHERE id=:id")->execute(['id'=>$requestB]);
     [$code,$intake]=qa_http('/api/admin/intake.php',$tokenAdmin,'__Host-dmo_admin');
     qa_positive($code===200&&$intake['intake']['paused']===true&&$intake['intake']['version']===0,'intake_control_starts_paused');
     $settings=['expected_version'=>0,'paused'=>false,'capacity'=>1,'confirm_change'=>true];
@@ -528,13 +529,21 @@ try {
     qa_positive($code===409,'stale_intake_settings_rejected');
     [$code,$public]=qa_http('/api/request-status.php');
     qa_positive($code===200&&$public['requests_open']===false&&!isset($public['capacity'])&&!isset($public['active_requests']),'public_intake_has_no_queue_counts');
-    $payload=['idempotency_key'=>'b1899b00-7b76-4d9c-b5a0-aef173b5e0d1','tier_id'=>null,'addon_ids'=>[],'subject_type'=>'portrait','brief'=>'Synthetic new commission for capacity testing.','preferred_contact'=>'onsite','preferred_deadline'=>null,'policy_version'=>'qa-policy-v1','acknowledge_review'=>true];
+    $payload=['idempotency_key'=>'b1899b00-7b76-4d9c-b5a0-aef173b5e0d1','tier_id'=>null,'addon_ids'=>[],'subject_type'=>'portrait','brief'=>'Synthetic new commission for capacity testing.','preferred_contact'=>'onsite','preferred_deadline'=>null,'policy_version'=>'qa-policy-v1','policy_sha256'=>dmo_config('DMO_REQUEST_POLICY_SHA256'),'acknowledge_review'=>true];
     [$code,$blocked]=qa_http('/api/requests.php',$tokenA,'__Host-dmo_session',$payload,$csrfA);
     qa_positive($code===503&&$blocked['error']==='commissions_at_capacity','capacity_blocks_new_request');
     [$code,$saved]=qa_http('/api/admin/intake.php',$tokenAdmin,'__Host-dmo_admin',array_replace($settings,['expected_version'=>$version,'capacity'=>2]),$csrfAdmin);
     qa_positive($code===200&&$saved['intake']['requests_open']===true,'capacity_increase_reopens_intake_under_existing_gates');
+    [$code,$policy]=qa_http('/api/policy.php');
+    qa_positive($code===200&&$policy['policy']['sha256']===$payload['policy_sha256'],'published_policy_matches_pin');
+    [$code]=qa_http('/api/policy.php?version=qa-policy-v1&sha256='.str_repeat('0',64));
+    qa_positive($code===404,'policy_digest_mismatch_rejected');
+    [$code]=qa_http('/api/requests.php',$tokenA,'__Host-dmo_session',array_replace($payload,['policy_sha256'=>str_repeat('0',64)]),$csrfA);
+    qa_positive($code===422,'stale_policy_digest_rejected');
     [$code,$submitted]=qa_http('/api/requests.php',$tokenA,'__Host-dmo_session',$payload,$csrfA);
     qa_positive($code===201,'new_request_consumes_remaining_capacity');
+    [$code,$receipt]=qa_http('/api/request.php?ref='.$submitted['public_ref'],$tokenA);
+    qa_positive($code===200&&$receipt['request']['policy_sha256']===$payload['policy_sha256'],'request_receipt_preserves_policy_digest');
     [$code,$public]=qa_http('/api/request-status.php');
     qa_positive($public['intake_reason']==='at_capacity','intake_capacity_updates_after_submission');
     [$code,$saved]=qa_http('/api/admin/intake.php',$tokenAdmin,'__Host-dmo_admin',array_replace($settings,['expected_version'=>$saved['intake']['version'],'paused'=>true,'capacity'=>2]),$csrfAdmin);

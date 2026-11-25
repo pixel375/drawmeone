@@ -1,0 +1,1 @@
+Only owner-approved final policy versions belong here. No approved documents exist yet. Each version is a JSON object with exactly version, approved (true), effective_date (YYYY-MM-DD), terms and privacy (plain text). Keep released files byte-for-byte immutable and pin SHA-256 in private configuration. Do not publish draft documents or synthetic test fixtures.

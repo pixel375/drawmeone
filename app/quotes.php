@@ -11,7 +11,7 @@ function dmo_quote_policy_ready(): bool
     return dmo_auth_configured()
         && dmo_config('DMO_PRIVACY_PUBLISHED') === '1'
         && dmo_config('DMO_REQUEST_TERMS_APPROVED') === '1'
-        && dmo_requests_policy_version() !== '';
+        && dmo_policy_current() !== null;
 }
 
 function dmo_quote_delivery_enabled(): bool

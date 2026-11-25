@@ -189,9 +189,9 @@ try {
             ->execute(['id' => $requestId]);
 
         $db->prepare(
-            "INSERT INTO dmo_audit_log (actor_id, action, entity_type, entity_id) " .
-            "VALUES (:actor, 'request.submitted', 'commission_request', :request)"
-        )->execute(['actor' => $customer, 'request' => $requestId]);
+            "INSERT INTO dmo_audit_log (actor_id, action, entity_type, entity_id, details_json) " .
+            "VALUES (:actor, 'request.submitted', 'commission_request', :request,:details)"
+        )->execute(['actor' => $customer, 'request' => $requestId,'details'=>json_encode(['policy_version'=>$request['policy_version'],'policy_sha256'=>$request['policy_sha256']],JSON_THROW_ON_ERROR)]);
 
         $db->commit();
         dmo_json(201, [

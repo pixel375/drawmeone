@@ -27,7 +27,7 @@ function dmo_refs_enabled(PDO $db): bool
         dmo_config('DMO_REFERENCES_ENABLED') === '1' &&
         dmo_config('DMO_PRIVACY_PUBLISHED') === '1' &&
         dmo_config('DMO_REQUEST_TERMS_APPROVED') === '1' &&
-        dmo_refs_schema_ready($db);
+        dmo_policy_current()!==null && dmo_refs_schema_ready($db);
 }
 
 function dmo_refs_storage_root(): string

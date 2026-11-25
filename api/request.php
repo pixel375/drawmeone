@@ -80,6 +80,7 @@ try {
     $deliveries=dmo_delivery_customer_rows($db,(int)$session['user_id'],(int)$request['id']);
     $reviews=dmo_review_enabled($db)?dmo_review_orders($db,(int)$request['id']):[];
     foreach($reviews as &$review){unset($review['can_offer']);if($review['latest']!==null)unset($review['latest']['draft_id']);}unset($review);
+    $request['policy_sha256']=dmo_policy_receipt($db,(int)$request['id']);
     unset($request['id']);
     dmo_json(200, [
         'ok' => true,
