@@ -380,10 +380,16 @@ try {
     art_assert($status===409,'stale_batch_replay_rejected');
     [$status,$manifest]=art_http('/api/portfolio.php');
     art_assert($status===200&&count($manifest['works'])===2,'both_published_together');
+    [$status,,$firstPage]=art_http('/artwork.php?id='.$id);
+    art_assert($status===200&&str_contains($firstPage,'rel="next" href="/artwork.php?id='.$id2.'"')&&!str_contains($firstPage,'rel="prev"'),'featured_drawing_next_navigation');
+    [$status,,$secondPage]=art_http('/artwork.php?id='.$id2);
+    art_assert($status===200&&str_contains($secondPage,'rel="prev" href="/artwork.php?id='.$id.'"')&&!str_contains($secondPage,'rel="next"'),'last_drawing_previous_navigation');
     [$status,$result]=art_http('/api/admin/artworks.php',$token,$csrf,array_replace($batch,['visibility'=>'draft']));
     art_assert($status===200&&$result['updated']===2,'atomic_batch_unpublish');
     [$status,$manifest]=art_http('/api/portfolio.php');
     art_assert($status===200&&$manifest['works']===[],'both_removed_together');
+    [$status]=art_http('/artwork.php?id='.$id2);
+    art_assert($status===404,'adjacent_drawing_unpublished_detail_revoked');
     $audit=$db->query(
         "SELECT action FROM dmo_audit_log WHERE entity_type='portfolio_artwork'"
     )->fetchAll(PDO::FETCH_COLUMN);

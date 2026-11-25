@@ -54,7 +54,7 @@ main{padding:38px 0 56px}h1{font:normal clamp(32px,5vw,58px)/1.15 Georgia,serif;
 </head>
 <body>
 <a class="skip" href="#main">Skip to drawings</a>
-<header><a href="/">drawmeone.</a><nav aria-label="Main navigation"><a href="/#portfolio">Home gallery</a><a href="/services.php">Services</a><a href="/commission.html">Commissions</a></nav></header>
+<header><a href="/" aria-label="Draw Me One homepage">drawmeone.</a><nav aria-label="Main navigation"><a href="/#portfolio">Home gallery</a><a href="/services.php">Services</a><a href="/commission.html">Commissions</a></nav></header>
 <main id="main" tabindex="-1">
 <h1>Published drawings</h1>
 <p class="intro">Original artwork shared by the artist. Select a drawing to view it individually.</p>
@@ -67,7 +67,7 @@ main{padding:38px 0 56px}h1{font:normal clamp(32px,5vw,58px)/1.15 Georgia,serif;
 <?php foreach($rows as $row):
     $id=(int)$row['id'];$alt=trim((string)($row['alt_text']??''));if($alt==='')$alt='Original drawing by Draw Me One';
 ?>
-<a href="/artwork.php?id=<?= $id ?>"><img src="/api/artwork.php?id=<?= $id ?>&amp;v=thumb" alt="<?= dmo_directory_escape($alt) ?>" width="<?= max(1,(int)$row['pixel_width']) ?>" height="<?= max(1,(int)$row['pixel_height']) ?>" loading="lazy" decoding="async"></a>
+<a href="/artwork.php?id=<?= $id ?>"><img src="/api/artwork.php?id=<?= $id ?>&amp;v=thumb" alt="<?= dmo_directory_escape($alt) ?>" width="<?= max(1,(int)$row['pixel_width']) ?>" height="<?= max(1,(int)$row['pixel_height']) ?>" loading="<?= $row===$rows[0]?'eager':'lazy' ?>"<?= $row===$rows[0]?' fetchpriority="high"':'' ?> decoding="async"></a>
 <?php endforeach; ?>
 </div>
 <?php endif; ?>

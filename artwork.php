@@ -16,7 +16,7 @@ if (!is_string($idText) || !preg_match('/^[1-9][0-9]{0,17}$/D', $idText) ||
 try {
     $db = dmo_database();
     $query = $db->prepare(
-        "SELECT a.id, a.alt_text, f.pixel_width, f.pixel_height, f.storage_key,f.mime_type,f.byte_size,f.variant " .
+        "SELECT a.id, a.alt_text, a.is_featured,a.sort_order,f.pixel_width, f.pixel_height, f.storage_key,f.mime_type,f.byte_size,f.variant " .
         "FROM dmo_portfolio_artworks a JOIN dmo_artwork_files f " .
         "ON f.artwork_id = a.id AND f.variant = 'display' " .
         "WHERE a.id = :id AND a.visibility = 'published' LIMIT 1"
@@ -29,6 +29,19 @@ try {
         header('X-Robots-Tag: noindex');
         echo 'Drawing not found.';
         exit;
+    }
+    // Use the same stable gallery ordering as the public directory. Only
+    // published records with both expected variants may become neighbours.
+    $neighbours=['previous'=>null,'next'=>null];
+    foreach(['previous'=>['>','ASC','DESC'],'next'=>['<','DESC','ASC']] as $direction=>[$op,$featureOrder,$sortOrder]){
+        $q=$db->prepare("SELECT a.id FROM dmo_portfolio_artworks a
+            JOIN dmo_artwork_files t ON t.artwork_id=a.id AND t.variant='thumb'
+            JOIN dmo_artwork_files d ON d.artwork_id=a.id AND d.variant='display'
+            WHERE a.visibility='published' AND (a.is_featured,-a.sort_order,a.id) $op (:featured,:sort,:id)
+            ORDER BY a.is_featured $featureOrder,a.sort_order $sortOrder,a.id $featureOrder LIMIT 1");
+        $q->execute(['featured'=>(int)$work['is_featured'],'sort'=>-(int)$work['sort_order'],'id'=>(int)$work['id']]);
+        $adjacent=$q->fetchColumn();
+        if($adjacent!==false)$neighbours[$direction]=(int)$adjacent;
     }
 } catch (Throwable $error) {
     dmo_log_problem($error, 'public artwork detail');
@@ -92,10 +105,14 @@ header('Referrer-Policy: strict-origin-when-cross-origin');
 <meta property="og:description" content="<?= dmo_artwork_page_escape($description) ?>">
 <meta property="og:url" content="<?= dmo_artwork_page_escape($canonical) ?>">
 <meta property="og:image" content="<?= dmo_artwork_page_escape($image) ?>">
+<meta property="og:image:width" content="<?= $width ?>">
+<meta property="og:image:height" content="<?= $height ?>">
+<meta property="og:image:alt" content="<?= dmo_artwork_page_escape($label) ?>">
 <meta name="twitter:card" content="summary_large_image">
 <script type="application/ld+json"><?= $schema ?></script>
 <style>
 :root{color-scheme:dark;--bg:#151318;--card:#211e24;--ink:#faf3ed;--muted:#c6b8bf;--line:#514550;--accent:#edb9ab}
+@media(prefers-color-scheme:light){:root{color-scheme:light;--bg:#faf7f3;--card:#fffdfa;--ink:#242027;--muted:#615662;--line:#d6c9ce;--accent:#783e53}}
 *{box-sizing:border-box}
 body{margin:0;background:radial-gradient(ellipse at 65% -10%,rgba(237,185,171,.1),transparent 65%),var(--bg);color:var(--ink);font:14px/1.65 system-ui,-apple-system,Segoe UI,sans-serif;min-height:100vh}
 a{color:inherit;text-decoration:none}
@@ -114,15 +131,17 @@ figure{margin:28px 0 0;padding:clamp(12px,2.7vw,27px);background:var(--card);bor
 figure img{display:block;max-width:100%;max-height:min(80dvh,1100px);width:auto;height:auto;object-fit:contain;margin:0 auto;border-radius:3px}
 figcaption{color:var(--muted);font-size:12px;text-align:left;margin-top:18px;overflow-wrap:anywhere}
 footer{padding:24px 0 45px;border-top:1px solid var(--line);font-size:12px;color:var(--muted);flex-wrap:wrap}
-@media(max-width:600px){header{min-height:65px}.wordmark{font-size:21px}nav{gap:13px}figure{padding:12px}}
+.skip{position:absolute;left:12px;top:-100px;padding:12px;background:var(--bg);z-index:3}.skip:focus{top:12px}.artwork-nav{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:22px 0 0}.artwork-nav a,.artwork-nav span{min-height:44px;display:flex;align-items:center;justify-content:center;text-align:center;padding:10px;border:1px solid var(--line);border-radius:8px;overflow-wrap:anywhere}.artwork-nav span{border-color:transparent;color:var(--muted)}
+@media(max-width:600px){header{min-height:65px;flex-wrap:wrap;padding-block:12px}.wordmark{font-size:21px}nav{gap:13px}figure{padding:12px}.artwork-nav{gap:6px}.artwork-nav a,.artwork-nav span{font-size:11px;padding:6px}}
 </style>
 </head>
 <body>
+<a class="skip" href="#main">Skip to drawing</a>
 <header>
   <a class="wordmark" href="/" aria-label="Draw Me One homepage">drawmeone<span>.</span></a>
-  <nav aria-label="Main navigation"><a href="/#portfolio">All drawings</a><a href="/commission.html">Commissions</a></nav>
+  <nav aria-label="Main navigation"><a href="/portfolio.php">All drawings</a><a href="/commission.html">Commissions</a></nav>
 </header>
-<main>
+<main id="main" tabindex="-1">
   <span class="eyebrow">FROM THE ARTIST'S PORTFOLIO</span>
   <h1>Original drawing</h1>
   <p class="intro">A piece from the Draw Me One portfolio, published by the artist.</p>
@@ -132,6 +151,11 @@ footer{padding:24px 0 45px;border-top:1px solid var(--line);font-size:12px;color
          width="<?= $width ?>" height="<?= $height ?>">
     <figcaption><?= dmo_artwork_page_escape($label) ?></figcaption>
   </figure>
+  <nav class="artwork-nav" aria-label="Browse published drawings">
+    <?php if($neighbours['previous']!==null): ?><a rel="prev" href="/artwork.php?id=<?= $neighbours['previous'] ?>">Previous drawing</a><?php else: ?><span>First drawing</span><?php endif; ?>
+    <a href="/portfolio.php">All drawings</a>
+    <?php if($neighbours['next']!==null): ?><a rel="next" href="/artwork.php?id=<?= $neighbours['next'] ?>">Next drawing</a><?php else: ?><span>Last drawing</span><?php endif; ?>
+  </nav>
 </main>
 <footer><a href="/#portfolio">← Back to the gallery</a><a href="/services.php">Commission services</a><span>Draw Me One · Original artwork</span></footer>
 </body>

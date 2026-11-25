@@ -1,0 +1,3 @@
+# Published drawing navigation
+
+Individual public drawing pages link to the preceding and following published artwork in the same featured, sort-order and ID sequence as the directory. Only published items with both expected variant records are linked; the detail endpoint independently validates image integrity and publication on each request. Pages gain a skip link, mobile-friendly navigation, device light palette and social-image dimensions/alt metadata. The directory prioritizes the first image and lazily loads subsequent images. No artwork publication state, text or index policy changed. Disposable tests cover ordering and unpublication.
