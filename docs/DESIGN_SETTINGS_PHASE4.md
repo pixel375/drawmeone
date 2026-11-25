@@ -50,3 +50,9 @@ When it is safe to test:
 - Apply published settings on the public page, while letting visitors override **only** light/dark mode.
 - Add version history/rollback and other administrative content (SEO, commission text, prices, packages).
 - Attach a preview thumbnail and colour swatches for each choice without exposing admin controls to visitors.
+
+## Public presentation runtime follow-up
+
+The public homepage now reads the allowlisted published settings endpoint. The separate private switch `DMO_PUBLIC_DESIGN_ENABLED=1` selects the production presentation; it is **not** enabled by this development pass. When off, the API explicitly selects the existing Design Lab preview. In public mode the saved published Studio layout, palette, gallery layout, default mode and logo apply; the visitor may override only light/dark, stored separately from preview preferences. Preview settings are ignored in public mode, including during first paint. Unavailable or invalid settings use safe Studio defaults and hide the Design Lab. No draft is public, and the original noindex launch restriction remains. A fresh page load reads the current published version. This does not change registration, intake, payments, portfolio publishing or policy approvals.
+
+The admin overview reports whether a published presentation is ready. Synthetic browser and disposable HTTP tests exercise published settings, draft isolation, stale publish, disallowed styles, failed API fallback and separate visitor mode. Owner approval is still required before flipping the private switch.

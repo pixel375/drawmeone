@@ -8,6 +8,7 @@ try {
     // The strict allowlist excludes arbitrary or confidential fields.
     dmo_json(200, [
         'ok' => true,
+        'presentation' => dmo_design_presentation(),
         'published' => $settings['exists'],
         'version' => $settings['version'],
         'settings' => $settings['settings'],

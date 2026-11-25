@@ -15,6 +15,7 @@ fs.mkdirSync(output, { recursive: true });
 
 async function mockPublicBackend(page) {
   const responses = [
+    ["**/api/site-settings.php*", {ok:true,presentation:"preview",published:false,version:0,settings:{}}],
     ["**/api/portfolio.php*", { ok: true, works: [] }],
     ["**/api/request-status.php*", { ok: true, requests_open: false }],
     ["**/api/catalog.php*", { ok: true, tiers: [], addons: [] }],
@@ -76,6 +77,7 @@ async function checkPage(browser, site, viewport) {
       waitUntil: "domcontentloaded", timeout: 20000
     });
     assert.equal(navigation.status(), 200, "homepage HTTP");
+    await page.waitForFunction(()=>document.documentElement.dataset.presentation==="preview");
     await page.locator("#portfolio-gallery .art-tile").first().waitFor({
       state: "visible", timeout: 12000
     });
@@ -112,6 +114,7 @@ async function checkPage(browser, site, viewport) {
       assert.equal(await page.locator("html").getAttribute("data-logo"),
         "01-minimal-pencil");
       await page.reload({ waitUntil: "domcontentloaded" });
+      await page.waitForFunction(()=>document.documentElement.dataset.presentation==="preview");
       await page.locator("#portfolio-gallery .art-tile").first().waitFor();
       assert.equal(await page.locator("html").getAttribute("data-site"), "studio");
       assert.equal(await page.locator("html").getAttribute("data-design"), "ember");
@@ -295,6 +298,43 @@ async function checkHomepageIntake(browser) {
   }finally{await context.close();}
 }
 
+async function checkPublishedPresentation(browser){
+  const context=await browser.newContext({viewport:{width:390,height:844},reducedMotion:"reduce"});
+  const page=await context.newPage();
+  const settings={site_style:"studio",color_theme:"ember",gallery_layout:"rows",default_mode:"light",logo:"01-minimal-pencil"};
+  let payload={ok:true,presentation:"published",published:true,version:3,settings},http=200;
+  try{
+    await context.addInitScript(()=>{localStorage.setItem("dmo-preview-settings",JSON.stringify({site:"cinema",design:"aurora",layout:"mosaic",mode:"dark",logo:"original"}));});
+    await mockPublicBackend(page);
+    await page.route("**/api/site-settings.php*",route=>route.fulfill({status:http,contentType:"application/json",body:JSON.stringify(payload)}));
+    await page.goto(base+"/index.html",{waitUntil:"domcontentloaded"});
+    await page.waitForFunction(()=>document.documentElement.dataset.presentation==="public");
+    const state=()=>page.locator("html").evaluate(el=>[el.dataset.site,el.dataset.design,el.dataset.layout,el.dataset.mode,el.dataset.logo]);
+    assert.deepEqual(await state(),["studio","ember","rows","light","01-minimal-pencil"]);
+    assert.equal(await page.locator("#design-lab").isVisible(),false);
+    await page.locator('[data-site-choice="cinema"]').evaluate(el=>el.click());
+    assert.equal((await state())[0],"studio","hidden preview control cannot change published style");
+    await page.locator("#header-mode").click();
+    assert.equal((await state())[3],"dark");
+    await page.reload({waitUntil:"domcontentloaded"});
+    await page.waitForFunction(()=>document.documentElement.dataset.presentation==="public");
+    assert.deepEqual(await state(),["studio","ember","rows","dark","01-minimal-pencil"]);
+    for(const [body,code] of [
+      [{...payload,settings:{...settings,site_style:"cinema"}},200],
+      [{...payload,settings:{...settings,unexpected:"value"}},200],
+      [{...payload,published:false},200],
+      [{ok:false},503]
+    ]){
+      payload=body;http=code;
+      await page.reload({waitUntil:"domcontentloaded"});
+      await page.waitForFunction(()=>document.documentElement.dataset.presentation==="public");
+      assert.deepEqual(await state(),["studio","noir","masonry","dark","original"]);
+      assert.equal(await page.locator("#design-lab").isVisible(),false);
+    }
+    console.log("PASS: published design, separate visitor mode, stale preview isolation and safe fallback");
+  }finally{await context.close();}
+}
+
 (async () => {
   const browser = await browserType.launch({ headless: true });
   try {
@@ -310,6 +350,7 @@ async function checkHomepageIntake(browser) {
     await checkPublishedPortfolio(browser);
     await checkClosedWorkflows(browser);
     await checkHomepageIntake(browser);
+    await checkPublishedPresentation(browser);
     console.log("BROWSER_SMOKE=PASS");
   } finally { await browser.close(); }
 })().catch(error => {

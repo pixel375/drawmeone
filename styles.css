@@ -364,3 +364,7 @@ h1 em,h2 em{font-style:normal;color:var(--accent)}
   .lab-label small{font-size:10px}
   .gallery-more{padding-top:19px}
 }
+
+/* Public presentation must never expose the development picker on fallback. */
+.design-lab[hidden]{display:none!important}
+:root[data-presentation="public"] .footer{padding-bottom:42px}

@@ -105,7 +105,7 @@ try {
 
     // All fake business flags are scoped to the ephemeral local server.
     foreach ([
-        'DMO_AUTH_ENABLED'=>'1','DMO_ADMIN_ENABLED'=>'1',
+        'DMO_AUTH_ENABLED'=>'1','DMO_ADMIN_ENABLED'=>'1','DMO_DESIGN_WRITES_ENABLED'=>'1','DMO_PUBLIC_DESIGN_ENABLED'=>'1',
         'DMO_MAIL_ENABLED'=>'1','DMO_MAIL_TRANSPORT'=>'php',
         'DMO_ALLOW_PHP_MAIL'=>'1','DMO_MAIL_FROM'=>'support@drawmeone.com',
         'DMO_TURNSTILE_SITE_KEY'=>'ci-only-site-key',
@@ -756,6 +756,29 @@ try {
         qa_positive(dmo_integrity_checkout_crypto($db)['invalid']===1,'integrity_detects_invalid_ciphertext');
     }finally{$db->rollBack();}
     qa_positive(dmo_integrity_checkout_crypto($db)['invalid']===0,'integrity_test_corruption_rolled_back');
+    // Actual HTTP: private design drafts must not affect the published site.
+    [$code,$public]=qa_http('/api/site-settings.php');
+    qa_positive($code===200&&$public['presentation']==='published'&&$public['published']===false&&$public['version']===0,'design_public_safe_defaults');
+    $settings=['site_style'=>'studio','color_theme'=>'ember','gallery_layout'=>'rows','default_mode'=>'light','logo'=>'01-minimal-pencil'];
+    $save=['action'=>'save_draft','expected_version'=>0,'settings'=>$settings];
+    [$code]=qa_http('/api/admin/design.php',$tokenAdmin,'__Host-dmo_admin',$save);
+    qa_positive($code===403,'design_requires_csrf');
+    [$code]=qa_http('/api/admin/design.php',$tokenAdmin,'__Host-dmo_admin',array_replace($save,['settings'=>array_replace($settings,['site_style'=>'cinema'])]),$csrfAdmin);
+    qa_positive($code===422,'design_unapproved_site_style_rejected');
+    [$code,$saved]=qa_http('/api/admin/design.php',$tokenAdmin,'__Host-dmo_admin',$save,$csrfAdmin);
+    qa_positive($code===200&&$saved['draft_version']===1,'design_draft_saved');
+    [$code,$public]=qa_http('/api/site-settings.php');
+    qa_positive($code===200&&$public['published']===false&&$public['settings']['color_theme']==='noir','design_draft_not_public');
+    [$code]=qa_http('/api/admin/design.php',$tokenAdmin,'__Host-dmo_admin',['action'=>'publish','expected_version'=>0],$csrfAdmin);
+    qa_positive($code===409,'design_stale_publish_denied');
+    [$code,$published]=qa_http('/api/admin/design.php',$tokenAdmin,'__Host-dmo_admin',['action'=>'publish','expected_version'=>1],$csrfAdmin);
+    qa_positive($code===200&&$published['published_version']===1,'design_publish_explicit');
+    [$code,$public]=qa_http('/api/site-settings.php');
+    qa_positive($code===200&&$public['published']===true&&$public['settings']===$settings,'design_public_uses_saved_published_settings');
+    [$code,$saved]=qa_http('/api/admin/design.php',$tokenAdmin,'__Host-dmo_admin',['action'=>'save_draft','expected_version'=>1,'settings'=>array_replace($settings,['color_theme'=>'canvas'])],$csrfAdmin);
+    qa_positive($code===200&&$saved['draft_version']===2,'design_second_draft_saved');
+    [$code,$public]=qa_http('/api/site-settings.php');
+    qa_positive($code===200&&$public['version']===1&&$public['settings']===$settings,'design_new_draft_leaves_published_unchanged');
     echo "DISPOSABLE_POSITIVE_HTTP=PASS\n";
 } catch(Throwable $error) {
     fwrite(STDERR,'DISPOSABLE_POSITIVE_HTTP=FAIL ('.get_class($error).

@@ -78,3 +78,9 @@ function dmo_design_require_write_flag(): void
         dmo_json(503, ['ok' => false, 'error' => 'design_editing_disabled']);
     }
 }
+
+/** Separate from draft writes and commercial activation. Defaults to preview. */
+function dmo_design_presentation(): string
+{
+    return dmo_config('DMO_PUBLIC_DESIGN_ENABLED')==='1'?'published':'preview';
+}

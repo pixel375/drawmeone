@@ -14,23 +14,22 @@
   <link rel="icon" type="image/svg+xml" href="./favicon.svg">
   <title>Draw Me One | Modern Drawing Commission Studio</title>
   <script>
-    // Avoid a bright flash while the visitor's last chosen mode is restored.
+    // Only the visitor's explicit light/dark choice is trusted before the
+    // server chooses the published or development-preview presentation.
     try {
-      const pref = JSON.parse(localStorage.getItem("dmo-preview-settings") || "{}");
-      for (const [key, allowed] of Object.entries({
-        site:["studio","archive","journal","cinema"],design:["noir","canvas","editorial","aurora","ember"],mode:["dark","light"],layout:["masonry","mosaic","rows"],logo:["original","01-minimal-pencil","02-signature","03-dmo-monogram","04-portrait-seal","05-editorial","06-brushstroke","07-portrait","08-paintbrush-badge","09-pen-lettering","10-creative-palette"]
-      })) if (allowed.includes(pref[key])) document.documentElement.dataset[key] = pref[key];
+      const mode=localStorage.getItem("dmo-visitor-mode");
+      if (mode==="dark"||mode==="light") document.documentElement.dataset.mode=mode;
     } catch (_) {}
   </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&amp;family=Inter+Tight:wght@400;500;600;700;800;900&amp;family=Manrope:wght@400;500;600;700;800&amp;family=Playfair+Display:ital,wght@0,500;0,600;1,500;1,600&amp;family=Space+Grotesk:wght@400;500;600;700&amp;display=swap">
-  <link rel="stylesheet" href="./styles.css?v=11">
+  <link rel="stylesheet" href="./styles.css?v=12">
   <link rel="stylesheet" href="./concepts.css?v=10">
   <link rel="stylesheet" href="./polish.css?v=13">
   <link rel="stylesheet" href="./branding.css?v=10">
   <script defer src="./concepts.js?v=12"></script>
-  <script defer src="./studio.js?v=12"></script>
+  <script defer src="./studio.js?v=13"></script>
   <script defer src="./gallery.js?v=13"></script>
 </head>
 <body>
@@ -133,7 +132,7 @@
     </footer>
   </div>
 
-  <aside class="design-lab" id="design-lab" aria-label="Live design preview controls">
+  <aside class="design-lab" id="design-lab" hidden aria-label="Live design preview controls">
     <div class="lab-titlebar">
       <div class="lab-title"><span class="lab-indicator"></span><strong>DESIGN LAB</strong><span class="lab-beta">LIVE PREVIEW</span></div>
       <button type="button" id="lab-collapse" class="lab-collapse" aria-expanded="true" aria-controls="lab-controls">Minimize <span aria-hidden="true">⌄</span></button>

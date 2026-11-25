@@ -18,6 +18,7 @@ try {
             'draft' => dmo_design_load($db, 'draft'),
             'published' => dmo_design_load($db, 'published'),
             'write_enabled' => dmo_config('DMO_DESIGN_WRITES_ENABLED') === '1',
+            'presentation' => dmo_design_presentation(),
         ]);
     }
 

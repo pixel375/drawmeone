@@ -1,1 +1,1 @@
-Verify homepage live intake assets and keyboard portfolio targets; read-only.
+Verify guarded published design runtime and explicit preview mode; read-only.

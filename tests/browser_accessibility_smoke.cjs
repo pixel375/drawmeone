@@ -16,6 +16,7 @@ const preset={
 };
 async function mocks(page) {
   for(const [url,value] of [
+    ["**/api/site-settings.php*",{ok:true,presentation:"preview",published:false,version:0,settings:{}}],
     ["**/api/portfolio.php*",{ok:true,works:[]}],
     ["**/api/request-status.php*",{ok:true,requests_open:false}],
     ["**/api/catalog.php*",{ok:true,tiers:[],addons:[]}],
@@ -66,6 +67,7 @@ async function home(browser,site,width,mode="dark") {
     },{site,design:"noir",mode,layout:"masonry",logo:"original"});
     await mocks(page);
     await page.goto(base+"/index.html",{waitUntil:"domcontentloaded"});
+    await page.waitForFunction(()=>document.documentElement.dataset.presentation==="preview");
     await page.locator("#portfolio-gallery .art-tile").first().waitFor({state:"visible",timeout:15000});
     await checkAxe(page,"home-"+site+"-"+width+"-"+mode);
     if(site==="studio" && width===1440 && mode==="dark") {

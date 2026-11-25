@@ -11,6 +11,7 @@ require_once dirname(__DIR__, 2) . '/app/integrity.php';
 require_once dirname(__DIR__, 2) . '/app/retention.php';
 require_once dirname(__DIR__, 2) . '/app/checkout.php';
 require_once dirname(__DIR__, 2) . '/app/cancellations.php';
+require_once dirname(__DIR__, 2) . '/app/design.php';
 dmo_reject_non_get();
 
 try {
@@ -49,7 +50,11 @@ try {
     $integrity=dmo_integrity_records($db);
     $integrityIssues=array_sum($integrity);
     $retention=dmo_retention_report($db);
+    $designPublished=dmo_design_load($db,'published');
+    $publicPresentation=dmo_design_presentation()==='published';
     $readiness = [
+        ['key'=>'public_design','label'=>'Published public presentation','status'=>$publicPresentation&&$designPublished['exists']?'ready':'blocked',
+         'detail'=>$publicPresentation?($designPublished['exists']?'Published design v'.$designPublished['version'].'; visitor mode override only':'Public defaults active; no artist design published'):'Development Design Lab remains available; public presentation switch is off'],
         ['key'=>'integrity','label'=>'Order and payment record consistency','status'=>$integrityIssues===0?'ready':'blocked',
          'detail'=>$integrityIssues===0?'No inconsistencies detected in current database checks; private-file and invoice authentication checks run separately':$integrityIssues.' affected records or missing schema checks require operator review'],
         ['key'=>'review_schema','label'=>'Artwork review schema','status'=>dmo_review_schema_ready($db)?'ready':'blocked','detail'=>'Required for optional proof approval and included revisions'],

@@ -294,10 +294,12 @@ jobs:
             exit 1
           }
           echo "alternate_contact_layouts=3"
-          [[ "$public_home" == *'studio.js?v=12'* ]] && [[ "$alt_js" == *'data-intake-description'* ]] || { echo "homepage_intake=stale_assets"; exit 1; }
-          studio_js=$(curl -fsSL --max-time 15 "https://drawmeone.com/studio.js?v=12")
+          [[ "$public_home" == *'studio.js?v=13'* ]] && [[ "$alt_js" == *'data-intake-description'* ]] || { echo "homepage_intake=stale_assets"; exit 1; }
+          studio_js=$(curl -fsSL --max-time 15 "https://drawmeone.com/studio.js?v=13")
           [[ "$studio_js" == *'function refreshIntake()'* ]] && [[ "$studio_js" == *'Start a commission request'* ]] || { echo "homepage_intake=stale_script"; exit 1; }
           echo "homepage_intake=deployed"
+          [[ "$studio_js" == *'function loadPresentation()'* ]] && [[ "$public_home" == *'id="design-lab" hidden'* ]] || { echo "public_design_runtime=stale_assets"; exit 1; }
+          curl -fsSL --max-time 15 https://drawmeone.com/api/site-settings.php | php -r '$d=json_decode(stream_get_contents(STDIN),true); if (!is_array($d)||($d["ok"]??false)!==true||!in_array($d["presentation"]??null,["preview","published"],true)) exit(1); echo "public_design_runtime=".$d["presentation"]."\\n";'
           # Verify mobile Artist Desk stylesheet was deployed and cache-busted.
           desk_page=$(curl -fsSL --max-time 15 "https://drawmeone.com/studio-admin/index.php")
           [[ "$desk_page" == *'panel.css?v=39'* ]] || {
@@ -478,11 +480,11 @@ jobs:
           # v4.0 public accessibility: validate deployed revised theme
           # picker contrast and skip-to-main links. Read-only assets only.
           home_html=$(curl -fsSL --max-time 15 "https://drawmeone.com/")
-          [[ "$home_html" == *'styles.css?v=11'* ]] || {
+          [[ "$home_html" == *'styles.css?v=12'* ]] || {
             echo "a11y_homepage=stale_version"
             exit 1
           }
-          home_css=$(curl -fsSL --max-time 15 "https://drawmeone.com/styles.css?v=11")
+          home_css=$(curl -fsSL --max-time 15 "https://drawmeone.com/styles.css?v=12")
           [[ "$home_css" == *'.lab-label small{font-size:10px'* ]] &&
           [[ "$home_css" == *'opacity:1;color:var(--ink)'* ]] || {
             echo "a11y_homepage=stale_accessibility_css"

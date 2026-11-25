@@ -53,7 +53,13 @@
   const lab = document.getElementById("design-lab");
   const collapse = document.getElementById("lab-collapse");
 
+  let previewEnabled=false;
+  const defaults={site:"studio",design:"noir",layout:"masonry",mode:"dark",logo:"original"};
+  function visitorMode(){
+    try{const mode=localStorage.getItem("dmo-visitor-mode");return allowed.mode.includes(mode)?mode:null;}catch(_){return null;}
+  }
   function save() {
+    if(!previewEnabled)return;
     try {
       localStorage.setItem(key,JSON.stringify({
         site:root.dataset.site,design:root.dataset.design,layout:root.dataset.layout,mode:root.dataset.mode,logo:root.dataset.logo
@@ -75,7 +81,8 @@
     syncLogos();
   }
   function choose(name, value) {
-    if (!allowed[name] || !allowed[name].includes(value)) return;
+    if (!allowed[name] || !allowed[name].includes(value) || (!previewEnabled&&name!=="mode")) return;
+    if(name==="mode"&&!previewEnabled){try{localStorage.setItem("dmo-visitor-mode",value);}catch(_){}}
     const oldLayout = root.dataset.layout;
     root.dataset[name] = value;
     if (name === "site") root.dataset.layout = defaultLayouts[value];
@@ -122,6 +129,51 @@
     document.addEventListener("dmo:site-change",()=>requestAnimationFrame(tick));
     tick();
   }
+  // Published design settings are allowlisted as a complete document.
+  // Missing, malformed or unreachable settings fall back to Studio with
+  // preview controls hidden. A draft is never read by this runtime.
+  function publishedChoices(data){
+    const map={site:"site_style",design:"color_theme",layout:"gallery_layout",mode:"default_mode",logo:"logo"};
+    const result={};
+    if(!data||typeof data!=="object"||Array.isArray(data)||Object.keys(data).length!==5)return null;
+    for(const [name,field] of Object.entries(map)){
+      const value=data[field];
+      if(!allowed[name].includes(value)||(name==="site"&&value!=="studio"))return null;
+      result[name]=value;
+    }
+    return result;
+  }
+  function applyPresentation(settings,preview){
+    const oldSite=root.dataset.site,oldLayout=root.dataset.layout;
+    previewEnabled=preview;
+    for(const [name,value] of Object.entries(settings))root.dataset[name]=value;
+    if(lab)lab.hidden=!preview;
+    if(oldSite!==root.dataset.site)document.dispatchEvent(new CustomEvent("dmo:site-change",{detail:{site:root.dataset.site}}));
+    if(oldLayout!==root.dataset.layout)document.dispatchEvent(new CustomEvent("dmo:layout-change"));
+    reflect();
+    root.dataset.presentation=preview?"preview":"public";
+  }
+  async function loadPresentation(){
+    let choices={...defaults},preview=false;
+    const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),5000);
+    try{
+      const response=await fetch("./api/site-settings.php",{cache:"no-store",signal:controller.signal});
+      if(response.ok){
+        const data=await response.json();
+        if(data?.ok===true&&data.presentation==="preview"){
+          preview=true;
+          try{
+            const pref=JSON.parse(localStorage.getItem(key)||"{}");
+            for(const name of Object.keys(allowed))if(allowed[name].includes(pref?.[name]))choices[name]=pref[name];
+          }catch(_){}
+        }else if(data?.ok===true&&data.presentation==="published"&&data.published===true&&Number.isSafeInteger(data.version)&&data.version>0){
+          choices=publishedChoices(data.settings)||choices;
+        }
+      }
+    }catch(_){}finally{clearTimeout(timer);}
+    if(!preview)choices.mode=visitorMode()||choices.mode;
+    applyPresentation(choices,preview);
+  }
   // All four layouts share server-reported availability. No client-side
   // setting grants permission to submit requests or initiate payment.
   const intakeCopy={
@@ -160,4 +212,5 @@
   });
   refreshIntake();
   reflect();
+  loadPresentation();
 })();
