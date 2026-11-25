@@ -227,6 +227,9 @@
       "stat-upcoming":data.counts?.upcoming,
       "stat-revision-due":data.counts?.revision_due,
       "stat-proof-waiting":data.counts?.proof_waiting,
+      "stat-needs-schedule":data.counts?.needs_schedule,
+      "stat-paid-to-start":data.counts?.paid_to_start,
+      "stat-ready-to-deliver":data.counts?.ready_to_deliver,
     };
     for (const [name, value] of Object.entries(counters)) {
       $(name).textContent = Number.isSafeInteger(value) && value >= 0

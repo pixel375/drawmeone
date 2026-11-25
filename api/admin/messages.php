@@ -16,7 +16,7 @@ try {
     $page=(int)$pageText;
     $offset=($page-1)*50;
     $condition=match($filter){
-        'reply_due'=>"WHERE m.is_internal=0 AND u.role='customer' AND r.status IN ('submitted','clarification_needed') AND NOT EXISTS(SELECT 1 FROM dmo_messages later WHERE later.conversation_id=c.id AND later.is_internal=0 AND later.id>m.id) ",
+        'reply_due'=>"WHERE m.is_internal=0 AND u.role='customer' AND ".dmo_artist_open_request_sql()." AND NOT EXISTS(SELECT 1 FROM dmo_messages later WHERE later.conversation_id=c.id AND later.is_internal=0 AND later.id>m.id) ",
         'customer'=>"WHERE m.is_internal=0 AND u.role='customer' ",
         'artist'=>"WHERE m.is_internal=0 AND u.role='admin' ",
         'internal'=>"WHERE m.is_internal=1 ",
@@ -29,7 +29,7 @@ try {
         'JOIN dmo_users u ON u.id = m.sender_id ' .
         'JOIN dmo_conversations c ON c.id = m.conversation_id ' .
         'JOIN dmo_commission_requests r ON r.id = c.request_id ' .
-        $condition . 'ORDER BY m.created_at DESC, m.id DESC LIMIT 51 OFFSET ' . $offset
+        $condition . ($filter==='reply_due'?'ORDER BY m.id ASC ':'ORDER BY m.created_at DESC, m.id DESC ') . 'LIMIT 51 OFFSET ' . $offset
     );
     $rows=$stmt->fetchAll();
     $hasMore=count($rows)>50;

@@ -358,6 +358,16 @@ try {
     qa_positive($code===200&&in_array($replyId,array_map('intval',array_column($inbox['messages'],'id')),true),'reply_due_inbox_latest_only');
     [$code,$overview]=qa_http('/api/admin/overview.php',$tokenAdmin,'__Host-dmo_admin');
     qa_positive($code===200&&$overview['counts']['reply_due']===count($queue['requests']),'reply_due_count_matches_queue');
+    $db->prepare("UPDATE dmo_commission_requests SET status='in_progress' WHERE id=:id")->execute(['id'=>$requestA]);
+    [$code,$productionQueue]=qa_http('/api/admin/requests.php?filter=reply_due',$tokenAdmin,'__Host-dmo_admin');
+    qa_positive($code===200&&in_array($requestA,array_map('intval',array_column($productionQueue['requests'],'id')),true),'production_request_reply_due_visible');
+    [$code,$productionInbox]=qa_http('/api/admin/messages.php?filter=reply_due',$tokenAdmin,'__Host-dmo_admin');
+    qa_positive($code===200&&in_array($replyId,array_map('intval',array_column($productionInbox['messages'],'id')),true),'production_request_reply_due_inbox');
+    $db->prepare("UPDATE dmo_commission_requests SET status='submitted' WHERE id=:id")->execute(['id'=>$requestA]);
+    foreach(['needs_schedule','paid_to_start','ready_to_deliver'] as $filter){
+        [$code,$work]=qa_http('/api/admin/requests.php?filter='.$filter,$tokenAdmin,'__Host-dmo_admin');
+        qa_positive($code===200&&$overview['counts'][$filter]===count($work['requests']),'artist_queue_count_'.$filter);
+    }
     $afterReply=qa_seed($db,"INSERT INTO dmo_messages (conversation_id,sender_id,body,is_internal) VALUES (:conv,:sender,'Synthetic artist response',0)",['conv'=>$conv,'sender'=>$admin]);
     [$code,$queue]=qa_http('/api/admin/requests.php?filter=reply_due',$tokenAdmin,'__Host-dmo_admin');
     qa_positive($code===200&&!in_array($requestA,array_map('intval',array_column($queue['requests'],'id')),true),'artist_reply_clears_queue');

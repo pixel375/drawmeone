@@ -516,6 +516,10 @@ async function verifyRequestList(browser) {
     await page.locator("#request-list-previous").click();
     await page.waitForFunction(()=>document.querySelector("#request-list-status")?.textContent.includes("Page 1"));
     assert.equal(await page.locator("#request-list-previous").isEnabled(),false);
+    await page.locator("#request-list-filter").selectOption("paid_to_start");
+    await page.locator("#request-list-filters button[type=submit]").click();
+    await page.waitForFunction(()=>document.querySelector("#request-list")?.textContent.includes("Synthetic name"));
+    assert.deepEqual(queries.at(-1),{q:"Synthetic name",n:1,filter:"paid_to_start"});
     const overflow=await horizontalOverflow(page);
     assert(overflow.measured<=overflow.available+3,JSON.stringify(overflow));
     assert.deepEqual(posts,[]);

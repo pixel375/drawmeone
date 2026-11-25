@@ -1,0 +1,3 @@
+# Artist production queues
+
+Reply-needed counts and inbox now use the same open-request predicate and prioritize oldest outstanding customer messages. Additional queues identify active orders missing an agreed date, paid-status orders awaiting production, and paid-status orders marked ready for delivery. Payment holds and recorded refunds are excluded from the paid queues. These queues are read-only operational hints, not evidence of settled funds or authorization to release artwork; existing order and delivery checks remain authoritative. Tests cover production conversations and count/filter parity.

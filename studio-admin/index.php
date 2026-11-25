@@ -20,7 +20,7 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
 <meta name="theme-color" content="#151317">
 <title>Artist's Desk · Draw Me One</title>
 <link rel="stylesheet" href="./panel.css?v=46">
-<script defer src="./panel.js?v=71"></script>
+<script defer src="./panel.js?v=72"></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to dashboard</a>
@@ -93,6 +93,9 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
         <article><span>UPCOMING DEADLINES</span><strong id="stat-upcoming">—</strong><small>Today through the next seven days</small><button type="button" class="quiet stat-shortcut" data-request-queue="upcoming">View upcoming</button></article>
         <article><span>REVISIONS REQUESTED</span><strong id="stat-revision-due">—</strong><small>Latest artwork review requests a revision</small><button type="button" class="quiet stat-shortcut" data-request-queue="revision_due">Review artwork</button></article>
         <article><span>PROOFS AWAITING REVIEW</span><strong id="stat-proof-waiting">—</strong><small>Latest artwork review pending</small><button type="button" class="quiet stat-shortcut" data-request-queue="proof_waiting">View pending proofs</button></article>
+        <article><span>NEEDS SCHEDULE</span><strong id="stat-needs-schedule">—</strong><small>Active orders without an agreed date</small><button type="button" class="quiet stat-shortcut" data-request-queue="needs_schedule">Plan dates</button></article>
+        <article><span>PAID TO START</span><strong id="stat-paid-to-start">—</strong><small>Paid status, production not started</small><button type="button" class="quiet stat-shortcut" data-request-queue="paid_to_start">Review production</button></article>
+        <article><span>READY TO DELIVER</span><strong id="stat-ready-to-deliver">—</strong><small>Paid orders marked ready; release checks still apply</small><button type="button" class="quiet stat-shortcut" data-request-queue="ready_to_deliver">Review delivery</button></article>
         <article><span>MESSAGE ACTIVITY</span><strong id="stat-messages">—</strong><small>Last seven days, not an unread count</small></article>
       </div>
       <p class="small">Activity reflects actual records. No placeholder orders, customers or payments are created.</p>
@@ -156,7 +159,7 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
           <input id="request-list-query" type="search" maxlength="80" placeholder="Search commissions">
         </label>
         <label for="request-list-filter">Request status
-          <select id="request-list-filter"><option value="all">All requests</option><option value="review">Needs review</option><option value="quote_waiting">Awaiting quote decision</option><option value="quote_followup">Quotes needing follow-up</option><option value="accepted">Accepted quote, no order</option><option value="orders">Active orders</option><option value="payment_review">Payments to reconcile</option><option value="payment_hold">Payment holds</option><option value="checkout_followup">Invoice follow-up</option><option value="due">Due soon or overdue</option><option value="reply_due">Customer reply needed</option><option value="overdue">Overdue</option><option value="upcoming">Due in next seven days</option><option value="revision_due">Revision requested</option><option value="proof_waiting">Proof awaiting customer</option><option value="other">Other statuses</option></select>
+          <select id="request-list-filter"><option value="all">All requests</option><option value="review">Needs review</option><option value="quote_waiting">Awaiting quote decision</option><option value="quote_followup">Quotes needing follow-up</option><option value="accepted">Accepted quote, no order</option><option value="orders">Active orders</option><option value="payment_review">Payments to reconcile</option><option value="payment_hold">Payment holds</option><option value="checkout_followup">Invoice follow-up</option><option value="due">Due soon or overdue</option><option value="reply_due">Customer reply needed</option><option value="overdue">Overdue</option><option value="upcoming">Due in next seven days</option><option value="revision_due">Revision requested</option><option value="proof_waiting">Proof awaiting customer</option><option value="needs_schedule">Active orders without agreed date</option><option value="paid_to_start">Paid orders awaiting production</option><option value="ready_to_deliver">Ready for delivery (paid)</option><option value="other">Other statuses</option></select>
         </label>
         <button type="submit" class="quiet">Search</button>
         <button type="button" class="quiet" id="request-list-refresh">Refresh</button>
