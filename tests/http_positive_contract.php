@@ -110,6 +110,7 @@ try {
         'DMO_QUOTE_DELIVERY_ENABLED'=>'1','DMO_QUOTE_RESPONSES_ENABLED'=>'1',
         'DMO_CUSTOMER_MESSAGING_ENABLED'=>'1',
         'DMO_ORDER_ADMIN_ENABLED'=>'1','DMO_ORDER_TERMS_APPROVED'=>'1',
+        'DMO_MANUAL_PAYMENT_ENABLED'=>'1','DMO_MANUAL_PAYMENT_TERMS_APPROVED'=>'1',
         'DMO_REGISTRATION_ENABLED'=>'0','DMO_REQUESTS_ENABLED'=>'0',
     ] as $name=>$value) putenv($name.'='.$value);
     if (!is_string($log)) throw new RuntimeException('Local server log unavailable.');
@@ -479,6 +480,32 @@ try {
     [$code]=qa_http('/api/admin/messages.php?filter=internal',$tokenA,'__Host-dmo_admin');
     qa_positive(in_array($code,[401,403],true),'customer_cannot_read_artist_inbox');
 
+    qa_positive((int)$db->query('SELECT COUNT(*) FROM dmo_payments')->fetchColumn()===0,
+        'full_positive_lifecycle_never_creates_payment');
+    $evidence=['action'=>'record_payment_evidence','request_id'=>$requestA,'order_id'=>$orderId,'method'=>'bank_transfer','reference'=>'CI-ONLY-TRANSACTION-123','currency'=>'CAD','amount_minor'=>3000];
+    [$code]=qa_http('/api/admin/request-actions.php',$tokenA,'__Host-dmo_admin',$evidence,$csrfA);
+    qa_positive(in_array($code,[401,403],true),'customer_cannot_record_payment');
+    [$code]=qa_http('/api/admin/request-actions.php',$tokenAdmin,'__Host-dmo_admin',array_replace($evidence,['amount_minor'=>2999]),$csrfAdmin);
+    qa_positive($code===409,'partial_payment_not_accepted');
+    [$code,$pending]=qa_http('/api/admin/request-actions.php',$tokenAdmin,'__Host-dmo_admin',$evidence,$csrfAdmin);
+    qa_positive($code===201 && $pending['status']==='pending_verification' && $pending['payment_status']==='unverified','payment_evidence_not_payment_confirmation');
+    [$code]=qa_http('/api/admin/request-actions.php',$tokenAdmin,'__Host-dmo_admin',$evidence,$csrfAdmin);
+    qa_positive($code===409,'duplicate_evidence_denied');
+    [$code,$queue]=qa_http('/api/admin/requests.php?filter=payment_review',$tokenAdmin,'__Host-dmo_admin');
+    qa_positive($code===200 && count($queue['requests'])===1,'payment_review_queue');
+    $confirm=array_replace($evidence,['action'=>'verify_payment_evidence','payment_id'=>$pending['payment_id'],'confirm_received'=>true]);
+    [$code]=qa_http('/api/admin/request-actions.php',$tokenAdmin,'__Host-dmo_admin',array_replace($confirm,['reference'=>'CI-WRONG-REFERENCE']),$csrfAdmin);
+    qa_positive($code===409,'mismatched_reference_denied');
+    [$code]=qa_http('/api/admin/request-actions.php',$tokenAdmin,'__Host-dmo_admin',array_replace($confirm,['confirm_received'=>false]),$csrfAdmin);
+    qa_positive($code===422,'receiving_account_confirmation_required');
+    [$code,$paid]=qa_http('/api/admin/request-actions.php',$tokenAdmin,'__Host-dmo_admin',$confirm,$csrfAdmin);
+    qa_positive($code===200 && $paid['payment_status']==='paid' && $paid['provider_verified']===false && $paid['money_moved']===false,'manual_full_payment_reconciled_without_charge');
+    [$code,$customerPaid]=qa_http('/api/request.php?ref='.urlencode($referenceA),$tokenA);
+    qa_positive($code===200 && $customerPaid['orders'][0]['payment_status']==='paid' &&
+        !str_contains(json_encode($customerPaid,JSON_THROW_ON_ERROR),'CI-ONLY-TRANSACTION') &&
+        !str_contains(json_encode($customerPaid,JSON_THROW_ON_ERROR),'manual-hmac-v1'),'customer_sees_paid_without_private_evidence');
+    [$code]=qa_http('/api/admin/request-actions.php',$tokenAdmin,'__Host-dmo_admin',$confirm,$csrfAdmin);
+    qa_positive($code===409,'paid_reconciliation_replay_denied');
     $db->prepare("UPDATE dmo_commission_requests SET status='completed' WHERE id=:id")
        ->execute(['id'=>$requestA]);
     [$code]=qa_http('/api/request-message.php',$tokenA,
@@ -486,8 +513,7 @@ try {
             'ref'=>$referenceA,'body'=>'Should be blocked after completion.',
         ],$csrfA);
     qa_positive($code===409,'closed_request_rejects_new_messages');
-    qa_positive((int)$db->query('SELECT COUNT(*) FROM dmo_payments')->fetchColumn()===0,
-        'full_positive_lifecycle_never_creates_payment');
+
     echo "DISPOSABLE_POSITIVE_HTTP=PASS\n";
 } catch(Throwable $error) {
     fwrite(STDERR,'DISPOSABLE_POSITIVE_HTTP=FAIL ('.get_class($error).

@@ -2,6 +2,7 @@
 declare(strict_types=1);
 require_once dirname(__DIR__, 2) . '/app/notifications.php';
 require_once dirname(__DIR__, 2) . '/app/deliveries.php';
+require_once dirname(__DIR__, 2) . '/app/payments.php';
 
 try {
     $db = dmo_database();
@@ -14,6 +15,7 @@ try {
 
     $action = $input['action'] ?? null;
     $requestId = dmo_workflow_id($input['request_id'] ?? null);
+    if (in_array($action,['record_payment_evidence','verify_payment_evidence','reject_payment_evidence'],true)) dmo_payment_reconcile($db,$admin,$requestId,$input);
     if ($action === 'remove_delivery_draft') dmo_delivery_remove($db,$admin,$requestId,$input);
     if ($action === 'send_notification') dmo_notification_send($db,$admin,$requestId,$input);
     if (!in_array($action, ['add_private_note', 'create_quote_draft', 'send_customer_message','set_review_status','set_order_deadline','withdraw_quote'], true)) {

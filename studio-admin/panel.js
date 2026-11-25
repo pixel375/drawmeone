@@ -594,6 +594,65 @@
     }
   }
 
+  function renderPaymentRecords(orders,records,enabled) {
+    const root=$("request-payment-records");root.replaceChildren();
+    if(!enabled)root.append(textNode("p","Manual reconciliation is disabled until approved.","small"));
+    for(const order of orders||[]){
+      const rows=(records||[]).filter(p=>p.order_id===order.id);
+      const card=document.createElement("article");card.className="notification-card";
+      card.append(textNode("strong","Order #"+order.id+" · "+formatQuoteMoney(order.total_minor,order.currency)));
+      for(const p of rows)card.append(textNode("p","Payment #"+p.id+" · "+p.method+" · "+formatQuoteMoney(p.amount_minor,p.currency)+" · "+p.status,"small"));
+      const pending=rows.find(p=>p.status==="pending_verification");
+      if(enabled&&order.status==="awaiting_arrangement"&&order.payment_status==="unverified"){
+        const form=document.createElement("form");form.className="payment-evidence-form";
+        const method=textNode("label","External payment method");const select=document.createElement("select");
+        for(const [id,label] of [["bank_transfer","Bank transfer"],["paypal","PayPal"],["stripe","Stripe"],["other","Other external method"]])select.append(new Option(label,id));
+        if(pending)select.value=pending.method;method.append(select);
+        const refLabel=textNode("label",pending?"Re-enter receiving-account transaction reference":"External transaction reference");
+        const ref=document.createElement("input");ref.required=true;ref.minLength=6;ref.maxLength=120;ref.autocomplete="off";refLabel.append(ref);
+        const amountLabel=textNode("label","Actual received amount ("+order.currency+")");
+        const amount=document.createElement("input");amount.type="text";amount.inputMode="decimal";amount.required=true;amount.placeholder="0.00";amountLabel.append(amount);
+        form.append(method,refLabel,amountLabel);
+        let check=null;
+        if(pending){
+          const label=document.createElement("label");label.className="order-date-ack";check=document.createElement("input");check.type="checkbox";check.required=true;
+          label.append(check,textNode("span","I independently checked the receiving account: this exact transaction is settled, not pending, reversed or refunded, and belongs to this order."));form.append(label);
+        }
+        const save=textNode("button",pending?"Confirm reconciled payment":"Record pending evidence","quiet");save.type="submit";form.append(save);
+        form.addEventListener("submit",event=>{
+          event.preventDefault();if(requestBusy||check&&!check.checked)return;
+          const match=amount.value.trim().match(/^(\d{1,8})(?:\.(\d{1,2}))?$/);
+          if(!match){requestText("request-detail-status","Enter the actual amount in dollars and cents.");return;}
+          const minor=Number(match[1])*100+Number((match[2]||"").padEnd(2,"0"));
+          const body={action:pending?"verify_payment_evidence":"record_payment_evidence",order_id:order.id,method:select.value,reference:ref.value.trim(),currency:order.currency,amount_minor:minor};
+          if(pending){body.payment_id=pending.id;body.confirm_received=true;}
+          reconcilePayment(body);
+        });
+        card.append(form);
+        if(pending){
+          const reject=textNode("button","Reject pending evidence","quiet");reject.type="button";
+          reject.addEventListener("click",()=>reconcilePayment({action:"reject_payment_evidence",order_id:order.id,payment_id:pending.id,confirm_rejection:true}));
+          card.append(reject);
+        }
+      }
+      root.append(card);
+    }
+  }
+  async function reconcilePayment(body){
+    if(requestBusy||selectedRequestId===null)return;
+    const prompt=body.action==="verify_payment_evidence"?"Confirm this exact external payment as received? This does not charge money or release artwork.":body.action==="reject_payment_evidence"?"Reject this evidence? It will remain in the audit history.":"Record pending evidence only? The order stays unpaid until reconciliation.";
+    if(!window.confirm(prompt))return;
+    const id=selectedRequestId;requestBusy=true;updateRequestButtons();
+    try{
+      const {response,data}=await post("request-actions.php",{...body,request_id:id},csrf);
+      if(response.status===401)return sessionExpired();
+      if(!response.ok||!data.ok){requestText("request-detail-status","Payment record not changed ("+(data.error||response.status)+").");return;}
+      await openRequest(id);await requests();
+      requestText("request-detail-status",data.status==="verified"?"Manual reconciliation recorded. No money moved or artwork released.":"Payment evidence "+data.status+". No money moved.");
+    }catch(_){requestText("request-detail-status","Payment update not confirmed. Refresh before retrying.");}
+    finally{requestBusy=false;updateRequestButtons();}
+  }
+
   function renderDeliveryDrafts(orders,drafts,enabled) {
     const root=$("request-delivery-drafts");
     root.replaceChildren();
@@ -723,6 +782,7 @@
     $("request-review-status").disabled = requestBusy || !reviewStatus;
     for(const button of $("request-notifications").querySelectorAll("button"))button.disabled=requestBusy;
     for(const field of $("request-delivery-drafts").querySelectorAll("input,button"))field.disabled=requestBusy;
+    for(const field of $("request-payment-records").querySelectorAll("input,select,button"))field.disabled=requestBusy;
     for(const button of $("request-quotes").querySelectorAll("button[data-quote-withdraw]"))button.disabled=requestBusy;
     for(const field of $("request-orders").querySelectorAll(".order-date-form input,.order-date-form button"))field.disabled=requestBusy;
     for (const field of $("request-note-form").querySelectorAll("textarea")) {
@@ -756,7 +816,7 @@
       "request-tier","request-contact","request-deadline","request-brief-text"]) {
       requestText(id, "—");
     }
-    for (const id of ["request-thread","request-quotes","request-references","request-orders","request-notifications","request-delivery-drafts"]) {
+    for (const id of ["request-thread","request-quotes","request-references","request-orders","request-notifications","request-delivery-drafts","request-payment-records"]) {
       $(id).replaceChildren();
     }
   }
@@ -832,6 +892,7 @@
     renderAdminOrders(item.orders, item.quotes);
     renderNotifications(data.notification_options,data.notifications_enabled===true);
     renderDeliveryDrafts(item.orders,data.delivery_drafts,data.delivery_staging_enabled===true);
+    renderPaymentRecords(item.orders,data.payment_records,data.manual_payments_enabled===true);
     requestText("request-detail-status", requestWriteEnabled
       ? "Admin draft editing available. Nothing is sent to the customer."
       : "Viewing only. Private note and quote creation are disabled on the server.");

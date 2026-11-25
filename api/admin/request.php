@@ -3,6 +3,7 @@ declare(strict_types=1);
 require_once dirname(__DIR__, 2) . '/app/commission-workflow.php';
 require_once dirname(__DIR__, 2) . '/app/notifications.php';
 require_once dirname(__DIR__, 2) . '/app/deliveries.php';
+require_once dirname(__DIR__, 2) . '/app/payments.php';
 dmo_reject_non_get();
 
 try {
@@ -25,6 +26,8 @@ try {
     dmo_json(200, [
         'ok' => true,
         'detail' => $detail,
+        'manual_payments_enabled' => dmo_manual_payments_enabled() && dmo_messages_request_open((string)$detail['request']['status']),
+        'payment_records' => dmo_payment_admin_rows($db,$id),
         'delivery_drafts' => dmo_delivery_drafts($db,$id),
         'delivery_staging_enabled' => dmo_delivery_staging_enabled($db),
         'notification_options' => dmo_notification_options($db,$detail),

@@ -13,7 +13,7 @@ try {
     if (!is_string($search) || strlen($search) > 160 ||
         preg_match('/[\x00-\x1f\x7f]/', $search) ||
         !is_string($pageText) || !preg_match('/^[1-9][0-9]{0,3}$/D', $pageText) ||
-        !is_string($filter) || !in_array($filter, ['all','review','other','orders','quote_waiting','accepted','due','quote_followup'], true)) {
+        !is_string($filter) || !in_array($filter, ['all','review','other','orders','quote_waiting','accepted','due','quote_followup','payment_review'], true)) {
         dmo_json(422, ['ok'=>false,'error'=>'invalid_request_list_filter']);
     }
     $search = trim($search);
@@ -30,6 +30,7 @@ try {
     if ($filter === 'review') $where[] = '(' . $review . ')';
     if ($filter === 'other') $where[] = 'NOT (' . $review . ')';
     $activeOrders = "o.status IN ('awaiting_arrangement','in_progress','ready_for_delivery','queued','drawing','awaiting_feedback','revision')";
+    if ($filter === 'payment_review') $where[] = "EXISTS (SELECT 1 FROM dmo_payments p WHERE p.order_id=o.id AND p.status='pending_verification')";
     if ($filter === 'orders') $where[] = $activeOrders;
     if ($filter === 'quote_waiting') $where[] = "o.id IS NULL AND vq.status='sent' AND vq.validity_ends_at>UTC_TIMESTAMP()";
     if ($filter === 'quote_followup') $where[] = "o.id IS NULL AND r.status IN ('submitted','clarification_needed') AND ((vq.status='sent' AND vq.validity_ends_at<=UTC_TIMESTAMP()) OR vq.status IN ('declined','superseded'))";

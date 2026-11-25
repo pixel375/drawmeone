@@ -6,6 +6,7 @@ require_once dirname(__DIR__, 2) . '/app/references.php';
 require_once dirname(__DIR__, 2) . '/app/backup-health.php';
 require_once dirname(__DIR__, 2) . '/app/notifications.php';
 require_once dirname(__DIR__, 2) . '/app/deliveries.php';
+require_once dirname(__DIR__, 2) . '/app/payments.php';
 dmo_reject_non_get();
 
 try {
@@ -81,6 +82,8 @@ try {
         ['key' => 'offsite', 'label' => 'Independent off-site recovery',
          'status' => 'planned',
          'detail' => 'Off-site copy and separately stored recovery key not configured'],
+        ['key'=>'manual_payments','label'=>'Manual payment reconciliation','status'=>dmo_manual_payments_enabled()?'ready':'blocked',
+         'detail'=>'Requires independently checked receiving-account records and separate owner approval'],
         ['key' => 'payments', 'label' => 'Verified payment processing',
          'status' => 'planned',
          'detail' => 'No provider verification or automated charges implemented'],

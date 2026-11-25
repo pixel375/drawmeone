@@ -61,3 +61,7 @@ DMO_CUSTOMER_NOTIFICATIONS_ENABLED=0
 
 # Private artist-only delivery draft staging. No customer release exists yet.
 DMO_DELIVERY_DRAFTS_ENABLED=0
+
+# Manual external payment reconciliation: explicit owner approval required.
+DMO_MANUAL_PAYMENT_ENABLED=0
+DMO_MANUAL_PAYMENT_TERMS_APPROVED=0

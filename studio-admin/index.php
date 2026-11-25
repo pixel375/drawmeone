@@ -19,8 +19,8 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
 <meta name="robots" content="noindex,nofollow">
 <meta name="theme-color" content="#151317">
 <title>Artist's Desk · Draw Me One</title>
-<link rel="stylesheet" href="./panel.css?v=31">
-<script defer src="./panel.js?v=31"></script>
+<link rel="stylesheet" href="./panel.css?v=32">
+<script defer src="./panel.js?v=32"></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to dashboard</a>
@@ -81,7 +81,7 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
         <article><span>QUOTE FOLLOW-UP</span><strong id="stat-quote-followup">—</strong><small>Expired, declined or inactive offers</small><button type="button" class="quiet stat-shortcut" data-request-queue="quote_followup">Review quotes</button></article>
         <article><span>ACTIVE ORDERS</span><strong id="stat-orders">—</strong><small>Awaiting arrangements or in progress</small><button type="button" class="quiet stat-shortcut" data-request-queue="orders">Open order queue</button></article>
         <article><span>ORDERS DUE SOON</span><strong id="stat-due">—</strong><small>Agreed date within seven days or overdue</small><button type="button" class="quiet stat-shortcut" data-request-queue="due">View deadlines</button></article>
-        <article><span>PAYMENTS TO CHECK</span><strong id="stat-payments">—</strong><small>Require manual verification</small></article>
+        <article><span>PAYMENTS TO CHECK</span><strong id="stat-payments">—</strong><small>Require manual verification</small><button type="button" class="quiet stat-shortcut" data-request-queue="payment_review">Review payments</button></article>
         <article><span>MESSAGE ACTIVITY</span><strong id="stat-messages">—</strong><small>Last seven days, not an unread count</small></article>
       </div>
       <p class="small">Activity reflects actual records. No placeholder orders, customers or payments are created.</p>
@@ -105,7 +105,7 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
           <input id="request-list-query" type="search" maxlength="80" placeholder="Search commissions">
         </label>
         <label for="request-list-filter">Request status
-          <select id="request-list-filter"><option value="all">All requests</option><option value="review">Needs review</option><option value="quote_waiting">Awaiting quote decision</option><option value="quote_followup">Quotes needing follow-up</option><option value="accepted">Accepted quote, no order</option><option value="orders">Active orders</option><option value="due">Due soon or overdue</option><option value="other">Other statuses</option></select>
+          <select id="request-list-filter"><option value="all">All requests</option><option value="review">Needs review</option><option value="quote_waiting">Awaiting quote decision</option><option value="quote_followup">Quotes needing follow-up</option><option value="accepted">Accepted quote, no order</option><option value="orders">Active orders</option><option value="payment_review">Payments to reconcile</option><option value="due">Due soon or overdue</option><option value="other">Other statuses</option></select>
         </label>
         <button type="submit" class="quiet">Search</button>
         <button type="button" class="quiet" id="request-list-refresh">Refresh</button>
@@ -152,6 +152,11 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
           <h4>Order progress</h4>
           <p class="small">An accepted quote requires separate artist confirmation. Confirming an order does not verify or collect payment.</p>
           <div id="request-orders"><p class="small">No confirmed order.</p></div>
+        </section>
+        <section class="request-brief" aria-label="Manual payment reconciliation">
+          <h4>Payment reconciliation</h4>
+          <p class="small">Record an external transaction, then verify it against the receiving account. No money is moved through this website.</p>
+          <div id="request-payment-records"></div>
         </section>
         <section class="request-brief" aria-label="Private staged artwork">
           <h4>Private artwork staging</h4>

@@ -391,6 +391,7 @@
         renderText("small","Order recorded: " + (order.created_at || "Not available"))
       );
       card.append(renderText("small","Agreed delivery date: "+(order.agreed_deadline||"Not agreed yet")));
+      if (order.payment_status === "paid") card.append(renderText("p","The artist has recorded receipt after manual reconciliation. This is not an automated provider receipt.","small"));
       if (order.payment_status === "unverified") {
         card.append(renderText("p",
           "Payment has not been verified. Please use the agreed contact method " +
