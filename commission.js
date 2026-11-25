@@ -412,7 +412,8 @@
       if(order.payment_status==="on_hold")card.append(renderText("p","Payment is under review. Artwork access is paused. Please contact the artist.","small"));
       if(order.payment_status==="refunded")card.append(renderText("p","A full external refund has been recorded. Please contact the artist if you have questions.","small"));
       if (order.payment_status === "paid") card.append(renderText("p","The artist has recorded receipt after manual reconciliation. This is not an automated provider receipt.","small"));
-      if (order.payment_status === "unverified") {
+      if(order.status==="cancelled")card.append(renderText("p","This unpaid order was cancelled. Do not send payment. The original quote remains in your history.","small"));
+      if (order.payment_status === "unverified"&&order.status!=="cancelled") {
         const invoice=checkoutLinks.find(x=>x.order_id===order.id&&Number.isSafeInteger(x.id)&&x.id>0);
         if(invoice){
           card.append(renderText("p","An external invoice is available. Check the receiving merchant, currency and exact quote total before paying. Do not pay again if you have already paid. The artist must verify receipt separately.","small"),
@@ -541,6 +542,23 @@
   }
   let detailRequestSequence = 0;
   let detailFullThread = false;
+  async function withdrawRequest(ref,expectedStatus){
+    if(detailMutationBusy()||state.selectedRef!==ref||!state.csrf)return;
+    if(!window.confirm("Withdraw this unaccepted request? Outstanding offers will be closed. Your records remain available. This does not issue a refund."))return;
+    state.quoteBusy=true;$("detail-withdraw").disabled=true;
+    try{
+      const response=await fetch("./api/request-withdraw.php",{method:"POST",credentials:"same-origin",cache:"no-store",
+        headers:{"Content-Type":"application/json","X-DMO-CSRF":state.csrf},
+        body:JSON.stringify({ref,expected_status:expectedStatus,confirm_withdrawal:true})});
+      if(response.status===401)return customerSessionExpired();
+      const data=await response.json();
+      if(!response.ok||!data.ok){$("detail-withdraw-status").textContent="Withdrawal not recorded. Refresh details before retrying.";return;}
+      await openDetail(ref);await loadMyRequests();
+      if(state.selectedRef===ref&&!leavingSession)$("detail-withdraw-status").textContent="Request withdrawn. No money moved.";
+    }catch(_){$("detail-withdraw-status").textContent="Outcome uncertain. Refresh details before retrying.";}
+    finally{state.quoteBusy=false;$("detail-withdraw").disabled=false;$("detail-refresh").disabled=false;}
+  }
+
   async function openDetail(ref) {
     if (typeof ref !== "string" || !/^DMO-[0-9a-f]{20}$/.test(ref)) return;
     if (leavingSession || (detailMutationBusy() && state.selectedRef !== ref)) return;
@@ -552,6 +570,7 @@
     panel.hidden = false;
     panel.setAttribute("aria-busy","true");
     $("detail-content").hidden = true;
+    $("detail-withdraw").hidden=true;$("detail-withdraw").onclick=null;$("detail-withdraw-status").textContent="";
     for (const id of ["detail-status","detail-type","detail-options","detail-contact","detail-deadline","detail-brief","detail-policy"]) {
       $(id).textContent = "";
     }
@@ -620,6 +639,8 @@
       $("detail-reference-upload").disabled = body.can_upload_references !== true ||
         state.uploadBusy;
       const r = body.request || {};
+      $("detail-withdraw").hidden=body.can_withdraw!==true;
+      $("detail-withdraw").onclick=()=>withdrawRequest(ref,r.status);
       renderCustomerQuotes(body.quotes || [], ref, r.policy_version || "");
       renderCustomerOrders(body.orders || [],Array.isArray(body.deliveries)?body.deliveries:[],Array.isArray(body.artwork_reviews)?body.artwork_reviews:[],Array.isArray(body.checkout_links)?body.checkout_links:[]);
       showFact("detail-ref",r.public_ref);

@@ -1,1 +1,1 @@
-Verify post-migration invoice follow-up and integrity checks. No provider calls.
+Verify gated withdrawal and unpaid cancellation interfaces; no production mutations.

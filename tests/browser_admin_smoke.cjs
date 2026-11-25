@@ -753,6 +753,35 @@ async function verifyCheckoutLinks(browser){
   }finally{await page.close();}
 }
 
+async function verifyUnpaidCancellation(browser){
+  const page=await browser.newPage({viewport:{width:320,height:844},reducedMotion:"reduce"});
+  const posts=[];await simulateBackend(page,posts);
+  const request={id:126,status:"submitted",public_ref:"CI-126",workflow_stage:"awaiting_arrangement"};
+  const order={id:127,status:"awaiting_arrangement",payment_status:"unverified",total_minor:3000,currency:"CAD",can_cancel_unpaid:true};
+  const answer=(route,data)=>route.fulfill({status:200,contentType:"application/json",body:JSON.stringify(data)});
+  await page.route("**/api/admin/requests.php*",route=>answer(route,{ok:true,requests:[request]}));
+  await page.route("**/api/admin/request.php?*",route=>answer(route,{ok:true,detail:{request,orders:[order],quotes:[],messages:[],references:[],addons:[]}}));
+  await page.route("**/api/admin/request-actions.php*",route=>{
+    assert.deepEqual(route.request().postDataJSON(),{action:"cancel_unpaid_order",order_id:127,reason:"customer_requested",confirm_no_funds:true,confirm_agreement:true,request_id:126});
+    Object.assign(order,{status:"cancelled",can_cancel_unpaid:false});Object.assign(request,{status:"cancelled",workflow_stage:"cancelled"});
+    return answer(route,{ok:true,status:"cancelled",money_moved:false});
+  });
+  try{
+    await page.goto(base+"/studio-admin/index.php",{waitUntil:"domcontentloaded"});
+    await page.locator("#workspace").waitFor({state:"visible"});
+    await page.locator('[data-view="requests"]').click();
+    await page.locator("#request-list .request-open").first().click();
+    const section=page.locator("#request-payment-records");
+    await section.getByRole("checkbox").nth(0).check();
+    await section.getByRole("checkbox").nth(1).check();
+    page.once("dialog",dialog=>dialog.accept());
+    await section.getByRole("button",{name:"Cancel unpaid order"}).click();
+    await page.waitForFunction(()=>document.querySelector("#request-payment-records")?.textContent.includes("Cancelled unpaid order"));
+    assert.equal(await section.getByRole("button",{name:"Cancel unpaid order"}).count(),0);
+    assert.deepEqual(posts,[]);
+    console.log("PASS: artist cancels only eligible unpaid order");
+  }finally{await page.close();}
+}
 async function verifyClosedDesk(browser) {
   const page=await browser.newPage({viewport:{width:390,height:844}});
   await page.route("**/api/admin/status.php*",route=>route.fulfill({
@@ -789,6 +818,7 @@ async function verifyClosedDesk(browser) {
     await verifyIntakeControl(browser);
     await verifyPrivacyQueue(browser);
     await verifyCheckoutLinks(browser);
+    await verifyUnpaidCancellation(browser);
     console.log("ADMIN_BROWSER_SMOKE=PASS");
   } finally {await browser.close();}
 })().catch(error=>{

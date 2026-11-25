@@ -10,7 +10,7 @@
 <title>Commission a drawing · Draw Me One</title>
 <link rel="icon" href="./favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="./commission.css?v=28">
-<script defer src="./commission.js?v=37"></script>
+<script defer src="./commission.js?v=38"></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
@@ -156,6 +156,8 @@
         </dl>
         <h4>Your description</h4>
         <p id="detail-brief" class="detail-brief"></p>
+        <button type="button" id="detail-withdraw" class="text-button" hidden>Withdraw unaccepted request</button>
+        <p id="detail-withdraw-status" class="small" role="status" aria-live="polite"></p>
         <section class="detail-references">
           <h4>Private reference images</h4>
           <p class="small">Reference drawings are private, not added to the artist's public gallery.</p>

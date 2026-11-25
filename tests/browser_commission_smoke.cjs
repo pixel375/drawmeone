@@ -488,6 +488,30 @@ async function verifyOrderHistoryStage(browser) {
   }finally{await page.close();}
 }
 
+async function verifyRequestWithdrawal(browser){
+  const page=await browser.newPage({viewport:{width:320,height:844},reducedMotion:"reduce"});
+  await installMocks(page,{signedIn:true,open:false});
+  let withdrawn=false;
+  await page.route("**/api/request.php?*",route=>{
+    const data=detail(A);data.request.status=withdrawn?"cancelled":"submitted";data.request.workflow_stage=data.request.status;
+    return answer(route,{...data,can_withdraw:!withdrawn,can_reply:!withdrawn});
+  });
+  await page.route("**/api/request-withdraw.php",route=>{
+    assert.deepEqual(route.request().postDataJSON(),{ref:A,expected_status:"submitted",confirm_withdrawal:true});
+    withdrawn=true;return answer(route,{ok:true,status:"cancelled",money_moved:false});
+  });
+  try{
+    await page.goto(base+"/commission.html",{waitUntil:"domcontentloaded"});
+    await page.locator('#my-request-list button[aria-label$="'+A+'"]').click();
+    await page.locator("#detail-withdraw").waitFor({state:"visible"});
+    page.once("dialog",dialog=>dialog.accept());
+    await page.locator("#detail-withdraw").click();
+    await page.waitForFunction(()=>document.querySelector("#detail-status")?.textContent.includes("Cancelled"));
+    assert.equal(await page.locator("#detail-withdraw").isVisible(),false);
+    assert.equal(withdrawn,true);
+    console.log("PASS: customer withdraws unaccepted request");
+  }finally{await page.close();}
+}
 async function openWithoutLogin(browser) {
   const page=await browser.newPage({viewport:{width:390,height:844}});
   await installMocks(page,{signedIn:false,open:true});
@@ -513,6 +537,7 @@ async function openWithoutLogin(browser) {
     await verifyOlderCustomerHistory(browser);
     await verifyFullCustomerThread(browser);
     await verifyOrderHistoryStage(browser);
+    await verifyRequestWithdrawal(browser);
     console.log("COMMISSION_BROWSER_SMOKE=PASS");
   } finally {await browser.close();}
 })().catch(err=>{console.error(err.stack||String(err));process.exitCode=1;});

@@ -754,6 +754,21 @@
         section.append(textNode("p","The local link expires after seven days or is hidden when evidence is recorded. This does not cancel the external invoice. Verify actual receipt separately.","small"));
         card.append(section);
       }
+      if(order.can_cancel_unpaid===true){
+        const form=document.createElement("form");form.className="payment-evidence-form";
+        const label=textNode("label","Cancellation reason");const select=document.createElement("select");
+        for(const [value,name] of [["customer_requested","Customer requested"],["mutual_agreement","Mutual agreement"],["artist_unavailable","Artist unavailable"]])select.append(new Option(name,value));
+        label.append(select);
+        const funds=document.createElement("label");funds.className="order-date-ack";const noFunds=document.createElement("input");noFunds.type="checkbox";noFunds.required=true;
+        funds.append(noFunds,textNode("span","I checked all external payment channels: no money was received or remains pending, and all invoices are closed."));
+        const agreed=document.createElement("label");agreed.className="order-date-ack";const agreement=document.createElement("input");agreement.type="checkbox";agreement.required=true;
+        agreed.append(agreement,textNode("span","Cancellation is permitted by the agreed terms and has been communicated to the customer."));
+        const submit=textNode("button","Cancel unpaid order","quiet");submit.type="submit";form.append(label,funds,agreed,submit);
+        form.addEventListener("submit",event=>{event.preventDefault();if(requestBusy||!noFunds.checked||!agreement.checked)return;
+          reconcilePayment({action:"cancel_unpaid_order",order_id:order.id,reason:select.value,confirm_no_funds:true,confirm_agreement:true});});
+        card.append(form);
+      }
+      if(order.status==="cancelled")card.append(textNode("p","Cancelled unpaid order. Agreement history retained; no refund was issued.","small"));
       const payment=order.payment_status;
       if(payment==="on_hold")card.append(textNode("p","Payment on hold. Production and downloads are blocked.","small"));
       if(payment==="refunded")card.append(textNode("p","Full external refund recorded. No refund was sent by this website.","small"));
@@ -823,7 +838,7 @@
   }
   async function reconcilePayment(body){
     if(requestBusy||selectedRequestId===null)return;
-    const prompt=body.action==="issue_checkout_link"?"Publish this exact external invoice for this order? No payment is collected here.":body.action==="revoke_checkout_link"?"Remove this locally after confirming it cannot collect another payment externally?":body.action==="verify_payment_evidence"?"Confirm this exact external payment as received? This does not charge money or release artwork.":body.action==="reject_payment_evidence"?"Reject this evidence? It will remain in the audit history.":"Record pending evidence only? The order stays unpaid until reconciliation.";
+    const prompt=body.action==="cancel_unpaid_order"?"Permanently cancel this unpaid order and close its request? No funds will move.":body.action==="issue_checkout_link"?"Publish this exact external invoice for this order? No payment is collected here.":body.action==="revoke_checkout_link"?"Remove this locally after confirming it cannot collect another payment externally?":body.action==="verify_payment_evidence"?"Confirm this exact external payment as received? This does not charge money or release artwork.":body.action==="reject_payment_evidence"?"Reject this evidence? It will remain in the audit history.":"Record pending evidence only? The order stays unpaid until reconciliation.";
     if(body.action!=="set_payment_exception"&&!window.confirm(prompt))return;
     const id=selectedRequestId;requestBusy=true;updateRequestButtons();
     try{
@@ -831,7 +846,7 @@
       if(response.status===401)return sessionExpired();
       if(!response.ok||!data.ok){requestText("request-detail-status","Payment record not changed ("+(data.error||response.status)+").");return;}
       await openRequest(id);await requests();
-      requestText("request-detail-status",body.action==="issue_checkout_link"?"External invoice link published. Payment is not verified.":body.action==="revoke_checkout_link"?"Closed invoice link removed locally. No money moved.":body.action==="set_payment_exception"?"Payment exception recorded: "+data.payment_status+". No money moved.":data.status==="verified"?"Manual reconciliation recorded. No money moved or artwork released.":"Payment evidence "+data.status+". No money moved.");
+      requestText("request-detail-status",body.action==="cancel_unpaid_order"?"Unpaid order cancelled. No money moved.":body.action==="issue_checkout_link"?"External invoice link published. Payment is not verified.":body.action==="revoke_checkout_link"?"Closed invoice link removed locally. No money moved.":body.action==="set_payment_exception"?"Payment exception recorded: "+data.payment_status+". No money moved.":data.status==="verified"?"Manual reconciliation recorded. No money moved or artwork released.":"Payment evidence "+data.status+". No money moved.");
     }catch(_){requestText("request-detail-status","Payment update not confirmed. Refresh before retrying.");}
     finally{requestBusy=false;updateRequestButtons();}
   }
