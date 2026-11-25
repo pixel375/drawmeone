@@ -215,10 +215,20 @@
   async function overview() {
     const generation=++overviewGeneration;
     renderLaunchEvidence(null);renderConfigurationReview(null);
-    const { response, data } = await get("overview.php");
+    for(const card of document.querySelectorAll(".overview-group .stats article")){
+      card.dataset.count="unknown";card.querySelector("strong").textContent="—";
+    }
+    applyOverviewFilter();
+    $("overview-counter-status").textContent="Refreshing live counts…";
+    let response,data;
+    try{({response,data}=await get("overview.php"));}
+    catch(_){if(generation===overviewGeneration&&!leavingSession){$("overview-counter-status").textContent="Live counts unavailable. Refresh readiness to retry.";showError("Unable to load live studio counts.");}return;}
     if(generation!==overviewGeneration||leavingSession)return;
     if (response.status === 401) return sessionExpired();
-    if (!response.ok || !data.ok) return showError("Unable to load live studio counts.");
+    if (!response.ok || !data.ok) {
+      $("overview-counter-status").textContent="Live counts unavailable. Refresh readiness to retry.";
+      return showError("Unable to load live studio counts.");
+    }
     if(!intakeBusy)renderIntake(data.intake);
     renderLaunchEvidence(data.launch_evidence);renderConfigurationReview(data.configuration_review);
     const counters = {

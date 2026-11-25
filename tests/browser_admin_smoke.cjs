@@ -126,6 +126,13 @@ async function verifyArtistDesk(browser, width) {
     await page.locator("#overview-hide-empty").check();assert.equal(await page.locator("#stat-orders").isVisible(),false);
     assert.match(await page.locator("#overview-counter-status").innerText(),/empty counters hidden/);
     await page.locator("#overview-hide-empty").uncheck();assert.equal(await page.locator("#stat-orders").isVisible(),true);
+    await page.route("**/api/admin/overview.php*",route=>route.fulfill({status:503,contentType:"application/json",body:JSON.stringify({ok:false})}));
+    await page.locator("#overview-hide-empty").check();await page.locator("#launch-refresh").click();
+    await page.waitForFunction(()=>document.querySelector("#overview-counter-status")?.textContent.includes("Live counts unavailable"));
+    assert.equal(await page.locator("#stat-orders").innerText(),"—");assert.equal(await page.locator("#stat-orders").isVisible(),true);
+    await page.unroute("**/api/admin/overview.php*");
+    await page.locator("#overview-hide-empty").uncheck();await page.locator("#launch-refresh").click();
+    await page.waitForFunction(()=>document.querySelector("#stat-orders")?.textContent==="0");
     assert.equal(await page.locator("#launch-checks .launch-check").count(),3);
     assert.match(await page.locator("#launch-status").innerText(),/1 of 3/);
     const evidence=page.locator(".integrity-details").filter({hasText:"Controlled launch stages and evidence"});
