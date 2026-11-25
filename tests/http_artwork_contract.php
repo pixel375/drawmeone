@@ -393,13 +393,13 @@ try {
     [$status,$manifest]=art_http('/api/portfolio.php');
     art_assert($status===200&&count($manifest['works'])===2,'both_published_together');
     [$status,,$featuredDirectory]=art_http('/portfolio.php?view=featured');
-    art_assert($status===200&&str_contains($featuredDirectory,'href="/artwork.php?id='.$id.'"')&&!str_contains($featuredDirectory,'href="/artwork.php?id='.$id2.'"'),'featured_filter_only_featured_published_art');
+    art_assert($status===200&&str_contains($featuredDirectory,'href="/artwork.php?id='.$id.'&amp;view=featured"')&&!str_contains($featuredDirectory,'href="/artwork.php?id='.$id2.'&amp;view=featured"'),'featured_filter_only_featured_published_art');
     [$status,,$landscapeDirectory]=art_http('/portfolio.php?view=landscape');
-    art_assert($status===200&&str_contains($landscapeDirectory,'href="/artwork.php?id='.$id.'"'),'landscape_filter_includes_landscape');
+    art_assert($status===200&&str_contains($landscapeDirectory,'href="/artwork.php?id='.$id.'&amp;view=landscape"'),'landscape_filter_includes_landscape');
     if(function_exists('exif_read_data')){
-        art_assert(!str_contains($landscapeDirectory,'href="/artwork.php?id='.$id2.'"'),'landscape_excludes_oriented_portrait');
+        art_assert(!str_contains($landscapeDirectory,'href="/artwork.php?id='.$id2.'&amp;view=landscape"'),'landscape_excludes_oriented_portrait');
         [$status,,$portraitDirectory]=art_http('/portfolio.php?view=portrait');
-        art_assert($status===200&&str_contains($portraitDirectory,'href="/artwork.php?id='.$id2.'"')&&!str_contains($portraitDirectory,'href="/artwork.php?id='.$id.'"'),'portrait_filter_uses_oriented_dimensions');
+        art_assert($status===200&&str_contains($portraitDirectory,'href="/artwork.php?id='.$id2.'&amp;view=portrait"')&&!str_contains($portraitDirectory,'href="/artwork.php?id='.$id.'&amp;view=portrait"'),'portrait_filter_uses_oriented_dimensions');
     }
     [$status]=art_http('/portfolio.php?view=invalid');
     art_assert($status===404,'invalid_portfolio_filter_rejected');
@@ -407,6 +407,10 @@ try {
     art_assert($status===200&&str_contains($firstPage,'rel="next" href="/artwork.php?id='.$id2.'"')&&!str_contains($firstPage,'rel="prev"'),'featured_drawing_next_navigation');
     [$status,,$secondPage]=art_http('/artwork.php?id='.$id2);
     art_assert($status===200&&str_contains($secondPage,'rel="prev" href="/artwork.php?id='.$id.'"')&&!str_contains($secondPage,'rel="next"'),'last_drawing_previous_navigation');
+    [$status,,$filteredDetail]=art_http('/artwork.php?id='.$id.'&view=featured');
+    art_assert($status===200&&!str_contains($filteredDetail,'rel="next"')&&str_contains($filteredDetail,'href="/portfolio.php?view=featured"'),'filtered_detail_stays_in_featured_selection');
+    [$status,,$fallbackDetail]=art_http('/artwork.php?id='.$id2.'&view=featured');
+    art_assert($status===200&&str_contains($fallbackDetail,'rel="prev" href="/artwork.php?id='.$id.'"'),'stale_filter_falls_back_to_all');
     // Put both in the same featured group with a tied rank, then move
     // against the normal ID tiebreaker and verify the public order.
     [$status]=art_http('/api/admin/artworks.php',$token,$csrf,['id'=>$id2,'action'=>'set_featured','featured'=>true]);
@@ -416,6 +420,8 @@ try {
     $move=['action'=>'move_published','id'=>$id,'neighbor_id'=>$id2,'direction'=>'earlier','expected_order'=>-15,'expected_neighbor_order'=>-15,'expected_featured'=>true];
     [$status,$moved]=art_http('/api/admin/artworks.php',$token,$csrf,$move);
     art_assert($status===200&&$moved['updated']===2,'gallery_move_rebalances_tied_ranks');
+    [$status,,$filteredDetail]=art_http('/artwork.php?id='.$id.'&view=featured');
+    art_assert($status===200&&str_contains($filteredDetail,'rel="next" href="/artwork.php?id='.$id2.'&amp;view=featured"'),'filtered_next_preserves_view');
     [$status,,$firstPage]=art_http('/artwork.php?id='.$id);
     art_assert($status===200&&str_contains($firstPage,'rel="next" href="/artwork.php?id='.$id2.'"'),'gallery_move_visible_publicly');
     [$status]=art_http('/api/admin/artworks.php',$token,$csrf,$move);

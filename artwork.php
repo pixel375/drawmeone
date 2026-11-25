@@ -1,11 +1,15 @@
 <?php
 declare(strict_types=1);
 require_once __DIR__ . '/app/artwork.php';
+require_once __DIR__ . '/app/gallery-navigation.php';
 header('Cache-Control: no-store');
 
 // Search-engine-readable detail pages are created ONLY for art that the
 // artist has explicitly published. Drafts and demo art never get pages.
 $idText = $_GET['id'] ?? null;
+$view=$_GET['view']??'all';$fromPage=$_GET['from_page']??'1';
+if(!is_string($view)||!isset(dmo_gallery_views()[$view]))$view='all';
+$fromPage=is_string($fromPage)&&preg_match('/^[1-9][0-9]{0,3}$/D',$fromPage)&&(int)$fromPage<=1000?(int)$fromPage:1;
 if (!is_string($idText) || !preg_match('/^[1-9][0-9]{0,17}$/D', $idText) ||
     ($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'GET') {
     http_response_code(404);
@@ -32,12 +36,15 @@ try {
     }
     // Use the same stable gallery ordering as the public directory. Only
     // published records with both expected variants may become neighbours.
+    // A stale filter must not hide a still-published drawing.
+    if(!dmo_gallery_matches($view,$work)){$view='all';$fromPage=1;}
+    $condition=dmo_gallery_condition($view);
     $neighbours=['previous'=>null,'next'=>null];
     foreach(['previous'=>['>','ASC','DESC'],'next'=>['<','DESC','ASC']] as $direction=>[$op,$featureOrder,$sortOrder]){
         $q=$db->prepare("SELECT a.id FROM dmo_portfolio_artworks a
             JOIN dmo_artwork_files t ON t.artwork_id=a.id AND t.variant='thumb'
             JOIN dmo_artwork_files d ON d.artwork_id=a.id AND d.variant='display'
-            WHERE a.visibility='published' AND (a.is_featured,-a.sort_order,a.id) $op (:featured,:sort,:id)
+            WHERE a.visibility='published' $condition AND (a.is_featured,-a.sort_order,a.id) $op (:featured,:sort,:id)
             ORDER BY a.is_featured $featureOrder,a.sort_order $sortOrder,a.id $featureOrder LIMIT 1");
         $q->execute(['featured'=>(int)$work['is_featured'],'sort'=>-(int)$work['sort_order'],'id'=>(int)$work['id']]);
         $adjacent=$q->fetchColumn();
@@ -155,9 +162,9 @@ footer{padding:24px 0 45px;border-top:1px solid var(--line);font-size:12px;color
     <figcaption><?= dmo_artwork_page_escape($label) ?></figcaption>
   </figure>
   <nav class="artwork-nav" aria-label="Browse published drawings">
-    <?php if($neighbours['previous']!==null): ?><a rel="prev" href="/artwork.php?id=<?= $neighbours['previous'] ?>">Previous drawing</a><?php else: ?><span>First drawing</span><?php endif; ?>
-    <a href="/portfolio.php">All drawings</a>
-    <?php if($neighbours['next']!==null): ?><a rel="next" href="/artwork.php?id=<?= $neighbours['next'] ?>">Next drawing</a><?php else: ?><span>Last drawing</span><?php endif; ?>
+    <?php if($neighbours['previous']!==null): ?><a rel="prev" href="<?= dmo_artwork_page_escape(dmo_gallery_detail_url($neighbours['previous'],$view)) ?>">Previous drawing</a><?php else: ?><span>First drawing</span><?php endif; ?>
+    <a href="<?= dmo_artwork_page_escape(dmo_directory_url($view,$fromPage)) ?>"><?= $view==='all'?'All drawings':'Back to '.dmo_artwork_page_escape(strtolower(dmo_gallery_views()[$view])) ?></a>
+    <?php if($neighbours['next']!==null): ?><a rel="next" href="<?= dmo_artwork_page_escape(dmo_gallery_detail_url($neighbours['next'],$view)) ?>">Next drawing</a><?php else: ?><span>Last drawing</span><?php endif; ?>
   </nav>
 </main>
 <footer><a href="/#portfolio">← Back to the gallery</a><a href="/services.php">Commission services</a><span>Draw Me One · Original artwork</span></footer>

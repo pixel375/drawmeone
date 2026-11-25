@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 require_once __DIR__.'/app/artwork.php';
+require_once __DIR__.'/app/gallery-navigation.php';
 header('Content-Type: text/html; charset=utf-8');
 header('Cache-Control: no-store');
 header('X-Robots-Tag: noindex, follow');
@@ -10,10 +11,9 @@ header('Referrer-Policy: strict-origin-when-cross-origin');
 if(($_SERVER['REQUEST_METHOD']??'GET')!=='GET'){http_response_code(405);header('Allow: GET');exit;}
 $raw=$_GET['page']??'1';
 $filter=$_GET['view']??'all';
-$filters=['all'=>'All drawings','featured'=>'Featured','portrait'=>'Portrait','landscape'=>'Landscape','square'=>'Square'];
+$filters=dmo_gallery_views();
 if(!is_string($filter)||!isset($filters[$filter])){http_response_code(404);echo 'Portfolio view not found.';exit;}
-$condition=match($filter){'featured'=>' AND a.is_featured=1','portrait'=>' AND d.pixel_height>d.pixel_width','landscape'=>' AND d.pixel_width>d.pixel_height','square'=>' AND d.pixel_width=d.pixel_height',default=>''};
-function dmo_directory_url(string $filter,int $page=1): string{$params=[];if($filter!=='all')$params['view']=$filter;if($page>1)$params['page']=$page;return '/portfolio.php'.($params?'?'.http_build_query($params):'');}
+$condition=dmo_gallery_condition($filter);
 if(!is_string($raw)||!preg_match('/^[1-9][0-9]{0,3}$/D',$raw)||((int)$raw)>1000){
     http_response_code(404);echo 'Portfolio page not found.';exit;
 }
@@ -77,7 +77,7 @@ main{padding:38px 0 56px}h1{font:normal clamp(32px,5vw,58px)/1.15 Georgia,serif;
 <?php foreach($rows as $row):
     $id=(int)$row['id'];$alt=trim((string)($row['alt_text']??''));if($alt==='')$alt='Original drawing by Draw Me One';
 ?>
-<a href="/artwork.php?id=<?= $id ?>"><img src="/api/artwork.php?id=<?= $id ?>&amp;v=thumb" alt="<?= dmo_directory_escape($alt) ?>" width="<?= max(1,(int)$row['pixel_width']) ?>" height="<?= max(1,(int)$row['pixel_height']) ?>" loading="<?= $row===$rows[0]?'eager':'lazy' ?>"<?= $row===$rows[0]?' fetchpriority="high"':'' ?> decoding="async"></a>
+<a href="<?= dmo_directory_escape(dmo_gallery_detail_url($id,$filter,$page)) ?>"><img src="/api/artwork.php?id=<?= $id ?>&amp;v=thumb" alt="<?= dmo_directory_escape($alt) ?>" width="<?= max(1,(int)$row['pixel_width']) ?>" height="<?= max(1,(int)$row['pixel_height']) ?>" loading="<?= $row===$rows[0]?'eager':'lazy' ?>"<?= $row===$rows[0]?' fetchpriority="high"':'' ?> decoding="async"></a>
 <?php endforeach; ?>
 </div>
 <?php endif; ?>
