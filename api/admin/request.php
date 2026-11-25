@@ -5,6 +5,7 @@ require_once dirname(__DIR__, 2) . '/app/notifications.php';
 require_once dirname(__DIR__, 2) . '/app/deliveries.php';
 require_once dirname(__DIR__, 2) . '/app/payments.php';
 require_once dirname(__DIR__, 2) . '/app/checkout.php';
+require_once dirname(__DIR__, 2) . '/app/cancellations.php';
 dmo_reject_non_get();
 
 try {
@@ -23,6 +24,7 @@ try {
     $eligible=dmo_policy_request_eligible($db,$id,$version);
     $detail['request']['policy_sha256']=dmo_policy_receipt($db,$id);
     foreach ($detail['orders'] as &$order) {
+        $order['can_cancel_unpaid']=dmo_cancellation_enabled()&&dmo_cancel_order_eligible($db,$id,$order['id']);
         $order['deadline_editable'] = dmo_messages_request_open((string)$detail['request']['status']) &&
             dmo_orders_deadline_editable($order);
     }

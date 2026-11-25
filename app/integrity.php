@@ -15,6 +15,7 @@ function dmo_integrity_records(PDO $db): array
         'paid_without_evidence'=>"SELECT COUNT(*) FROM dmo_orders o JOIN dmo_quotes q ON q.id=o.accepted_quote_id WHERE o.payment_status='paid' AND NOT (".dmo_fulfillment_payment_sql().")",
         'paid_order_exception_conflict'=>"SELECT COUNT(*) FROM dmo_orders o WHERE o.payment_status='paid' AND ".dmo_order_exception_sql()." IN ('payment.access_held','payment.full_refund_recorded')",
         'duplicate_verified_payment'=>"SELECT COUNT(*) FROM (SELECT order_id FROM dmo_payments WHERE status='verified' GROUP BY order_id HAVING COUNT(*)>1) duplicates",
+        'cancelled_order_conflict'=>"SELECT COUNT(*) FROM dmo_orders o JOIN dmo_commission_requests r ON r.id=o.request_id WHERE o.status='cancelled' AND (r.status<>'cancelled' OR o.payment_status<>'unverified' OR EXISTS(SELECT 1 FROM dmo_payments p WHERE p.order_id=o.id AND p.status<>'rejected'))",
         'multiple_orders'=>"SELECT COUNT(*) FROM (SELECT request_id FROM dmo_orders GROUP BY request_id HAVING COUNT(*)>1) duplicates",
     ];
     if(dmo_checkout_schema_ready($db)){

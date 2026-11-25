@@ -95,3 +95,7 @@ DMO_CHECKOUT_LINKS_ENABLED=0
 DMO_CHECKOUT_TERMS_APPROVED=0
 # DMO_CHECKOUT_HOST=approved.provider.example
 # DMO_CHECKOUT_PATH_PREFIX=/invoice/
+
+# Explicit approval for pre-acceptance withdrawal and unpaid order cancellation.
+DMO_CANCELLATION_ENABLED=0
+DMO_CANCELLATION_TERMS_APPROVED=0

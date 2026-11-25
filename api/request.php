@@ -5,6 +5,7 @@ require_once dirname(__DIR__) . '/app/quotes.php';
 require_once dirname(__DIR__) . '/app/orders.php';
 require_once dirname(__DIR__) . '/app/deliveries.php';
 require_once dirname(__DIR__) . '/app/checkout.php';
+require_once dirname(__DIR__) . '/app/cancellations.php';
 dmo_reject_non_get();
 
 try {
@@ -83,6 +84,7 @@ try {
     foreach($reviews as &$review){unset($review['can_offer']);if($review['latest']!==null)unset($review['latest']['draft_id']);}unset($review);
     $request['policy_sha256']=dmo_policy_receipt($db,(int)$request['id']);
     $checkout=dmo_checkout_rows($db,(int)$request['id']);
+    $canWithdraw=dmo_withdrawal_enabled()&&dmo_withdrawal_eligible($db,(int)$request['id'],$request['status']);
     unset($request['id']);
     dmo_json(200, [
         'ok' => true,
@@ -101,6 +103,7 @@ try {
         'artwork_reviews' => $reviews,
         'quotes_visible' => count($quotes) > 0,
         'checkout_links'=>$checkout,
+        'can_withdraw'=>$canWithdraw,
         'payments_enabled' => false,
     ]);
 } catch (Throwable $error) {

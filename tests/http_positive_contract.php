@@ -115,7 +115,7 @@ try {
         'DMO_CUSTOMER_MESSAGING_ENABLED'=>'1',
         'DMO_ORDER_ADMIN_ENABLED'=>'1','DMO_ORDER_TERMS_APPROVED'=>'1',
         'DMO_MANUAL_PAYMENT_ENABLED'=>'1','DMO_MANUAL_PAYMENT_TERMS_APPROVED'=>'1',
-        'DMO_REGISTRATION_ENABLED'=>'0','DMO_REQUESTS_ENABLED'=>'1','DMO_INTAKE_CONTROL_ENABLED'=>'1','DMO_CHECKOUT_LINKS_ENABLED'=>'1','DMO_CHECKOUT_TERMS_APPROVED'=>'1','DMO_CHECKOUT_HOST'=>'checkout.example.invalid','DMO_CHECKOUT_PATH_PREFIX'=>'/invoice/','DMO_PRIVACY_SELF_SERVICE_ENABLED'=>'1',
+        'DMO_REGISTRATION_ENABLED'=>'0','DMO_REQUESTS_ENABLED'=>'1','DMO_INTAKE_CONTROL_ENABLED'=>'1','DMO_CANCELLATION_ENABLED'=>'1','DMO_CANCELLATION_TERMS_APPROVED'=>'1','DMO_CHECKOUT_LINKS_ENABLED'=>'1','DMO_CHECKOUT_TERMS_APPROVED'=>'1','DMO_CHECKOUT_HOST'=>'checkout.example.invalid','DMO_CHECKOUT_PATH_PREFIX'=>'/invoice/','DMO_PRIVACY_SELF_SERVICE_ENABLED'=>'1',
     ] as $name=>$value) putenv($name.'='.$value);
     if (!is_string($log)) throw new RuntimeException('Local server log unavailable.');
     $process=proc_open([
@@ -670,6 +670,51 @@ try {
     qa_positive($code===200&&$dashboard['retention']['mode']==='review_only'&&$dashboard['retention']['counts']['privacy_open_7d']===1&&$dashboard['retention']['counts']['privacy_open_30d']===1,'privacy_age_uses_original_submission');
     qa_positive($dashboard['retention']['counts']['closed_no_order_365d']===1,'retention_identifies_old_closed_request_without_order');
     qa_positive(!str_contains(json_encode($dashboard['retention'],JSON_THROW_ON_ERROR),'positive-b@example.invalid'),'retention_report_contains_no_customer_identity');
+    // Newly submitted request from the intake test: confirm an unpaid order.
+    $newRef=$submitted['public_ref'];
+    $q=$db->prepare('SELECT id FROM dmo_commission_requests WHERE public_ref=:ref');$q->execute(['ref'=>$newRef]);$newId=(int)$q->fetchColumn();
+    [$code,$detail]=qa_http('/api/request.php?ref='.$newRef,$tokenA);
+    qa_positive($code===200&&$detail['can_withdraw']===true,'new_request_can_be_withdrawn');
+    $withdrawal=['ref'=>$newRef,'expected_status'=>'submitted','confirm_withdrawal'=>true];
+    [$code]=qa_http('/api/request-withdraw.php',$tokenB,'__Host-dmo_session',$withdrawal,$csrfB);
+    qa_positive($code===404,'cross_account_withdrawal_denied');
+    [$code]=qa_http('/api/request-withdraw.php',$tokenA,'__Host-dmo_session',$withdrawal);
+    qa_positive($code===403,'withdrawal_requires_csrf');
+    [$code,$newQuote]=qa_http('/api/admin/request-actions.php',$tokenAdmin,'__Host-dmo_admin',['action'=>'create_quote_draft','request_id'=>$newId,'currency'=>'CAD','scope'=>'Cancellation fixture','revision_allowance'=>0,'lines'=>[['description'=>'Artwork','amount_minor'=>2000]]],$csrfAdmin);
+    qa_positive($code===201,'cancellation_quote_created');
+    [$code]=qa_http('/api/admin/quote-send.php',$tokenAdmin,'__Host-dmo_admin',['request_id'=>$newId,'quote_id'=>$newQuote['quote_id'],'validity_days'=>7],$csrfAdmin);
+    qa_positive($code===200,'cancellation_quote_sent');
+    [$code]=qa_http('/api/quote-response.php',$tokenA,'__Host-dmo_session',['ref'=>$newRef,'quote_id'=>$newQuote['quote_id'],'decision'=>'accept','policy_version'=>'qa-policy-v1','acknowledge_quote'=>true],$csrfA);
+    qa_positive($code===200,'cancellation_quote_accepted');
+    [$code]=qa_http('/api/request-withdraw.php',$tokenA,'__Host-dmo_session',$withdrawal,$csrfA);
+    qa_positive($code===409,'accepted_quote_cannot_be_withdrawn');
+    [$code,$newOrder]=qa_http('/api/admin/order-create.php',$tokenAdmin,'__Host-dmo_admin',['request_id'=>$newId,'accepted_quote_id'=>$newQuote['quote_id'],'confirm_unpaid'=>true],$csrfAdmin);
+    qa_positive($code===201,'cancellation_unpaid_order_confirmed');
+    $cancel=['action'=>'cancel_unpaid_order','request_id'=>$newId,'order_id'=>$newOrder['order_id'],'reason'=>'mutual_agreement','confirm_no_funds'=>true,'confirm_agreement'=>true];
+    [$code]=qa_http('/api/admin/request-actions.php',$tokenAdmin,'__Host-dmo_admin',array_replace($cancel,['confirm_no_funds'=>false]),$csrfAdmin);
+    qa_positive($code===422,'cancellation_requires_external_confirmation');
+    [$code,$link]=qa_http('/api/admin/request-actions.php',$tokenAdmin,'__Host-dmo_admin',['action'=>'issue_checkout_link','request_id'=>$newId,'order_id'=>$newOrder['order_id'],'expected_link_id'=>null,'url'=>'https://checkout.example.invalid/invoice/cancel-fixture','currency'=>'CAD','amount_minor'=>2000,'confirm_invoice'=>true],$csrfAdmin);
+    qa_positive($code===201,'cancellation_invoice_created');
+    [$code]=qa_http('/api/admin/request-actions.php',$tokenAdmin,'__Host-dmo_admin',$cancel,$csrfAdmin);
+    qa_positive($code===409,'open_invoice_blocks_cancellation');
+    [$code]=qa_http('/api/admin/request-actions.php',$tokenAdmin,'__Host-dmo_admin',['action'=>'revoke_checkout_link','request_id'=>$newId,'order_id'=>$newOrder['order_id'],'expected_link_id'=>$link['link_id'],'confirm_external_closed'=>true],$csrfAdmin);
+    qa_positive($code===200,'cancellation_invoice_closed');
+    [$code,$done]=qa_http('/api/admin/request-actions.php',$tokenAdmin,'__Host-dmo_admin',$cancel,$csrfAdmin);
+    qa_positive($code===200&&$done['status']==='cancelled'&&$done['money_moved']===false,'unpaid_order_cancelled_without_money_movement');
+    [$code,$detail]=qa_http('/api/request.php?ref='.$newRef,$tokenA);
+    qa_positive($code===200&&$detail['request']['status']==='cancelled'&&$detail['orders'][0]['status']==='cancelled'&&$detail['quotes'][0]['status']==='accepted'&&$detail['can_withdraw']===false&&$detail['checkout_links']===[],'cancelled_order_preserves_original_agreement');
+    [$code]=qa_http('/api/admin/request-actions.php',$tokenAdmin,'__Host-dmo_admin',$cancel,$csrfAdmin);
+    qa_positive($code===409,'duplicate_cancellation_rejected');
+    // Reopen a synthetic no-order fixture only, then verify withdrawal of a sent offer.
+    $db->prepare("UPDATE dmo_commission_requests SET status='submitted' WHERE id=:id")->execute(['id'=>$requestB]);
+    [$code,$draftB]=qa_http('/api/admin/request-actions.php',$tokenAdmin,'__Host-dmo_admin',['action'=>'create_quote_draft','request_id'=>$requestB,'currency'=>'CAD','scope'=>'Withdrawal fixture','revision_allowance'=>0,'lines'=>[['description'=>'Artwork','amount_minor'=>1000]]],$csrfAdmin);
+    qa_positive($code===201,'withdrawal_fixture_quote_created');
+    [$code]=qa_http('/api/admin/quote-send.php',$tokenAdmin,'__Host-dmo_admin',['request_id'=>$requestB,'quote_id'=>$draftB['quote_id'],'validity_days'=>7],$csrfAdmin);
+    qa_positive($code===200,'withdrawal_fixture_quote_sent');
+    [$code,$closed]=qa_http('/api/request-withdraw.php',$tokenB,'__Host-dmo_session',['ref'=>$referenceB,'expected_status'=>'submitted','confirm_withdrawal'=>true],$csrfB);
+    qa_positive($code===200&&$closed['status']==='cancelled','customer_withdraws_unaccepted_request');
+    [$code,$detail]=qa_http('/api/request.php?ref='.$referenceB,$tokenB);
+    qa_positive($code===200&&$detail['quotes'][0]['status']==='superseded'&&$detail['can_withdraw']===false&&$detail['can_reply']===false,'withdrawal_invalidates_offer_but_preserves_history');
     echo "DISPOSABLE_POSITIVE_HTTP=PASS\n";
 } catch(Throwable $error) {
     fwrite(STDERR,'DISPOSABLE_POSITIVE_HTTP=FAIL ('.get_class($error).

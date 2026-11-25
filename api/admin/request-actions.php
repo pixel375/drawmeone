@@ -4,6 +4,7 @@ require_once dirname(__DIR__, 2) . '/app/notifications.php';
 require_once dirname(__DIR__, 2) . '/app/deliveries.php';
 require_once dirname(__DIR__, 2) . '/app/payments.php';
 require_once dirname(__DIR__, 2) . '/app/checkout.php';
+require_once dirname(__DIR__, 2) . '/app/cancellations.php';
 
 try {
     $db = dmo_database();
@@ -18,6 +19,7 @@ try {
     $requestId = dmo_workflow_id($input['request_id'] ?? null);
     if (in_array($action,['record_payment_evidence','verify_payment_evidence','reject_payment_evidence'],true)) dmo_payment_reconcile($db,$admin,$requestId,$input);
     if (in_array($action,['issue_checkout_link','revoke_checkout_link'],true)) dmo_checkout_apply($db,$admin,$requestId,$input);
+    if ($action==='cancel_unpaid_order') dmo_cancel_order_apply($db,$admin,$requestId,$input);
     if ($action==='set_payment_exception') dmo_payment_exception_apply($db,$admin,$requestId,$input);
     if ($action==='offer_artwork_review') dmo_review_offer($db,$admin,$requestId,$input);
     if (in_array($action,['set_production_status','release_delivery'],true)) dmo_fulfillment_apply($db,$admin,$requestId,$input);
