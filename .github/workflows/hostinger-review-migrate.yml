@@ -1,0 +1,68 @@
+name: DrawMeOne — Add Artwork Review Schema
+
+# Fixed additive database migration only. No SQL or shell input from trigger.
+on:
+  push:
+    branches: [main]
+    paths: ['.github/ops/review-migrate.trigger']
+
+permissions:
+  contents: read
+  statuses: write
+
+concurrency:
+  group: drawmeone-hostinger-review-migration
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    environment: hostinger-diagnostics
+    env:
+      SSH_HOST: ${{ vars.HOSTINGER_HOST }}
+      SSH_PORT: ${{ vars.HOSTINGER_PORT }}
+      SSH_USER: ${{ vars.HOSTINGER_USER }}
+      SSH_PRIVATE_KEY: ${{ secrets.HOSTINGER_SSH_PRIVATE_KEY }}
+      SSH_KNOWN_HOSTS: ${{ secrets.HOSTINGER_KNOWN_HOSTS }}
+    steps:
+      - name: Apply fixed additive schema only if customer service remains closed
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          [[ "${SSH_HOST:-}" =~ ^[A-Za-z0-9.-]+$ ]] || exit 1
+          [[ "${SSH_USER:-}" =~ ^[A-Za-z0-9_-]+$ ]] || exit 1
+          [[ "${SSH_PORT:-}" =~ ^[0-9]{1,5}$ ]] && (( SSH_PORT >= 1 && SSH_PORT <= 65535 )) || exit 1
+          [[ -n "${SSH_PRIVATE_KEY:-}" && -n "${SSH_KNOWN_HOSTS:-}" ]] || exit 1
+          umask 077
+          dir=$(mktemp -d)
+          trap 'rm -rf -- "$dir"' EXIT
+          printf '%s\n' "$SSH_PRIVATE_KEY" | sed 's/\r$//' > "$dir/key"
+          printf '%s\n' "$SSH_KNOWN_HOSTS" | sed 's/\r$//' > "$dir/known_hosts"
+          chmod 600 "$dir/key" "$dir/known_hosts"
+          ssh-keygen -y -P '' -f "$dir/key" >/dev/null
+          ssh -T -o BatchMode=yes -o ConnectTimeout=20 -o ConnectionAttempts=1 \
+            -o StrictHostKeyChecking=yes -o "UserKnownHostsFile=$dir/known_hosts" \
+            -o IdentitiesOnly=yes -i "$dir/key" -p "$SSH_PORT" \
+            "$SSH_USER@$SSH_HOST" \
+            'php "$HOME/domains/drawmeone.com/public_html/app/cli-migrate-reviews.php" apply'
+      - name: Publish sanitized migration result
+        if: always()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          JOB_RESULT: ${{ job.status }}
+        run: |
+          set -Eeuo pipefail
+          state=failure
+          description="Artwork review schema was not verified"
+          if [[ "$JOB_RESULT" == "success" ]]; then
+            state=success
+            description="Artwork review schema ready; customer service remains closed"
+          fi
+          gh api --method POST "repos/$GITHUB_REPOSITORY/statuses/$GITHUB_SHA" \
+            -f state="$state" \
+            -f context="drawmeone/artwork-review-schema" \
+            -f description="$description" \
+            -f target_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
+            --silent

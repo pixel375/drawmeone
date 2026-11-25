@@ -69,3 +69,6 @@ DMO_MANUAL_PAYMENT_TERMS_APPROVED=0
 # Paid production and final customer download; owner approval required.
 DMO_DELIVERY_RELEASE_ENABLED=0
 DMO_DELIVERY_TERMS_APPROVED=0
+
+# Optional customer proof review workflow; disabled until approved.
+DMO_ARTWORK_REVIEW_ENABLED=0

@@ -82,6 +82,11 @@ function dmo_delivery_remove(PDO $db,array $admin,int $requestId,array $input): 
         if($released->fetchColumn()!==false){
             $db->rollBack();dmo_json(409,['ok'=>false,'error'=>'released_artwork_immutable']);
         }
+        if(dmo_review_schema_ready($db)){
+            $review=$db->prepare("SELECT id FROM dmo_artwork_reviews WHERE draft_id=:id AND status IN ('pending','approved') LIMIT 1");
+            $review->execute(['id'=>$id]);
+            if($review->fetchColumn()!==false){$db->rollBack();dmo_json(409,['ok'=>false,'error'=>'reviewed_draft_protected']);}
+        }
         $path=dmo_delivery_file($row['storage_key']);
         $db->prepare('DELETE FROM dmo_delivery_drafts WHERE id=:id AND request_id=:request')
             ->execute(['id'=>$id,'request'=>$requestId]);
@@ -169,6 +174,8 @@ function dmo_fulfillment_apply(PDO $db,array $admin,int $requestId,array $input)
         if($option===null)throw new DmoFulfillmentConflict('verified_payment_and_policy_required');
         if($release){
             if(!$option['can_release'])throw new DmoFulfillmentConflict('order_not_ready');
+            $review=dmo_review_latest($db,$orderId);
+            if($review!==null&&($review['status']!=='approved'||(int)$review['draft_id']!==$draftId))throw new DmoFulfillmentConflict('approved_draft_required');
             $q=$db->prepare('SELECT storage_key,sha256,byte_size FROM dmo_delivery_drafts WHERE id=:id AND request_id=:request AND order_id=:order FOR UPDATE');
             $q->execute(['id'=>$draftId,'request'=>$requestId,'order'=>$orderId]);
             $draft=$q->fetch(PDO::FETCH_ASSOC);
@@ -193,6 +200,8 @@ function dmo_fulfillment_apply(PDO $db,array $admin,int $requestId,array $input)
             if($input['expected_status']!==$option['status']||!in_array($input['status'],$option['next'],true))
                 throw new DmoFulfillmentConflict('production_status_conflict');
             if($input['status']==='ready_for_delivery'){
+                $review=dmo_review_latest($db,$orderId);
+                if($review!==null&&$review['status']!=='approved')throw new DmoFulfillmentConflict('customer_review_pending');
                 $q=$db->prepare('SELECT id FROM dmo_delivery_drafts WHERE order_id=:order AND request_id=:request LIMIT 1');
                 $q->execute(['order'=>$orderId,'request'=>$requestId]);
                 if($q->fetchColumn()===false)throw new DmoFulfillmentConflict('stage_artwork_first');
@@ -230,3 +239,5 @@ function dmo_delivery_customer_rows(PDO $db,int $customerId,int $requestId): arr
         'bytes'=>(int)$r['byte_size'],'width'=>(int)$r['pixel_width'],'height'=>(int)$r['pixel_height'],
         'created_at'=>$r['created_at']],$q->fetchAll(PDO::FETCH_ASSOC));
 }
+
+require_once __DIR__.'/artwork-reviews.php';
