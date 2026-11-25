@@ -276,7 +276,17 @@ async function verifyBulkArtworkChoices(browser) {
     });
     await unpublish.click();
     assert.deepEqual(posts,[],"dismissed bulk unpublish made no API changes");
-    console.log("PASS: safe publish/unpublish bulk selection and filtered status");
+    await page.route("**/api/admin/artworks.php*",route=>{
+      if(route.request().method()==="GET")return route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({...mockAdmin["artworks.php"],write_enabled:true})});
+      const payload=route.request().postDataJSON();
+      assert.equal(payload.action,"batch_visibility");assert.equal(payload.visibility,"draft");assert.equal(payload.confirm,true);assert.equal(payload.ids.length,1);
+      return route.fulfill({status:409,contentType:"application/json",body:JSON.stringify({ok:false,error:"artwork_batch_changed"})});
+    });
+    page.once("dialog",dialog=>dialog.accept());
+    await unpublish.click();
+    await page.waitForFunction(()=>document.querySelector("#artwork-library-status")?.textContent.includes("Batch not confirmed"));
+    assert.equal(await unpublish.isEnabled(),false);
+    console.log("PASS: safe publish/unpublish bulk selection, atomic API and stale batch lockout");
   } finally {await context.close();}
 }
 async function verifyRequestIsolation(browser) {

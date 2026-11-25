@@ -291,6 +291,33 @@ try {
     art_assert($status===200,'unpublished_artwork_still_private_artist_preview');
     [$status]=art_http('/api/admin/artworks.php',$token,$csrf,['id'=>$id,'action'=>'set_alt','alt'=>'']);
     art_assert($status===200,'optional_description_can_be_cleared');
+    [$status,$second]=art_http('/api/admin/artwork-upload.php',$token,$csrf,null,$png);
+    art_assert($status===201,'second_private_drawing_for_batch');
+    $id2=$second['artwork_id'];
+    $batch=['action'=>'batch_visibility','ids'=>[$id,$id2],'visibility'=>'published','confirm'=>true];
+    [$status]=art_http('/api/admin/artworks.php',$token,$csrf,array_replace($batch,['ids'=>[$id,$id]]));
+    art_assert($status===422,'batch_duplicate_ids_denied');
+    [$status]=art_http('/api/admin/artworks.php',$token,$csrf,array_replace($batch,['confirm'=>false]));
+    art_assert($status===422,'batch_requires_confirmation');
+    [$status]=art_http('/api/admin/artworks.php',$token,$csrf,array_replace($batch,['ids'=>[$id,PHP_INT_MAX]]));
+    art_assert($status===409,'batch_stale_or_missing_item_rejected');
+    $q=$db->prepare("SELECT storage_key FROM dmo_artwork_files WHERE artwork_id=:id AND variant='display'");$q->execute(['id'=>$id2]);
+    $file=dmo_artwork_storage_file($q->fetchColumn());$backup=file_get_contents($file);file_put_contents($file,'broken second drawing');
+    [$status]=art_http('/api/admin/artworks.php',$token,$csrf,$batch);
+    art_assert($status===422,'batch_invalid_file_rejected');
+    [$status,$manifest]=art_http('/api/portfolio.php');
+    art_assert($status===200&&$manifest['works']===[],'failed_batch_publishes_nothing');
+    file_put_contents($file,$backup);chmod($file,0600);
+    [$status,$result]=art_http('/api/admin/artworks.php',$token,$csrf,$batch);
+    art_assert($status===200&&$result['updated']===2,'atomic_batch_publish');
+    [$status]=art_http('/api/admin/artworks.php',$token,$csrf,$batch);
+    art_assert($status===409,'stale_batch_replay_rejected');
+    [$status,$manifest]=art_http('/api/portfolio.php');
+    art_assert($status===200&&count($manifest['works'])===2,'both_published_together');
+    [$status,$result]=art_http('/api/admin/artworks.php',$token,$csrf,array_replace($batch,['visibility'=>'draft']));
+    art_assert($status===200&&$result['updated']===2,'atomic_batch_unpublish');
+    [$status,$manifest]=art_http('/api/portfolio.php');
+    art_assert($status===200&&$manifest['works']===[],'both_removed_together');
     $audit=$db->query(
         "SELECT action FROM dmo_audit_log WHERE entity_type='portfolio_artwork'"
     )->fetchAll(PDO::FETCH_COLUMN);

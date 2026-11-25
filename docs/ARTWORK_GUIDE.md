@@ -50,3 +50,7 @@ The owner tested real image upload, publication and unpublication through Artist
 ## Library browsing and optional descriptions
 
 The Artist's Desk retrieves up to the supported 2,000-item library, shows 60 drawings per screen, and can filter featured drawings or missing optional accessibility descriptions, and sort by public gallery order or upload age. Select all applies only to the current displayed page. Descriptions are optional plain text (240 UTF-8 bytes), not titles or required upload fields. Publishing now verifies both optimized files against recorded byte lengths, WebP type and dimensions before exposing them. Failed or incomplete library refreshes lock editing until a successful reload. No existing artwork or production settings were changed.
+
+## Atomic bulk visibility
+
+A selected page of up to 60 drawings is validated and changed in one transaction, locking rows in ID order. Stale visibility, duplicate IDs, unknown records, or invalid optimized files reject the entire batch. No file deletion occurs. Each affected artwork receives an audit event. On a lost connection or conflict the UI locks further writes until reloaded. Explicit confirmation and CSRF remain mandatory.

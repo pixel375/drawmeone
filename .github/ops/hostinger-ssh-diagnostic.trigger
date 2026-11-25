@@ -1,1 +1,1 @@
-Verify improved library browsing and optional accessibility descriptions.
+Verify atomic artwork batch visibility and assets.

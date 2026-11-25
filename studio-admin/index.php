@@ -20,7 +20,7 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
 <meta name="theme-color" content="#151317">
 <title>Artist's Desk · Draw Me One</title>
 <link rel="stylesheet" href="./panel.css?v=41">
-<script defer src="./panel.js?v=52"></script>
+<script defer src="./panel.js?v=53"></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to dashboard</a>
@@ -287,8 +287,8 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
         </div>
         <div class="artwork-bulk">
           <strong>Artwork visibility</strong>
-          <p class="small">Only published artwork appears in the public gallery. Drafts are never served through the public image API.</p>
-          <label class="artwork-select-label"><input type="checkbox" id="artwork-select-all"> Select all displayed</label>
+          <p class="small">Only published artwork appears in the public gallery. Drafts are never served through the public image API. Selected drawings are published or unpublished together; a failed validation prevents the entire batch.</p>
+          <label class="artwork-select-label"><input type="checkbox" id="artwork-select-all"> Select all displayed on this page</label>
           <div class="artwork-batch-actions">
             <button type="button" class="quiet" id="artwork-publish-selected" disabled>Publish selected drafts</button>
             <button type="button" class="quiet" id="artwork-unpublish-selected" disabled>Unpublish selected drawings</button>

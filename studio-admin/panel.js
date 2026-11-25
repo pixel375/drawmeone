@@ -1627,67 +1627,29 @@
     artworkControls();
   });
 
-  $("artwork-publish-selected").addEventListener("click", async () => {
-    if (!artworkWriteEnabled || artworkBusy) return;
-    const ids = [...document.querySelectorAll("#artwork-list .artwork-select:checked")]
-      .filter(x => x.dataset.visibility === "draft")
-      .map(x=>Number(x.value)).filter(x=>Number.isSafeInteger(x) && x > 0);
-    if (!ids.length || !window.confirm(
-      "Publish " + ids.length + " selected drawings to the public portfolio?"
-    )) return;
-    artworkBusy = true;
-    artworkControls();
-    let completed = 0, failures = 0;
-    for (const id of ids) {
-      try {
-        const {response,data} = await post("artworks.php",{
-          id,action:"set_visibility",visibility:"published",
-        },csrf);
-        if (response.status === 401) {sessionExpired();break;}
-        if (response.ok && data.ok) completed++;
-        else failures++;
-      } catch (_) {
-        failures++;
+  async function batchArtwork(visibility){
+    if(!artworkWriteEnabled||artworkBusy||artworkLoading)return;
+    const prior=visibility==="published"?"draft":"published";
+    const ids=[...$("artwork-list").querySelectorAll(".artwork-select:checked")].filter(x=>x.dataset.visibility===prior).map(x=>Number(x.value)).filter(x=>Number.isSafeInteger(x)&&x>0);
+    if(!ids.length||ids.length>60)return;
+    const message=visibility==="published"?"Publish "+ids.length+" selected drawings to the public portfolio?":
+      "Remove "+ids.length+" selected drawings from the public gallery? Images stay in your private library and can be republished later.";
+    if(!window.confirm(message))return;
+    artworkBusy=true;artworkControls();artworkState("Validating selected drawings…");
+    try{
+      const {response,data}=await post("artworks.php",{action:"batch_visibility",ids,visibility,confirm:true},csrf);
+      if(response.status===401)return sessionExpired();
+      if(!response.ok||!data.ok||data.updated!==ids.length){
+        artworkWriteEnabled=false;
+        artworkState("Batch not confirmed. Reload before editing; no partial batch is applied by the server.");
+        return;
       }
-      artworkState("Publishing: " + (completed + failures) + " / " + ids.length);
-    }
-    artworkBusy = false;
-    await artworksLoad();
-    artworkState("Published " + completed + " drawing(s)" +
-      (failures ? "; " + failures + " failed." : "."));
-  });
-
-  $("artwork-unpublish-selected").addEventListener("click", async () => {
-    if (!artworkWriteEnabled || artworkBusy) return;
-    const ids = [...document.querySelectorAll("#artwork-list .artwork-select:checked")]
-      .filter(x => x.dataset.visibility === "published")
-      .map(x => Number(x.value)).filter(x => Number.isSafeInteger(x) && x > 0);
-    if (!ids.length || !window.confirm(
-      "Remove " + ids.length + " selected drawings from the public gallery? " +
-      "Images stay in your private library and can be republished later."
-    )) return;
-    artworkBusy = true;
-    artworkControls();
-    let completed = 0, failures = 0;
-    for (const id of ids) {
-      try {
-        const {response,data} = await post("artworks.php", {
-          id,action:"set_visibility",visibility:"draft",
-        },csrf);
-        if (response.status === 401) {sessionExpired();break;}
-        if (response.ok && data.ok) completed++;
-        else failures++;
-      } catch (_) {
-        failures++;
-      }
-      artworkState("Unpublishing: " + (completed + failures) + " / " + ids.length);
-    }
-    artworkBusy = false;
-    await artworksLoad();
-    artworkState("Unpublished " + completed + " drawing(s)" +
-      (failures ? "; " + failures + " failed." : ".") +
-      " Originals remain private and are not deleted.");
-  });
+      if(await artworksLoad())artworkState((visibility==="published"?"Published ":"Unpublished ")+data.updated+" drawings together. No files deleted.");
+    }catch(_){artworkWriteEnabled=false;artworkState("Batch outcome uncertain. Reload before retrying.");}
+    finally{artworkBusy=false;if(!leavingSession)renderArtwork();}
+  }
+  $("artwork-publish-selected").addEventListener("click",()=>batchArtwork("published"));
+  $("artwork-unpublish-selected").addEventListener("click",()=>batchArtwork("draft"));
 
   $("artwork-upload").addEventListener("click", async () => {
     if (!artworkWriteEnabled || artworkBusy) return;

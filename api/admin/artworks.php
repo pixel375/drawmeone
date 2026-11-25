@@ -44,8 +44,9 @@ try {
     if (!dmo_artwork_writes_enabled()) {
         dmo_json(503, ['ok' => false, 'error' => 'artwork_editing_disabled']);
     }
-    $id = dmo_artwork_id($input['id'] ?? null);
     $action = $input['action'] ?? null;
+    if($action==='batch_visibility')dmo_artwork_batch_visibility($db,(int)$admin['user_id'],$input);
+    $id = dmo_artwork_id($input['id'] ?? null);
     if (!in_array($action, ['set_visibility', 'set_featured', 'set_order', 'set_alt'], true)) {
         dmo_json(422, ['ok' => false, 'error' => 'invalid_action']);
     }
@@ -87,22 +88,8 @@ try {
             $db->rollBack();
             dmo_json(404, ['ok' => false, 'error' => 'artwork_not_found']);
         }
-        if ($action === 'set_visibility' && $value === 'published') {
-            $files = $db->prepare(
-                'SELECT variant, storage_key,mime_type,byte_size,pixel_width,pixel_height FROM dmo_artwork_files WHERE artwork_id = :id'
-            );
-            $files->execute(['id' => $id]);
-            $found = [];
-            foreach ($files->fetchAll() as $file) {
-                if (in_array($file['variant'], ['thumb', 'display'], true) &&
-                    dmo_artwork_variant_valid($file)) {
-                    $found[$file['variant']] = true;
-                }
-            }
-            if (!isset($found['thumb'], $found['display'])) {
-                $db->rollBack();
-                dmo_json(422, ['ok' => false, 'error' => 'optimized_artwork_missing']);
-            }
+        if($action==='set_visibility'&&$value==='published'&&!dmo_artwork_publishable($db,$id)){
+            $db->rollBack();dmo_json(422,['ok'=>false,'error'=>'optimized_artwork_missing']);
         }
         $db->prepare('UPDATE dmo_portfolio_artworks SET ' . $update . ' WHERE id = :id')
             ->execute($params);

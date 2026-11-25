@@ -189,3 +189,47 @@ function dmo_artwork_variant_valid(array $row): bool
             (int)$size[0]===(int)$row['pixel_width']&&(int)$size[1]===(int)$row['pixel_height'];
     }catch(Throwable $e){return false;}
 }
+
+function dmo_artwork_publishable(PDO $db,int $id): bool
+{
+    $q=$db->prepare('SELECT variant,storage_key,mime_type,byte_size,pixel_width,pixel_height FROM dmo_artwork_files WHERE artwork_id=:id');
+    $q->execute(['id'=>$id]);$found=[];
+    foreach($q->fetchAll(PDO::FETCH_ASSOC) as $file){
+        if(in_array($file['variant'],['thumb','display'],true)&&dmo_artwork_variant_valid($file))$found[$file['variant']]=true;
+    }
+    return isset($found['thumb'],$found['display']);
+}
+/** Bounded atomic bulk visibility changes. All rows locked in ascending ID order. */
+function dmo_artwork_batch_visibility(PDO $db,int $admin,array $input): never
+{
+    $ids=$input['ids']??null;$target=$input['visibility']??null;
+    if(count($input)!==4||array_diff(array_keys($input),['action','ids','visibility','confirm'])||
+        ($input['confirm']??null)!==true||!in_array($target,['draft','published'],true)||
+        !is_array($ids)||!array_is_list($ids)||count($ids)<1||count($ids)>60)
+        dmo_json(422,['ok'=>false,'error'=>'invalid_artwork_batch']);
+    foreach($ids as $id)if(!is_int($id)||$id<1)dmo_json(422,['ok'=>false,'error'=>'invalid_artwork_batch']);
+    if(count(array_unique($ids))!==count($ids))dmo_json(422,['ok'=>false,'error'=>'invalid_artwork_batch']);
+    sort($ids,SORT_NUMERIC);
+    $expected=$target==='published'?'draft':'published';
+    $db->beginTransaction();
+    try{
+        $lock=$db->prepare('SELECT visibility FROM dmo_portfolio_artworks WHERE id=:id FOR UPDATE');
+        foreach($ids as $id){
+            $lock->execute(['id'=>$id]);
+            if($lock->fetchColumn()!==$expected){
+                $db->rollBack();dmo_json(409,['ok'=>false,'error'=>'artwork_batch_changed']);
+            }
+            if($target==='published'&&!dmo_artwork_publishable($db,$id)){
+                $db->rollBack();dmo_json(422,['ok'=>false,'error'=>'optimized_artwork_missing']);
+            }
+        }
+        $update=$db->prepare('UPDATE dmo_portfolio_artworks SET visibility=:visibility,published_at='.
+            ($target==='published'?'COALESCE(published_at,UTC_TIMESTAMP())':'NULL').' WHERE id=:id');
+        foreach($ids as $id){
+            $update->execute(['visibility'=>$target,'id'=>$id]);
+            dmo_artwork_record_audit($db,$admin,$id,'artwork.set_visibility');
+        }
+        $db->commit();
+        dmo_json(200,['ok'=>true,'updated'=>count($ids),'visibility'=>$target]);
+    }catch(Throwable $error){if($db->inTransaction())$db->rollBack();throw $error;}
+}
