@@ -259,6 +259,8 @@ async function quoteSuccessWithoutPayment(browser) {
     await page.waitForFunction(()=>
       document.querySelector(".customer-quote-status")?.textContent === "Accepted");
     assert.equal(decisionCount,1,"one confirmed synthetic quote acceptance");
+    assert.equal(await page.locator("#detail-summary").getAttribute("href"),"./commission-summary.php?ref="+A);
+    assert.equal(await page.locator("#detail-summary").isVisible(),true);
     assert.equal(await page.locator("#detail-quotes button").count(),0,
       "accepted quote becomes read-only");
     assert.match(await page.locator("#detail-quote-feedback").innerText(),

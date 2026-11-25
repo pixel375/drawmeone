@@ -31,6 +31,7 @@
     ++requestsFetchSequence;
     ++detailRequestSequence;
     renderCustomerAttention(null);
+    $("detail-summary").hidden=true;$("detail-summary").removeAttribute("href");
     $("customer-workspace").hidden = true;
     location.replace("./account.html");
   }
@@ -593,6 +594,7 @@
     panel.hidden = false;
     panel.setAttribute("aria-busy","true");
     $("detail-content").hidden = true;
+    $("detail-summary").hidden=true;$("detail-summary").removeAttribute("href");
     $("detail-withdraw").hidden=true;$("detail-withdraw").onclick=null;$("detail-withdraw-status").textContent="";
     for (const id of ["detail-status","detail-type","detail-options","detail-contact","detail-deadline","detail-brief","detail-policy"]) {
       $(id).textContent = "";
@@ -691,6 +693,8 @@
           root.append(item);
         }
       }
+      $("detail-summary").href="./commission-summary.php?ref="+encodeURIComponent(ref);
+      $("detail-summary").hidden=false;
       $("detail-content").hidden = false;
       $("detail-load-status").hidden = true;
     } catch (_) {

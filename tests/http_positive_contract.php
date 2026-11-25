@@ -439,6 +439,12 @@ try {
     qa_positive($code===409,'duplicate_order_confirmation_rejected');
 
     $orderId=$order['order_id'];
+    [$code,,$print]=qa_http('/commission-summary.php?ref='.$referenceA,$tokenA);
+    qa_positive($code===200&&str_contains($print,'Accepted quote')&&str_contains($print,'CAD 30.00')&&str_contains($print,'Not verified')&&!str_contains($print,'A private test drawing.'),'private_print_summary_accepted_unpaid');
+    [$code,,$otherPrint]=qa_http('/commission-summary.php?ref='.$referenceA,$tokenB);
+    qa_positive($code===404&&!str_contains($otherPrint,$referenceA),'print_summary_cross_account_denied');
+    [$code]=qa_http('/commission-summary.php?ref='.$referenceA);
+    qa_positive($code===401,'print_summary_requires_customer');
     $link=['action'=>'issue_checkout_link','request_id'=>$requestA,'order_id'=>$orderId,'expected_link_id'=>null,'url'=>'https://checkout.example.invalid/invoice/ci-first','currency'=>'CAD','amount_minor'=>3000,'confirm_invoice'=>true];
     foreach(['http://checkout.example.invalid/invoice/ci-first','https://checkout.example.invalid.evil.invalid/invoice/ci-first','https://checkout.example.invalid@evil.invalid/invoice/ci-first','https://checkout.example.invalid/invoice/../other','https://checkout.example.invalid/invoice/ci-first?redirect=evil','https://checkout.example.invalid/invoice/%2fother'] as $bad){
         [$code]=qa_http('/api/admin/request-actions.php',$tokenAdmin,'__Host-dmo_admin',array_replace($link,['url'=>$bad]),$csrfAdmin);
@@ -455,6 +461,8 @@ try {
     qa_positive($code===404,'other_customer_checkout_denied');
     [$code]=qa_http('/api/checkout.php?id='.$linkId,$tokenA);
     qa_positive($code===303,'owner_checkout_redirect');
+    [$code,,$print]=qa_http('/commission-summary.php?ref='.$referenceA,$tokenA);
+    qa_positive($code===200&&!str_contains($print,'ci-first')&&!str_contains($print,'checkout.example.invalid')&&!str_contains($print,'api/checkout.php'),'print_summary_excludes_invoice_url');
     $q=$db->prepare('SELECT url_ciphertext FROM dmo_checkout_links WHERE id=:id');$q->execute(['id'=>$linkId]);
     qa_positive(!str_contains((string)$q->fetchColumn(),'ci-first'),'checkout_url_encrypted_at_rest');
     $q=$db->prepare('SELECT url_fingerprint,url_ciphertext FROM dmo_checkout_links WHERE id=:id');$q->execute(['id'=>$linkId]);$originalInvoice=$q->fetch(PDO::FETCH_ASSOC);
@@ -639,6 +647,8 @@ try {
         !str_contains(json_encode($customerPaid,JSON_THROW_ON_ERROR),'manual-hmac-v1'),'customer_sees_paid_without_private_evidence');
     [$code,$finance]=qa_http('/api/admin/finance.php?state=reconciled&currency=CAD',$tokenAdmin,'__Host-dmo_admin');
     qa_positive($code===200&&count($finance['records'])===1&&$finance['records'][0]['record_state']==='reconciled','finance_reconciled_record');
+    [$code,,$print]=qa_http('/commission-summary.php?ref='.$referenceA,$tokenA);
+    qa_positive($code===200&&str_contains($print,'Recorded as reconciled')&&!str_contains($print,'CI-ONLY-TRANSACTION'),'print_summary_local_reconciled_state_no_reference');
     [$code,$none]=qa_http('/api/admin/finance.php?state=reconciled&currency=USD',$tokenAdmin,'__Host-dmo_admin');
     qa_positive($code===200&&$none['records']===[],'finance_currency_filter');
     [$code,$none]=qa_http('/api/admin/finance.php?before='.$finance['records'][0]['id'],$tokenAdmin,'__Host-dmo_admin');

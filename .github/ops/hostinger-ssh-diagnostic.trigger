@@ -1,1 +1,1 @@
-Verify scoped request detail isolation and privacy fail-closed controls.
+Verify private printable commission summary and unauthenticated denial.
