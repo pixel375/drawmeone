@@ -334,3 +334,5 @@ footer{padding:28px 0 70px;border-top:1px solid var(--line);color:var(--muted);f
 #finance-summary{margin:16px 0 20px}#finance-records .notification-card{min-width:0;overflow-wrap:anywhere}#finance-records button{max-width:100%;white-space:normal}#finance-export{white-space:normal;max-width:100%}
 
 #request-customer-scope{margin:0 0 16px;padding:12px;border:1px solid var(--line);border-radius:8px}#request-customer-scope[hidden]{display:none!important}#customer-directory-list .notification-card{overflow-wrap:anywhere;min-width:0}#customer-directory-list button{max-width:100%;white-space:normal}#customer-directory-next{margin-top:12px}
+
+#admin-security{margin-bottom:24px}#admin-security-form{margin-top:16px}#admin-security-form input,#admin-security-form select{width:100%;min-width:0;max-width:100%}#admin-security-new-fields[hidden]{display:none!important}#admin-security-activity{overflow-wrap:anywhere}

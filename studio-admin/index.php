@@ -19,8 +19,8 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
 <meta name="robots" content="noindex,nofollow">
 <meta name="theme-color" content="#151317">
 <title>Artist's Desk · Draw Me One</title>
-<link rel="stylesheet" href="./panel.css?v=44">
-<script defer src="./panel.js?v=58"></script>
+<link rel="stylesheet" href="./panel.css?v=45">
+<script defer src="./panel.js?v=59"></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to dashboard</a>
@@ -398,6 +398,23 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
 
     <section data-panel="settings" class="content-panel" hidden>
       <div class="section-intro"><h2>Website settings</h2><p>Theme, logo, default dark mode, commission pricing and SEO will be editable here.</p></div>
+      <details class="integrity-details" id="admin-security">
+        <summary>Administrator account security</summary>
+        <p id="admin-security-status" class="small" role="status">Open to check active sessions and recent sign-in activity.</p>
+        <button type="button" class="quiet" id="admin-security-refresh">Refresh security information</button>
+        <ul id="admin-security-activity"></ul>
+        <form id="admin-security-form" class="design-editor">
+          <label for="admin-security-action">Action</label><select id="admin-security-action"><option value="revoke_other_sessions">Sign out other devices</option><option value="change_password">Change administrator password</option></select>
+          <label for="admin-security-current">Current password</label><input id="admin-security-current" type="password" autocomplete="current-password" maxlength="128" required>
+          <div id="admin-security-new-fields" hidden>
+            <label for="admin-security-new">New password (16–72 UTF-8 bytes)</label><input id="admin-security-new" type="password" autocomplete="new-password" minlength="16" maxlength="72">
+            <label for="admin-security-confirm">Confirm new password</label><input id="admin-security-confirm" type="password" autocomplete="new-password" maxlength="72">
+          </div>
+          <button type="submit" id="admin-security-submit" class="quiet" disabled>Confirm security change</button>
+          <p class="small" id="admin-security-feedback" role="status"></p>
+        </form>
+        <p class="small">Password changes sign out every administrator session for your account, including this device. Other-device sign-out preserves this session.</p>
+      </details>
       <form class="design-editor" id="design-form" novalidate>
         <div class="design-header">
           <span class="overline">ARTIST-CONTROLLED APPEARANCE</span>

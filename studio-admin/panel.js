@@ -2287,6 +2287,61 @@
     const link=document.createElement("a");link.href=url;link.download="drawmeone-payment-records.json";document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
   });
 
+  let adminSecurityBusy=false,adminSecurityReady=false,adminSecurityGeneration=0;
+  function syncAdminSecurity(){
+    const change=$("admin-security-action").value==="change_password";
+    $("admin-security-new-fields").hidden=!change;
+    $("admin-security-new").required=$("admin-security-confirm").required=change;
+    $("admin-security-submit").disabled=adminSecurityBusy||!adminSecurityReady||!csrf;
+  }
+  function clearAdminSecurity(){
+    ++adminSecurityGeneration;adminSecurityReady=false;$("admin-security-form").reset();
+    $("admin-security-activity").replaceChildren();syncAdminSecurity();
+  }
+  async function loadAdminSecurity(){
+    if(leavingSession||!csrf||adminSecurityBusy)return;
+    const generation=++adminSecurityGeneration;adminSecurityReady=false;syncAdminSecurity();
+    $("admin-security-refresh").disabled=true;$("admin-security-status").textContent="Checking account security…";$("admin-security-activity").replaceChildren();
+    try{
+      const {response,data}=await get("security.php");
+      if(generation!==adminSecurityGeneration||leavingSession)return;
+      if(response.status===401)return sessionExpired();
+      if(!response.ok||!data.ok||!Number.isSafeInteger(data.active_sessions)||!Array.isArray(data.activity))throw Error("unavailable");
+      const labels={"admin.bootstrap":"Account created","admin.login":"Signed in","admin.logout":"Signed out","admin.password_reset_cli":"Password reset by operator","admin.password_changed":"Password changed","admin.other_sessions_revoked":"Other sessions revoked"};
+      for(const item of data.activity){if(labels[item.action])$("admin-security-activity").append(textNode("li",labels[item.action]+" · "+item.created_at+" UTC","small"));}
+      $("admin-security-status").textContent=data.active_sessions+" active session(s), including this device.";
+      adminSecurityReady=true;
+    }catch(_){if(generation===adminSecurityGeneration)$("admin-security-status").textContent="Security information unavailable. Refresh to retry.";}
+    finally{if(generation===adminSecurityGeneration){$("admin-security-refresh").disabled=false;syncAdminSecurity();}}
+  }
+  $("admin-security").addEventListener("toggle",()=>{if($("admin-security").open)loadAdminSecurity();});
+  $("admin-security-refresh").addEventListener("click",loadAdminSecurity);
+  $("admin-security-action").addEventListener("change",()=>{$("admin-security-new").value=$("admin-security-confirm").value="";syncAdminSecurity();});
+  $("admin-security-form").addEventListener("submit",async event=>{
+    event.preventDefault();
+    if(adminSecurityBusy||!adminSecurityReady||!csrf||!event.currentTarget.reportValidity())return;
+    const action=$("admin-security-action").value,payload={action,current_password:$("admin-security-current").value};
+    if(action==="change_password"){
+      const next=$("admin-security-new").value;
+      if(next!==$("admin-security-confirm").value||new TextEncoder().encode(next).length<16||new TextEncoder().encode(next).length>72){$("admin-security-feedback").textContent="New passwords must match and contain 16–72 UTF-8 bytes.";return;}
+      payload.new_password=next;
+    }
+    if(!window.confirm(action==="change_password"?"Change your password and sign out all your administrator sessions?":"Sign out all other sessions for your administrator account?"))return;
+    $("admin-security-current").value=$("admin-security-new").value=$("admin-security-confirm").value="";
+    adminSecurityBusy=true;adminSecurityReady=false;syncAdminSecurity();
+    for(const field of event.currentTarget.querySelectorAll("input,select,button"))field.disabled=true;
+    $("admin-security-feedback").textContent="Confirming…";
+    try{
+      const {response,data}=await post("security.php",payload,csrf);
+      if(leavingSession)return;
+      if(response.status===401)return sessionExpired();
+      if(!response.ok||!data.ok){$("admin-security-feedback").textContent=response.status===403?"Current password not accepted.":response.status===429?"Too many attempts. Try again later.":"Change not confirmed. Refresh security information before retrying.";return;}
+      if(data.requires_sign_in===true)return freshSignIn("password-changed");
+      $("admin-security-feedback").textContent=data.sessions_revoked+" other session(s) revoked.";
+    }catch(_){$("admin-security-feedback").textContent="Outcome uncertain. Refresh security information before retrying.";}
+    finally{adminSecurityBusy=false;for(const field of $("admin-security-form").querySelectorAll("input,select,button"))field.disabled=false;syncAdminSecurity();if(!leavingSession)loadAdminSecurity();}
+  });
+
   function selectPanel(name) {
     clearError();
     document.querySelectorAll("[data-panel]").forEach(section => {
@@ -2327,7 +2382,7 @@
     ++overviewGeneration;
     ++artworkGeneration;
     artworkRecords=[];artworkWriteEnabled=false;$("artwork-list").replaceChildren();
-    renderLaunchEvidence(null);renderConfigurationReview(null);
+    renderLaunchEvidence(null);renderConfigurationReview(null);clearAdminSecurity();
     closeRequestDetail(true);clearPrivacyQueue();clearFinance();clearCustomers();setRequestCustomer();$("customer-query").value="";
     $("workspace").hidden = true;
     const url = new URL(location.href);
@@ -2475,7 +2530,7 @@
       siteKey = data.turnstile_site_key;
       const url = new URL(location.href);
       const reason = url.searchParams.get("session");
-      const fresh = reason === "expired" || reason === "signed-out";
+      const fresh = reason === "expired" || reason === "signed-out" || reason === "password-changed";
       if (fresh) {
         url.searchParams.delete("session");
         history.replaceState(null, "", url.href);
@@ -2484,7 +2539,7 @@
       show("sign-in");
       if (fresh) {
         $("login-message").textContent = reason === "expired"
-          ? "Your session has expired. Please sign in again." : "Signed out.";
+          ? "Your session has expired. Please sign in again." : reason==="password-changed"?"Password changed. Sign in with your new password.":"Signed out.";
       }
       enableCaptcha(siteKey);
     } catch (_) {

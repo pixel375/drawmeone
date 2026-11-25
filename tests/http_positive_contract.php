@@ -986,6 +986,36 @@ try {
     qa_positive(!str_contains(json_encode($evidence,JSON_THROW_ON_ERROR),'positive-a@example.invalid')&&!str_contains(json_encode($evidence,JSON_THROW_ON_ERROR),$tokenAdmin),'launch_evidence_excludes_private_identity_and_credentials');
     [$code]=qa_http('/api/admin/overview.php');
     qa_positive($code===401,'launch_evidence_requires_admin');
+    require_once dirname(__DIR__).'/app/admin.php';
+    $db->beginTransaction();
+    qa_positive(dmo_admin_login_lock($db,$admin,$hash),'admin_login_lock_accepts_verified_snapshot');
+    $db->prepare('UPDATE dmo_users SET password_hash=:hash WHERE id=:id')->execute(['hash'=>password_hash('Synthetic replacement password!',PASSWORD_DEFAULT),'id'=>$admin]);
+    qa_positive(!dmo_admin_login_lock($db,$admin,$hash),'admin_login_lock_rejects_replaced_password_hash');
+    $db->rollBack();
+    $secondAdminToken=bin2hex(random_bytes(32));
+    qa_seed($db,'INSERT INTO dmo_sessions (user_id,session_hash,expires_at,last_seen_at) VALUES (:user,:hash,DATE_ADD(UTC_TIMESTAMP(),INTERVAL 1 HOUR),UTC_TIMESTAMP())',['user'=>$admin,'hash'=>hash('sha256',$secondAdminToken)]);
+    [$code,$security]=qa_http('/api/admin/security.php',$tokenAdmin,'__Host-dmo_admin');
+    qa_positive($code===200&&$security['active_sessions']===2&&!str_contains(json_encode($security,JSON_THROW_ON_ERROR),'session_hash'),'admin_security_scoped_summary');
+    [$code]=qa_http('/api/admin/security.php',$tokenA,'__Host-dmo_admin');
+    qa_positive($code===401,'admin_security_customer_denied');
+    $revoke=['action'=>'revoke_other_sessions','current_password'=>'CI-positive-disposable-password!'];
+    [$code]=qa_http('/api/admin/security.php',$tokenAdmin,'__Host-dmo_admin',$revoke);
+    qa_positive($code===403,'admin_security_csrf_required');
+    [$code]=qa_http('/api/admin/security.php',$tokenAdmin,'__Host-dmo_admin',array_replace($revoke,['current_password'=>'incorrect']),$csrfAdmin);
+    qa_positive($code===403,'admin_security_current_password_required');
+    [$code,$revoked]=qa_http('/api/admin/security.php',$tokenAdmin,'__Host-dmo_admin',$revoke,$csrfAdmin);
+    qa_positive($code===200&&$revoked['sessions_revoked']===1&&$revoked['requires_sign_in']===false,'admin_security_other_session_revoked');
+    [$code,$me]=qa_http('/api/admin/me.php',$secondAdminToken,'__Host-dmo_admin');
+    qa_positive($code===200&&$me['authenticated']===false,'admin_revoked_session_denied');
+    [$code,$me]=qa_http('/api/admin/me.php',$tokenAdmin,'__Host-dmo_admin');
+    qa_positive($code===200&&$me['authenticated']===true,'admin_current_session_preserved');
+    $newPassword='CI-new-admin-password-123!';
+    [$code,$changed]=qa_http('/api/admin/security.php',$tokenAdmin,'__Host-dmo_admin',['action'=>'change_password','current_password'=>'CI-positive-disposable-password!','new_password'=>$newPassword],$csrfAdmin);
+    qa_positive($code===200&&$changed['requires_sign_in']===true,'admin_password_change_revokes_current_session');
+    [$code,$me]=qa_http('/api/admin/me.php',$tokenAdmin,'__Host-dmo_admin');
+    qa_positive($code===200&&$me['authenticated']===false,'admin_changed_password_session_invalid');
+    $q=$db->prepare('SELECT password_hash FROM dmo_users WHERE id=:id');$q->execute(['id'=>$admin]);
+    qa_positive(password_verify($newPassword,$q->fetchColumn()),'admin_password_replacement_persisted');
     echo "DISPOSABLE_POSITIVE_HTTP=PASS\n";
 } catch(Throwable $error) {
     fwrite(STDERR,'DISPOSABLE_POSITIVE_HTTP=FAIL ('.get_class($error).

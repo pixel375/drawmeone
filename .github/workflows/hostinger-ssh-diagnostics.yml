@@ -291,12 +291,12 @@ jobs:
             desk_page=$(curl -fsSL --max-time 5 -H "Cache-Control: no-cache" "https://drawmeone.com/studio-admin/index.php" || true)
             commission_page=$(curl -fsSL --max-time 5 -H "Cache-Control: no-cache" "https://drawmeone.com/commission.html" || true)
             customer_page=$(curl -fsSL --max-time 5 -H "Cache-Control: no-cache" "https://drawmeone.com/account.html" || true)
-            if [[ "$public_home" == *'concepts.js?v=13'* && "$public_home" == *'studio.js?v=14'* && "$public_home" == *'gallery.js?v=16'* && "$public_home" == *'styles.css?v=14'* && "$desk_page" == *'panel.js?v=58'* && "$desk_page" == *'panel.css?v=44'* && "$commission_page" == *'commission.js?v=42'* && "$customer_page" == *'account.js?v=23'* ]]; then synced=yes; break; fi
+            if [[ "$public_home" == *'concepts.js?v=13'* && "$public_home" == *'studio.js?v=14'* && "$public_home" == *'gallery.js?v=16'* && "$public_home" == *'styles.css?v=14'* && "$desk_page" == *'panel.js?v=59'* && "$desk_page" == *'panel.css?v=45'* && "$commission_page" == *'commission.js?v=42'* && "$customer_page" == *'account.js?v=23'* ]]; then synced=yes; break; fi
             sleep 4
           done
           [[ "$synced" == "yes" ]] || { echo "deployment_sync=expected_versions_unavailable"; exit 1; }
           echo "deployment_sync=expected_versions_present"
-          for endpoint in finance customers privacy overview; do
+          for endpoint in finance customers privacy overview security; do
             status=$(curl -sS --max-time 12 -o /dev/null -w '%{http_code}' "https://drawmeone.com/api/admin/$endpoint.php")
             [[ "$status" == "401" || "$status" == "503" ]] || { echo "admin_route_${endpoint}=unexpected_$status"; exit 1; }
             echo "admin_route_${endpoint}=guarded"
@@ -321,17 +321,17 @@ jobs:
           [[ "$studio_js" == *'function loadPresentation()'* ]] && [[ "$public_home" == *'id="design-lab" hidden'* ]] || { echo "public_design_runtime=stale_assets"; exit 1; }
           curl -fsSL --max-time 15 https://drawmeone.com/api/site-settings.php | php -r '$d=json_decode(stream_get_contents(STDIN),true); if (!is_array($d)||($d["ok"]??false)!==true||!in_array($d["presentation"]??null,["preview","published"],true)) exit(1); echo "public_design_runtime=".$d["presentation"]."\\n";'
           # Verify mobile Artist Desk stylesheet was deployed and cache-busted.
-          [[ "$desk_page" == *'panel.css?v=44'* ]] || {
+          [[ "$desk_page" == *'panel.css?v=45'* ]] || {
             echo "mobile_artist_desk=stale_stylesheet_reference"
             exit 1
           }
-          desk_css=$(curl -fsSL --max-time 15 "https://drawmeone.com/studio-admin/panel.css?v=44")
+          desk_css=$(curl -fsSL --max-time 15 "https://drawmeone.com/studio-admin/panel.css?v=45")
           [[ "$desk_css" == *'v3.3: All six Artist Desk sections'* ]] &&
           [[ "$desk_css" == *'grid-template-columns:repeat(3,minmax(0,1fr))'* ]] || {
             echo "mobile_artist_desk=stale_or_missing_mobile_layout"
             exit 1
           }
-          [[ "$desk_page" == *'panel.js?v=58'* ]] &&
+          [[ "$desk_page" == *'panel.js?v=59'* ]] &&
           [[ "$desk_page" == *'id="artwork-filter"'* ]] &&
           [[ "$desk_page" == *'id="artwork-unpublish-selected"'* ]] || {
             echo "artist_artwork_library=stale_html"
@@ -341,7 +341,7 @@ jobs:
             echo "artist_artwork_library=stale_css"
             exit 1
           }
-          desk_js=$(curl -fsSL --max-time 15 "https://drawmeone.com/studio-admin/panel.js?v=58")
+          desk_js=$(curl -fsSL --max-time 15 "https://drawmeone.com/studio-admin/panel.js?v=59")
           [[ "$desk_js" == *'artwork-unpublish-selected'* ]] &&
           [[ "$desk_js" == *'No artworks match this view.'* ]] || {
             echo "artist_artwork_library=stale_js"
@@ -501,6 +501,8 @@ jobs:
           echo "commission_summary=deployed"
           [[ "$desk_page" == *'id="configuration-issues"'* && "$desk_js" == *'function renderConfigurationReview(report)'* ]] || { echo "configuration_review_ui=stale_assets"; exit 1; }
           echo "configuration_review_ui=deployed"
+          [[ "$desk_page" == *'id="admin-security-form"'* && "$desk_js" == *'function loadAdminSecurity()'* ]] || { echo "admin_security_ui=stale_assets"; exit 1; }
+          echo "admin_security_ui=deployed"
           # v3.9 registration remains closed, but verify the versioned
           # customer signup and recovery assets are deployed safely.
           [[ "$customer_page" == *'account.js?v=23'* ]] &&

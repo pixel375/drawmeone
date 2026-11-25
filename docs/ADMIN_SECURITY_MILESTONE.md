@@ -1,0 +1,3 @@
+# Administrator account security
+
+Authenticated account-security disclosure in Settings shows active own sessions and ten recent allowlisted account events. Password change and other-device sign-out require current password, same-origin CSRF, rate limiting and locked active account/session checks. New passwords require 16–72 UTF-8 bytes; password changes revoke all own sessions, other-device sign-out preserves the current session. No MFA, account creation or impersonation is added. Admin login locks and rechecks the verified password hash before issuing a session, serializing with CLI reset. Cookies are issued only after commit. Tests use synthetic credentials exclusively; production credentials and flags unchanged.

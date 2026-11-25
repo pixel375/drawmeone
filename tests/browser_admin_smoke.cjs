@@ -892,6 +892,32 @@ async function verifyPackageCompatibility(browser){
     console.log("PASS: artist configures extra compatibility without publishing");
   }finally{await page.close();}
 }
+async function verifyAdminSecurity(browser){
+  const page=await browser.newPage({viewport:{width:320,height:844}});
+  const posts=[];await simulateBackend(page,posts);
+  let sessions=2,changes=0;
+  await page.route("**/api/admin/security.php*",route=>{
+    const answer=data=>route.fulfill({status:200,contentType:"application/json",body:JSON.stringify(data)});
+    if(route.request().method()==="GET")return answer({ok:true,active_sessions:sessions,activity:[{action:"admin.login",created_at:"2026-11-25 12:00:00"}]});
+    assert.deepEqual(route.request().postDataJSON(),{action:"revoke_other_sessions",current_password:"synthetic-password"});
+    changes++;sessions=1;return answer({ok:true,sessions_revoked:1,requires_sign_in:false});
+  });
+  try{
+    await page.goto(base+"/studio-admin/index.php",{waitUntil:"domcontentloaded"});
+    await page.locator("#workspace").waitFor({state:"visible"});
+    await page.locator('[data-view="settings"]').click();
+    await page.locator("#admin-security > summary").click();
+    await page.waitForFunction(()=>document.querySelector("#admin-security-status")?.textContent.includes("2 active"));
+    await page.locator("#admin-security-current").fill("synthetic-password");
+    page.once("dialog",dialog=>dialog.accept());
+    await page.locator("#admin-security-submit").click();
+    await page.waitForFunction(()=>document.querySelector("#admin-security-status")?.textContent.includes("1 active"));
+    assert.equal(await page.locator("#admin-security-current").inputValue(),"");
+    assert.equal(changes,1);assert.deepEqual(posts,[]);
+    const dims=await horizontalOverflow(page);assert(dims.measured<=dims.available+3,JSON.stringify(dims));
+    console.log("PASS: admin other-device revocation and cleared credentials");
+  }finally{await page.close();}
+}
 async function verifyClosedDesk(browser) {
   const page=await browser.newPage({viewport:{width:390,height:844}});
   await page.route("**/api/admin/status.php*",route=>route.fulfill({
@@ -931,6 +957,7 @@ async function verifyClosedDesk(browser) {
     await verifyUnpaidCancellation(browser);
     await verifyDesignHistory(browser);
     await verifyPackageCompatibility(browser);
+    await verifyAdminSecurity(browser);
     console.log("ADMIN_BROWSER_SMOKE=PASS");
   } finally {await browser.close();}
 })().catch(error=>{

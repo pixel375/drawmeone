@@ -53,7 +53,7 @@ function dmo_admin_cookie(string $token, int $expires): void
     ]);
 }
 
-function dmo_admin_issue_session(PDO $db, int $adminId): void
+function dmo_admin_issue_session(PDO $db, int $adminId, bool $setCookie=true): string
 {
     $token = bin2hex(random_bytes(32));
     $stmt = $db->prepare(
@@ -61,7 +61,8 @@ function dmo_admin_issue_session(PDO $db, int $adminId): void
         'VALUES (:uid, :hash, DATE_ADD(UTC_TIMESTAMP(), INTERVAL 12 HOUR), UTC_TIMESTAMP())'
     );
     $stmt->execute(['uid' => $adminId, 'hash' => hash('sha256', $token)]);
-    dmo_admin_cookie($token, time() + DMO_ADMIN_TTL_SECONDS);
+    if($setCookie)dmo_admin_cookie($token, time() + DMO_ADMIN_TTL_SECONDS);
+    return $token;
 }
 
 function dmo_admin_current_session(PDO $db): ?array
@@ -108,4 +109,21 @@ function dmo_admin_audit(PDO $db, int $id, string $action): void
         "VALUES (:uid, :action, 'user', :entity)"
     );
     $stmt->execute(['uid' => $id, 'action' => $action, 'entity' => $id]);
+}
+
+/** Serialize credential checks with CLI reset and self-service security changes. */
+function dmo_admin_login_lock(PDO $db,int $id,string $verifiedHash): bool
+{
+    if(!$db->inTransaction())throw new LogicException('Account transaction required');
+    $q=$db->prepare("SELECT password_hash,role,account_status,email_verified_at FROM dmo_users WHERE id=:id FOR UPDATE");
+    $q->execute(['id'=>$id]);$row=$q->fetch(PDO::FETCH_ASSOC);
+    return is_array($row)&&$row['role']==='admin'&&$row['account_status']==='active'&&$row['email_verified_at']!==null&&hash_equals($verifiedHash,$row['password_hash']);
+}
+function dmo_admin_security_summary(PDO $db,int $user): array
+{
+    $q=$db->prepare("SELECT COUNT(*) FROM dmo_sessions WHERE user_id=:id AND expires_at>UTC_TIMESTAMP() AND last_seen_at>DATE_SUB(UTC_TIMESTAMP(),INTERVAL 30 MINUTE)");
+    $q->execute(['id'=>$user]);$count=(int)$q->fetchColumn();
+    $q=$db->prepare("SELECT action,created_at FROM dmo_audit_log WHERE entity_type='user' AND entity_id=:id AND actor_id=:actor AND action IN ('admin.bootstrap','admin.login','admin.logout','admin.password_reset_cli','admin.password_changed','admin.other_sessions_revoked') ORDER BY id DESC LIMIT 10");
+    $q->execute(['id'=>$user,'actor'=>$user]);
+    return ['active_sessions'=>$count,'activity'=>$q->fetchAll(PDO::FETCH_ASSOC)];
 }

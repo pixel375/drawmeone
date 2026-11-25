@@ -41,12 +41,16 @@ try {
 
     $db->beginTransaction();
     try {
-        dmo_admin_issue_session($db, (int) $record['id']);
+        if(!dmo_admin_login_lock($db,(int)$record['id'],$record['password_hash'])){
+            $db->rollBack();dmo_json(401,['ok'=>false,'error'=>'invalid_credentials']);
+        }
+        $sessionToken=dmo_admin_issue_session($db, (int) $record['id'],false);
         dmo_admin_audit($db, (int) $record['id'], 'admin.login');
         $db->commit();
+        dmo_admin_cookie($sessionToken,time()+DMO_ADMIN_TTL_SECONDS);
     } catch (Throwable $error) {
-        $db->rollBack();
-        // A session cookie set before commit may exist but will not be valid.
+        if($db->inTransaction())$db->rollBack();
+        // A failed login must not leave an issued cookie.
         dmo_admin_cookie('', time() - 3600);
         throw $error;
     }
