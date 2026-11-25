@@ -444,6 +444,16 @@ try {
     qa_positive($code===303,'owner_checkout_redirect');
     $q=$db->prepare('SELECT url_ciphertext FROM dmo_checkout_links WHERE id=:id');$q->execute(['id'=>$linkId]);
     qa_positive(!str_contains((string)$q->fetchColumn(),'ci-first'),'checkout_url_encrypted_at_rest');
+    $q=$db->prepare('SELECT url_fingerprint,url_ciphertext FROM dmo_checkout_links WHERE id=:id');$q->execute(['id'=>$linkId]);$originalInvoice=$q->fetch(PDO::FETCH_ASSOC);
+    $db->prepare('UPDATE dmo_checkout_links SET url_fingerprint=:hash WHERE id=:id')->execute(['hash'=>str_repeat('0',64),'id'=>$linkId]);
+    [$code]=qa_http('/api/checkout.php?id='.$linkId,$tokenA);
+    qa_positive($code===404,'checkout_redirect_denies_fingerprint_mismatch');
+    $db->prepare('UPDATE dmo_checkout_links SET url_fingerprint=:hash,url_ciphertext=:cipher WHERE id=:id')->execute(['hash'=>$originalInvoice['url_fingerprint'],'cipher'=>$originalInvoice['url_ciphertext']."\n",'id'=>$linkId]);
+    [$code]=qa_http('/api/checkout.php?id='.$linkId,$tokenA);
+    qa_positive($code===404,'checkout_redirect_denies_noncanonical_ciphertext');
+    $db->prepare('UPDATE dmo_checkout_links SET url_ciphertext=:cipher WHERE id=:id')->execute(['cipher'=>$originalInvoice['url_ciphertext'],'id'=>$linkId]);
+    [$code]=qa_http('/api/checkout.php?id='.$linkId,$tokenA);
+    qa_positive($code===303,'checkout_redirect_restored_after_fixture_repair');
     [$code]=qa_http('/api/admin/request-actions.php',$tokenAdmin,'__Host-dmo_admin',array_replace($link,['expected_link_id'=>$linkId,'url'=>'https://checkout.example.invalid/invoice/ci-next']),$csrfAdmin);
     qa_positive($code===409,'existing_invoice_must_be_closed_before_replacement');
     $revoke=['action'=>'revoke_checkout_link','request_id'=>$requestA,'order_id'=>$orderId,'expected_link_id'=>$linkId,'confirm_external_closed'=>true];

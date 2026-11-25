@@ -1,1 +1,1 @@
-Verify neutral unavailable artwork handling and showcase regression correction.
+Verify shared invoice authentication and independent recovery coverage; read-only.

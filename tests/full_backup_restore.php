@@ -16,6 +16,7 @@ if (PHP_SAPI !== 'cli' ||
 }
 require_once dirname(__DIR__) . '/app/artwork.php';
 require_once dirname(__DIR__) . '/app/references.php';
+require_once dirname(__DIR__).'/app/integrity.php';
 
 function drill_assert(bool $condition, string $name): void
 {
@@ -109,6 +110,8 @@ try {
     file_put_contents($env, "# Disposable CI snapshot, never production\n");
     chmod($env,0600);
     putenv('DMO_ENV_FILE=' . $env);
+    $appKey=bin2hex(random_bytes(32));
+    putenv('DMO_APP_KEY='.$appKey);
     $db = dmo_database();
     $key = bin2hex(random_bytes(16));
     $artRoot = $workspace . '/drawmeone-artworks';
@@ -183,6 +186,9 @@ try {
     $quoteId=(int)$db->lastInsertId();
     $db->prepare("INSERT INTO dmo_orders (request_id,accepted_quote_id,status,payment_status) VALUES (:request,:quote,'awaiting_arrangement','unverified')")->execute(['request'=>$requestId,'quote'=>$quoteId]);
     $orderId=(int)$db->lastInsertId();
+    $invoiceUrl='https://checkout.example.invalid/invoice/'.bin2hex(random_bytes(16));
+    $invoiceCipher=dmo_checkout_seal($invoiceUrl,$orderId);
+    $db->prepare("INSERT INTO dmo_checkout_links (order_id,created_by,url_ciphertext,url_fingerprint,provider_host,currency,amount_minor,expires_at) VALUES (:order,:actor,:cipher,:fingerprint,'checkout.example.invalid','CAD',3000,DATE_ADD(UTC_TIMESTAMP(),INTERVAL 7 DAY))")->execute(['order'=>$orderId,'actor'=>$artistId,'cipher'=>$invoiceCipher,'fingerprint'=>hash_hmac('sha256',$invoiceUrl,dmo_checkout_key())]);
     $db->prepare('INSERT INTO dmo_delivery_drafts (request_id,order_id,uploaded_by,storage_key,pixel_width,pixel_height,byte_size,sha256) VALUES (:request,:order,:actor,:key,320,240,:bytes,:sha)')->execute(['request'=>$requestId,'order'=>$orderId,'actor'=>$artistId,'key'=>$deliveryKey.'/display.webp','bytes'=>filesize($deliveryFile),'sha'=>hash_file('sha256',$deliveryFile)]);
     drill_assert((int)$db->query('SELECT COUNT(*) FROM dmo_portfolio_artworks')
         ->fetchColumn()===1,'snapshot_contains_synthetic_artwork');
@@ -294,6 +300,8 @@ try {
     $sql=$restored.'/database.sql';
     drill_assert(is_file($sql) && filesize($sql)>256,
         'independent_reader_recovers_sql_dump');
+    $dump=file_get_contents($sql);
+    drill_assert(is_string($dump)&&!str_contains($dump,$invoiceUrl)&&!str_contains($dump,$appKey),'sql_dump_excludes_raw_invoice_and_app_key');unset($dump);
     $expected=[
         $restored.'/drawmeone-artworks/'.$key.'/thumb.webp',
         $restored.'/drawmeone-artworks/'.$key.'/display.webp',
@@ -351,6 +359,16 @@ try {
     drill_assert($restore->query("SELECT version FROM dmo_schema_migrations WHERE version='005_artwork_reviews'")->fetchColumn()==='005_artwork_reviews','restored_schema_includes_artwork_reviews');
     drill_assert((int)$restore->query('SELECT COUNT(*) FROM dmo_artwork_reviews')->fetchColumn()===0,'restored_review_table_available');
     drill_assert($restore->query("SELECT version FROM dmo_schema_migrations WHERE version='006_checkout_links'")->fetchColumn()==='006_checkout_links','restored_checkout_schema_available');
+    $invoice=$restore->query('SELECT order_id,url_ciphertext,url_fingerprint,provider_host FROM dmo_checkout_links')->fetch(PDO::FETCH_ASSOC);
+    drill_assert(is_array($invoice)&&$invoice['url_ciphertext']===$invoiceCipher&&dmo_checkout_authenticated_url($invoice)===$invoiceUrl,'restored_invoice_authenticates_with_original_app_key');
+    $scan=dmo_integrity_checkout_crypto($restore);
+    drill_assert($scan===['checked'=>1,'invalid'=>0,'complete'=>true],'restored_invoice_integrity_scan_passes');
+    putenv('DMO_APP_KEY='.bin2hex(random_bytes(32)));
+    drill_assert(dmo_checkout_authenticated_url($invoice)===null&&dmo_integrity_checkout_crypto($restore)['invalid']===1,'restored_invoice_rejects_wrong_app_key');
+    putenv('DMO_APP_KEY='.$appKey);
+    drill_assert(dmo_checkout_authenticated_url(array_replace($invoice,['order_id'=>$orderId+1]))===null,'restored_invoice_rejects_wrong_order_binding');
+    drill_assert(dmo_checkout_authenticated_url($invoice)===$invoiceUrl,'restored_invoice_original_key_revalidated');
+    sodium_memzero($appKey);unset($invoiceUrl,$invoiceCipher,$invoice);
     drill_assert(true,'restored_database_media_references_match_files');
     $sourceUsers=(int)$db->query('SELECT COUNT(*) FROM dmo_users')->fetchColumn();
     drill_assert($sourceUsers===2,'original_disposable_database_unchanged');

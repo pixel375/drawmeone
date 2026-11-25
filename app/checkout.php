@@ -40,6 +40,25 @@ function dmo_checkout_unseal(string $cipher,int $order): ?string {
     $url=openssl_decrypt(substr($data,28),'aes-256-gcm',dmo_checkout_key(),OPENSSL_RAW_DATA,substr($data,0,12),substr($data,12,16),(string)$order);
     return is_string($url)&&dmo_checkout_url($url)?$url:null;
 }
+/** Authenticate the stored ciphertext, order binding, fingerprint and original host.
+ * Independent of current provider configuration for recovery and integrity checks.
+ * Never log or expose the returned URL outside the owner-authorized redirect.
+ */
+function dmo_checkout_authenticated_url(array $row): ?string
+{
+    if(strlen(dmo_config('DMO_APP_KEY'))<32||!function_exists('openssl_decrypt'))return null;
+    $cipher=(string)($row['url_ciphertext']??'');
+    if(strlen($cipher)>1500)return null;
+    $raw=base64_decode($cipher,true);
+    if(!is_string($raw)||strlen($raw)<29||base64_encode($raw)!==$cipher)return null;
+    $key=dmo_checkout_key();
+    $url=openssl_decrypt(substr($raw,28),'aes-256-gcm',$key,OPENSSL_RAW_DATA,substr($raw,0,12),substr($raw,12,16),(string)($row['order_id']??''));
+    if(!is_string($url)||strlen($url)>1000||
+        !preg_match('~^https://([a-z0-9.-]+)/[A-Za-z0-9_-]+(?:/[A-Za-z0-9_-]+)*$~D',$url,$parts)||
+        $parts[1]!==($row['provider_host']??null)||
+        !hash_equals((string)($row['url_fingerprint']??''),hash_hmac('sha256',$url,$key)))return null;
+    return $url;
+}
 function dmo_checkout_eligible(PDO $db,int $request,int $order): ?array {
     $q=$db->prepare("SELECT o.id,q.currency,q.total_minor,r.policy_version,r.status AS request_status FROM dmo_orders o
         JOIN dmo_quotes q ON q.id=o.accepted_quote_id AND q.request_id=o.request_id

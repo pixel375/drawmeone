@@ -119,8 +119,6 @@ function dmo_integrity_checkout_crypto(PDO $db,int $limit=10000): array
     if($limit<1||$limit>10000)throw new InvalidArgumentException('Invalid invoice scan limit');
     if(!dmo_checkout_schema_ready($db))return ['checked'=>0,'invalid'=>0,'complete'=>false];
     $checked=0;$invalid=0;$last=0;
-    $keyReady=strlen(dmo_config('DMO_APP_KEY'))>=32&&function_exists('openssl_decrypt');
-    $key=$keyReady?dmo_checkout_key():null;
     while($checked<$limit){
         $size=min(100,$limit-$checked);
         $q=$db->prepare("SELECT id,order_id,url_ciphertext,url_fingerprint,provider_host FROM dmo_checkout_links WHERE status='active' AND id>:last ORDER BY id LIMIT ".$size);
@@ -128,18 +126,7 @@ function dmo_integrity_checkout_crypto(PDO $db,int $limit=10000): array
         if(!$rows)break;
         foreach($rows as $row){
             $last=(int)$row['id'];$checked++;
-            $cipher=(string)$row['url_ciphertext'];
-            if(!$keyReady||strlen($cipher)>1500){$invalid++;continue;}
-            $raw=base64_decode($cipher,true);
-            if(!is_string($raw)||strlen($raw)<29||base64_encode($raw)!==$cipher){$invalid++;continue;}
-            $url=openssl_decrypt(substr($raw,28),'aes-256-gcm',$key,OPENSSL_RAW_DATA,substr($raw,0,12),substr($raw,12,16),(string)$row['order_id']);
-            if(!is_string($url)||strlen($url)>1000||
-                !preg_match('~^https://([a-z0-9.-]+)/[A-Za-z0-9_-]+(?:/[A-Za-z0-9_-]+)*$~D',$url,$parts)||
-                $parts[1]!==$row['provider_host']||
-                !hash_equals((string)$row['url_fingerprint'],hash_hmac('sha256',$url,$key))){
-                $invalid++;
-            }
-            unset($url);
+            if(dmo_checkout_authenticated_url($row)===null)$invalid++;
         }
     }
     $q=$db->prepare("SELECT id FROM dmo_checkout_links WHERE status='active' AND id>:last LIMIT 1");
