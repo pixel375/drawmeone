@@ -9,8 +9,8 @@
 <meta name="description" content="Request an original custom drawing through Draw Me One when commissions open.">
 <title>Commission a drawing · Draw Me One</title>
 <link rel="icon" href="./favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="./commission.css?v=31">
-<script defer src="./commission.js?v=54"></script>
+<link rel="stylesheet" href="./commission.css?v=32">
+<script defer src="./commission.js?v=55"></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
@@ -79,14 +79,14 @@
         </div>
         <fieldset id="request-addons" class="addons">
           <legend>Optional add-ons</legend>
-          <p class="small" id="addons-empty">No add-ons are currently available.</p>
+          <p class="small" id="addons-empty">No add-ons are available for this selection.</p><p id="request-addons-count" class="small" role="status">0 of 8 extras selected</p>
           <div id="addons-options" class="addon-options"></div>
         </fieldset>
         <section id="request-estimate" class="request-estimate" hidden aria-label="Package estimate"><strong>Selected package and extras estimate</strong><p id="request-estimate-value" role="status"></p><small>Not a final price, invoice or payment request. The artist must review the scope and issue an individual quote.</small></section>
         <div class="field">
           <label for="request-brief">Describe your drawing</label>
-          <textarea id="request-brief" minlength="30" maxlength="6000" rows="8" required placeholder="Who or what should be in the artwork? What mood, pose, colours, details or setting are important?"></textarea>
-          <small>At least 30 characters. Avoid sharing sensitive information. Private reference uploads become available after submitting a request when the service is enabled.</small>
+          <textarea id="request-brief" maxlength="6000" rows="8" required aria-describedby="request-brief-count request-brief-help" placeholder="Who or what should be in the artwork? What mood, pose, colours, details or setting are important?"></textarea>
+          <small id="request-brief-count">0 / 6000 UTF-8 bytes</small><small id="request-brief-help">Write a detailed brief (at least 30 UTF-8 bytes). Avoid sensitive information. Private reference uploads become available after submitting, when enabled.</small><details class="brief-guide"><summary>What should I include?</summary><ul><li>Subject or character and important identifying details.</li><li>Pose, expression, mood and preferred colours.</li><li>Background, composition and intended use.</li><li>Anything the artist should avoid. Mention reference images you can provide privately later.</li></ul><p class="small">Do not include passwords, payment information or private identification documents.</p></details>
         </div>
         <div class="field-row">
           <div class="field">
@@ -108,6 +108,7 @@
           <input type="checkbox" id="request-ack" required>
           <span>I have read the commission terms and privacy policy, and understand this is only a request for artist review. The artwork, pricing, delivery schedule and any payment will be agreed separately before an order is placed.</span>
         </label>
+        <p id="request-unsent" class="small" role="status" hidden>Your unsent request is held only on this page. Leaving may discard it.</p><button type="button" id="request-clear-draft" class="text-button" hidden>Clear unsent form</button>
         <div class="submit-row">
           <span class="small">No charge at submission. Maximum three new requests per 24 hours.</span>
           <button id="request-submit" class="primary-button" type="submit" disabled>Send request for review</button>

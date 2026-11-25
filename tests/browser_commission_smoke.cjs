@@ -364,6 +364,10 @@ async function openIntake(browser) {
     assert.equal(await page.locator('#addons-options input[value="32"]').isVisible(),false,
       "incompatible add-on hidden");
     assert.equal(await page.locator('#addons-options input[value="32"]').isDisabled(),true);
+    await page.locator("#request-brief").fill("é".repeat(3100));
+    assert.match(await page.locator("#request-brief-count").innerText(),/Shorten your brief/);
+    assert.equal(await page.locator("#request-brief").evaluate(el=>el.validity.valid),false);
+    assert.equal(await page.locator("#request-unsent").isVisible(),true);
     await page.locator("#request-brief").fill(
       "Synthetic request for a portrait with warm colors and a calm background."
     );
@@ -383,6 +387,7 @@ async function openIntake(browser) {
       /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
     assert.equal(await page.locator("#request-brief").inputValue(),"");
     assert.equal(await page.locator("#request-ack").isChecked(),false);
+    assert.equal(await page.locator("#request-unsent").isVisible(),false);
     console.log("PASS: synthetic signed-in commission form, tier/addon compatibility, single idempotent POST");
   } finally {await context.close();}
 }

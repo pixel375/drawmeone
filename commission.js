@@ -126,6 +126,28 @@
   const preferredPackage=new URLSearchParams(location.search).get("package");
   const validPreferredPackage=typeof preferredPackage==="string"&&/^[a-z0-9][a-z0-9-]{1,79}$/.test(preferredPackage)?preferredPackage:null;
   let initialPackageUsed=false;
+  let requestFormBaseline=null;
+  function requestFormSnapshot(){
+    return JSON.stringify([$("request-tier").value,$("request-subject").value,$("request-brief").value,$("request-deadline").value,$("request-contact").value,$("request-ack").checked,[...$("addons-options").querySelectorAll("input:checked")].map(x=>x.value)]);
+  }
+  function requestFormDirty(){return requestFormBaseline!==null&&requestFormSnapshot()!==requestFormBaseline;}
+  function refreshRequestDraftState(){
+    const raw=$("request-brief").value,size=new TextEncoder().encode(raw).length,trimmed=new TextEncoder().encode(raw.trim()).length;
+    $("request-brief-count").textContent=size+" / 6000 UTF-8 bytes"+(size>6000?" · Shorten your brief":trimmed<30?" · Add more detail":"");
+    $("request-brief").setCustomValidity(size>6000?"Shorten your brief to at most 6000 UTF-8 bytes.":trimmed<30&&raw.length?"Add more detail (at least 30 UTF-8 bytes).":"");
+    const dirty=requestFormDirty();$("request-unsent").hidden=!dirty;$("request-clear-draft").hidden=!dirty;$("request-clear-draft").disabled=state.sending||receiptBusy;
+  }
+  $("request-form").addEventListener("input",refreshRequestDraftState);
+  $("request-form").addEventListener("change",refreshRequestDraftState);
+  $("request-clear-draft").addEventListener("click",()=>{
+    if(state.sending||receiptBusy||!requestFormDirty()||!window.confirm("Clear the unsent request fields? Any existing submission receipt ID will be retained."))return;
+    $("request-form").reset();$("request-tier").dispatchEvent(new Event("change"));
+    requestFormBaseline=requestFormSnapshot();refreshRequestDraftState();
+  });
+  window.addEventListener("beforeunload",event=>{
+    if(leavingSession)return;
+    if(requestFormDirty()||detailDraftKinds().length||state.sending||detailMutationBusy()){event.preventDefault();event.returnValue="";}
+  });
   function renderCatalog() {
     const tiers = Array.isArray(state.catalog?.tiers) ? state.catalog.tiers : [];
     const addons = Array.isArray(state.catalog?.addons) ? state.catalog.addons : [];
@@ -156,6 +178,7 @@
     const updateEstimate=()=>{
       const tier=tiers.find(x=>String(x.id)===tierSelect.value);
       const chosen=addons.filter(x=>[...addonWrap.querySelectorAll("input:checked:not(:disabled)")].some(input=>input.value===String(x.id)));
+      $("request-addons-count").textContent=chosen.length+" of 8 extras selected";
       const box=$("request-estimate"),output=$("request-estimate-value");
       if(!tier){box.hidden=true;output.textContent="";return;}
       box.hidden=false;
@@ -184,12 +207,15 @@
       $("addons-empty").hidden=!!addonWrap.querySelector("input:not(:disabled)");
       updateEstimate();
     };
-    tierSelect.onchange=describeTier;addonWrap.onchange=updateEstimate;
+    tierSelect.onchange=describeTier;addonWrap.onchange=event=>{
+      if(event.target.matches("input[type=checkbox]")&&event.target.checked&&addonWrap.querySelectorAll("input:checked").length>8){event.target.checked=false;updateEstimate();$("request-addons-count").textContent="8 of 8 extras selected · Deselect one before choosing another.";}
+      else updateEstimate();refreshRequestDraftState();
+    };
     if(!initialPackageUsed){
       initialPackageUsed=true;
       if(validPreferredPackage){const matched=tiers.find(x=>x.slug===validPreferredPackage&&Number.isSafeInteger(x.id)&&x.id>0);if(matched){tierSelect.value=String(matched.id);$("request-package-handoff").textContent="Package selected from the services page. You can change it before submitting.";}else{$("request-package-handoff").textContent="That package is no longer available. Choose another package or a custom idea.";} }
     }else $("request-package-handoff").textContent="";
-    describeTier();
+    describeTier();requestFormBaseline=requestFormSnapshot();refreshRequestDraftState();
   }
 
   function localTomorrow() {
@@ -1014,12 +1040,12 @@
     event.preventDefault();
     if (state.sending || receiptBusy || !state.service?.requests_open || !state.csrf) return;
     const form = $("request-form");
-    if (!form.reportValidity()) return;
+    refreshRequestDraftState();if (!form.reportValidity()) return;
     const brief = $("request-brief").value.trim();
     const addon_ids = [...$("addons-options").querySelectorAll("input:checked")]
       .map(node => Number(node.value));
-    if (brief.length < 30 || brief.length > 6000 || addon_ids.length > 8) {
-      feedback("Please describe your idea in 30–6000 characters and choose no more than eight add-ons.",true);
+    if (new TextEncoder().encode(brief).length < 30 || new TextEncoder().encode(brief).length > 6000 || addon_ids.length > 8) {
+      feedback("Please describe your idea in 30–6000 UTF-8 bytes and choose no more than eight add-ons.",true);
       return;
     }
     const tierId = $("request-tier").value;
@@ -1051,7 +1077,7 @@
       const body = await response.json();
       if (response.ok && body.ok) {
         clearPendingRequestKey();
-        form.reset();
+        form.reset();requestFormBaseline=requestFormSnapshot();refreshRequestDraftState();
         feedback("Request " + body.public_ref +
           " received for artist review. No order or charge has been created.");
         await loadMyRequests();
@@ -1084,7 +1110,7 @@
     } finally {
       state.sending = false;syncReceiptRecovery();
       for(const [field,disabled] of fields)field.disabled=disabled;
-      if(!leavingSession)$('request-tier').dispatchEvent(new Event('change'));
+      if(!leavingSession){$('request-tier').dispatchEvent(new Event('change'));refreshRequestDraftState();}
       button.disabled = !state.service?.requests_open||leavingSession;
     }
   });
