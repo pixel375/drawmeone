@@ -62,3 +62,6 @@ Pricing approval now gates every public catalog read and every new selected pack
 ## Artist-managed optional-extra compatibility
 
 The existing tier/add-on mapping is now editable in Artist's Desk, with separate controls for all current/future extras versus selected extras (including none, when at least one extra exists). Draft compatibility stays private; active-tier changes require approved pricing and publishing gates. Updates require both the tier revision and a mapping/inventory revision. Explicit publication also verifies the current mapping revision. Writes are transactional, CSRF-protected and audited. Unpublished extras never appear to customers. Restricted tiers exclude future extras until selected. Editing is refused rather than partially saving when the bounded inventory exceeds 100 extras. No migration, price approval, new live data or launch switch was changed. Tests exercise actual HTTP endpoints and mocked artist browser interaction.
+
+
+Pricing editor now tracks unsaved package fields and extra compatibility independently. Changes survive tab navigation; selecting a different item or reloading requires confirmation. Publish and other conflicting actions are blocked until pending changes are saved or discarded. Failed writes preserve form inputs and uncertain network outcomes require a fresh read. No rates or approval switches changed.

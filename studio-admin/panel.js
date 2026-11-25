@@ -1919,7 +1919,22 @@
   let packageWrite = false;
   let packagePublish = false;
   let packageBusy = false;
-  let packageGeneration=0;
+  let packageGeneration=0,packageSaved=null,packageLoaded=false,packageLoading=false;
+  const packageFieldIds=['package-slug','package-name','package-description','package-currency','package-order','package-min','package-max','package-features'];
+  function packageSnapshot(){return {fields:JSON.stringify(packageFieldIds.map(id=>$(id).value)),compat:JSON.stringify([$('package-compatibility-mode').value,[...$('package-compatibility-options').querySelectorAll('input:checked')].map(x=>x.value)])};}
+  function packageDirty(){const current=packageSnapshot();return {fields:!!packageSaved&&current.fields!==packageSaved.fields,compat:!!packageSaved&&current.compat!==packageSaved.compat};}
+  function packageHasChanges(){const dirty=packageDirty();return dirty.fields||dirty.compat;}
+  function packageControls(){
+    const row=packageRows(packageSelected.kind).find(r=>r.id===packageSelected.id),dirty=packageDirty(),locked=packageBusy||packageLoading||!packageWrite||(row?.is_active===true&&!packagePublish);
+    for(const id of packageFieldIds)$(id).disabled=locked||dirty.compat;
+    $('package-save').disabled=locked||dirty.compat;
+    $('package-visibility').disabled=packageBusy||packageLoading||!packagePublish||!row||dirty.fields||dirty.compat||(packageSelected.kind==='tier'&&!row.is_active&&row.compatibility?.editable!==true);
+    $('package-refresh').disabled=packageBusy||packageLoading;
+    $('package-unsaved').hidden=!dirty.fields&&!dirty.compat;
+    $('package-unsaved').textContent=dirty.fields?'Unsaved package changes. Save before publishing or editing extras.':'Unsaved extra availability. Save before publishing or editing package details.';
+    $('package-revert').disabled=packageBusy||packageLoading||!packageHasChanges();
+    packageCompatibilityControls();
+  }
 
   function packageRows(kind) {
     return kind === "tier" ? packageCatalog.tiers : packageCatalog.addons;
@@ -1982,7 +1997,7 @@
   function packageCompatibilityControls(){
     const record=packageSelected.kind==="tier"?packageRows("tier").find(row=>row.id===packageSelected.id):null;
     const state=record?.compatibility;
-    const enabled=!!state&&state.editable===true&&packageWrite&&!packageBusy&&(!record.is_active||packagePublish);
+    const enabled=!!state&&state.editable===true&&packageWrite&&!packageBusy&&!packageLoading&&!packageDirty().fields&&(!record.is_active||packagePublish);
     const selected=$("package-compatibility-mode").value==="selected";
     $("package-compatibility-mode").disabled=!enabled;
     $("package-compatibility-options").querySelectorAll("input").forEach(input=>input.disabled=!enabled||!selected);
@@ -2007,8 +2022,9 @@
     packageCompatibilityControls();
   }
 
-  function packageSelect(kind, id = null) {
-    if (packageBusy||!["tier", "addon"].includes(kind)) return;
+  function packageSelect(kind, id = null, force=false) {
+    if (packageBusy||packageLoading||!["tier", "addon"].includes(kind)) return;
+    if(!force&&packageHasChanges()&&!window.confirm("Discard unsaved package or extra changes?"))return;
     const record = id === null ? null : packageRows(kind).find(row => row.id === id);
     if (id !== null && !record) return;
     packageSelected = { kind, id };
@@ -2045,34 +2061,28 @@
       ? "Unpublish" : "Publish";
     $("package-visibility").disabled = !packagePublish || packageBusy || !record || (kind==="tier"&&!record?.is_active&&record?.compatibility?.editable!==true);
     renderPackageCompatibility(record,kind);
+    packageSaved=packageSnapshot();packageControls();
     renderPackageLists();
   }
 
   async function packagesLoad() {
     const generation=++packageGeneration;
-    packageWrite=false;packagePublish=false;
-    $("package-save").disabled=true;$("package-visibility").disabled=true;packageCompatibilityControls();
+    packageWrite=false;packagePublish=false;packageLoading=true;packageLoaded=false;packageControls();
     packageShow("Loading existing commission tiers and add-ons…");
-    const { response, data } = await get("packages.php");
-    if(generation!==packageGeneration||leavingSession)return;
-    if (response.status === 401) return sessionExpired();
-    if (!response.ok || !data.ok) {
-      packageShow("Unable to load commission packages. Please retry.", true);
-      return;
-    }
-    packageWrite = data.write_enabled === true;
-    packagePublish = data.publish_enabled === true;
-    packageCatalog = data.catalog || {tiers: [],addons: []};
-    const found = packageRows(packageSelected.kind).some(
-      row => row.id === packageSelected.id
-    );
-    packageSelected.id=found?packageSelected.id:null;
-    if(!packageBusy)packageSelect(packageSelected.kind,packageSelected.id);
-    packageShow(packageWrite
-      ? (packagePublish
-        ? "Editing and publication available. Confirm rates before publishing."
-        : "Unpublished editing available. Public publishing remains locked.")
-      : "Editing locked until the private backend switch is enabled.");
+    try{
+      const { response, data } = await get("packages.php");
+      if(generation!==packageGeneration||leavingSession)return false;
+      if(response.status===401){sessionExpired();return false;}
+      if(!response.ok||!data.ok||!Array.isArray(data.catalog?.tiers)||!Array.isArray(data.catalog?.addons))throw Error("unavailable");
+      packageWrite=data.write_enabled===true;packagePublish=data.publish_enabled===true;
+      packageCatalog=data.catalog;packageLoaded=true;
+      if(!packageRows(packageSelected.kind).some(row=>row.id===packageSelected.id))packageSelected.id=null;
+      packageLoading=false;
+      if(!packageBusy)packageSelect(packageSelected.kind,packageSelected.id,true);
+      packageShow(packageWrite?(packagePublish?"Editing and publication available. Confirm rates before publishing.":"Unpublished editing available. Public publishing remains locked."):"Editing locked until the private backend switch is enabled.");
+      return true;
+    }catch(_){if(generation===packageGeneration)packageShow("Unable to load commission packages. Refresh before editing.",true);return false;}
+    finally{if(generation===packageGeneration){packageLoading=false;packageControls();}}
   }
 
   function packagePayload() {
@@ -2113,12 +2123,13 @@
 
   $("package-new-tier").addEventListener("click", () => packageSelect("tier"));
   $("package-new-addon").addEventListener("click", () => packageSelect("addon"));
-  $("package-refresh").addEventListener("click", () => {if(!packageBusy)packagesLoad().catch(() => {
-    packageShow("Unable to refresh packages.",true);
-  });});
+  $("package-refresh").addEventListener("click",()=>{if(!packageBusy&&!packageLoading&&(!packageHasChanges()||window.confirm("Discard unsaved package or extra changes and refresh?")))packagesLoad();});
+  $("package-revert").addEventListener("click",()=>{if(window.confirm("Discard unsaved package or extra changes?"))packageSelect(packageSelected.kind,packageSelected.id,true);});
+  for(const id of packageFieldIds)$(id).addEventListener("input",packageControls);
+  $("package-compatibility-options").addEventListener("change",packageControls);
   $("package-form").addEventListener("submit", async event => {
     event.preventDefault();
-    if (!packageWrite || packageBusy) return;
+    if (!packageWrite || packageBusy || packageLoading || packageDirty().compat) return;
     const item = packagePayload();
     if (!item) return;
     const current = packageRows(packageSelected.kind)
@@ -2127,8 +2138,8 @@
         !window.confirm("This changes a published price or package immediately. Continue?")) {
       return;
     }
-    packageBusy = true;
-    $("package-save").disabled = true;$("package-visibility").disabled=true;packageCompatibilityControls();
+    let refreshed=false;
+    packageBusy = true;packageControls();
     packageShow("Saving package without publishing…");
     try {
       const action = packageSelected.kind === "tier" ? "save_tier" : "save_addon";
@@ -2142,18 +2153,18 @@
         return;
       }
       packageSelected.id = data.id;
-      await packagesLoad();
-      packageShow("Saved. New items are unpublished until explicitly activated.");
+      refreshed=await packagesLoad();
+      if(refreshed)packageShow("Saved. New items are unpublished until explicitly activated.");
     } catch (_) {
-      packageShow("Connection problem. Save was not confirmed.", true);
+      packageWrite=false;packagePublish=false;packageShow("Connection problem. Save was not confirmed. Refresh before retrying.", true);
     } finally {
       packageBusy = false;
-      packageSelect(packageSelected.kind, packageSelected.id);
+      if(!leavingSession){if(refreshed)packageSelect(packageSelected.kind,packageSelected.id,true);else packageControls();}
     }
   });
 
   $("package-visibility").addEventListener("click", async () => {
-    if (!packagePublish || packageBusy || packageSelected.id === null) return;
+    if (!packagePublish || packageBusy || packageLoading || packageHasChanges() || packageSelected.id === null) return;
     const row = packageRows(packageSelected.kind)
       .find(x => x.id === packageSelected.id);
     if (!row) return;
@@ -2162,8 +2173,8 @@
     if (!window.confirm(active
       ? "Publish " + name + " to the public catalog? Confirm its prices are approved."
       : "Remove " + name + " from the public catalog?")) return;
-    packageBusy = true;
-    $("package-visibility").disabled = true;$("package-save").disabled=true;packageCompatibilityControls();
+    let refreshed=false;
+    packageBusy = true;packageControls();
     try {
       const { response, data } = await post("packages.php", {
         action:"set_active",kind:packageSelected.kind,
@@ -2177,34 +2188,34 @@
           (data.error || "not approved"), true);
         return;
       }
-      await packagesLoad();
-      packageShow(active ? "Published to public catalog." : "Unpublished from catalog.");
+      refreshed=await packagesLoad();
+      if(refreshed)packageShow(active ? "Published to public catalog." : "Unpublished from catalog.");
     } catch (_) {
-      packageShow("Connection problem. Visibility was not confirmed.", true);
+      packageWrite=false;packagePublish=false;packageShow("Connection problem. Visibility was not confirmed. Refresh before retrying.", true);
     } finally {
       packageBusy = false;
-      packageSelect(packageSelected.kind,packageSelected.id);
+      if(!leavingSession){if(refreshed)packageSelect(packageSelected.kind,packageSelected.id,true);else packageControls();}
     }
   });
 
-  $("package-compatibility-mode").addEventListener("change",packageCompatibilityControls);
+  $("package-compatibility-mode").addEventListener("change",packageControls);
   $("package-compatibility-save").addEventListener("click",async()=>{
     const record=packageSelected.kind==="tier"?packageRows("tier").find(row=>row.id===packageSelected.id):null;
-    if(!record||packageBusy||!packageWrite||!record.compatibility?.editable||(record.is_active&&!packagePublish))return;
+    if(!record||packageBusy||packageLoading||packageDirty().fields||!packageWrite||!record.compatibility?.editable||(record.is_active&&!packagePublish))return;
     const mode=$("package-compatibility-mode").value;
     const ids=mode==="selected"?[...$("package-compatibility-options").querySelectorAll("input:checked")].map(input=>Number(input.value)):[];
     if(mode==="selected"&&!packageRows("addon").length)return;
     if(!window.confirm("Save extra availability for this package?"+(record.is_active?" This changes the public catalog immediately.":"")))return;
-    packageBusy=true;$("package-save").disabled=true;$("package-visibility").disabled=true;packageCompatibilityControls();
+    let refreshed=false;packageBusy=true;packageControls();
     try{
       const {response,data}=await post("packages.php",{action:"set_compatibility",kind:"tier",id:record.id,mode,allowed_addon_ids:ids,
         expected_revision:record.revision,expected_compatibility_revision:record.compatibility.revision},csrf);
       if(response.status===401)return sessionExpired();
       if(!response.ok||!data.ok){packageWrite=false;packagePublish=false;packageShow("Change not confirmed. Reload before editing.",true);return;}
-      await packagesLoad();
-      if(!leavingSession&&packageWrite)packageShow("Extra availability saved.");
+      refreshed=await packagesLoad();
+      if(!leavingSession&&refreshed)packageShow("Extra availability saved.");
     }catch(_){packageWrite=false;packagePublish=false;packageShow("Connection failed. Reload before editing.",true);}
-    finally{packageBusy=false;if(!leavingSession)packageSelect(packageSelected.kind,packageSelected.id);}
+    finally{packageBusy=false;if(!leavingSession){if(refreshed)packageSelect(packageSelected.kind,packageSelected.id,true);else packageControls();}}
   });
 
   let customerGeneration=0,customerCursor=null,customerSearch="",customerState="all";
@@ -2368,7 +2379,7 @@
     if (name === "settings") emailDiagnosticsLoad().catch(() => {
       $("mail-check-status").textContent = "Email diagnostics unavailable.";
     });
-    if (name === "packages") packagesLoad().catch(() => showError("Packages unavailable."));
+    if (name === "packages"&&!packageBusy&&!packageLoading&&!packageLoaded&&!packageHasChanges()) packagesLoad();
     if (name === "artwork"&&!artworkBusy) artworksLoad();
   }
 

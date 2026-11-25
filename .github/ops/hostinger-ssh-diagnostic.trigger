@@ -1,1 +1,1 @@
-Verify gallery Escape and unsaved design controls.
+Verify pricing draft safeguards and preserved inputs.

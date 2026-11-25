@@ -20,7 +20,7 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
 <meta name="theme-color" content="#151317">
 <title>Artist's Desk · Draw Me One</title>
 <link rel="stylesheet" href="./panel.css?v=45">
-<script defer src="./panel.js?v=60"></script>
+<script defer src="./panel.js?v=61"></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to dashboard</a>
@@ -378,7 +378,8 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
           </div>
           <div class="package-form-actions">
             <button type="button" class="quiet" id="package-refresh">Reload</button>
-            <button type="submit" class="quiet" id="package-save" disabled>Save unpublished</button>
+            <p id="package-unsaved" class="small" role="status" hidden></p><button type="button" class="quiet" id="package-revert" disabled>Discard unsaved changes</button>
+          <button type="submit" class="quiet" id="package-save" disabled>Save unpublished</button>
             <button type="button" class="primary" id="package-visibility" disabled>Publish</button>
           </div>
           <fieldset id="package-compatibility" class="package-compatibility" hidden>

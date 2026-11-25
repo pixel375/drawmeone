@@ -291,7 +291,7 @@ jobs:
             desk_page=$(curl -fsSL --max-time 5 -H "Cache-Control: no-cache" "https://drawmeone.com/studio-admin/index.php" || true)
             commission_page=$(curl -fsSL --max-time 5 -H "Cache-Control: no-cache" "https://drawmeone.com/commission.html" || true)
             customer_page=$(curl -fsSL --max-time 5 -H "Cache-Control: no-cache" "https://drawmeone.com/account.html" || true)
-            if [[ "$public_home" == *'concepts.js?v=13'* && "$public_home" == *'studio.js?v=14'* && "$public_home" == *'gallery.js?v=17'* && "$public_home" == *'styles.css?v=14'* && "$desk_page" == *'panel.js?v=60'* && "$desk_page" == *'panel.css?v=45'* && "$commission_page" == *'commission.js?v=42'* && "$customer_page" == *'account.js?v=23'* ]]; then synced=yes; break; fi
+            if [[ "$public_home" == *'concepts.js?v=13'* && "$public_home" == *'studio.js?v=14'* && "$public_home" == *'gallery.js?v=17'* && "$public_home" == *'styles.css?v=14'* && "$desk_page" == *'panel.js?v=61'* && "$desk_page" == *'panel.css?v=45'* && "$commission_page" == *'commission.js?v=42'* && "$customer_page" == *'account.js?v=23'* ]]; then synced=yes; break; fi
             sleep 4
           done
           [[ "$synced" == "yes" ]] || { echo "deployment_sync=expected_versions_unavailable"; exit 1; }
@@ -331,7 +331,7 @@ jobs:
             echo "mobile_artist_desk=stale_or_missing_mobile_layout"
             exit 1
           }
-          [[ "$desk_page" == *'panel.js?v=60'* ]] &&
+          [[ "$desk_page" == *'panel.js?v=61'* ]] &&
           [[ "$desk_page" == *'id="artwork-filter"'* ]] &&
           [[ "$desk_page" == *'id="artwork-unpublish-selected"'* ]] || {
             echo "artist_artwork_library=stale_html"
@@ -341,7 +341,7 @@ jobs:
             echo "artist_artwork_library=stale_css"
             exit 1
           }
-          desk_js=$(curl -fsSL --max-time 15 "https://drawmeone.com/studio-admin/panel.js?v=60")
+          desk_js=$(curl -fsSL --max-time 15 "https://drawmeone.com/studio-admin/panel.js?v=61")
           [[ "$desk_js" == *'artwork-unpublish-selected'* ]] &&
           [[ "$desk_js" == *'No artworks match this view.'* ]] || {
             echo "artist_artwork_library=stale_js"
