@@ -40,7 +40,7 @@ function auth_request(string $path,?array $payload=null,?string $cookie=null,
     if($cookie!==null) $options[CURLOPT_COOKIE]='__Host-dmo_session='.$cookie;
     if($payload!==null){
         $options[CURLOPT_POST]=true;
-        $options[CURLOPT_POSTFIELDS]=json_encode($payload,JSON_THROW_ON_ERROR);
+        $options[CURLOPT_POSTFIELDS]=json_encode((object)$payload,JSON_THROW_ON_ERROR);
         $headers[]='Content-Type: application/json';
         $headers[]='Origin: '.$origin;
     }
