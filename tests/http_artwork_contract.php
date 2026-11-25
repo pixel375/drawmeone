@@ -409,6 +409,7 @@ try {
     art_assert($status===200&&str_contains($secondPage,'rel="prev" href="/artwork.php?id='.$id.'"')&&!str_contains($secondPage,'rel="next"'),'last_drawing_previous_navigation');
     [$status,,$filteredDetail]=art_http('/artwork.php?id='.$id.'&view=featured');
     art_assert($status===200&&!str_contains($filteredDetail,'rel="next"')&&str_contains($filteredDetail,'href="/portfolio.php?view=featured"'),'filtered_detail_stays_in_featured_selection');
+    art_assert(str_contains($filteredDetail,'data-copy-artwork')&&str_contains($filteredDetail,'https://drawmeone.com/artwork.php?id='.$id.'"'),'share_uses_canonical_published_drawing_link');
     [$status,,$fallbackDetail]=art_http('/artwork.php?id='.$id2.'&view=featured');
     art_assert($status===200&&str_contains($fallbackDetail,'rel="prev" href="/artwork.php?id='.$id.'"'),'stale_filter_falls_back_to_all');
     // Put both in the same featured group with a tied rank, then move

@@ -37,7 +37,7 @@ function dmo_directory_escape(string $value): string{return htmlspecialchars($va
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,follow">
 <meta name="theme-color" content="#151318">
-<script src="./public-theme.js?v=1"></script>
+<script src="./public-theme.js?v=2"></script>
 <meta name="description" content="Browse original drawings published by the Draw Me One artist.">
 <title>Published drawings | Draw Me One</title>
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">

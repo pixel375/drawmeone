@@ -17,7 +17,7 @@
   const feed=document.createElement("div");
   feed.className="shared-gallery-feed";
   for(const selector of [
-    "#gallery-demo-notice","#portfolio-gallery","#portfolio-empty","#portfolio-error","#gallery-more"
+    "#gallery-demo-notice","#portfolio-gallery","#portfolio-empty","#portfolio-error","#gallery-more","#portfolio-directory-note",".portfolio-directory-link"
   ]) {
     const node=studioGallery.querySelector(selector);
     if(!node) return;

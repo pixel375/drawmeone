@@ -106,7 +106,7 @@ header('Referrer-Policy: strict-origin-when-cross-origin');
 <link rel="canonical" href="<?= dmo_artwork_page_escape($canonical) ?>">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <meta name="theme-color" content="#141318">
-<script src="./public-theme.js?v=1"></script>
+<script src="./public-theme.js?v=2"></script>
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Draw Me One">
 <meta property="og:title" content="<?= dmo_artwork_page_escape($title) ?>">
@@ -141,7 +141,7 @@ figure{margin:28px 0 0;padding:clamp(12px,2.7vw,27px);background:var(--card);bor
 figure img{display:block;max-width:100%;max-height:min(80dvh,1100px);width:auto;height:auto;object-fit:contain;margin:0 auto;border-radius:3px}
 figcaption{color:var(--muted);font-size:12px;text-align:left;margin-top:18px;overflow-wrap:anywhere}
 footer{padding:24px 0 45px;border-top:1px solid var(--line);font-size:12px;color:var(--muted);flex-wrap:wrap}
-.skip{position:absolute;left:12px;top:-100px;padding:12px;background:var(--bg);z-index:3}.skip:focus{top:12px}.artwork-nav{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:22px 0 0}.artwork-nav a,.artwork-nav span{min-height:44px;display:flex;align-items:center;justify-content:center;text-align:center;padding:10px;border:1px solid var(--line);border-radius:8px;overflow-wrap:anywhere}.artwork-nav span{border-color:transparent;color:var(--muted)}
+.skip{position:absolute;left:12px;top:-100px;padding:12px;background:var(--bg);z-index:3}.skip:focus{top:12px}.artwork-share{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:20px 0}.artwork-share button{min-height:44px;padding:8px 14px;font:inherit;color:var(--ink);border:1px solid var(--line);background:var(--card);border-radius:8px;cursor:pointer}.artwork-share button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}.artwork-share button[hidden]{display:none}.artwork-share p{margin:0;color:var(--muted)}.artwork-share details{flex-basis:100%;overflow-wrap:anywhere}.artwork-share summary{cursor:pointer;padding:8px 0}.artwork-share summary:focus-visible{outline:2px solid var(--accent);outline-offset:3px}.artwork-nav{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:22px 0 0}.artwork-nav a,.artwork-nav span{min-height:44px;display:flex;align-items:center;justify-content:center;text-align:center;padding:10px;border:1px solid var(--line);border-radius:8px;overflow-wrap:anywhere}.artwork-nav span{border-color:transparent;color:var(--muted)}
 @media(max-width:600px){header{min-height:65px;flex-wrap:wrap;padding-block:12px}.wordmark{font-size:21px}nav{gap:13px}figure{padding:12px}.artwork-nav{gap:6px}.artwork-nav a,.artwork-nav span{font-size:11px;padding:6px}}
 </style>
 </head>
@@ -161,6 +161,7 @@ footer{padding:24px 0 45px;border-top:1px solid var(--line);font-size:12px;color
          width="<?= $width ?>" height="<?= $height ?>">
     <figcaption><?= dmo_artwork_page_escape($label) ?></figcaption>
   </figure>
+  <div class="artwork-share" aria-label="Share this drawing"><button type="button" data-share-artwork hidden>Share drawing</button><button type="button" data-copy-artwork hidden>Copy drawing link</button><p data-share-status role="status" aria-live="polite"></p><details><summary>Permanent drawing link</summary><a href="<?= dmo_artwork_page_escape($canonical) ?>"><?= dmo_artwork_page_escape($canonical) ?></a></details></div>
   <nav class="artwork-nav" aria-label="Browse published drawings">
     <?php if($neighbours['previous']!==null): ?><a rel="prev" href="<?= dmo_artwork_page_escape(dmo_gallery_detail_url($neighbours['previous'],$view)) ?>">Previous drawing</a><?php else: ?><span>First drawing</span><?php endif; ?>
     <a href="<?= dmo_artwork_page_escape(dmo_directory_url($view,$fromPage)) ?>"><?= $view==='all'?'All drawings':'Back to '.dmo_artwork_page_escape(strtolower(dmo_gallery_views()[$view])) ?></a>

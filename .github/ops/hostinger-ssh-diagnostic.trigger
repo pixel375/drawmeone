@@ -1,1 +1,1 @@
-Verify customer request selection race correction and public gallery improvements; read-only.
+Verify combined agenda, customer history, public navigation and share controls; read-only.

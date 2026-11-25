@@ -405,6 +405,19 @@ async function checkPublicInformation(browser){
   }finally{await context.close();}
 }
 
+async function checkPublicShare(browser){
+  const page=await browser.newPage({viewport:{width:320,height:844}});
+  await page.addInitScript(()=>{Object.defineProperty(navigator,"clipboard",{configurable:true,value:{writeText:async url=>{window.__copied=url;}}});});
+  await page.route("**/artwork.php?id=123",route=>route.fulfill({contentType:"text/html",body:'<!doctype html><html><head><link rel="canonical" href="https://drawmeone.com/artwork.php?id=123"><script src="/public-theme.js?v=2"></script></head><body><button data-public-theme hidden></button><button data-share-artwork hidden>Share drawing</button><button data-copy-artwork hidden>Copy drawing link</button><p data-share-status></p></body></html>'}));
+  try{
+    await page.goto(base+"/artwork.php?id=123");
+    await page.getByRole("button",{name:"Copy drawing link"}).click();
+    await page.waitForFunction(()=>document.querySelector("[data-share-status]")?.textContent==="Drawing link copied.");
+    assert.equal(await page.evaluate(()=>window.__copied),"https://drawmeone.com/artwork.php?id=123");
+    console.log("PASS: share copies canonical drawing URL");
+  }finally{await page.close();}
+}
+
 async function checkPublicTheme(browser){
   const context=await browser.newContext({viewport:{width:320,height:844},colorScheme:"dark"});
   try{
@@ -446,6 +459,7 @@ async function checkPublicTheme(browser){
     await checkPublishedPresentation(browser);
     await checkPublicInformation(browser);
     await checkPublicTheme(browser);
+    await checkPublicShare(browser);
     console.log("BROWSER_SMOKE=PASS");
   } finally { await browser.close(); }
 })().catch(error => {
