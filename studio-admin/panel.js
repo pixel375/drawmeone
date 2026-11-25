@@ -1442,6 +1442,32 @@
   let artworkWriteEnabled = false;
   let artworkBusy = false;
   let artworkPage=1,artworkGeneration=0,artworkLoading=false;
+  // In-memory drafts survive filtering, paging and server refreshes, but never a sign-in session.
+  const artworkDrafts=new Map();
+  function artworkDraftKey(id,field){return id+":"+field;}
+  function artworkDraftInput(work,field,input){
+    const key=artworkDraftKey(work.id,field),base=String(work[field]??"");
+    input.value=artworkDrafts.get(key)?.value??base;
+    input.addEventListener("input",()=>{
+      const old=artworkDrafts.get(key);
+      if(input.value===base)artworkDrafts.delete(key);
+      else artworkDrafts.set(key,{base:old?.base??base,value:input.value});
+      artworkControls();
+    });
+  }
+  function artworkDraftCanSave(work,field){
+    const draft=artworkDrafts.get(artworkDraftKey(work.id,field));
+    if(draft&&draft.base!==String(work[field]??"")){
+      artworkState("This drawing changed on the server. Discard unsaved edits and review the latest values before saving.");
+      return false;
+    }
+    return true;
+  }
+  $("artwork-discard-edits").addEventListener("click",()=>{
+    if(artworkBusy||artworkLoading||!artworkDrafts.size)return;
+    if(!window.confirm("Discard all unsaved artwork descriptions and sort orders?"))return;
+    artworkDrafts.clear();renderArtwork();artworkState("Unsaved artwork edits discarded.");
+  });
 
   function artworkState(message) {
     $("artwork-library-status").textContent = message;
@@ -1453,7 +1479,14 @@
     $("artwork-refresh").disabled=artworkBusy||artworkLoading;
     $("artwork-files").disabled=!canWrite;
     for(const field of $("artwork-list").querySelectorAll("button,input"))field.disabled=!canWrite;
-    $("artwork-select-all").disabled=!canWrite;
+    const selectable=$("artwork-list").querySelectorAll(".artwork-select").length;
+    $("artwork-select-all").disabled=!canWrite||selectable===0;
+    $("artwork-select-all").checked=selectable>0&&checked.length===selectable;
+    $("artwork-select-all").indeterminate=checked.length>0&&checked.length<selectable;
+    $("artwork-selection-count").textContent=checked.length+" selected on this page";
+    $("artwork-unsaved").hidden=artworkDrafts.size===0;
+    $("artwork-unsaved-count").textContent=artworkDrafts.size+" unsaved artwork field(s). Save individual edits or discard them. Unsaved edits are not published.";
+    $("artwork-discard-edits").disabled=artworkBusy||artworkLoading;
     $("artwork-upload").disabled = !canWrite;
     $("artwork-publish-selected").disabled = !canWrite ||
       !checked.some(input => input.dataset.visibility === "draft");
@@ -1552,7 +1585,7 @@
       input.min = "-10000";
       input.max = "10000";
       input.step = "1";
-      input.value = String(work.sort_order);
+      artworkDraftInput(work,"sort_order",input);
       input.disabled = !artworkWriteEnabled;
       input.setAttribute("aria-label", "Sort order for drawing " + work.id);
       const save = document.createElement("button");
@@ -1562,20 +1595,21 @@
       save.disabled = !artworkWriteEnabled || artworkBusy;
       save.addEventListener("click", () => {
         const value = Number(input.value);
-        if (!Number.isInteger(value) || value < -10000 || value > 10000) {
+        if (input.value.trim()==="" || !Number.isInteger(value) || value < -10000 || value > 10000) {
           artworkState("Sort order must be a whole number between -10000 and 10000.");
           return;
         }
-        updateArtwork(work.id,"set_order",{sort_order:value});
+        if(artworkDraftCanSave(work,"sort_order"))updateArtwork(work.id,"set_order",{sort_order:value});
       });
       order.append(input,save);
       const accessibility=document.createElement("details");
       const summary=textNode("summary","Optional accessibility description");
-      const alt=document.createElement("input");alt.type="text";alt.maxLength=240;alt.value=work.alt||"";
+      const alt=document.createElement("input");alt.type="text";alt.maxLength=240;artworkDraftInput(work,"alt",alt);
+      if(artworkDrafts.has(artworkDraftKey(work.id,"alt")))accessibility.open=true;
       alt.setAttribute("aria-label","Accessibility description for drawing "+work.id);
       alt.placeholder="Describe what is visible (optional)";
       const saveAlt=textNode("button","Save description","quiet");saveAlt.type="button";
-      saveAlt.addEventListener("click",()=>updateArtwork(work.id,"set_alt",{alt:alt.value.trim()}));
+      saveAlt.addEventListener("click",()=>{if(artworkDraftCanSave(work,"alt"))updateArtwork(work.id,"set_alt",{alt:alt.value.trim()});});
       accessibility.append(summary,alt,saveAlt);
       if(work.visibility==="published"){
         const link=textNode("a","View public drawing","small");link.href="../artwork.php?id="+work.id;link.target="_blank";link.rel="noopener noreferrer";body.append(title,state,link,pick,actions,order,accessibility);
@@ -1621,12 +1655,13 @@
         artworkState("Change not saved: " + (data.error || "HTTP " + response.status));
         return;
       }
+      if(action==="set_order"||action==="set_alt")artworkDrafts.delete(artworkDraftKey(id,action==="set_order"?"sort_order":"alt"));
       if(await artworksLoad())artworkState("Artwork #" + id + " updated.");
     } catch (_) {
       artworkWriteEnabled=false;artworkState("Connection failed. Change not confirmed; reload before editing.");
     } finally {
       artworkBusy = false;
-      renderArtwork();
+      if(!leavingSession)artworkControls();
     }
   }
 
@@ -1669,7 +1704,7 @@
       }
       if(await artworksLoad())artworkState((visibility==="published"?"Published ":"Unpublished ")+data.updated+" drawings together. No files deleted.");
     }catch(_){artworkWriteEnabled=false;artworkState("Batch outcome uncertain. Reload before retrying.");}
-    finally{artworkBusy=false;if(!leavingSession)renderArtwork();}
+    finally{artworkBusy=false;if(!leavingSession)artworkControls();}
   }
   $("artwork-publish-selected").addEventListener("click",()=>batchArtwork("published"));
   $("artwork-unpublish-selected").addEventListener("click",()=>batchArtwork("draft"));

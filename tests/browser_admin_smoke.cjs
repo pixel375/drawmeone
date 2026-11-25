@@ -310,6 +310,52 @@ async function verifyBulkArtworkChoices(browser) {
     console.log("PASS: safe publish/unpublish bulk selection, atomic API and stale batch lockout");
   } finally {await context.close();}
 }
+async function verifyArtworkDrafts(browser){
+  const page=await browser.newPage({viewport:{width:390,height:844}});
+  await simulateBackend(page,[]);
+  let writes=0,sort=0,alt="";
+  await page.route("**/api/admin/artworks.php*",route=>{
+    const reply=(data,status=200)=>route.fulfill({status,contentType:"application/json",body:JSON.stringify(data)});
+    if(route.request().method()==="GET")return reply({...mockAdmin["artworks.php"],write_enabled:true,artworks:mockAdmin["artworks.php"].artworks.map(w=>w.id===4?{...w,sort_order:sort,alt}:w)});
+    writes++;
+    const payload=route.request().postDataJSON();
+    if(writes===1)return reply({ok:false,error:"ci_save_rejected"},422);
+    if(payload.action==="set_order")sort=payload.sort_order;
+    if(payload.action==="set_alt")alt=payload.alt;
+    return reply({ok:true,id:4});
+  });
+  try{
+    await page.goto(base+"/studio-admin/index.php",{waitUntil:"domcontentloaded"});
+    await page.locator("#workspace").waitFor({state:"visible"});
+    await page.locator('[data-view="artwork"]').click();
+    const order=page.getByLabel("Sort order for drawing 4",{exact:true});
+    const desc=page.getByLabel("Accessibility description for drawing 4",{exact:true});
+    const card=page.locator(".artwork-library-card").filter({has:order});
+    await order.fill("19");
+    await card.locator("summary").click();await desc.fill("Synthetic drawing description");
+    await page.locator("#artwork-filter").selectOption("published");
+    await page.locator("#artwork-filter").selectOption("all");
+    assert.equal(await order.inputValue(),"19");
+    assert.equal(await desc.inputValue(),"Synthetic drawing description");
+    await page.locator('[data-view="overview"]').click();
+    await page.locator('[data-view="artwork"]').click();
+    await card.getByRole("button",{name:"Set order",exact:true}).click();
+    await page.waitForFunction(()=>document.querySelector("#artwork-library-status")?.textContent.includes("Change not saved"));
+    assert.equal(await order.inputValue(),"19");
+    assert.equal(await desc.inputValue(),"Synthetic drawing description");
+    await card.getByRole("button",{name:"Set order",exact:true}).click();
+    await page.waitForFunction(()=>document.querySelector("#artwork-library-status")?.textContent.includes("updated"));
+    assert.equal(sort,19);
+    assert.equal(await desc.inputValue(),"Synthetic drawing description");
+    assert.equal(await page.locator("#artwork-unsaved").isVisible(),true);
+    page.once("dialog",d=>d.accept());
+    await page.locator("#artwork-discard-edits").click();
+    assert.equal(await desc.inputValue(),"");
+    assert.equal(await page.locator("#artwork-unsaved").isVisible(),false);
+    assert.equal(writes,2);
+    console.log("PASS: artwork drafts survive filtering, tab changes and rejected saves");
+  }finally{await page.close();}
+}
 async function verifyRequestIsolation(browser) {
   const page=await browser.newPage({viewport:{width:390,height:844},reducedMotion:"reduce"});
   const posts=[];
@@ -964,6 +1010,7 @@ async function verifyClosedDesk(browser) {
     for(const width of [320,390,768,1440]) await verifyArtistDesk(browser,width);
     await verifyClosedDesk(browser);
     await verifyBulkArtworkChoices(browser);
+    await verifyArtworkDrafts(browser);
     await verifyRequestIsolation(browser);
     await verifyRequestList(browser);
     await verifyFreshAdminSignIn(browser);
