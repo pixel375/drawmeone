@@ -22,7 +22,7 @@
   }
   let leavingSession = false;
   const proofDrafts=new Map();
-  let pendingReply=null;
+  let pendingReply=null,remainingReferences=[],referenceStopRequested=false;
   function customerSessionExpired() {
     if (leavingSession) return;
     leavingSession = true;
@@ -50,7 +50,7 @@
   function detailDraftKinds(){
     const kinds=[];
     if($("detail-reply-body").value!=="")kinds.push("private message");
-    if($("detail-reference-files").files.length)kinds.push("selected reference images");
+    if($("detail-reference-files").files.length||remainingReferences.length)kinds.push("selected reference images");
     if([...proofDrafts.values()].some(value=>value!==""))kinds.push("proof revision feedback");
     return kinds;
   }
@@ -64,15 +64,32 @@
     return !kinds.length||window.confirm("Discard your unsent "+kinds.join(", ")+" for this request?");
   }
   $("detail-reply-body").addEventListener("input",updateDetailDraftWarning);
-  $("detail-reference-files").addEventListener("change",updateDetailDraftWarning);
+  function syncReferenceResume(){
+    $("detail-reference-resume").hidden=!remainingReferences.length;
+    $("detail-reference-resume").disabled=state.uploadBusy||$("detail-reference-form").hidden;
+    $("detail-reference-resume").textContent="Upload "+remainingReferences.length+" remaining image(s)";
+    $("detail-reference-stop").hidden=!state.uploadBusy;
+    $("detail-reference-stop").disabled=referenceStopRequested;
+    updateDetailDraftWarning();
+  }
+  $("detail-reference-files").addEventListener("change",()=>{
+    if(remainingReferences.length&&$("detail-reference-files").files.length){
+      if(!window.confirm("Replace the remaining reference upload selection with these new files?"))$("detail-reference-files").value="";
+      else remainingReferences=[];
+    }
+    syncReferenceResume();
+  });
+  $("detail-reference-stop").addEventListener("click",()=>{
+    if(state.uploadBusy){referenceStopRequested=true;syncReferenceResume();$("detail-reference-feedback").textContent="Stopping after the current image…";}
+  });
   function clearDetailDrafts() {
-    proofDrafts.clear();pendingReply=null;
+    proofDrafts.clear();pendingReply=null;remainingReferences=[];referenceStopRequested=false;
     $("detail-reply-body").value = "";
     $("detail-reference-files").value = "";
     $("detail-reference-feedback").textContent = "";
     $("detail-reply-feedback").textContent = "";
     $("detail-reference-progress").hidden = true;
-    updateDetailDraftWarning();
+    syncReferenceResume();
   }
   function displayStatus(text, error = false) {
     const node = $("request-status");
@@ -689,6 +706,7 @@
       $("detail-reference-form").hidden = body.can_upload_references !== true;
       $("detail-reference-upload").disabled = body.can_upload_references !== true ||
         state.uploadBusy;
+      syncReferenceResume();
       const r = body.request || {};
       $("detail-withdraw").hidden=body.can_withdraw!==true;
       $("detail-withdraw").onclick=()=>withdrawRequest(ref,r.status);
@@ -790,61 +808,59 @@
     }
   }
 
-  $("detail-reference-form").addEventListener("submit", async event => {
-    event.preventDefault();
-    const ref = state.selectedRef;
-    if (!ref || detailMutationBusy() || !state.csrf) return;
-    const files = Array.from($("detail-reference-files").files || []);
-    if (!files.length || files.length > 8 ||
-        files.some(file => file.size > 4 * 1024 * 1024 || file.size < 1 ||
-          !["image/jpeg","image/png","image/webp"].includes(file.type))) {
-      $("detail-reference-feedback").textContent =
-        "Choose up to eight JPEG, PNG or WebP images, maximum 4 MB each.";
+  $("detail-reference-form").addEventListener("submit",event=>{
+    event.preventDefault();uploadReferences(Array.from($("detail-reference-files").files||[]));
+  });
+  $("detail-reference-resume").addEventListener("click",()=>uploadReferences([...remainingReferences]));
+  async function uploadReferences(files){
+    const ref=state.selectedRef;
+    if(!ref||detailMutationBusy()||!state.csrf||$("detail-reference-form").hidden)return;
+    if(!files.length||files.length>8||files.some(file=>file.size>4*1024*1024||file.size<1||
+      !(["image/jpeg","image/png","image/webp"].includes(file.type)||(!file.type&&/\.(jpe?g|png|webp)$/i.test(file.name))))){
+      $("detail-reference-feedback").textContent="Choose up to eight JPEG, PNG or WebP images, maximum 4 MB each.";
       return;
     }
-    const progress = $("detail-reference-progress");
-    state.uploadBusy = true;
-    $("detail-reference-files").disabled=true;
-    $("detail-reference-upload").disabled = true;
-    progress.hidden = false;
-    progress.max = files.length; progress.value = 0;
-    try {
-      for (const file of files) {
-        const payload = new FormData();
-        payload.append("ref", ref);
-        payload.append("reference", file);
-        const response = await fetch("./api/request-attachment.php", {
-          method:"POST", credentials:"same-origin", cache:"no-store",
-          headers:{"X-DMO-CSRF":state.csrf},body:payload,
-        });
-        if (response.status === 401) return customerSessionExpired();
-        const data = await response.json();
-        if (!response.ok || !data.ok) {
-          $("detail-reference-feedback").textContent =
-            "Upload stopped (" + (data.error || response.status) +
-            "). Earlier images may already have uploaded. Refresh to check before retrying.";
-          await openDetail(ref);
-          return;
+    const progress=$("detail-reference-progress"),status=$("detail-reference-feedback");
+    state.uploadBusy=true;referenceStopRequested=false;remainingReferences=[];
+    $("detail-reference-files").disabled=true;$("detail-reference-upload").disabled=true;
+    syncReferenceResume();
+    progress.hidden=false;progress.max=files.length;progress.value=0;
+    let attempted=0,saved=0,rejected=0,uncertain=0,reason="";
+    try{
+      for(let i=0;i<files.length;i++){
+        if(referenceStopRequested||leavingSession){reason="Upload stopped.";break;}
+        const payload=new FormData();payload.append("ref",ref);payload.append("reference",files[i]);
+        try{
+          const response=await fetch("./api/request-attachment.php",{method:"POST",credentials:"same-origin",cache:"no-store",headers:{"X-DMO-CSRF":state.csrf},body:payload});
+          if(response.status===401)return customerSessionExpired();
+          const data=await response.json();
+          if(response.ok&&data.ok===true&&Number.isSafeInteger(data.attachment_id)&&data.attachment_id>0)saved++;
+          else if(response.status===429&&data.error==="too_many_uploads"){
+            reason="Upload rate limit reached. Try remaining images later.";break;
+          }else if(response.status>=400&&response.status<500&&data.ok===false){
+            rejected++;reason="Upload stopped ("+(data.error||response.status)+").";
+          }else{
+            uncertain++;reason="Upload outcome not confirmed. Check the reference list before reselecting that image.";
+          }
+        }catch(_){
+          uncertain++;reason="Connection interrupted. Check the reference list before reselecting the unconfirmed image.";
         }
-        progress.value += 1;
-        $("detail-reference-feedback").textContent =
-          "Uploaded " + progress.value + " of " + files.length + " reference images.";
+        attempted=i+1;progress.value=attempted;
+        status.textContent="Processed "+attempted+" of "+files.length+" reference images.";
+        if(reason)break;
       }
-      $("detail-reference-files").value = "";
+      if(leavingSession)return;
+      remainingReferences=files.slice(attempted);
+      $("detail-reference-files").value="";
       await openDetail(ref);
-      $("detail-reference-feedback").textContent =
-        "Private reference images saved. They are visible only to you and the artist.";
-    } catch (_) {
-      $("detail-reference-feedback").textContent =
-        "Connection lost. Check the reference list before retrying.";
-    } finally {
-      state.uploadBusy = false;
-      $("detail-reference-files").disabled=false;
-      updateDetailDraftWarning();
-      progress.hidden = true;
-      $("detail-reference-upload").disabled = $("detail-reference-form").hidden;
+      if(leavingSession)return;
+      status.textContent=(reason?reason+" ":"")+saved+" saved · "+rejected+" rejected · "+uncertain+" unconfirmed · "+remainingReferences.length+" remaining."+
+        (remainingReferences.length&&$("detail-reference-form").hidden?" Uploads are unavailable until the request permits more references.":"");
+    }finally{
+      state.uploadBusy=false;referenceStopRequested=false;progress.hidden=true;
+      if(!leavingSession){$("detail-reference-files").disabled=false;$("detail-reference-upload").disabled=$("detail-reference-form").hidden;syncReferenceResume();}
     }
-  });
+  }
 
   $("detail-reply-form").addEventListener("submit", async event => {
     event.preventDefault();

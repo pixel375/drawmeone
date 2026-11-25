@@ -421,6 +421,43 @@ async function customerDraftAndSessionIsolation(browser) {
   }finally{await page.close();}
 }
 
+async function verifyReferenceRecovery(browser){
+  const page=await browser.newPage({viewport:{width:390,height:844}});
+  await installMocks(page,{signedIn:true,open:false});
+  await page.route("**/api/request.php?*",route=>answer(route,{...detail(A),can_upload_references:true,can_reply:true}));
+  const uploaded=[];
+  await page.route("**/api/request-attachment.php",route=>{
+    const body=route.request().postData()||"";
+    uploaded.push(body.includes("first.png")?"first":body.includes("second.png")?"second":body.includes("third.png")?"third":"unknown");
+    if(uploaded.length===2)return route.fulfill({status:502,contentType:"text/plain",body:"Gateway failure"});
+    return answer(route,{ok:true,attachment_id:uploaded.length},201);
+  });
+  let messageCalls=0,keys=[];
+  await page.route("**/api/request-message.php",route=>{
+    keys.push(route.request().postDataJSON().operation_key);messageCalls++;
+    return messageCalls===1?route.abort("failed"):answer(route,{ok:true,message_id:91,already_saved:true});
+  });
+  try{
+    await page.goto(base+"/commission.html",{waitUntil:"domcontentloaded"});
+    await page.locator('#my-request-list button[aria-label$="'+A+'"]').click();
+    await page.locator("#detail-reference-form").waitFor({state:"visible"});
+    await page.locator("#detail-reference-files").setInputFiles(["first.png","second.png","third.png"].map(name=>({name,mimeType:"image/png",buffer:Buffer.from("synthetic reference")})));
+    await page.locator("#detail-reference-upload").click();
+    await page.waitForFunction(()=>document.querySelector("#detail-reference-feedback")?.textContent.includes("1 unconfirmed · 1 remaining"));
+    assert.deepEqual(uploaded,["first","second"]);
+    await page.locator("#detail-reference-resume").click();
+    await page.waitForFunction(()=>document.querySelector("#detail-reference-feedback")?.textContent.includes("0 unconfirmed · 0 remaining"));
+    assert.deepEqual(uploaded,["first","second","third"]);
+    await page.locator("#detail-reply-body").fill("Synthetic retry message");
+    await page.locator("#detail-reply-send").click();
+    await page.waitForFunction(()=>document.querySelector("#detail-reply-feedback")?.textContent.includes("Retry the unchanged"));
+    await page.locator("#detail-reply-send").click();
+    await page.waitForFunction(()=>document.querySelector("#detail-reply-feedback")?.textContent.includes("Message saved"));
+    assert.equal(keys.length,2);assert.equal(keys[0],keys[1]);assert.match(keys[0],/^[0-9a-f-]{36}$/);
+    assert.equal(await page.locator("#detail-reply-body").inputValue(),"");
+    console.log("PASS: private reference upload recovery and unchanged message operation key");
+  }finally{await page.close();}
+}
 async function verifyOlderCustomerHistory(browser) {
   const page=await browser.newPage({viewport:{width:320,height:844},reducedMotion:"reduce"});
   const test=await installMocks(page,{signedIn:true,open:false});
@@ -577,6 +614,7 @@ async function openWithoutLogin(browser) {
     await readonlyQuoteStatuses(browser);
     await detailRaceAndRecovery(browser);
     await customerDraftAndSessionIsolation(browser);
+    await verifyReferenceRecovery(browser);
     await verifyOlderCustomerHistory(browser);
     await verifyFullCustomerThread(browser);
     await verifyOrderHistoryStage(browser);
