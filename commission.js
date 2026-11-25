@@ -166,6 +166,7 @@
     quote_available:"Awaiting your quote decision",
     quote_expired:"Quote expired",
     quote_declined:"Quote declined",
+    quote_inactive:"Quote no longer available",
     awaiting_arrangement:"Awaiting payment arrangements",
     queued:"In the artist queue",
     drawing:"Drawing in progress",
@@ -408,7 +409,7 @@
       sent:"Awaiting your decision",
       accepted:"Accepted",
       declined:"Declined",
-      superseded:"Replaced by a newer quote",
+      superseded:"No longer available (withdrawn or replaced)",
     };
     const hasAccepted = quotes.some(quote => quote.status === "accepted");
     for (const quote of quotes) {
@@ -564,7 +565,7 @@
       renderCustomerQuotes(body.quotes || [], ref, r.policy_version || "");
       renderCustomerOrders(body.orders || []);
       showFact("detail-ref",r.public_ref);
-      showFact("detail-status",readableRequestStatus(r.status));
+      showFact("detail-status",readableRequestStatus(r.workflow_stage || r.status));
       showFact("detail-type",labels[r.subject_type] || r.subject_type);
       const addons = Array.isArray(body.addons) ? body.addons : [];
       showFact("detail-options",

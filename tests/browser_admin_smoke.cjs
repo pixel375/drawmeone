@@ -495,6 +495,38 @@ async function verifyOrderPlanning(browser) {
   }finally{await page.close();}
 }
 
+async function verifyQuoteFollowup(browser) {
+  const page=await browser.newPage({viewport:{width:390,height:844},reducedMotion:"reduce"});
+  const posts=[];await simulateBackend(page,posts);
+  const row={id:92,status:"submitted",public_ref:"CI-92",workflow_stage:"quote_expired"};
+  const quote={id:93,version_number:1,status:"sent",is_expired:true,currency:"CAD",total_minor:1500,scope_description:"Synthetic portrait for review",revision_allowance:1,lines:[{description:"Portrait",amount_minor:1500}],sent_at:"2026-11-01",validity_ends_at:"2026-11-08"};
+  const answer=(route,data)=>route.fulfill({status:200,contentType:"application/json",body:JSON.stringify(data)});
+  await page.route("**/api/admin/requests.php*",route=>answer(route,{ok:true,requests:[row]}));
+  await page.route("**/api/admin/request.php?*",route=>answer(route,{ok:true,admin_writes_enabled:true,quote_sending_enabled:true,detail:{request:row,quotes:[quote],orders:[],messages:[],references:[],addons:[]}}));
+  await page.route("**/api/admin/request-actions.php*",route=>{
+    assert.deepEqual(route.request().postDataJSON(),{action:"withdraw_quote",request_id:92,quote_id:93,confirm_withdrawal:true});
+    quote.status="superseded";row.workflow_stage="quote_inactive";
+    return answer(route,{ok:true,status:"superseded"});
+  });
+  try{
+    await page.goto(base+"/studio-admin/index.php",{waitUntil:"domcontentloaded"});
+    await page.locator("#workspace").waitFor({state:"visible"});
+    await page.locator('[data-request-queue="quote_followup"]').click();
+    await page.locator("#request-list .request-open").first().click();
+    await page.locator("#request-quotes button[data-quote-withdraw]").waitFor();
+    assert.match(await page.locator("#request-quotes").innerText(),/Expired/);
+    await page.getByRole("button",{name:"Use as starting point for new version"}).click();
+    assert.equal(await page.locator("#quote-scope").inputValue(),quote.scope_description);
+    page.once("dialog",dialog=>dialog.accept());
+    await page.locator("#request-quotes button[data-quote-withdraw]").click();
+    await page.waitForFunction(()=>document.querySelector("#request-detail-status")?.textContent.includes("Offer withdrawn"));
+    assert.equal(await page.locator("#request-quotes button[data-quote-withdraw]").count(),0);
+    assert.match(await page.locator("#request-quotes").innerText(),/No longer available/);
+    assert.deepEqual(posts,[]);
+    console.log("PASS: expired quote follow-up, copy and explicit withdrawal");
+  }finally{await page.close();}
+}
+
 async function verifyClosedDesk(browser) {
   const page=await browser.newPage({viewport:{width:390,height:844}});
   await page.route("**/api/admin/status.php*",route=>route.fulfill({
@@ -524,6 +556,7 @@ async function verifyClosedDesk(browser) {
     await verifyFreshAdminSignIn(browser);
     await verifyReviewAndInbox(browser);
     await verifyOrderPlanning(browser);
+    await verifyQuoteFollowup(browser);
     console.log("ADMIN_BROWSER_SMOKE=PASS");
   } finally {await browser.close();}
 })().catch(error=>{

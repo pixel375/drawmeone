@@ -20,7 +20,7 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
 <meta name="theme-color" content="#151317">
 <title>Artist's Desk · Draw Me One</title>
 <link rel="stylesheet" href="./panel.css?v=28">
-<script defer src="./panel.js?v=27"></script>
+<script defer src="./panel.js?v=28"></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to dashboard</a>
@@ -78,6 +78,7 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
       <div class="section-intro"><h2>At a glance</h2><p>Activity from the connected database.</p></div>
       <div class="stats">
         <article><span>REQUESTS TO REVIEW</span><strong id="stat-requests">—</strong><small>Submitted or requiring clarification</small><button type="button" class="quiet stat-shortcut" data-request-queue="review">Review requests</button></article>
+        <article><span>QUOTE FOLLOW-UP</span><strong id="stat-quote-followup">—</strong><small>Expired, declined or inactive offers</small><button type="button" class="quiet stat-shortcut" data-request-queue="quote_followup">Review quotes</button></article>
         <article><span>ACTIVE ORDERS</span><strong id="stat-orders">—</strong><small>Awaiting arrangements or in progress</small><button type="button" class="quiet stat-shortcut" data-request-queue="orders">Open order queue</button></article>
         <article><span>ORDERS DUE SOON</span><strong id="stat-due">—</strong><small>Agreed date within seven days or overdue</small><button type="button" class="quiet stat-shortcut" data-request-queue="due">View deadlines</button></article>
         <article><span>PAYMENTS TO CHECK</span><strong id="stat-payments">—</strong><small>Require manual verification</small></article>
@@ -104,7 +105,7 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
           <input id="request-list-query" type="search" maxlength="80" placeholder="Search commissions">
         </label>
         <label for="request-list-filter">Request status
-          <select id="request-list-filter"><option value="all">All requests</option><option value="review">Needs review</option><option value="quote_waiting">Awaiting quote decision</option><option value="accepted">Accepted quote, no order</option><option value="orders">Active orders</option><option value="due">Due soon or overdue</option><option value="other">Other statuses</option></select>
+          <select id="request-list-filter"><option value="all">All requests</option><option value="review">Needs review</option><option value="quote_waiting">Awaiting quote decision</option><option value="quote_followup">Quotes needing follow-up</option><option value="accepted">Accepted quote, no order</option><option value="orders">Active orders</option><option value="due">Due soon or overdue</option><option value="other">Other statuses</option></select>
         </label>
         <button type="submit" class="quiet">Search</button>
         <button type="button" class="quiet" id="request-list-refresh">Refresh</button>

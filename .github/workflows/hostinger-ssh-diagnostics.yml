@@ -306,7 +306,7 @@ jobs:
             echo "mobile_artist_desk=stale_or_missing_mobile_layout"
             exit 1
           }
-          [[ "$desk_page" == *'panel.js?v=27'* ]] &&
+          [[ "$desk_page" == *'panel.js?v=28'* ]] &&
           [[ "$desk_page" == *'id="artwork-filter"'* ]] &&
           [[ "$desk_page" == *'id="artwork-unpublish-selected"'* ]] || {
             echo "artist_artwork_library=stale_html"
@@ -316,7 +316,7 @@ jobs:
             echo "artist_artwork_library=stale_css"
             exit 1
           }
-          desk_js=$(curl -fsSL --max-time 15 "https://drawmeone.com/studio-admin/panel.js?v=27")
+          desk_js=$(curl -fsSL --max-time 15 "https://drawmeone.com/studio-admin/panel.js?v=28")
           [[ "$desk_js" == *'artwork-unpublish-selected'* ]] &&
           [[ "$desk_js" == *'No artworks match this view.'* ]] || {
             echo "artist_artwork_library=stale_js"
@@ -361,14 +361,14 @@ jobs:
           # Public commission intake remains closed, but its signed-in history
           # assets must include the new browser-only filters and status labels.
           commission_page=$(curl -fsSL --max-time 15 "https://drawmeone.com/commission.html")
-          [[ "$commission_page" == *'commission.js?v=29'* ]] &&
+          [[ "$commission_page" == *'commission.js?v=30'* ]] &&
           [[ "$commission_page" == *'commission.css?v=27'* ]] &&
           [[ "$commission_page" == *'id="request-history-search"'* ]] &&
           [[ "$commission_page" == *'id="request-history-filter"'* ]] || {
             echo "customer_history=stale_html"
             exit 1
           }
-          commission_js=$(curl -fsSL --max-time 15 "https://drawmeone.com/commission.js?v=29")
+          commission_js=$(curl -fsSL --max-time 15 "https://drawmeone.com/commission.js?v=30")
           [[ "$commission_js" == *'function renderRequestHistory()'* ]] &&
           [[ "$commission_js" == *'readableRequestStatus(r.status)'* ]] &&
           [[ "$commission_js" == *'requestsFetchSequence'* ]] || {
@@ -413,6 +413,13 @@ jobs:
             echo "order_planning=stale_assets"
             exit 1
           }
+          [[ "$desk_page" == *'id="stat-quote-followup"'* ]] &&
+          [[ "$desk_js" == *'function withdrawQuote(quoteId)'* ]] &&
+          [[ "$commission_js" == *'quote_inactive'* ]] || {
+            echo "quote_followup=stale_assets"
+            exit 1
+          }
+          echo "quote_followup=deployed"
           echo "order_planning=deployed"
           echo "commission_workspace=deployed"
           echo "customer_history=deployed"

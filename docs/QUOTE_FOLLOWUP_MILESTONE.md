@@ -1,0 +1,3 @@
+# Quote follow-up and expiry milestone
+
+Order planning passed all automated suites and live diagnostics. This milestone adds a dedicated follow-up queue and counter for expired, declined and inactive offers, sorts due orders by earliest date, makes quote history copyable to a new draft, and allows explicit withdrawal of unaccepted sent offers. Withdrawal preserves the immutable version using the existing superseded status (customer label: withdrawn or replaced); audit distinguishes withdrawal. Existing accepted quotes and orders cannot be withdrawn. Customer detail and history now use the same current stage. No email, payment, policy or launch switch changes. CI/live verification pending.

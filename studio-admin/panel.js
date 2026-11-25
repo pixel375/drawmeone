@@ -75,6 +75,7 @@
       "stat-requests": data.counts?.requests_for_review,
       "stat-orders": data.counts?.active_orders,
       "stat-due": data.counts?.orders_due_soon,
+      "stat-quote-followup": data.counts?.quotes_to_follow_up,
       "stat-payments": data.counts?.payments_to_verify,
       "stat-messages": data.counts?.messages_last_seven_days,
     };
@@ -130,7 +131,7 @@
   function workflowLabel(stage) {
     const labels={submitted:"Awaiting review",clarification_needed:"Clarification needed",
       quote_available:"Awaiting quote decision",quote_accepted:"Quote accepted",quote_expired:"Quote expired",
-      quote_declined:"Quote declined",awaiting_arrangement:"Awaiting payment arrangements",
+      quote_declined:"Quote declined",quote_inactive:"Quote no longer available",awaiting_arrangement:"Awaiting payment arrangements",
       in_progress:"Artwork in progress",queued:"Queued",drawing:"Drawing in progress",
       awaiting_feedback:"Awaiting feedback",revision:"Revisions in progress",
       ready_for_delivery:"Ready for delivery",completed:"Completed",rejected:"Declined",cancelled:"Cancelled"};
@@ -353,19 +354,20 @@
       card.className = "request-quote-card";
       card.append(
         textNode("strong", "Version " + quote.version_number +
-          " · " + (quote.status || "draft") +
+          " · " + (quote.status === "sent" && quote.is_expired ? "Expired" : quote.status === "superseded" ? "No longer available" : quote.status || "draft") +
           " · " + formatQuoteMoney(quote.total_minor,quote.currency)),
         textNode("p", quote.scope_description || ""),
         textNode("small", "Revisions included: " + quote.revision_allowance +
           " · Created: " + (quote.created_at || ""))
       );
-      if (quote.status === "draft") {
+      if(quote.sent_at)card.append(textNode("small","Released: "+quote.sent_at+" UTC · Valid until: "+(quote.validity_ends_at||"Not specified")+" UTC"));
+      if (quoteDraftAllowed && !alreadyAccepted && ["draft","sent","declined","superseded"].includes(quote.status)) {
         const copy = document.createElement("button");
         copy.type = "button";
         copy.className = "quiet request-open";
         copy.textContent = "Use as starting point for new version";
         copy.addEventListener("click", () => {
-          if (!requestWriteEnabled || requestBusy) return;
+          if (!quoteDraftAllowed || requestBusy) return;
           $("quote-currency").value = quote.currency === "USD" ? "USD" : "CAD";
           $("quote-scope").value = quote.scope_description || "";
           $("quote-revisions").value = String(quote.revision_allowance);
@@ -396,6 +398,13 @@
         actions.append(label,publish);
         card.append(actions);
       }
+      if(quote.status==="sent" && quoteDeliveryEnabled && !alreadyAccepted){
+        const withdraw=textNode("button","Withdraw offer","quiet");
+        withdraw.type="button";
+        withdraw.dataset.quoteWithdraw="true";
+        withdraw.addEventListener("click",()=>withdrawQuote(Number(quote.id)));
+        card.append(withdraw);
+      }
       if (Array.isArray(quote.lines)) {
         const list = document.createElement("ul");
         for (const line of quote.lines) {
@@ -408,6 +417,25 @@
     }
   }
 
+
+  async function withdrawQuote(quoteId) {
+    if(!quoteDeliveryEnabled||requestBusy||selectedRequestId===null||!Number.isSafeInteger(quoteId))return;
+    if(!window.confirm("Withdraw this offer? The customer will no longer be able to accept it. Its history is preserved."))return;
+    const id=selectedRequestId;
+    requestBusy=true;updateRequestButtons();
+    try{
+      const {response,data}=await post("request-actions.php",{action:"withdraw_quote",request_id:id,quote_id:quoteId,confirm_withdrawal:true},csrf);
+      if(response.status===401)return sessionExpired();
+      if(!response.ok||!data.ok){
+        requestText("request-detail-status","Offer not withdrawn. Refresh before retrying.");
+        return;
+      }
+      await openRequest(id);
+      await requests();
+      requestText("request-detail-status","Offer withdrawn; history retained. No payment or email sent.");
+    }catch(_){requestText("request-detail-status","Withdrawal not confirmed. Refresh before retrying.");}
+    finally{requestBusy=false;updateRequestButtons();}
+  }
 
   async function releaseQuote(quoteId, validityDays) {
     const requestId = selectedRequestId;
@@ -571,6 +599,7 @@
     $("request-thread-full").disabled = requestBusy;
     $("request-review-save").disabled = requestBusy || !reviewStatus;
     $("request-review-status").disabled = requestBusy || !reviewStatus;
+    for(const button of $("request-quotes").querySelectorAll("button[data-quote-withdraw]"))button.disabled=requestBusy;
     for(const field of $("request-orders").querySelectorAll(".order-date-form input,.order-date-form button"))field.disabled=requestBusy;
     for (const field of $("request-note-form").querySelectorAll("textarea")) {
       field.disabled = !requestWriteEnabled || requestBusy;
