@@ -1,1 +1,1 @@
-Verify gallery curation and shared public theme assets; read-only.
+Verify public portfolio filters, gallery curation and public theme; read-only.

@@ -417,6 +417,9 @@ async function checkPublicTheme(browser){
     assert.equal(await page.locator("html").getAttribute("data-public-mode"),"light");
     await page.getByRole("button",{name:"Switch to dark mode"}).click();
     assert.equal(await page.evaluate(()=>localStorage.getItem("dmo-visitor-mode")),"dark");
+    await page.getByRole("navigation",{name:"Filter published drawings"}).getByRole("link",{name:"Portrait",exact:true}).click();
+    await page.waitForURL("**/portfolio.php?view=portrait");
+    assert.equal(await page.getByRole("link",{name:"Portrait",exact:true}).getAttribute("aria-current"),"page");
     await page.goto(base+"/policy.php?version=invalid&sha256="+"0".repeat(64));
     await page.getByRole("button",{name:"Switch to light mode"}).waitFor();
     assert.equal(await page.locator("html").getAttribute("data-public-mode"),"dark");

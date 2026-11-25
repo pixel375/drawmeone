@@ -392,6 +392,17 @@ try {
     art_assert($status===409,'stale_batch_replay_rejected');
     [$status,$manifest]=art_http('/api/portfolio.php');
     art_assert($status===200&&count($manifest['works'])===2,'both_published_together');
+    [$status,,$featuredDirectory]=art_http('/portfolio.php?view=featured');
+    art_assert($status===200&&str_contains($featuredDirectory,'href="/artwork.php?id='.$id.'"')&&!str_contains($featuredDirectory,'href="/artwork.php?id='.$id2.'"'),'featured_filter_only_featured_published_art');
+    [$status,,$landscapeDirectory]=art_http('/portfolio.php?view=landscape');
+    art_assert($status===200&&str_contains($landscapeDirectory,'href="/artwork.php?id='.$id.'"'),'landscape_filter_includes_landscape');
+    if(function_exists('exif_read_data')){
+        art_assert(!str_contains($landscapeDirectory,'href="/artwork.php?id='.$id2.'"'),'landscape_excludes_oriented_portrait');
+        [$status,,$portraitDirectory]=art_http('/portfolio.php?view=portrait');
+        art_assert($status===200&&str_contains($portraitDirectory,'href="/artwork.php?id='.$id2.'"')&&!str_contains($portraitDirectory,'href="/artwork.php?id='.$id.'"'),'portrait_filter_uses_oriented_dimensions');
+    }
+    [$status]=art_http('/portfolio.php?view=invalid');
+    art_assert($status===404,'invalid_portfolio_filter_rejected');
     [$status,,$firstPage]=art_http('/artwork.php?id='.$id);
     art_assert($status===200&&str_contains($firstPage,'rel="next" href="/artwork.php?id='.$id2.'"')&&!str_contains($firstPage,'rel="prev"'),'featured_drawing_next_navigation');
     [$status,,$secondPage]=art_http('/artwork.php?id='.$id2);
@@ -413,6 +424,8 @@ try {
     art_assert($status===200&&$result['updated']===2,'atomic_batch_unpublish');
     [$status,$manifest]=art_http('/api/portfolio.php');
     art_assert($status===200&&$manifest['works']===[],'both_removed_together');
+    [$status,,$featuredDirectory]=art_http('/portfolio.php?view=featured');
+    art_assert($status===200&&!str_contains($featuredDirectory,'href="/artwork.php?id='),'filtered_directory_excludes_unpublished_art');
     [$status]=art_http('/artwork.php?id='.$id2);
     art_assert($status===404,'adjacent_drawing_unpublished_detail_revoked');
     $audit=$db->query(
