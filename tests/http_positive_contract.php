@@ -16,6 +16,7 @@ if (PHP_SAPI !== 'cli' || getenv('DMO_CI_INTEGRATION') !== '1' ||
     exit(2);
 }
 require_once dirname(__DIR__) . '/app/auth.php';
+require_once dirname(__DIR__) . '/app/integrity.php';
 
 function qa_positive(bool $condition, string $name): void
 {
@@ -715,6 +716,46 @@ try {
     qa_positive($code===200&&$closed['status']==='cancelled','customer_withdraws_unaccepted_request');
     [$code,$detail]=qa_http('/api/request.php?ref='.$referenceB,$tokenB);
     qa_positive($code===200&&$detail['quotes'][0]['status']==='superseded'&&$detail['can_withdraw']===false&&$detail['can_reply']===false,'withdrawal_invalidates_offer_but_preserves_history');
+    // Read-only monitoring must detect corrupted states without repairing them.
+    $baseline=dmo_integrity_records($db);
+    $newChecks=['schema_reference_missing','schema_delivery_missing','schema_review_missing','schema_checkout_missing',
+        'cancelled_request_live_quote','cancelled_request_live_order','cancelled_order_unclosed_invoice',
+        'cancelled_order_staged_artwork','cancelled_order_proof'];
+    foreach($newChecks as $check)qa_positive(isset($baseline[$check])&&$baseline[$check]===0,'integrity_clean_'.$check);
+    $db->beginTransaction();
+    try{
+        $db->exec("DELETE FROM dmo_schema_migrations WHERE version='006_checkout_links'");
+        qa_positive(dmo_integrity_records($db)['schema_checkout_missing']===1,'integrity_missing_checkout_migration_detected');
+        qa_positive(dmo_integrity_checkout_crypto($db)['complete']===false,'missing_checkout_schema_not_clean');
+    }finally{$db->rollBack();}
+    $db->beginTransaction();
+    try{
+        $db->prepare("UPDATE dmo_quotes SET status='sent' WHERE id=:id")->execute(['id'=>$draftB['quote_id']]);
+        $db->prepare("UPDATE dmo_orders SET status='awaiting_arrangement' WHERE id=:id")->execute(['id'=>$newOrder['order_id']]);
+        $db->prepare("UPDATE dmo_checkout_links SET status='suspended',revoked_at=NULL WHERE id=:id")->execute(['id'=>$link['link_id']]);
+        $counts=dmo_integrity_records($db);
+        qa_positive($counts['cancelled_request_live_quote']===1&&$counts['cancelled_request_live_order']===1,'integrity_cancelled_request_conflicts_detected');
+        $db->prepare("UPDATE dmo_orders SET status='cancelled' WHERE id=:id")->execute(['id'=>$newOrder['order_id']]);
+        qa_positive(dmo_integrity_records($db)['cancelled_order_unclosed_invoice']===1,'integrity_cancelled_order_invoice_detected');
+    }finally{$db->rollBack();}
+    $db->beginTransaction();
+    try{
+        $url='https://checkout.example.invalid/invoice/crypto-fixture';
+        $order=(int)$newOrder['order_id'];
+        $cipher=dmo_checkout_seal($url,$order);
+        $db->prepare("UPDATE dmo_checkout_links SET status='active',revoked_at=NULL,url_ciphertext=:cipher,url_fingerprint=:fingerprint WHERE id=:id")
+            ->execute(['cipher'=>$cipher,'fingerprint'=>hash_hmac('sha256',$url,dmo_checkout_key()),'id'=>$link['link_id']]);
+        $scan=dmo_integrity_checkout_crypto($db);
+        qa_positive($scan['checked']===1&&$scan['invalid']===0&&$scan['complete'],'integrity_authenticates_valid_invoice');
+        $db->prepare("UPDATE dmo_checkout_links SET url_ciphertext=:cipher WHERE id=:id")->execute(['cipher'=>dmo_checkout_seal($url,$order+1),'id'=>$link['link_id']]);
+        qa_positive(dmo_integrity_checkout_crypto($db)['invalid']===1,'integrity_detects_wrong_order_binding');
+        $db->prepare("UPDATE dmo_checkout_links SET url_ciphertext=:cipher,url_fingerprint=:fingerprint WHERE id=:id")
+            ->execute(['cipher'=>$cipher,'fingerprint'=>str_repeat('0',64),'id'=>$link['link_id']]);
+        qa_positive(dmo_integrity_checkout_crypto($db)['invalid']===1,'integrity_detects_fingerprint_mismatch');
+        $db->prepare("UPDATE dmo_checkout_links SET url_ciphertext='invalid' WHERE id=:id")->execute(['id'=>$link['link_id']]);
+        qa_positive(dmo_integrity_checkout_crypto($db)['invalid']===1,'integrity_detects_invalid_ciphertext');
+    }finally{$db->rollBack();}
+    qa_positive(dmo_integrity_checkout_crypto($db)['invalid']===0,'integrity_test_corruption_rolled_back');
     echo "DISPOSABLE_POSITIVE_HTTP=PASS\n";
 } catch(Throwable $error) {
     fwrite(STDERR,'DISPOSABLE_POSITIVE_HTTP=FAIL ('.get_class($error).

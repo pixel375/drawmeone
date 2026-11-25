@@ -8,6 +8,7 @@ if(PHP_SAPI!=='cli'||count($argv)!==2||$argv[1]!=='check'){
 try{
     $db=dmo_database();
     $records=dmo_integrity_records($db);$media=dmo_integrity_media($db);
+    $media['checkout_crypto']=dmo_integrity_checkout_crypto($db);
     $issues=array_sum($records);$complete=true;
     foreach($records as $key=>$value)echo "integrity_".$key."=".$value."\n";
     foreach($media as $key=>$row){

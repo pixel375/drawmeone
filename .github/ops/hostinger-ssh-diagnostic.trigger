@@ -1,1 +1,1 @@
-Verify gated withdrawal and unpaid cancellation interfaces; no production mutations.
+Verify offline recovery source and schema/cancellation/invoice integrity checks; no production mutations.

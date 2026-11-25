@@ -10,6 +10,8 @@ require_once __DIR__.'/checkout.php';
  */
 function dmo_integrity_records(PDO $db): array
 {
+    $schemas=['reference'=>dmo_refs_schema_ready($db),'delivery'=>dmo_delivery_schema_ready($db),
+        'review'=>dmo_review_schema_ready($db),'checkout'=>dmo_checkout_schema_ready($db)];
     $checks=[
         'order_quote_mismatch'=>"SELECT COUNT(*) FROM dmo_orders o LEFT JOIN dmo_quotes q ON q.id=o.accepted_quote_id AND q.request_id=o.request_id WHERE q.id IS NULL OR q.status<>'accepted'",
         'paid_without_evidence'=>"SELECT COUNT(*) FROM dmo_orders o JOIN dmo_quotes q ON q.id=o.accepted_quote_id WHERE o.payment_status='paid' AND NOT (".dmo_fulfillment_payment_sql().")",
@@ -18,25 +20,31 @@ function dmo_integrity_records(PDO $db): array
         'cancelled_order_conflict'=>"SELECT COUNT(*) FROM dmo_orders o JOIN dmo_commission_requests r ON r.id=o.request_id WHERE o.status='cancelled' AND (r.status<>'cancelled' OR o.payment_status<>'unverified' OR EXISTS(SELECT 1 FROM dmo_payments p WHERE p.order_id=o.id AND p.status<>'rejected'))",
         'multiple_orders'=>"SELECT COUNT(*) FROM (SELECT request_id FROM dmo_orders GROUP BY request_id HAVING COUNT(*)>1) duplicates",
     ];
-    if(dmo_checkout_schema_ready($db)){
+    $checks['cancelled_request_live_quote']="SELECT COUNT(*) FROM dmo_quotes q JOIN dmo_commission_requests r ON r.id=q.request_id WHERE r.status='cancelled' AND q.status='sent'";
+    $checks['cancelled_request_live_order']="SELECT COUNT(*) FROM dmo_orders o JOIN dmo_commission_requests r ON r.id=o.request_id WHERE r.status='cancelled' AND o.status<>'cancelled'";
+    if($schemas['checkout']){
+        $checks['cancelled_order_unclosed_invoice']="SELECT COUNT(*) FROM dmo_checkout_links l JOIN dmo_orders o ON o.id=l.order_id WHERE o.status='cancelled' AND l.status<>'revoked'";
         $checks['checkout_amount_mismatch']="SELECT COUNT(*) FROM dmo_checkout_links l JOIN dmo_orders o ON o.id=l.order_id JOIN dmo_quotes q ON q.id=o.accepted_quote_id WHERE l.currency<>q.currency OR l.amount_minor<>q.total_minor";
         $checks['checkout_multiple_unclosed']="SELECT COUNT(*) FROM (SELECT order_id FROM dmo_checkout_links WHERE status IN ('active','suspended') GROUP BY order_id HAVING COUNT(*)>1) duplicates";
-        $checks['checkout_invalid_storage']="SELECT COUNT(*) FROM dmo_checkout_links WHERE status NOT IN ('active','suspended','revoked') OR (status='active' AND (url_ciphertext='' OR revoked_at IS NOT NULL)) OR (status IN ('suspended','revoked') AND url_ciphertext<>'') OR (status='revoked' AND revoked_at IS NULL)";
+        $checks['checkout_invalid_storage']="SELECT COUNT(*) FROM dmo_checkout_links WHERE status NOT IN ('active','suspended','revoked') OR (status='active' AND (url_ciphertext='' OR revoked_at IS NOT NULL)) OR (status IN ('suspended','revoked') AND url_ciphertext<>'') OR (status='suspended' AND revoked_at IS NOT NULL) OR (status='revoked' AND revoked_at IS NULL)";
         $checks['checkout_active_after_evidence']="SELECT COUNT(*) FROM dmo_checkout_links l WHERE l.status='active' AND EXISTS (SELECT 1 FROM dmo_payments p WHERE p.order_id=l.order_id AND p.status IN ('pending_verification','verified'))";
     }
-    if(dmo_delivery_schema_ready($db)){
+    if($schemas['delivery']){
+        $checks['cancelled_order_staged_artwork']="SELECT COUNT(*) FROM dmo_delivery_drafts d JOIN dmo_orders o ON o.id=d.order_id WHERE o.status='cancelled'";
         $checks['draft_order_mismatch']="SELECT COUNT(*) FROM dmo_delivery_drafts d JOIN dmo_orders o ON o.id=d.order_id WHERE d.request_id<>o.request_id";
         $checks['delivery_missing_draft']="SELECT COUNT(*) FROM dmo_deliverables f JOIN dmo_orders o ON o.id=f.order_id LEFT JOIN dmo_delivery_drafts d ON d.order_id=o.id AND d.request_id=o.request_id AND d.storage_key=f.storage_key WHERE d.id IS NULL OR f.byte_size<>d.byte_size OR f.mime_type<>'image/webp'";
         $checks['delivery_state_mismatch']="SELECT COUNT(*) FROM dmo_deliverables f JOIN dmo_orders o ON o.id=f.order_id JOIN dmo_commission_requests r ON r.id=o.request_id WHERE o.status<>'completed' OR r.status<>'completed'";
         $checks['completed_without_delivery']="SELECT COUNT(*) FROM dmo_orders o WHERE o.status='completed' AND NOT EXISTS (SELECT 1 FROM dmo_deliverables f WHERE f.order_id=o.id)";
     }
-    if(dmo_review_schema_ready($db)){
+    if($schemas['review']&&$schemas['delivery']){
+        $checks['cancelled_order_proof']="SELECT COUNT(*) FROM dmo_artwork_reviews v JOIN dmo_orders o ON o.id=v.order_id WHERE o.status='cancelled'";
         $checks['review_draft_mismatch']="SELECT COUNT(*) FROM dmo_artwork_reviews v LEFT JOIN dmo_delivery_drafts d ON d.id=v.draft_id WHERE v.status IN ('pending','approved') AND (d.id IS NULL OR d.order_id<>v.order_id)";
         $checks['review_pending_multiple']="SELECT COUNT(*) FROM (SELECT order_id FROM dmo_artwork_reviews WHERE status='pending' GROUP BY order_id HAVING COUNT(*)>1) duplicates";
         $checks['review_allowance_exceeded']="SELECT COUNT(*) FROM (SELECT o.id FROM dmo_orders o JOIN dmo_quotes q ON q.id=o.accepted_quote_id JOIN dmo_artwork_reviews v ON v.order_id=o.id AND v.status='revision_requested' GROUP BY o.id,q.revision_allowance HAVING COUNT(*)>q.revision_allowance) exceeded";
         $checks['delivery_approval_mismatch']="SELECT COUNT(*) FROM dmo_deliverables f JOIN dmo_artwork_reviews v ON v.id=(SELECT x.id FROM dmo_artwork_reviews x WHERE x.order_id=f.order_id ORDER BY x.round_number DESC LIMIT 1) LEFT JOIN dmo_delivery_drafts d ON d.id=v.draft_id WHERE v.status<>'approved' OR d.id IS NULL OR d.storage_key<>f.storage_key";
     }
     $counts=[];
+    foreach($schemas as $name=>$ready)$counts['schema_'.$name.'_missing']=$ready?0:1;
     foreach($checks as $key=>$sql)$counts[$key]=(int)$db->query($sql)->fetchColumn();
     return $counts;
 }
@@ -90,4 +98,43 @@ function dmo_integrity_media(PDO $db,int $limit=10000): array
         $result[$kind]=['checked'=>$checked,'invalid'=>$invalid,'complete'=>$q->fetchColumn()===false];
     }
     return $result;
+}
+
+/**
+ * CLI-only bounded authentication of stored active invoice ciphertext.
+ * Verify the original order binding, HMAC and stored host, independently
+ * of the current provider configuration (which may have changed).
+ * No redirects, external calls, customer data or decrypted URLs in output.
+ */
+function dmo_integrity_checkout_crypto(PDO $db,int $limit=10000): array
+{
+    if($limit<1||$limit>10000)throw new InvalidArgumentException('Invalid invoice scan limit');
+    if(!dmo_checkout_schema_ready($db))return ['checked'=>0,'invalid'=>0,'complete'=>false];
+    $checked=0;$invalid=0;$last=0;
+    $keyReady=strlen(dmo_config('DMO_APP_KEY'))>=32&&function_exists('openssl_decrypt');
+    $key=$keyReady?dmo_checkout_key():null;
+    while($checked<$limit){
+        $size=min(100,$limit-$checked);
+        $q=$db->prepare("SELECT id,order_id,url_ciphertext,url_fingerprint,provider_host FROM dmo_checkout_links WHERE status='active' AND id>:last ORDER BY id LIMIT ".$size);
+        $q->execute(['last'=>$last]);$rows=$q->fetchAll(PDO::FETCH_ASSOC);
+        if(!$rows)break;
+        foreach($rows as $row){
+            $last=(int)$row['id'];$checked++;
+            $cipher=(string)$row['url_ciphertext'];
+            if(!$keyReady||strlen($cipher)>1500){$invalid++;continue;}
+            $raw=base64_decode($cipher,true);
+            if(!is_string($raw)||strlen($raw)<29||base64_encode($raw)!==$cipher){$invalid++;continue;}
+            $url=openssl_decrypt(substr($raw,28),'aes-256-gcm',$key,OPENSSL_RAW_DATA,substr($raw,0,12),substr($raw,12,16),(string)$row['order_id']);
+            if(!is_string($url)||strlen($url)>1000||
+                !preg_match('~^https://([a-z0-9.-]+)/[A-Za-z0-9_-]+(?:/[A-Za-z0-9_-]+)*$~D',$url,$parts)||
+                $parts[1]!==$row['provider_host']||
+                !hash_equals((string)$row['url_fingerprint'],hash_hmac('sha256',$url,$key))){
+                $invalid++;
+            }
+            unset($url);
+        }
+    }
+    $q=$db->prepare("SELECT id FROM dmo_checkout_links WHERE status='active' AND id>:last LIMIT 1");
+    $q->execute(['last'=>$last]);
+    return ['checked'=>$checked,'invalid'=>$invalid,'complete'=>$q->fetchColumn()===false];
 }

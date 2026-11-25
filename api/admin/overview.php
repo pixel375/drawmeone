@@ -51,7 +51,7 @@ try {
     $retention=dmo_retention_report($db);
     $readiness = [
         ['key'=>'integrity','label'=>'Order and payment record consistency','status'=>$integrityIssues===0?'ready':'blocked',
-         'detail'=>$integrityIssues===0?'No inconsistencies detected in current database checks; file checks run separately':$integrityIssues.' failed record checks require operator review'],
+         'detail'=>$integrityIssues===0?'No inconsistencies detected in current database checks; private-file and invoice authentication checks run separately':$integrityIssues.' affected records or missing schema checks require operator review'],
         ['key'=>'review_schema','label'=>'Artwork review schema','status'=>dmo_review_schema_ready($db)?'ready':'blocked','detail'=>'Required for optional proof approval and included revisions'],
         ['key'=>'review','label'=>'Customer proof review','status'=>dmo_review_enabled($db)?'ready':'blocked','detail'=>'Optional watermarked proof and quote-based revision allowances'],
         ['key' => 'mail', 'label' => 'Transactional email',
@@ -97,7 +97,7 @@ try {
              : 'Backup freshness, file permissions or recovery-key presence needs attention'],
         ['key' => 'offsite', 'label' => 'Independent off-site recovery',
          'status' => 'planned',
-         'detail' => 'Off-site copy and separately stored recovery key not configured'],
+         'detail' => 'Offline verifier implemented; independent ciphertext and recovery/app key custody not configured'],
         ['key'=>'privacy_self_service','label'=>'Customer privacy self-service','status'=>dmo_config('DMO_PRIVACY_SELF_SERVICE_ENABLED')==='1'?'ready':'blocked','detail'=>'Scoped customer export and manual privacy requests; no automated deletion'],
         ['key'=>'payment_exceptions','label'=>'Payment exceptions','status'=>dmo_payment_exceptions_enabled()?'ready':'blocked','detail'=>'Manual dispute holds and external full refund records; no money movement'],
         ['key'=>'manual_payments','label'=>'Manual payment reconciliation','status'=>dmo_manual_payments_enabled()?'ready':'blocked',
