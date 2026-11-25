@@ -141,6 +141,14 @@ try {
     [$status,$badUpload] = art_http('/api/admin/artwork-upload.php',$token,$csrf,null,$bad);
     art_assert($status===422,'invalid_image_rejected');
 
+    $lock=$db->prepare('SELECT GET_LOCK(:name,0)');$lock->execute(['name'=>dmo_artwork_upload_lock_name($db)]);
+    art_assert((int)$lock->fetchColumn()===1,'disposable_upload_lock_acquired');
+    try{
+        [$status,$busy]=art_http('/api/admin/artwork-upload.php',$token,$csrf,null,$png);
+        art_assert($status===409&&($busy['error']??null)==='artwork_upload_busy','parallel_artwork_upload_rejected_without_insert');
+    }finally{
+        $unlock=$db->prepare('SELECT RELEASE_LOCK(:name)');$unlock->execute(['name'=>dmo_artwork_upload_lock_name($db)]);
+    }
     [$status,$uploaded] = art_http('/api/admin/artwork-upload.php',$token,$csrf,null,$png);
     art_assert($status===201 && is_int($uploaded['artwork_id']??null) &&
         ($uploaded['visibility']??'')==='draft',
@@ -184,7 +192,7 @@ try {
     [$status,$json,$bytes,$headers]=art_http(
         '/api/admin/artwork-preview.php?id='.$id.'&v=display',$token);
     art_assert($status===200 && str_contains(strtolower($headers),'image/webp') &&
-        str_contains(strtolower($headers),'no-store') &&
+        str_contains(strtolower($headers),'no-store') && str_contains(strtolower($headers),'noindex') &&
         substr($bytes,0,4)==='RIFF' && substr($bytes,8,4)==='WEBP',
         'artist_draft_preview_private_nostore_webp');
     [$status,$list]=art_http('/api/admin/artworks.php',$token);
@@ -280,6 +288,12 @@ try {
     [$status,$result]=art_http('/api/admin/artworks.php',$token,$csrf,
         ['id'=>$id,'action'=>'set_order','sort_order'=>-15]);
     art_assert($status===200,'artwork_sort_position_saved');
+    [$status,$conflict]=art_http('/api/admin/artworks.php',$token,$csrf,['id'=>$id,'action'=>'set_order','sort_order'=>22,'expected'=>0]);
+    art_assert($status===409&&($conflict['error']??null)==='artwork_field_changed','stale_sort_update_rejected');
+    [$status,$conflict]=art_http('/api/admin/artworks.php',$token,$csrf,['id'=>$id,'action'=>'set_alt','alt'=>'Stale description','expected'=>'']);
+    art_assert($status===409&&($conflict['error']??null)==='artwork_field_changed','stale_accessibility_description_rejected');
+    [$status]=art_http('/api/admin/artworks.php',$token,$csrf,['id'=>$id,'action'=>'set_order','sort_order'=>-15,'expected'=>-15]);
+    art_assert($status===200,'current_sort_expectation_accepted');
     [$status,$list]=art_http('/api/admin/artworks.php',$token);
     art_assert($status===200 && $list['artworks'][0]['featured']===true &&
         $list['artworks'][0]['sort_order']===-15,

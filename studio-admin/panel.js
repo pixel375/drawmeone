@@ -1599,7 +1599,7 @@
           artworkState("Sort order must be a whole number between -10000 and 10000.");
           return;
         }
-        if(artworkDraftCanSave(work,"sort_order"))updateArtwork(work.id,"set_order",{sort_order:value});
+        if(artworkDraftCanSave(work,"sort_order"))updateArtwork(work.id,"set_order",{sort_order:value,expected:work.sort_order});
       });
       order.append(input,save);
       const accessibility=document.createElement("details");
@@ -1609,7 +1609,7 @@
       alt.setAttribute("aria-label","Accessibility description for drawing "+work.id);
       alt.placeholder="Describe what is visible (optional)";
       const saveAlt=textNode("button","Save description","quiet");saveAlt.type="button";
-      saveAlt.addEventListener("click",()=>{if(artworkDraftCanSave(work,"alt"))updateArtwork(work.id,"set_alt",{alt:alt.value.trim()});});
+      saveAlt.addEventListener("click",()=>{if(artworkDraftCanSave(work,"alt"))updateArtwork(work.id,"set_alt",{alt:alt.value.trim(),expected:work.alt||""});});
       accessibility.append(summary,alt,saveAlt);
       if(work.visibility==="published"){
         const link=textNode("a","View public drawing","small");link.href="../artwork.php?id="+work.id;link.target="_blank";link.rel="noopener noreferrer";body.append(title,state,link,pick,actions,order,accessibility);
@@ -1652,7 +1652,10 @@
       },csrf);
       if (response.status === 401) return sessionExpired();
       if (!response.ok || !data.ok) {
-        artworkState("Change not saved: " + (data.error || "HTTP " + response.status));
+        if(response.status===409&&data.error==="artwork_field_changed"){
+          artworkWriteEnabled=false;
+          artworkState("Change not saved: another session updated this field. Refresh the library to review the conflict; unsaved values are retained.");
+        }else artworkState("Change not saved: " + (data.error || "HTTP " + response.status));
         return;
       }
       if(action==="set_order"||action==="set_alt")artworkDrafts.delete(artworkDraftKey(id,action==="set_order"?"sort_order":"alt"));

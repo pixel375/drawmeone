@@ -6,6 +6,11 @@ require_once __DIR__ . '/admin.php';
 const DMO_ARTWORK_MAX_BYTES = 8 * 1024 * 1024;
 const DMO_ARTWORK_MAX_PIXELS = 16000000;
 
+/** Database-scoped, bounded upload lock; released when nonpersistent PDO closes. */
+function dmo_artwork_upload_lock_name(PDO $db): string
+{
+    return 'dmo-artwork-upload-'.substr(hash('sha256',(string)$db->query('SELECT DATABASE()')->fetchColumn()),0,40);
+}
 function dmo_artwork_writes_enabled(): bool
 {
     return dmo_config('DMO_ARTWORK_WRITES_ENABLED') === '1';

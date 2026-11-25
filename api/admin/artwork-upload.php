@@ -31,6 +31,11 @@ try {
         $file['size'] > DMO_ARTWORK_MAX_BYTES) {
         dmo_json(422, ['ok' => false, 'error' => 'invalid_upload']);
     }
+    // Serialize the count and insert across separate administrator sessions.
+    // This connection is nonpersistent and releases the lock on request exit.
+    $lock=$db->prepare('SELECT GET_LOCK(:name,3)');
+    $lock->execute(['name'=>dmo_artwork_upload_lock_name($db)]);
+    if((int)$lock->fetchColumn()!==1)dmo_json(409,['ok'=>false,'error'=>'artwork_upload_busy']);
     $count = (int) $db->query('SELECT COUNT(*) FROM dmo_portfolio_artworks')->fetchColumn();
     if ($count >= 2000) {
         dmo_json(422, ['ok' => false, 'error' => 'artwork_library_limit']);

@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
 require_once dirname(__DIR__, 2) . '/app/artwork.php';
+header('Cache-Control: private, no-store');
+header('X-Robots-Tag: noindex, nofollow, noarchive');
 dmo_reject_non_get();
 try {
     $db = dmo_database();

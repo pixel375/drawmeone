@@ -80,13 +80,25 @@ try {
         $update = 'sort_order = :value';
     }
 
+    // New dashboard clients supply the original field value for optimistic
+    // concurrency checks. Older clients remain compatible during deployment.
+    $hasExpected=array_key_exists('expected',$input);
+    if($hasExpected&&(
+        ($action==='set_order'&&(!is_int($input['expected'])||$input['expected']<-10000||$input['expected']>10000))||
+        ($action==='set_alt'&&(!is_string($input['expected'])||strlen($input['expected'])>240||!preg_match('//u',$input['expected'])))||
+        !in_array($action,['set_order','set_alt'],true)
+    ))dmo_json(422,['ok'=>false,'error'=>'invalid_expected_artwork_value']);
     $db->beginTransaction();
     try {
-        $stmt = $db->prepare('SELECT visibility FROM dmo_portfolio_artworks WHERE id = :id FOR UPDATE');
+        $stmt = $db->prepare('SELECT visibility,sort_order,alt_text FROM dmo_portfolio_artworks WHERE id = :id FOR UPDATE');
         $stmt->execute(['id' => $id]);
-        if ($stmt->fetchColumn() === false) {
+        $current=$stmt->fetch();
+        if (!is_array($current)) {
             $db->rollBack();
             dmo_json(404, ['ok' => false, 'error' => 'artwork_not_found']);
+        }
+        if($hasExpected&&$input['expected']!==($action==='set_order'?(int)$current['sort_order']:(string)($current['alt_text']??''))){
+            $db->rollBack();dmo_json(409,['ok'=>false,'error'=>'artwork_field_changed']);
         }
         if($action==='set_visibility'&&$value==='published'&&!dmo_artwork_publishable($db,$id)){
             $db->rollBack();dmo_json(422,['ok'=>false,'error'=>'optimized_artwork_missing']);
