@@ -312,3 +312,5 @@ footer{padding:28px 0 70px;border-top:1px solid var(--line);color:var(--muted);f
 .payment-evidence-form{display:grid;gap:10px;min-width:0}.payment-evidence-form label{display:grid;gap:5px;min-width:0}.payment-evidence-form .order-date-ack{display:flex;align-items:flex-start;gap:8px}.payment-evidence-form input,.payment-evidence-form select{max-width:100%;min-width:0}.payment-evidence-form button{min-height:44px;white-space:normal}
 
 #request-delivery-drafts .notification-card button{justify-self:start;max-width:100%;white-space:normal}
+
+#request-delivery-drafts .notification-card p{white-space:pre-wrap;overflow-wrap:anywhere}

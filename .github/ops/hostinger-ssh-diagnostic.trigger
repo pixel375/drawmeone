@@ -1,1 +1,1 @@
-Verify payment reconciliation and gated fulfillment assets and unchanged production gates. Read-only.
+Read-only verify proof review and delivery assets; no commercial activation.

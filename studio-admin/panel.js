@@ -653,7 +653,7 @@
     finally{requestBusy=false;updateRequestButtons();}
   }
 
-  function renderDeliveryDrafts(orders,drafts,enabled,options=[]) {
+  function renderDeliveryDrafts(orders,drafts,enabled,options=[],reviews=[]) {
     const root=$("request-delivery-drafts");
     root.replaceChildren();
     if(!enabled)root.append(textNode("p","Private staging is disabled until approved.","small"));
@@ -663,6 +663,16 @@
       for(const status of option.next||[]){
         const button=textNode("button",status==="in_progress"?(option.status==="ready_for_delivery"?"Return to production":"Start production"):"Mark ready for delivery","quiet");button.type="button";
         button.addEventListener("click",()=>changeFulfillment({action:"set_production_status",order_id:option.order_id,expected_status:option.status,status}));card.append(button);
+      }
+      root.append(card);
+    }
+    for(const review of reviews){
+      const card=document.createElement("article");card.className="notification-card";
+      card.append(textNode("strong","Customer review · Order #"+review.order_id),
+        textNode("p","Included revisions used: "+review.revisions_used+" / "+review.revision_allowance,"small"));
+      if(review.latest){
+        card.append(textNode("p","Proof "+review.latest.round+" · "+review.latest.status.replaceAll("_"," "),"small"));
+        if(review.latest.feedback)card.append(textNode("p",review.latest.feedback,"small"));
       }
       root.append(card);
     }
@@ -679,11 +689,17 @@
       preview.href=link.href+"&view=preview";preview.target="_blank";preview.rel="noopener noreferrer";
       const actions=document.createElement("div");actions.className="delivery-draft-actions";
       actions.append(preview,link);
-      if(!draft.released && options.some(o=>o.order_id===draft.order_id&&o.can_release===true)){
+      const review=reviews.find(r=>r.order_id===draft.order_id);
+      const latest=review?.latest;
+      if(!draft.released&&review?.can_offer===true&&latest?.draft_id!==draft.id){
+        const offer=textNode("button","Send watermarked proof for review","quiet");offer.type="button";
+        offer.addEventListener("click",()=>changeFulfillment({action:"offer_artwork_review",order_id:draft.order_id,draft_id:draft.id}));actions.append(offer);
+      }
+      if(!draft.released && (!latest||(latest.status==="approved"&&latest.draft_id===draft.id)) && options.some(o=>o.order_id===draft.order_id&&o.can_release===true)){
         const release=textNode("button","Release final artwork","quiet");release.type="button";
         release.addEventListener("click",()=>changeFulfillment({action:"release_delivery",order_id:draft.order_id,draft_id:draft.id,confirm_final:true}));actions.append(release);
       }
-      if(enabled&&!draft.released){
+      if(enabled&&!draft.released&&!(latest?.draft_id===draft.id&&["pending","approved"].includes(latest.status))){
         const remove=textNode("button","Remove draft","quiet");
         remove.type="button";remove.disabled=requestBusy;
         remove.addEventListener("click",()=>removeDeliveryDraft(draft.id));
@@ -713,14 +729,14 @@
   async function changeFulfillment(body){
     if(requestBusy||selectedRequestId===null)return;
     if(!window.confirm(body.action==="release_delivery"?
-      "Release this exact drawing to the customer and complete the order? The customer can download it immediately. No charge or email is sent.":"Update this paid order's production status?"))return;
+      "Release this exact drawing to the customer and complete the order? The customer can download it immediately. No charge or email is sent.":body.action==="offer_artwork_review"?"Share a reduced, watermarked proof with the customer for approval or included revisions?":"Update this paid order's production status?"))return;
     const id=selectedRequestId;requestBusy=true;updateRequestButtons();
     try{
       const {response,data}=await post("request-actions.php",{...body,request_id:id},csrf);
       if(response.status===401)return sessionExpired();
       if(!response.ok||!data.ok){requestText("request-detail-status","Order not changed ("+(data.error||response.status)+").");return;}
       await openRequest(id);await requests();
-      requestText("request-detail-status",body.action==="release_delivery"?"Final artwork released to customer. Order completed.":"Production status updated.");
+      requestText("request-detail-status",body.action==="release_delivery"?"Final artwork released to customer. Order completed.":body.action==="offer_artwork_review"?"Proof available for customer review. Final artwork remains private.":"Production status updated.");
     }catch(_){requestText("request-detail-status","Order update not confirmed. Refresh before retrying.");}
     finally{requestBusy=false;updateRequestButtons();}
   }
@@ -918,7 +934,7 @@
     renderRequestReferences(item.references);
     renderAdminOrders(item.orders, item.quotes);
     renderNotifications(data.notification_options,data.notifications_enabled===true);
-    renderDeliveryDrafts(item.orders,data.delivery_drafts,data.delivery_staging_enabled===true,data.fulfillment_options||[]);
+    renderDeliveryDrafts(item.orders,data.delivery_drafts,data.delivery_staging_enabled===true,data.fulfillment_options||[],data.artwork_reviews||[]);
     renderPaymentRecords(item.orders,data.payment_records,data.manual_payments_enabled===true);
     requestText("request-detail-status", requestWriteEnabled
       ? "Admin draft editing available. Nothing is sent to the customer."

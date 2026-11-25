@@ -67,7 +67,7 @@ jobs:
           [[ -d "$site" && -f "$site/app/cli-admin.php" && -f "$site/app/bootstrap.php" ]] || {
             echo "Expected DrawMeOne PHP deployment is missing"; exit 1;
           }
-          for file in artwork.php sitemap.php app/bootstrap.php app/backup-health.php app/auth.php app/mailer.php app/admin.php app/cli-admin.php app/cli-backup.php app/cli-mail-config.php app/cli-smtp-probe.php app/commission-workflow.php app/quotes.php app/orders.php app/artwork.php app/requests.php app/references.php app/cli-migrate-references.php app/deliveries.php app/cli-migrate-deliveries.php app/notifications.php app/payments.php api/admin/delivery-draft.php api/delivery.php api/request-status.php api/requests.php api/request.php api/request-message.php api/quote-response.php api/request-attachment.php api/reference.php api/reference-delete.php api/auth/signup.php api/auth/login.php api/auth/logout.php api/auth/me.php api/auth/status.php api/auth/verify.php api/auth/resend-verification.php api/auth/reset-request.php api/auth/reset-confirm.php api/admin/login.php api/admin/email.php api/admin/request.php api/admin/request-actions.php api/admin/quote-send.php api/admin/order-create.php api/portfolio.php api/artwork.php api/admin/artworks.php api/admin/artwork-preview.php api/admin/artwork-upload.php; do
+          for file in artwork.php sitemap.php app/bootstrap.php app/backup-health.php app/auth.php app/mailer.php app/admin.php app/cli-admin.php app/cli-backup.php app/cli-mail-config.php app/cli-smtp-probe.php app/commission-workflow.php app/quotes.php app/orders.php app/artwork.php app/requests.php app/references.php app/cli-migrate-references.php app/deliveries.php app/artwork-reviews.php app/cli-migrate-reviews.php app/cli-migrate-deliveries.php app/notifications.php app/payments.php api/admin/delivery-draft.php api/delivery.php api/artwork-review.php api/request-status.php api/requests.php api/request.php api/request-message.php api/quote-response.php api/request-attachment.php api/reference.php api/reference-delete.php api/auth/signup.php api/auth/login.php api/auth/logout.php api/auth/me.php api/auth/status.php api/auth/verify.php api/auth/resend-verification.php api/auth/reset-request.php api/auth/reset-confirm.php api/admin/login.php api/admin/email.php api/admin/request.php api/admin/request-actions.php api/admin/quote-send.php api/admin/order-create.php api/portfolio.php api/artwork.php api/admin/artworks.php api/admin/artwork-preview.php api/admin/artwork-upload.php; do
             valid=no
             for attempt in 1 2 3 4 5 6 7 8 9 10; do
               if [[ -f "$site/$file" ]] && php -l "$site/$file" >/dev/null 2>&1; then
@@ -296,17 +296,17 @@ jobs:
           echo "alternate_contact_layouts=3"
           # Verify mobile Artist Desk stylesheet was deployed and cache-busted.
           desk_page=$(curl -fsSL --max-time 15 "https://drawmeone.com/studio-admin/index.php")
-          [[ "$desk_page" == *'panel.css?v=33'* ]] || {
+          [[ "$desk_page" == *'panel.css?v=34'* ]] || {
             echo "mobile_artist_desk=stale_stylesheet_reference"
             exit 1
           }
-          desk_css=$(curl -fsSL --max-time 15 "https://drawmeone.com/studio-admin/panel.css?v=33")
+          desk_css=$(curl -fsSL --max-time 15 "https://drawmeone.com/studio-admin/panel.css?v=34")
           [[ "$desk_css" == *'v3.3: All six Artist Desk sections'* ]] &&
           [[ "$desk_css" == *'grid-template-columns:repeat(3,minmax(0,1fr))'* ]] || {
             echo "mobile_artist_desk=stale_or_missing_mobile_layout"
             exit 1
           }
-          [[ "$desk_page" == *'panel.js?v=33'* ]] &&
+          [[ "$desk_page" == *'panel.js?v=34'* ]] &&
           [[ "$desk_page" == *'id="artwork-filter"'* ]] &&
           [[ "$desk_page" == *'id="artwork-unpublish-selected"'* ]] || {
             echo "artist_artwork_library=stale_html"
@@ -316,7 +316,7 @@ jobs:
             echo "artist_artwork_library=stale_css"
             exit 1
           }
-          desk_js=$(curl -fsSL --max-time 15 "https://drawmeone.com/studio-admin/panel.js?v=33")
+          desk_js=$(curl -fsSL --max-time 15 "https://drawmeone.com/studio-admin/panel.js?v=34")
           [[ "$desk_js" == *'artwork-unpublish-selected'* ]] &&
           [[ "$desk_js" == *'No artworks match this view.'* ]] || {
             echo "artist_artwork_library=stale_js"
@@ -361,14 +361,14 @@ jobs:
           # Public commission intake remains closed, but its signed-in history
           # assets must include the new browser-only filters and status labels.
           commission_page=$(curl -fsSL --max-time 15 "https://drawmeone.com/commission.html")
-          [[ "$commission_page" == *'commission.js?v=32'* ]] &&
-          [[ "$commission_page" == *'commission.css?v=27'* ]] &&
+          [[ "$commission_page" == *'commission.js?v=33'* ]] &&
+          [[ "$commission_page" == *'commission.css?v=28'* ]] &&
           [[ "$commission_page" == *'id="request-history-search"'* ]] &&
           [[ "$commission_page" == *'id="request-history-filter"'* ]] || {
             echo "customer_history=stale_html"
             exit 1
           }
-          commission_js=$(curl -fsSL --max-time 15 "https://drawmeone.com/commission.js?v=32")
+          commission_js=$(curl -fsSL --max-time 15 "https://drawmeone.com/commission.js?v=33")
           [[ "$commission_js" == *'function renderRequestHistory()'* ]] &&
           [[ "$commission_js" == *'readableRequestStatus(r.workflow_stage || r.status)'* ]] &&
           [[ "$commission_js" == *'requestsFetchSequence'* ]] || {

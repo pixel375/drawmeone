@@ -41,6 +41,7 @@ function dmo_review_offer(PDO $db,array $admin,int $requestId,array $input): nev
     if(count($input)!==4||array_diff(array_keys($input),['action','request_id','order_id','draft_id'])!==[])
         dmo_json(422,['ok'=>false,'error'=>'invalid_review_offer']);
     $orderId=dmo_workflow_id($input['order_id']??null);$draftId=dmo_workflow_id($input['draft_id']??null);
+    if(!dmo_auth_rate_limit($db,'artwork-review-offer',(string)$admin['user_id'],20,60))dmo_json(429,['ok'=>false,'error'=>'too_many_attempts']);
     $db->beginTransaction();
     try{
         $lock=$db->prepare('SELECT id FROM dmo_commission_requests WHERE id=:id FOR UPDATE');$lock->execute(['id'=>$requestId]);
@@ -51,7 +52,9 @@ function dmo_review_offer(PDO $db,array $admin,int $requestId,array $input): nev
         if(!$eligible)throw new DmoFulfillmentConflict('order_not_eligible');
         $q=$db->prepare('SELECT storage_key,sha256,byte_size FROM dmo_delivery_drafts WHERE id=:id AND order_id=:order AND request_id=:request');
         $q->execute(['id'=>$draftId,'order'=>$orderId,'request'=>$requestId]);$draft=$q->fetch(PDO::FETCH_ASSOC);
-        if(!is_array($draft)||($option['latest']['draft_id']??null)===$draftId)throw new DmoFulfillmentConflict('new_draft_required');
+        $old=$db->prepare('SELECT id FROM dmo_artwork_reviews WHERE order_id=:order AND draft_id=:draft LIMIT 1');
+        $old->execute(['order'=>$orderId,'draft'=>$draftId]);
+        if(!is_array($draft)||$old->fetchColumn()!==false)throw new DmoFulfillmentConflict('new_draft_required');
         $file=dmo_delivery_file($draft['storage_key']);
         if(!is_file($file)||filesize($file)!==(int)$draft['byte_size']||!hash_equals($draft['sha256'],(string)hash_file('sha256',$file)))throw new DmoFulfillmentConflict('draft_integrity_failed');
         $round=($option['latest']['round']??0)+1;

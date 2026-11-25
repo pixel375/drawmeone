@@ -365,7 +365,24 @@
   }
 
 
-  function renderCustomerOrders(orders,deliveries=[]) {
+  async function respondArtworkReview(id,decision,feedback,status,box){
+    if(detailMutationBusy()||!state.selectedRef||!state.csrf)return;
+    if(!window.confirm(decision==="approve"?"Approve this exact proof for final delivery?":"Use one included revision from your accepted quote?"))return;
+    const ref=state.selectedRef;state.quoteBusy=true;
+    for(const field of box.querySelectorAll("button,textarea"))field.disabled=true;
+    status.textContent="Recording your decision…";
+    try{
+      const response=await fetch("./api/artwork-review.php",{method:"POST",credentials:"same-origin",cache:"no-store",
+        headers:{"Content-Type":"application/json","X-DMO-CSRF":state.csrf},body:JSON.stringify({review_id:id,decision,feedback})});
+      if(response.status===401)return customerSessionExpired();
+      const data=await response.json();
+      if(!response.ok||!data.ok){status.textContent="Decision not recorded ("+(data.error||response.status)+"). Refresh before retrying.";return;}
+      await openDetail(ref);await loadMyRequests();
+    }catch(_){status.textContent="Decision not confirmed. Refresh before retrying.";}
+    finally{state.quoteBusy=false;for(const field of box.querySelectorAll("button,textarea"))field.disabled=false;}
+  }
+
+  function renderCustomerOrders(orders,deliveries=[],reviews=[]) {
     const root = $("detail-orders");
     root.replaceChildren();
     const records = Array.isArray(orders) ? orders : [];
@@ -396,6 +413,32 @@
         card.append(renderText("p",
           "Payment has not been verified. Please use the agreed contact method " +
           "with the artist; this page is not a payment request.", "small"));
+      }
+      const review=reviews.find(r=>r.order_id===order.id);
+      if(review?.latest){
+        const latest=review.latest;
+        const box=document.createElement("section");box.className="customer-proof";
+        box.append(renderText("strong","Artwork review · Proof "+latest.round),
+          renderText("p","Included revisions used: "+review.revisions_used+" / "+review.revision_allowance,"small"),
+          renderText("p",latest.status==="pending"?"Please review the proof.":latest.status==="approved"?"You approved this proof.":"Revision requested.","small"));
+        if(latest.feedback)box.append(renderText("p",latest.feedback,"small"));
+        if(latest.status==="pending"&&Number.isSafeInteger(latest.id)&&latest.id>0){
+          const img=document.createElement("img");img.src="./api/artwork-review.php?id="+latest.id;img.alt="Watermarked artwork proof";img.loading="lazy";
+          box.append(img,renderText("p","This is a reduced watermarked proof, not your final download.","small"));
+          const approve=renderText("button","Approve proof","text-button");approve.type="button";
+          const status=renderText("p","","small");status.setAttribute("role","status");
+          approve.addEventListener("click",()=>respondArtworkReview(latest.id,"approve","",status,box));
+          box.append(approve);
+          if(review.revisions_used<review.revision_allowance){
+            const form=document.createElement("form");const label=renderText("label","What should the artist change?");
+            const note=document.createElement("textarea");note.required=true;note.minLength=3;note.maxLength=500;label.append(note);
+            const revise=renderText("button","Request included revision","text-button");revise.type="submit";
+            form.append(label,revise);form.addEventListener("submit",event=>{event.preventDefault();respondArtworkReview(latest.id,"revise",note.value.trim(),status,box);});
+            box.append(form);
+          }else box.append(renderText("p","Included revisions are exhausted. Contact the artist separately about additional changes.","small"));
+          box.append(status);
+        }
+        card.append(box);
       }
       for(const delivery of deliveries.filter(d=>d.order_id===order.id)){
         if(!Number.isSafeInteger(delivery.id)||delivery.id<1)continue;
@@ -572,7 +615,7 @@
         state.uploadBusy;
       const r = body.request || {};
       renderCustomerQuotes(body.quotes || [], ref, r.policy_version || "");
-      renderCustomerOrders(body.orders || [],Array.isArray(body.deliveries)?body.deliveries:[]);
+      renderCustomerOrders(body.orders || [],Array.isArray(body.deliveries)?body.deliveries:[],Array.isArray(body.artwork_reviews)?body.artwork_reviews:[]);
       showFact("detail-ref",r.public_ref);
       showFact("detail-status",readableRequestStatus(r.workflow_stage || r.status));
       showFact("detail-type",labels[r.subject_type] || r.subject_type);

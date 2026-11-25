@@ -117,7 +117,7 @@ try {
         'DMO_REQUEST_TERMS_APPROVED' => '1',
         'DMO_REFERENCES_ENABLED' => '1',
         'DMO_ADMIN_ENABLED' => '1',
-        'DMO_REQUEST_ADMIN_WRITES_ENABLED'=>'1','DMO_ORDER_ADMIN_ENABLED'=>'1','DMO_ORDER_TERMS_APPROVED'=>'1','DMO_DELIVERY_DRAFTS_ENABLED'=>'1','DMO_DELIVERY_RELEASE_ENABLED'=>'1','DMO_DELIVERY_TERMS_APPROVED'=>'1',
+        'DMO_REQUEST_ADMIN_WRITES_ENABLED'=>'1','DMO_ORDER_ADMIN_ENABLED'=>'1','DMO_ORDER_TERMS_APPROVED'=>'1','DMO_DELIVERY_DRAFTS_ENABLED'=>'1','DMO_DELIVERY_RELEASE_ENABLED'=>'1','DMO_DELIVERY_TERMS_APPROVED'=>'1','DMO_ARTWORK_REVIEW_ENABLED'=>'1',
     ] as $name => $value) putenv($name . '=' . $value);
 
     $db = dmo_database();
@@ -240,7 +240,36 @@ try {
     ref_assert($code===409,'ready_requires_staged_artwork');
     [$code,$saved]=ref_http('/api/admin/delivery-draft.php',$artistCookie,null,$artistCsrf,$upload);
     ref_assert($code===201,'stage_final_artwork');
+    $proofId=$saved['draft_id'];
+    $offer=['action'=>'offer_artwork_review','request_id'=>$requestA,'order_id'=>$order,'draft_id'=>$proofId];
+    [$code,$offered]=ref_http('/api/admin/request-actions.php',$artistCookie,$offer,$artistCsrf);
+    ref_assert($code===201,'artist_offers_private_proof');
+    $reviewId=$offered['review_id'];
+    [$code,$json,$bytes,$headers]=ref_http('/api/artwork-review.php?id='.$reviewId,$cookieA);
+    ref_assert($code===200 && substr($bytes,8,4)==='WEBP' && str_contains(strtolower($headers),'no-store'),'customer_sees_watermarked_proof');
+    [$code]=ref_http('/api/artwork-review.php?id='.$reviewId,$cookieB);
+    ref_assert($code===404,'other_customer_cannot_view_proof');
+    [$code]=ref_http('/api/admin/request-actions.php',$artistCookie,$ready,$artistCsrf);
+    ref_assert($code===409,'pending_proof_blocks_ready');
+    $decision=['review_id'=>$reviewId,'decision'=>'revise','feedback'=>'Please adjust shading.'];
+    [$code]=ref_http('/api/artwork-review.php',$cookieB,$decision,$csrfB);
+    ref_assert($code===409,'other_customer_cannot_request_revision');
+    [$code]=ref_http('/api/artwork-review.php',$cookieA,$decision);
+    ref_assert($code===403,'review_requires_csrf');
+    [$code]=ref_http('/api/artwork-review.php',$cookieA,$decision,$csrfA);
+    ref_assert($code===200,'customer_uses_included_revision');
+    [$code]=ref_http('/api/artwork-review.php',$cookieA,$decision,$csrfA);
+    ref_assert($code===409,'revision_replay_denied');
+    [$code,$saved]=ref_http('/api/admin/delivery-draft.php',$artistCookie,null,$artistCsrf,$upload);
+    ref_assert($code===201,'artist_stages_revised_proof');
     $finalId=$saved['draft_id'];
+    [$code,$offered]=ref_http('/api/admin/request-actions.php',$artistCookie,array_replace($offer,['draft_id'=>$finalId]),$artistCsrf);
+    ref_assert($code===201,'artist_offers_revised_proof');
+    $reviewId=$offered['review_id'];
+    [$code]=ref_http('/api/artwork-review.php',$cookieA,array_replace($decision,['review_id'=>$reviewId]),$csrfA);
+    ref_assert($code===409,'included_revision_limit_enforced');
+    [$code]=ref_http('/api/artwork-review.php',$cookieA,['review_id'=>$reviewId,'decision'=>'approve','feedback'=>''],$csrfA);
+    ref_assert($code===200,'customer_approves_exact_revised_proof');
     [$code]=ref_http('/api/admin/request-actions.php',$artistCookie,$ready,$artistCsrf);
     ref_assert($code===200,'artist_marks_ready');
     [$code,$data]=ref_http('/api/request.php?ref='.$refA,$cookieA);
@@ -250,6 +279,8 @@ try {
     $release=['action'=>'release_delivery','request_id'=>$requestA,'order_id'=>$order,'draft_id'=>$finalId,'confirm_final'=>true];
     [$code]=ref_http('/api/admin/request-actions.php',$artistCookie,array_replace($release,['confirm_final'=>false]),$artistCsrf);
     ref_assert($code===422,'explicit_final_release_required');
+    [$code]=ref_http('/api/admin/request-actions.php',$artistCookie,array_replace($release,['draft_id'=>$proofId]),$artistCsrf);
+    ref_assert($code===409,'cannot_release_unapproved_draft');
     [$code,$result]=ref_http('/api/admin/request-actions.php',$artistCookie,$release,$artistCsrf);
     ref_assert($code===201 && $result['status']==='completed' && $result['customer_visible']===true,'final_release_completes_order');
     $delivery=$result['delivery_id'];

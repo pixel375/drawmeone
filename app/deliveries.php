@@ -138,6 +138,8 @@ function dmo_fulfillment_options(PDO $db,int $requestId): array
             'ready_for_delivery'=>['in_progress'],
             default=>[],
         };
+        $review=dmo_review_latest($db,(int)$row['id']);
+        if($review!==null&&$review['status']!=='approved')$next=array_values(array_diff($next,['ready_for_delivery']));
         $options[]=['order_id'=>(int)$row['id'],'status'=>$row['status'],'next'=>$next,
             'can_release'=>$row['status']==='ready_for_delivery'];
     }
