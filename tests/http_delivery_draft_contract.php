@@ -137,7 +137,7 @@ try {
          VALUES (:ref,:customer,'portrait',:brief,'onsite','qa-policy-v1','submitted')",
         ['ref'=>$refA, 'customer'=>$customerA,
          'brief'=>str_repeat('Synthetic private image inquiry. ', 2)]);
-    ref_insert($db,
+    $requestB = ref_insert($db,
         "INSERT INTO dmo_commission_requests
          (public_ref,customer_id,subject_type,brief,preferred_contact,policy_version,status)
          VALUES (:ref,:customer,'portrait',:brief,'onsite','qa-policy-v1','submitted')",
@@ -258,6 +258,7 @@ try {
     ref_assert($code===200&&in_array($requestA,array_map('intval',array_column($queue['requests'],'id')),true),'pending_proof_work_queue');
     [$code,$history]=ref_http('/api/requests.php',$cookieA);
     ref_assert($code===200&&in_array($refA,$history['attention']['proofs'],true),'customer_attention_pending_proof');
+    $db->prepare("UPDATE dmo_commission_requests SET preferred_contact='email' WHERE id=:id")->execute(['id'=>$requestB]);
     ref_assert(dmo_notification_target($db,$requestB,'proof',$reviewId)===null,'proof_notice_cross_request_denied');
     [$code,$noticeDetail]=ref_http('/api/admin/request.php?id='.$requestA,$artistCookie);
     ref_assert($code===200&&count(array_filter($noticeDetail['notification_options'],fn($n)=>$n['kind']==='proof'&&$n['event_id']===$reviewId))===1,'proof_notice_listed');

@@ -1,1 +1,1 @@
-Verify customer commission update shortcuts and current assets; read-only.
+Retest customer attention, notifications and work queues with explicit second-account fixture.
