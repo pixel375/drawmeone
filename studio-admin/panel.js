@@ -166,6 +166,7 @@
       "stat-quote-followup": data.counts?.quotes_to_follow_up,
       "stat-payments": data.counts?.payments_to_verify,
       "stat-holds": data.counts?.payment_holds,
+      "stat-privacy": data.counts?.privacy_open,
       "stat-messages": data.counts?.messages_last_seven_days,
     };
     for (const [name, value] of Object.entries(counters)) {

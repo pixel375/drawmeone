@@ -245,6 +245,7 @@
       if(generation!==privacyGeneration||leaving||!csrf)return;
       if(response.status===401)return freshSignIn("expired");
       if(!response.ok||!body.ok){
+        if(response.status===409)await loadPrivacyCase();
         $("privacy-notice").textContent=response.status===413?"Your records exceed the self-service export limit. Submit an additional access request.":response.status===403?"Password or security confirmation not accepted.":response.status===409?"Request changed. Refresh before retrying.":"Action not confirmed. Please try again later.";return;
       }
       if(payload.action==="export"){

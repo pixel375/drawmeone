@@ -1,1 +1,1 @@
-Verify private export/request interfaces and unchanged commercial gates. Read-only.
+Verify privacy case counters and customer export/queue UI, no customer records exported on live server.

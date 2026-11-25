@@ -23,6 +23,7 @@ try {
             "WHERE status IN ('awaiting_arrangement','in_progress','ready_for_delivery'," .
             "'queued','drawing','awaiting_feedback','revision')",
         'orders_due_soon' => "SELECT COUNT(*) FROM dmo_orders WHERE status IN ('awaiting_arrangement','in_progress','ready_for_delivery','queued','drawing','awaiting_feedback','revision') AND agreed_deadline IS NOT NULL AND DATE(agreed_deadline)<=DATE_ADD(UTC_DATE(),INTERVAL 7 DAY)",
+        'privacy_open' => "SELECT COUNT(*) FROM dmo_audit_log a JOIN dmo_users u ON u.id=a.entity_id WHERE a.entity_type='user' AND a.action='privacy.case' AND u.role='customer' AND a.id=(SELECT MAX(x.id) FROM dmo_audit_log x WHERE x.entity_type='user' AND x.entity_id=u.id AND x.action='privacy.case') AND JSON_UNQUOTE(JSON_EXTRACT(a.details_json,'$.status')) IN ('submitted','in_review')",
         'payment_holds' => "SELECT COUNT(*) FROM dmo_orders o WHERE ".dmo_order_exception_sql()."='payment.access_held'",
         'payments_to_verify' => "SELECT COUNT(*) FROM dmo_payments " .
             "WHERE status = 'pending_verification'",

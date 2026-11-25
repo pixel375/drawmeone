@@ -668,6 +668,43 @@ async function verifyIntakeControl(browser){
   }finally{await page.close();}
 }
 
+async function verifyPrivacyQueue(browser){
+  const page=await browser.newPage({viewport:{width:320,height:844},reducedMotion:"reduce"});
+  const posts=[];await simulateBackend(page,posts);
+  const item={case_id:12,version:12,customer_id:4,display_name:"CI Customer",email:"ci@example.invalid",kind:"deletion",status:"submitted",note:"Synthetic review.",reply:""};
+  let open=true;
+  const answer=(route,data)=>route.fulfill({status:200,contentType:"application/json",body:JSON.stringify(data)});
+  await page.route("**/api/admin/privacy.php*",route=>{
+    if(route.request().method()==="GET")return answer(route,{ok:true,cases:open?[item]:[],next_before:null});
+    const body=route.request().postDataJSON();assert.equal(body.customer_id,4);assert.equal(body.expected_version,item.version);assert.equal(body.confirm_record,true);
+    if(body.status==="in_review")Object.assign(item,{version:13,status:"in_review",reply:body.reply});
+    else {assert.equal(body.status,"resolved");open=false;}
+    return answer(route,{ok:true,case:item,data_deleted:false,data_changed:false});
+  });
+  try{
+    await page.goto(base+"/studio-admin/index.php",{waitUntil:"domcontentloaded"});
+    await page.locator("#workspace").waitFor({state:"visible"});
+    await page.locator("#privacy-queue-refresh").click();
+    await page.locator("#privacy-queue form").waitFor();
+    const form=page.locator("#privacy-queue form");
+    await form.locator("textarea").fill("Review started.");
+    await form.getByRole("checkbox").check();
+    page.once("dialog",dialog=>dialog.accept());
+    await form.getByRole("button",{name:"Save privacy decision"}).click();
+    await page.waitForFunction(()=>document.querySelector("#privacy-queue")?.textContent.includes("in review"));
+    await form.locator("select").selectOption("resolved");
+    await form.locator("textarea").fill("Synthetic manual response completed.");
+    await form.getByRole("checkbox").check();
+    page.once("dialog",dialog=>dialog.accept());
+    await form.getByRole("button",{name:"Save privacy decision"}).click();
+    await page.waitForFunction(()=>document.querySelector("#privacy-queue-status")?.textContent.includes("0 open"));
+    assert.equal(await form.count(),0);
+    assert.deepEqual(posts,[]);
+    const result=await horizontalOverflow(page);assert(result.measured<=result.available+3,JSON.stringify(result));
+    console.log("PASS: artist privacy queue review and non-destructive outcome");
+  }finally{await page.close();}
+}
+
 async function verifyClosedDesk(browser) {
   const page=await browser.newPage({viewport:{width:390,height:844}});
   await page.route("**/api/admin/status.php*",route=>route.fulfill({
@@ -702,6 +739,7 @@ async function verifyClosedDesk(browser) {
     await verifyDeliveryDraftManagement(browser);
     await verifyFinancialException(browser);
     await verifyIntakeControl(browser);
+    await verifyPrivacyQueue(browser);
     console.log("ADMIN_BROWSER_SMOKE=PASS");
   } finally {await browser.close();}
 })().catch(error=>{

@@ -20,7 +20,7 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
 <meta name="theme-color" content="#151317">
 <title>Artist's Desk · Draw Me One</title>
 <link rel="stylesheet" href="./panel.css?v=37">
-<script defer src="./panel.js?v=40"></script>
+<script defer src="./panel.js?v=41"></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to dashboard</a>
@@ -83,6 +83,7 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
         <article><span>ORDERS DUE SOON</span><strong id="stat-due">—</strong><small>Agreed date within seven days or overdue</small><button type="button" class="quiet stat-shortcut" data-request-queue="due">View deadlines</button></article>
         <article><span>PAYMENTS TO CHECK</span><strong id="stat-payments">—</strong><small>Require manual verification</small><button type="button" class="quiet stat-shortcut" data-request-queue="payment_review">Review payments</button></article>
         <article><span>PAYMENT HOLDS</span><strong id="stat-holds">—</strong><small>Payment exceptions requiring attention</small><button type="button" class="quiet stat-shortcut" data-request-queue="payment_hold">Review holds</button></article>
+        <article><span>OPEN PRIVACY REQUESTS</span><strong id="stat-privacy">—</strong><small>Require individual review</small></article>
         <article><span>MESSAGE ACTIVITY</span><strong id="stat-messages">—</strong><small>Last seven days, not an unread count</small></article>
       </div>
       <p class="small">Activity reflects actual records. No placeholder orders, customers or payments are created.</p>

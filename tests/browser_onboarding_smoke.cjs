@@ -13,7 +13,7 @@ const reply=(route,data,status=200)=>route.fulfill({status,contentType:"applicat
 async function fakeService(page,options={}) {
   const counts={signup:0,resend:0,login:0,logout:0,verify:0,resetRequest:0,resetConfirm:0,security:0};
   const writes=[];
-  let signedIn=!!options.signedIn;let sessions=2;
+  let signedIn=!!options.signedIn;let sessions=2;let privacyCase=null;
   await page.route("https://challenges.cloudflare.com/turnstile/v0/api.js*",
     route=>route.fulfill({status:200,contentType:"application/javascript",body:captchaJS}));
   await page.route("**/api/auth/**",route=>{
@@ -26,7 +26,7 @@ async function fakeService(page,options={}) {
         turnstile_site_key:options.closed?null:"ci-only-key"});
       case "me.php":return reply(route,{ok:true,authenticated:signedIn,
         user:signedIn?{display_name:"CI Customer",email:"ci@example.invalid",role:"customer"}:undefined,
-        active_sessions:signedIn?sessions:undefined,csrf_token:signedIn?"synthetic-csrf":undefined});
+        privacy_self_service_enabled:!!options.privacy,active_sessions:signedIn?sessions:undefined,csrf_token:signedIn?"synthetic-csrf":undefined});
       case "signup.php":counts.signup++;return reply(route,{ok:true},202);
       case "resend-verification.php":counts.resend++;return reply(route,{ok:true},202);
       case "login.php":
@@ -36,6 +36,13 @@ async function fakeService(page,options={}) {
         signedIn=true;return reply(route,{ok:true,status:"signed_in"});
       case "logout.php":
         counts.logout++;signedIn=false;return reply(route,{ok:true,status:"signed_out"});
+      case "privacy.php":{
+        if(request.method()==="GET")return reply(route,{ok:true,enabled:true,case:privacyCase});
+        const p=request.postDataJSON();assert.equal(p.current_password,"ci-current-password");
+        if(p.action==="export")return reply(route,{ok:true,export:{format:"drawmeone-customer-records-v1",profile:{email:"ci@example.invalid"}}});
+        if(p.action==="submit"){privacyCase={case_id:17,version:17,kind:p.kind,status:"submitted",note:p.note,reply:""};return reply(route,{ok:true,case:privacyCase,data_deleted:false});}
+        assert.equal(p.expected_version,17);privacyCase={...privacyCase,version:18,status:"withdrawn"};return reply(route,{ok:true,case:privacyCase,data_deleted:false});
+      }
       case "security.php":{
         counts.security++;const p=request.postDataJSON();
         if(p.action==="change_password"){signedIn=false;return reply(route,{ok:true,status:"password_changed",requires_sign_in:true,sessions_revoked:sessions});}
@@ -247,6 +254,39 @@ async function accountSecurity(browser){
     console.log("PASS: device revocation, password change and fresh sign-in");
   }finally{await page.close();}
 }
+async function privacySelfService(browser){
+  const page=await browser.newPage({viewport:{width:320,height:844},acceptDownloads:true});
+  const m=await fakeService(page,{signedIn:true,privacy:true});
+  try{
+    await page.goto(base+"/account.html",{waitUntil:"domcontentloaded"});
+    await page.locator("#account-privacy summary").click();
+    await waitText(page,"#privacy-case","No privacy requests");
+    await page.locator("#privacy-password").fill("ci-current-password");
+    const downloaded=page.waitForEvent("download");
+    await page.locator("#privacy-submit").click();
+    const file=await downloaded;
+    assert.equal(file.suggestedFilename(),"drawmeone-customer-records.json");
+    const content=JSON.parse(require("node:fs").readFileSync(await file.path(),"utf8"));
+    assert.equal(content.profile.email,"ci@example.invalid");
+    await waitText(page,"#privacy-notice","Export prepared");
+    await page.locator("#privacy-action").selectOption("deletion");
+    await page.locator("#privacy-note").fill("Synthetic privacy request.");
+    await page.locator("#privacy-password").fill("ci-current-password");
+    page.once("dialog",dialog=>dialog.accept());
+    await page.locator("#privacy-submit").click();
+    await waitText(page,"#privacy-case","submitted");
+    assert.equal(await page.locator("#privacy-password").inputValue(),"");
+    assert.equal(await page.locator("#privacy-action option[value=deletion]").isDisabled(),true);
+    await page.locator("#privacy-password").fill("ci-current-password");
+    page.once("dialog",dialog=>dialog.accept());
+    await page.locator("#privacy-withdraw").click();
+    await waitText(page,"#privacy-case","withdrawn");
+    assert.equal(await page.locator("#privacy-withdraw").isVisible(),false);
+    assert.equal(m.writes.filter(x=>x.endpoint==="privacy.php").length,3);
+    await overflow(page);
+    console.log("PASS: private JSON export, deletion request and withdrawal UI");
+  }finally{await page.close();}
+}
 (async()=>{
   const browser=await browserType.launch({headless:true});
   try {
@@ -254,6 +294,7 @@ async function accountSecurity(browser){
     await registrationClosedButLoginReady(browser);
     await signupAndSignIn(browser);
     await accountSecurity(browser);
+    await privacySelfService(browser);
     await verification(browser,false);
     await verification(browser,true);
     await requestReset(browser);

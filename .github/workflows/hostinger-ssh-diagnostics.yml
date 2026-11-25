@@ -306,7 +306,7 @@ jobs:
             echo "mobile_artist_desk=stale_or_missing_mobile_layout"
             exit 1
           }
-          [[ "$desk_page" == *'panel.js?v=40'* ]] &&
+          [[ "$desk_page" == *'panel.js?v=41'* ]] &&
           [[ "$desk_page" == *'id="artwork-filter"'* ]] &&
           [[ "$desk_page" == *'id="artwork-unpublish-selected"'* ]] || {
             echo "artist_artwork_library=stale_html"
@@ -316,7 +316,7 @@ jobs:
             echo "artist_artwork_library=stale_css"
             exit 1
           }
-          desk_js=$(curl -fsSL --max-time 15 "https://drawmeone.com/studio-admin/panel.js?v=40")
+          desk_js=$(curl -fsSL --max-time 15 "https://drawmeone.com/studio-admin/panel.js?v=41")
           [[ "$desk_js" == *'artwork-unpublish-selected'* ]] &&
           [[ "$desk_js" == *'No artworks match this view.'* ]] || {
             echo "artist_artwork_library=stale_js"
@@ -444,12 +444,12 @@ jobs:
           # v3.9 registration remains closed, but verify the versioned
           # customer signup and recovery assets are deployed safely.
           customer_page=$(curl -fsSL --max-time 15 "https://drawmeone.com/account.html")
-          [[ "$customer_page" == *'account.js?v=18'* ]] &&
+          [[ "$customer_page" == *'account.js?v=19'* ]] &&
           [[ "$customer_page" == *'id="signup-password-confirm"'* ]] || {
             echo "customer_onboarding_assets=stale_signup"
             exit 1
           }
-          customer_js=$(curl -fsSL --max-time 15 "https://drawmeone.com/account.js?v=18")
+          customer_js=$(curl -fsSL --max-time 15 "https://drawmeone.com/account.js?v=19")
           [[ "$customer_js" == *'signupPasswordConfirm.setCustomValidity'* ]] &&
           [[ "$customer_js" == *'Too many sign-in attempts'* ]] || {
             echo "customer_onboarding_assets=stale_signup_script"
