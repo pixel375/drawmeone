@@ -365,7 +365,7 @@
   }
 
 
-  function renderCustomerOrders(orders) {
+  function renderCustomerOrders(orders,deliveries=[]) {
     const root = $("detail-orders");
     root.replaceChildren();
     const records = Array.isArray(orders) ? orders : [];
@@ -396,6 +396,14 @@
         card.append(renderText("p",
           "Payment has not been verified. Please use the agreed contact method " +
           "with the artist; this page is not a payment request.", "small"));
+      }
+      for(const delivery of deliveries.filter(d=>d.order_id===order.id)){
+        if(!Number.isSafeInteger(delivery.id)||delivery.id<1)continue;
+        card.append(renderText("p","Your finished artwork is available ("+delivery.width+" × "+delivery.height+", WebP).","small"));
+        const link=renderText("a","Download finished artwork","text-button");
+        link.href="./api/delivery.php?id="+delivery.id;
+        link.rel="noopener noreferrer";
+        card.append(link);
       }
       root.append(card);
     }
@@ -564,7 +572,7 @@
         state.uploadBusy;
       const r = body.request || {};
       renderCustomerQuotes(body.quotes || [], ref, r.policy_version || "");
-      renderCustomerOrders(body.orders || []);
+      renderCustomerOrders(body.orders || [],Array.isArray(body.deliveries)?body.deliveries:[]);
       showFact("detail-ref",r.public_ref);
       showFact("detail-status",readableRequestStatus(r.workflow_stage || r.status));
       showFact("detail-type",labels[r.subject_type] || r.subject_type);

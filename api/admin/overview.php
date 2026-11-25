@@ -68,6 +68,7 @@ try {
         ['key' => 'orders', 'label' => 'Order confirmation',
          'status' => dmo_orders_admin_enabled() ? 'ready' : 'blocked',
          'detail' => 'Unpaid confirmation and individually agreed scheduling; no payment verification'],
+        ['key'=>'fulfillment','label'=>'Paid order production and delivery','status'=>dmo_fulfillment_enabled($db)?'ready':'blocked','detail'=>'Requires reconciled full payment and approved delivery terms'],
         ['key'=>'delivery_drafts','label'=>'Private artwork staging',
          'status'=>dmo_delivery_staging_enabled($db)?'ready':'blocked',
          'detail'=>'Artist-only draft storage; customer release not implemented'],

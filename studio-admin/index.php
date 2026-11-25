@@ -19,8 +19,8 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
 <meta name="robots" content="noindex,nofollow">
 <meta name="theme-color" content="#151317">
 <title>Artist's Desk · Draw Me One</title>
-<link rel="stylesheet" href="./panel.css?v=32">
-<script defer src="./panel.js?v=32"></script>
+<link rel="stylesheet" href="./panel.css?v=33">
+<script defer src="./panel.js?v=33"></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to dashboard</a>
@@ -160,7 +160,7 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
         </section>
         <section class="request-brief" aria-label="Private staged artwork">
           <h4>Private artwork staging</h4>
-          <p class="small">Stage a drawing for an order. Only the artist can download it; this does not deliver the artwork or verify payment.</p>
+          <p class="small">Stage artwork privately, track production after payment reconciliation, then explicitly release the final drawing when eligible.</p>
           <div id="request-delivery-drafts"></div>
         </section>
         <section class="request-brief" aria-label="Optional customer email notices">
