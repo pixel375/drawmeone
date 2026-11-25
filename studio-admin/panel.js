@@ -202,6 +202,16 @@
     for(const code of codes)list.append(textNode("li",code.replaceAll("_"," ").replaceAll(":"," · "),"small"));
     if(!codes.length)list.append(textNode("li","No warnings reported by this review.","small"));
   }
+  function applyOverviewFilter(){
+    const hide=$("overview-hide-empty").checked;let hidden=0;
+    for(const group of document.querySelectorAll(".overview-group")){
+      const cards=[...group.querySelectorAll(".stats article")];
+      for(const card of cards){card.hidden=hide&&card.dataset.count==="0";if(card.hidden)hidden++;}
+      group.querySelector(".overview-empty").hidden=cards.some(card=>!card.hidden);
+    }
+    $("overview-counter-status").textContent=hide?hidden+" empty counters hidden. Unknown counts remain visible.":"All counters shown. Counts can overlap.";
+  }
+  $("overview-hide-empty").addEventListener("change",applyOverviewFilter);
   async function overview() {
     const generation=++overviewGeneration;
     renderLaunchEvidence(null);renderConfigurationReview(null);
@@ -232,9 +242,11 @@
       "stat-ready-to-deliver":data.counts?.ready_to_deliver,
     };
     for (const [name, value] of Object.entries(counters)) {
-      $(name).textContent = Number.isSafeInteger(value) && value >= 0
-        ? value.toLocaleString() : "—";
+      const valid=Number.isSafeInteger(value)&&value>=0;
+      $(name).textContent=valid?value.toLocaleString():"—";
+      $(name).closest("article").dataset.count=valid?String(value):"unknown";
     }
+    applyOverviewFilter();
     const retention=$("retention-checks");retention.replaceChildren();
     const review=data.retention;
     const retentionGroups=[

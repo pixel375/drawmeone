@@ -19,8 +19,8 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
 <meta name="robots" content="noindex,nofollow">
 <meta name="theme-color" content="#151317">
 <title>Artist's Desk · Draw Me One</title>
-<link rel="stylesheet" href="./panel.css?v=49">
-<script defer src="./panel.js?v=80"></script>
+<link rel="stylesheet" href="./panel.css?v=50">
+<script defer src="./panel.js?v=81"></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to dashboard</a>
@@ -78,26 +78,25 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
 
     <section data-panel="overview" class="content-panel">
       <div class="section-intro"><h2>At a glance</h2><p>Activity from the connected database.</p></div>
-      <div class="stats">
-        <article><span>REQUESTS TO REVIEW</span><strong id="stat-requests">—</strong><small>Submitted or requiring clarification</small><button type="button" class="quiet stat-shortcut" data-request-queue="review">Review requests</button></article>
-        <article><span>QUOTE FOLLOW-UP</span><strong id="stat-quote-followup">—</strong><small>Expired, declined or inactive offers</small><button type="button" class="quiet stat-shortcut" data-request-queue="quote_followup">Review quotes</button></article>
-        <article><span>ACTIVE ORDERS</span><strong id="stat-orders">—</strong><small>Awaiting arrangements or in progress</small><button type="button" class="quiet stat-shortcut" data-request-queue="orders">Open order queue</button></article>
-        <article><span>ORDERS DUE SOON</span><strong id="stat-due">—</strong><small>Agreed date within seven days or overdue</small><button type="button" class="quiet stat-shortcut" data-request-queue="due">View deadlines</button></article>
-        <article><span>PAYMENTS TO CHECK</span><strong id="stat-payments">—</strong><small>Require manual verification</small><button type="button" class="quiet stat-shortcut" data-request-queue="payment_review">Review payments</button></article>
-        <article><span>INVOICE FOLLOW-UP</span><strong id="stat-checkout">—</strong><small>Expired or suspended local links needing external closure review</small><button type="button" class="quiet stat-shortcut" data-request-queue="checkout_followup">Review invoices</button></article>
-        <article><span>PAYMENT HOLDS</span><strong id="stat-holds">—</strong><small>Payment exceptions requiring attention</small><button type="button" class="quiet stat-shortcut" data-request-queue="payment_hold">Review holds</button></article>
-        <article><span>OPEN PRIVACY REQUESTS</span><strong id="stat-privacy">—</strong><small>Require individual review</small></article>
-        <article><span>REPLIES NEEDED</span><strong id="stat-reply-due">—</strong><small>Latest public message is from the customer</small><button type="button" class="quiet stat-shortcut" data-request-queue="reply_due">View conversations</button></article>
-        <article><span>ACCEPTED QUOTES</span><strong id="stat-accepted">—</strong><small>Accepted quote without an order</small><button type="button" class="quiet stat-shortcut" data-request-queue="accepted">Review accepted quotes</button></article>
-        <article><span>OVERDUE ORDERS</span><strong id="stat-overdue">—</strong><small>Agreed date has passed</small><button type="button" class="quiet stat-shortcut" data-request-queue="overdue">Review overdue</button></article>
-        <article><span>UPCOMING DEADLINES</span><strong id="stat-upcoming">—</strong><small>Today through the next seven days</small><button type="button" class="quiet stat-shortcut" data-request-queue="upcoming">View upcoming</button></article>
-        <article><span>REVISIONS REQUESTED</span><strong id="stat-revision-due">—</strong><small>Latest artwork review requests a revision</small><button type="button" class="quiet stat-shortcut" data-request-queue="revision_due">Review artwork</button></article>
-        <article><span>PROOFS AWAITING REVIEW</span><strong id="stat-proof-waiting">—</strong><small>Latest artwork review pending</small><button type="button" class="quiet stat-shortcut" data-request-queue="proof_waiting">View pending proofs</button></article>
-        <article><span>NEEDS SCHEDULE</span><strong id="stat-needs-schedule">—</strong><small>Active orders without an agreed date</small><button type="button" class="quiet stat-shortcut" data-request-queue="needs_schedule">Plan dates</button></article>
-        <article><span>PAID TO START</span><strong id="stat-paid-to-start">—</strong><small>Paid status, production not started</small><button type="button" class="quiet stat-shortcut" data-request-queue="paid_to_start">Review production</button></article>
-        <article><span>READY TO DELIVER</span><strong id="stat-ready-to-deliver">—</strong><small>Paid orders marked ready; release checks still apply</small><button type="button" class="quiet stat-shortcut" data-request-queue="ready_to_deliver">Review delivery</button></article>
-        <article><span>MESSAGE ACTIVITY</span><strong id="stat-messages">—</strong><small>Last seven days, not an unread count</small></article>
-      </div>
+      <div class="overview-controls"><label><input type="checkbox" id="overview-hide-empty"> Hide empty counters</label><p id="overview-counter-status" class="small" role="status"></p></div>
+      <section class="overview-group" aria-labelledby="overview-group-0"><h3 id="overview-group-0">Daily work</h3><div class="stats"><article><span>REQUESTS TO REVIEW</span><strong id="stat-requests">—</strong><small>Submitted or requiring clarification</small><button type="button" class="quiet stat-shortcut" data-request-queue="review">Review requests</button></article>
+<article><span>REPLIES NEEDED</span><strong id="stat-reply-due">—</strong><small>Latest public message is from the customer</small><button type="button" class="quiet stat-shortcut" data-request-queue="reply_due">View conversations</button></article>
+<article><span>ACCEPTED QUOTES</span><strong id="stat-accepted">—</strong><small>Accepted quote without an order</small><button type="button" class="quiet stat-shortcut" data-request-queue="accepted">Review accepted quotes</button></article>
+<article><span>QUOTE FOLLOW-UP</span><strong id="stat-quote-followup">—</strong><small>Expired, declined or inactive offers</small><button type="button" class="quiet stat-shortcut" data-request-queue="quote_followup">Review quotes</button></article>
+<article><span>OVERDUE ORDERS</span><strong id="stat-overdue">—</strong><small>Agreed date has passed</small><button type="button" class="quiet stat-shortcut" data-request-queue="overdue">Review overdue</button></article>
+<article><span>REVISIONS REQUESTED</span><strong id="stat-revision-due">—</strong><small>Latest artwork review requests a revision</small><button type="button" class="quiet stat-shortcut" data-request-queue="revision_due">Review artwork</button></article>
+<article><span>PAID TO START</span><strong id="stat-paid-to-start">—</strong><small>Paid status, production not started</small><button type="button" class="quiet stat-shortcut" data-request-queue="paid_to_start">Review production</button></article>
+<article><span>READY TO DELIVER</span><strong id="stat-ready-to-deliver">—</strong><small>Paid orders marked ready; release checks still apply</small><button type="button" class="quiet stat-shortcut" data-request-queue="ready_to_deliver">Review delivery</button></article></div><p class="small overview-empty" hidden>No non-empty counters in this group.</p></section>
+      <section class="overview-group" aria-labelledby="overview-group-1"><h3 id="overview-group-1">Production & planning</h3><div class="stats"><article><span>ACTIVE ORDERS</span><strong id="stat-orders">—</strong><small>Awaiting arrangements or in progress</small><button type="button" class="quiet stat-shortcut" data-request-queue="orders">Open order queue</button></article>
+<article><span>UPCOMING DEADLINES</span><strong id="stat-upcoming">—</strong><small>Today through the next seven days</small><button type="button" class="quiet stat-shortcut" data-request-queue="upcoming">View upcoming</button></article>
+<article><span>NEEDS SCHEDULE</span><strong id="stat-needs-schedule">—</strong><small>Active orders without an agreed date</small><button type="button" class="quiet stat-shortcut" data-request-queue="needs_schedule">Plan dates</button></article>
+<article><span>PROOFS AWAITING REVIEW</span><strong id="stat-proof-waiting">—</strong><small>Latest artwork review pending</small><button type="button" class="quiet stat-shortcut" data-request-queue="proof_waiting">View pending proofs</button></article>
+<article><span>ORDERS DUE SOON</span><strong id="stat-due">—</strong><small>Agreed date within seven days or overdue</small><button type="button" class="quiet stat-shortcut" data-request-queue="due">View deadlines</button></article></div><p class="small overview-empty" hidden>No non-empty counters in this group.</p></section>
+      <section class="overview-group" aria-labelledby="overview-group-2"><h3 id="overview-group-2">Administration</h3><div class="stats"><article><span>PAYMENTS TO CHECK</span><strong id="stat-payments">—</strong><small>Require manual verification</small><button type="button" class="quiet stat-shortcut" data-request-queue="payment_review">Review payments</button></article>
+<article><span>PAYMENT HOLDS</span><strong id="stat-holds">—</strong><small>Payment exceptions requiring attention</small><button type="button" class="quiet stat-shortcut" data-request-queue="payment_hold">Review holds</button></article>
+<article><span>INVOICE FOLLOW-UP</span><strong id="stat-checkout">—</strong><small>Expired or suspended local links needing external closure review</small><button type="button" class="quiet stat-shortcut" data-request-queue="checkout_followup">Review invoices</button></article>
+<article><span>OPEN PRIVACY REQUESTS</span><strong id="stat-privacy">—</strong><small>Require individual review</small></article>
+<article><span>MESSAGE ACTIVITY</span><strong id="stat-messages">—</strong><small>Last seven days, not an unread count</small></article></div><p class="small overview-empty" hidden>No non-empty counters in this group.</p></section>
       <p class="small">Activity reflects actual records. No placeholder orders, customers or payments are created.</p>
       <section class="launch-overview" aria-labelledby="intake-title">
         <h3 id="intake-title">Commission availability</h3>

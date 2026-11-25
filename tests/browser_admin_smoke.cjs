@@ -123,6 +123,9 @@ async function verifyArtistDesk(browser, width) {
     assert.equal(await page.locator("#closed").isVisible(),false);
     assert.equal(await page.locator("#sign-in").isVisible(),false);
     assert.equal(await page.locator("#stat-orders").innerText(),"0");
+    await page.locator("#overview-hide-empty").check();assert.equal(await page.locator("#stat-orders").isVisible(),false);
+    assert.match(await page.locator("#overview-counter-status").innerText(),/empty counters hidden/);
+    await page.locator("#overview-hide-empty").uncheck();assert.equal(await page.locator("#stat-orders").isVisible(),true);
     assert.equal(await page.locator("#launch-checks .launch-check").count(),3);
     assert.match(await page.locator("#launch-status").innerText(),/1 of 3/);
     const evidence=page.locator(".integrity-details").filter({hasText:"Controlled launch stages and evidence"});
