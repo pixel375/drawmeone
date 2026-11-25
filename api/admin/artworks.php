@@ -46,6 +46,7 @@ try {
     }
     $action = $input['action'] ?? null;
     if($action==='batch_visibility')dmo_artwork_batch_visibility($db,(int)$admin['user_id'],$input);
+    if($action==='move_published')dmo_artwork_move($db,(int)$admin['user_id'],$input);
     $id = dmo_artwork_id($input['id'] ?? null);
     if (!in_array($action, ['set_visibility', 'set_featured', 'set_order', 'set_alt'], true)) {
         dmo_json(422, ['ok' => false, 'error' => 'invalid_action']);

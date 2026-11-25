@@ -1623,6 +1623,7 @@
     const mode=$("artwork-sort-mode").value;
     if(mode==="gallery")matching.sort((a,b)=>Number(b.featured)-Number(a.featured)||a.sort_order-b.sort_order||b.id-a.id);
     if(mode==="oldest")matching.reverse();
+    const published=artworkRecords.filter(w=>w.visibility==="published").sort((a,b)=>Number(b.featured)-Number(a.featured)||a.sort_order-b.sort_order||b.id-a.id);
     const pages=Math.max(1,Math.ceil(matching.length/60));artworkPage=Math.max(1,Math.min(pages,artworkPage));
     const visible=matching.slice((artworkPage-1)*60,artworkPage*60);
     $("artwork-page").textContent="Page "+artworkPage+" of "+pages;
@@ -1690,6 +1691,15 @@
         featured:!work.featured,expected:work.featured===true,
       }));
       actions.append(toggle,feature);
+      if(work.visibility==="published"&&mode==="gallery"){
+        const position=published.findIndex(w=>w.id===work.id);
+        for(const [direction,step,label] of [["earlier",-1,"Move earlier"],["later",1,"Move later"]]){
+          const neighbor=published[position+step];
+          if(!neighbor||neighbor.featured!==work.featured)continue;
+          const button=textNode("button",label,"quiet");button.type="button";
+          button.addEventListener("click",()=>moveArtwork(work,neighbor,direction));actions.append(button);
+        }
+      }
       const order = document.createElement("div");
       order.className = "artwork-sort";
       const input = document.createElement("input");
@@ -1750,6 +1760,20 @@
       if(generation===artworkGeneration&&!leavingSession)artworkState("Artwork library unavailable. Reload before editing.");
       return false;
     }finally{if(generation===artworkGeneration){artworkLoading=false;artworkControls();}}
+  }
+
+  async function moveArtwork(work,neighbor,direction){
+    if(!artworkWriteEnabled||artworkBusy||artworkLoading)return;
+    if([...artworkDrafts.keys()].some(k=>k.endsWith(":sort_order"))){artworkState("Save or discard unsaved sort orders before moving drawings.");return;}
+    if(!window.confirm("Move drawing #"+work.id+" "+direction+" in the public gallery, relative to drawing #"+neighbor.id+"? Equal sort values may be renumbered within this featured group."))return;
+    artworkBusy=true;artworkControls();
+    try{
+      const {response,data}=await post("artworks.php",{action:"move_published",id:work.id,neighbor_id:neighbor.id,direction,expected_order:work.sort_order,expected_neighbor_order:neighbor.sort_order,expected_featured:work.featured===true},csrf);
+      if(response.status===401)return sessionExpired();
+      if(!response.ok||!data.ok){artworkWriteEnabled=false;artworkState("Move not confirmed. Refresh to review the latest gallery order.");return;}
+      if(await artworksLoad())artworkState("Drawing #"+work.id+" moved "+direction+" in the public gallery.");
+    }catch(_){artworkWriteEnabled=false;artworkState("Move outcome uncertain. Refresh before retrying.");}
+    finally{artworkBusy=false;if(!leavingSession)artworkControls();}
   }
 
   async function updateArtwork(id, action, payload) {

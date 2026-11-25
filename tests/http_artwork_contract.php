@@ -384,6 +384,19 @@ try {
     art_assert($status===200&&str_contains($firstPage,'rel="next" href="/artwork.php?id='.$id2.'"')&&!str_contains($firstPage,'rel="prev"'),'featured_drawing_next_navigation');
     [$status,,$secondPage]=art_http('/artwork.php?id='.$id2);
     art_assert($status===200&&str_contains($secondPage,'rel="prev" href="/artwork.php?id='.$id.'"')&&!str_contains($secondPage,'rel="next"'),'last_drawing_previous_navigation');
+    // Put both in the same featured group with a tied rank, then move
+    // against the normal ID tiebreaker and verify the public order.
+    [$status]=art_http('/api/admin/artworks.php',$token,$csrf,['id'=>$id2,'action'=>'set_featured','featured'=>true]);
+    art_assert($status===200,'second_featured_for_curation');
+    [$status]=art_http('/api/admin/artworks.php',$token,$csrf,['id'=>$id2,'action'=>'set_order','sort_order'=>-15]);
+    art_assert($status===200,'equal_gallery_rank_fixture');
+    $move=['action'=>'move_published','id'=>$id,'neighbor_id'=>$id2,'direction'=>'earlier','expected_order'=>-15,'expected_neighbor_order'=>-15,'expected_featured'=>true];
+    [$status,$moved]=art_http('/api/admin/artworks.php',$token,$csrf,$move);
+    art_assert($status===200&&$moved['updated']===2,'gallery_move_rebalances_tied_ranks');
+    [$status,,$firstPage]=art_http('/artwork.php?id='.$id);
+    art_assert($status===200&&str_contains($firstPage,'rel="next" href="/artwork.php?id='.$id2.'"'),'gallery_move_visible_publicly');
+    [$status]=art_http('/api/admin/artworks.php',$token,$csrf,$move);
+    art_assert($status===409,'stale_gallery_move_rejected');
     [$status,$result]=art_http('/api/admin/artworks.php',$token,$csrf,array_replace($batch,['visibility'=>'draft']));
     art_assert($status===200&&$result['updated']===2,'atomic_batch_unpublish');
     [$status,$manifest]=art_http('/api/portfolio.php');

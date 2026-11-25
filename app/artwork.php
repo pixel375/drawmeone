@@ -305,3 +305,45 @@ function dmo_artwork_batch_visibility(PDO $db,int $admin,array $input): never
         dmo_json(200,['ok'=>true,'updated'=>count($ids),'visibility'=>$target]);
     }catch(Throwable $error){if($db->inTransaction())$db->rollBack();throw $error;}
 }
+
+/** Swap adjacent published drawings within one featured group. Rebalance that
+ * group only when equal sort values prevent a two-row swap. */
+function dmo_artwork_move(PDO $db,int $admin,array $input): never
+{
+    if(array_diff(array_keys($input),['action','id','neighbor_id','direction','expected_order','expected_neighbor_order','expected_featured'])!==[]||
+        count($input)!==7||!in_array($input['direction']??null,['earlier','later'],true)||
+        !is_bool($input['expected_featured']??null)||!is_int($input['expected_order']??null)||!is_int($input['expected_neighbor_order']??null))
+        dmo_json(422,['ok'=>false,'error'=>'invalid_artwork_move']);
+    $id=dmo_artwork_id($input['id']??null);$neighbor=dmo_artwork_id($input['neighbor_id']??null);
+    if($id===$neighbor)dmo_json(422,['ok'=>false,'error'=>'invalid_artwork_move']);
+    $db->beginTransaction();
+    try{
+        // Lock in primary-key order, then sort the locked snapshot in PHP.
+        $rows=$db->query("SELECT id,sort_order,is_featured FROM dmo_portfolio_artworks WHERE visibility='published' ORDER BY id ASC FOR UPDATE")->fetchAll();
+        $group=array_values(array_filter($rows,static fn($r)=>(bool)$r['is_featured']===$input['expected_featured']));
+        usort($group,static fn($a,$b)=>(int)$a['sort_order']<=>(int)$b['sort_order']?:((int)$b['id']<=>(int)$a['id']));
+        $ids=array_map('intval',array_column($group,'id'));$index=array_search($id,$ids,true);
+        $adjacent=$index===false?-1:$index+($input['direction']==='earlier'?-1:1);
+        if($index===false||($ids[$adjacent]??null)!==$neighbor||
+            (int)$group[$index]['sort_order']!==$input['expected_order']||(int)$group[$adjacent]['sort_order']!==$input['expected_neighbor_order']){
+            $db->rollBack();dmo_json(409,['ok'=>false,'error'=>'artwork_move_changed']);
+        }
+        // Ties with any other row can prevent an exact swap, so reassign
+        // sequential values only when the group's ordering is ambiguous.
+        $orders=array_map('intval',array_column($group,'sort_order'));
+        [$group[$index],$group[$adjacent]]=[$group[$adjacent],$group[$index]];
+        $update=$db->prepare('UPDATE dmo_portfolio_artworks SET sort_order=:sort WHERE id=:id');
+        if(count($group)>2000){$db->rollBack();dmo_json(409,['ok'=>false,'error'=>'artwork_library_limit']);}
+        $rebalance=count(array_unique($orders))!==count($orders);
+        $changed=0;
+        foreach($group as $i=>$row){
+            $new=$orders[$i];
+            if($rebalance)$new=$i*5;
+            if($new===(int)$row['sort_order'])continue;
+            $update->execute(['sort'=>$new,'id'=>(int)$row['id']]);
+            dmo_artwork_record_audit($db,$admin,(int)$row['id'],'artwork.set_order');
+            $changed++;
+        }
+        $db->commit();dmo_json(200,['ok'=>true,'updated'=>$changed]);
+    }catch(Throwable $error){if($db->inTransaction())$db->rollBack();throw $error;}
+}

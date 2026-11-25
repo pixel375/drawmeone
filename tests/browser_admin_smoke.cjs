@@ -362,6 +362,27 @@ async function verifyArtworkDrafts(browser){
     console.log("PASS: artwork drafts survive filtering, tab changes and rejected saves");
   }finally{await page.close();}
 }
+async function verifyGalleryMoves(browser){
+  const page=await browser.newPage({viewport:{width:390,height:844}});
+  await simulateBackend(page,[]);
+  let rows=[{id:91,visibility:"published",featured:false,sort_order:0,alt:""},{id:92,visibility:"published",featured:false,sort_order:5,alt:""}],payload=null;
+  await page.route("**/api/admin/artworks.php*",route=>{
+    const answer=data=>route.fulfill({status:200,contentType:"application/json",body:JSON.stringify(data)});
+    if(route.request().method()==="GET")return answer({ok:true,write_enabled:true,artworks:rows});
+    payload=route.request().postDataJSON();rows=rows.map(w=>({...w,sort_order:w.id===92?0:5}));return answer({ok:true,updated:2});
+  });
+  try{
+    await page.goto(base+"/studio-admin/index.php",{waitUntil:"domcontentloaded"});
+    await page.locator("#workspace").waitFor({state:"visible"});await page.locator('[data-view="artwork"]').click();
+    await page.locator("#artwork-sort-mode").selectOption("gallery");
+    const card=page.locator(".artwork-library-card").filter({has:page.getByLabel("Sort order for drawing 92",{exact:true})});
+    page.once("dialog",d=>d.accept());await card.getByRole("button",{name:"Move earlier",exact:true}).click();
+    await page.waitForFunction(()=>document.querySelector("#artwork-library-status")?.textContent.includes("moved earlier"));
+    assert.deepEqual(payload,{action:"move_published",id:92,neighbor_id:91,direction:"earlier",expected_order:5,expected_neighbor_order:0,expected_featured:false});
+    assert.match(await page.locator(".artwork-library-card").first().innerText(),/Drawing #92/i);
+    console.log("PASS: artist moves adjacent published drawing");
+  }finally{await page.close();}
+}
 async function verifyInterruptedArtworkUpload(browser){
   const page=await browser.newPage({viewport:{width:390,height:844}});
   await simulateBackend(page,[]);
@@ -1097,6 +1118,7 @@ async function verifyClosedDesk(browser) {
     await verifyBulkArtworkChoices(browser);
     await verifyArtworkDrafts(browser);
     await verifyInterruptedArtworkUpload(browser);
+    await verifyGalleryMoves(browser);
     await verifyRequestIsolation(browser);
     await verifyRequestList(browser);
     await verifyFreshAdminSignIn(browser);
