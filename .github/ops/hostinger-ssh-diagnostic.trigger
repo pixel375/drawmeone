@@ -1,1 +1,1 @@
-Verify public drawing navigation and grouped artist/customer improvements; read-only.
+Verify activity sentence-case presentation and all current assets; read-only.

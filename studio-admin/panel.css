@@ -343,3 +343,6 @@ footer{padding:28px 0 70px;border-top:1px solid var(--line);color:var(--muted);f
 #artwork-search:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 
 .request-activity summary{cursor:pointer;font-weight:750;min-height:44px;display:list-item;padding-block:10px}.request-activity-list{list-style:none;margin:12px 0;padding:0;display:grid;gap:0}.request-activity-list li{display:flex;flex-wrap:wrap;justify-content:space-between;gap:6px 16px;padding:12px 0;border-top:1px solid var(--line);overflow-wrap:anywhere}.request-activity-list small{color:var(--muted)}
+
+/* Event descriptions are sentence case, unlike section labels. */
+.request-activity-list li>strong{text-transform:none;letter-spacing:normal;font-size:13px}

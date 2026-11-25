@@ -757,7 +757,8 @@ async function verifyDeliveryDraftManagement(browser) {
     await page.locator('[data-view="requests"]').click();
     await page.locator("#request-list .request-open").first().click();
     await page.locator("#request-activity-panel summary").click();
-    assert.match(await page.locator("#request-activity-list").innerText(),/Unpaid order confirmed/);
+    await page.waitForFunction(()=>document.querySelector("#request-activity-list")?.textContent.includes("Unpaid order confirmed"));
+    assert.match(await page.locator("#request-activity-list").innerText(),/Unpaid order confirmed/i);
     assert.equal(await page.locator("#request-activity-limit").isVisible(),true);
     await page.locator(".delivery-draft-form input").setInputFiles({name:"fixture.png",mimeType:"image/png",buffer:Buffer.from("synthetic image fixture")});
     await page.getByRole("button",{name:"Stage privately",exact:true}).click();
