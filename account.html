@@ -44,11 +44,12 @@ small{display:block;color:var(--muted);font-size:11px;line-height:1.6;margin-top
 .info-list{font-size:12px;color:var(--muted);margin-top:28px}
 footer{border-top:1px solid var(--line);padding-top:20px;margin-top:28px;font-size:11px;color:var(--muted)}
 [hidden]{display:none!important}
+#account-security{border-top:1px solid var(--line);padding-top:12px;min-width:0}#account-security summary{cursor:pointer;min-height:44px;font-weight:700;padding:8px 0}#security-action{display:block;width:100%;background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:12px;font:inherit;min-height:48px}#security-notice,#account-email{overflow-wrap:anywhere}
 .skip-link{position:absolute;left:14px;top:-90px;z-index:1000;padding:10px 16px;background:var(--accent);color:#21191c;border-radius:7px;font-weight:800;text-decoration:none}
 .skip-link:focus{top:10px}
 button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 </style>
-<script defer src="./account.js?v=15"></script>
+<script defer src="./account.js?v=16"></script>
 </head>
 <body>
 <a class="skip-link" href="#main">Skip to main content</a>
@@ -115,6 +116,24 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-off
     <span id="account-email"></span>
     <p>Review your private commission requests and follow their status. New submissions open only when the artist is ready.</p>
     <a href="./commission.html" class="primary account-commission-link">My commissions &amp; request form</a>
+    <p id="account-session-count" aria-live="polite"></p>
+    <details id="account-security"><summary>Account security</summary>
+      <form id="security-form">
+        <label for="security-action">Security action</label>
+        <select id="security-action"><option value="revoke_other_sessions">Sign out other devices</option><option value="change_password">Change password</option></select>
+        <label for="security-current">Current password</label>
+        <input id="security-current" type="password" autocomplete="current-password" required maxlength="128">
+        <div id="security-new-fields" hidden>
+          <label for="security-new">New password</label>
+          <input id="security-new" type="password" autocomplete="new-password" minlength="12" maxlength="128">
+          <label for="security-confirm">Confirm new password</label>
+          <input id="security-confirm" type="password" autocomplete="new-password" minlength="12" maxlength="128">
+          <small>Changing your password signs out every device, including this one.</small>
+        </div>
+        <button class="primary" id="security-submit" type="submit">Apply security action</button>
+      </form>
+    </details>
+    <p id="security-notice" role="status" aria-live="polite"></p>
     <button id="sign-out" class="primary" type="button">Sign out</button>
   </div>
 </section>

@@ -444,12 +444,12 @@ jobs:
           # v3.9 registration remains closed, but verify the versioned
           # customer signup and recovery assets are deployed safely.
           customer_page=$(curl -fsSL --max-time 15 "https://drawmeone.com/account.html")
-          [[ "$customer_page" == *'account.js?v=15'* ]] &&
+          [[ "$customer_page" == *'account.js?v=16'* ]] &&
           [[ "$customer_page" == *'id="signup-password-confirm"'* ]] || {
             echo "customer_onboarding_assets=stale_signup"
             exit 1
           }
-          customer_js=$(curl -fsSL --max-time 15 "https://drawmeone.com/account.js?v=15")
+          customer_js=$(curl -fsSL --max-time 15 "https://drawmeone.com/account.js?v=16")
           [[ "$customer_js" == *'signupPasswordConfirm.setCustomValidity'* ]] &&
           [[ "$customer_js" == *'Too many sign-in attempts'* ]] || {
             echo "customer_onboarding_assets=stale_signup_script"
@@ -468,6 +468,8 @@ jobs:
             echo "customer_onboarding_assets=stale_recovery_script"
             exit 1
           }
+          [[ "$customer_page" == *'id="account-security"'* ]] && [[ "$customer_js" == *'function freshSignIn(reason)'* ]] || { echo "account_security=stale_assets"; exit 1; }
+          echo "account_security=deployed"
           echo "customer_onboarding_assets=deployed"
           # v4.0 public accessibility: validate deployed revised theme
           # picker contrast and skip-to-main links. Read-only assets only.

@@ -19,6 +19,13 @@
   const widgets = {};
   let csrf = "";
   let status = null;
+  let securityBusy=false;
+  let leaving=false;
+  const securityForm=$("security-form");
+  function clearPrivateAccount(){csrf="";signedIn.hidden=true;$("account-name").textContent="";$("account-email").textContent="";$("account-session-count").textContent="";securityForm.reset();$("security-notice").textContent="";}
+  function freshSignIn(reason){leaving=true;clearPrivateAccount();workspace.hidden=true;location.replace(location.pathname+"?session="+encodeURIComponent(reason));}
+  window.addEventListener("pagehide",()=>{clearPrivateAccount();});
+  window.addEventListener("pageshow",event=>{if(event.persisted)location.reload();});
 
   function message(text, isError = false) {
     note.hidden = false;
@@ -49,7 +56,9 @@
     if(!response.ok) return false;
     const data = await response.json();
     if(!data.authenticated || !data.user) return false;
+    if(leaving)return false;
     csrf = data.csrf_token;
+    $("account-session-count").textContent=Number.isSafeInteger(data.active_sessions)?data.active_sessions+" active session(s), including this device.":"Active session count unavailable.";
     $("account-name").textContent = data.user.display_name;
     $("account-email").textContent = data.user.email;
     unavailable.hidden = true; workspace.hidden = true; signedIn.hidden = false;
@@ -188,15 +197,53 @@
     finally{$("submit-signup").disabled=false;}
   });
 
-  $("sign-out").addEventListener("click", async () => {
-    try {
-      const {response}=await request("./api/auth/logout.php",{},csrf);
-      if(!response.ok) throw new Error("logout_failed");
-      csrf = "";
-      signedIn.hidden = true; workspace.hidden = false;show("login");
-    } catch (_) {
-      alert("Unable to sign out. Please refresh or try again.");
+  function syncSecurityForm(){
+    const change=$("security-action").value==="change_password";
+    $("security-new-fields").hidden=!change;
+    $("security-new").required=$("security-confirm").required=change;
+    $("security-new").value=$("security-confirm").value="";
+  }
+  $("security-action").addEventListener("change",syncSecurityForm);
+  securityForm.addEventListener("submit",async event=>{
+    event.preventDefault();if(securityBusy||!csrf||!securityForm.reportValidity())return;
+    const action=$("security-action").value;
+    const payload={action,current_password:$("security-current").value};
+    if(action==="change_password"){
+      if($("security-new").value!==$("security-confirm").value){
+        $("security-notice").textContent="New passwords do not match.";return;
+      }
+      if(new TextEncoder().encode($("security-new").value).length>128){
+        $("security-notice").textContent="New password must be at most 128 bytes.";return;
+      }
+      payload.new_password=$("security-new").value;
     }
+    if(!window.confirm(action==="change_password"?"Change your password and sign out all devices?":"Sign out all other devices?"))return;
+    securityBusy=true;$("sign-out").disabled=true;
+    for(const field of securityForm.querySelectorAll("input,select,button"))field.disabled=true;
+    $("security-notice").textContent="Applying security action…";
+    try{
+      const {response,body}=await request("./api/auth/security.php",payload,csrf);
+      if(response.status===401)return freshSignIn("expired");
+      if(!response.ok||!body.ok){$("security-notice").textContent=response.status===403?"Current password or security check was not accepted.":response.status===429?"Too many attempts. Try again later.":"Security action not confirmed. Review your details.";return;}
+      if(body.requires_sign_in===true)return freshSignIn("password-changed");
+      if(body.status!=="other_sessions_revoked")throw new Error("unexpected_result");
+      $("account-session-count").textContent="1 active session, including this device.";
+      $("security-notice").textContent="Other sessions signed out.";
+    }catch(_){$("security-notice").textContent="Security action outcome uncertain. Refresh before trying again.";}
+    finally{
+      securityBusy=false;for(const field of securityForm.querySelectorAll("input,select,button"))field.disabled=false;
+      $("sign-out").disabled=false;$("security-current").value=$("security-new").value=$("security-confirm").value="";
+    }
+  });
+  $("sign-out").addEventListener("click",async()=>{
+    if(securityBusy||!csrf)return;
+    securityBusy=true;$("sign-out").disabled=true;$("security-submit").disabled=true;
+    try{
+      const {response,body}=await request("./api/auth/logout.php",{},csrf);
+      if(!response.ok||body.ok!==true||body.status!=="signed_out")throw new Error("logout_failed");
+      freshSignIn("signed-out");
+    }catch(_){$("security-notice").textContent="Unable to confirm sign out. Refresh or try again.";}
+    finally{securityBusy=false;$("sign-out").disabled=false;$("security-submit").disabled=false;}
   });
 
   async function verifyFromLink(token) {
@@ -214,6 +261,8 @@
     }
   }
   async function initialize() {
+    const reason=new URLSearchParams(location.search).get("session");
+    if(reason)history.replaceState(null,"",location.pathname+location.hash);
     const fragment = new URLSearchParams(location.hash.slice(1));
     const verificationToken = fragment.get("verify");
     if(verificationToken)history.replaceState(null,"",location.pathname+location.search);
@@ -233,6 +282,9 @@
       signupTab.hidden = !status.registration_available;
       show("login");
       activateTurnstile(status.turnstile_site_key);
+      if(reason==="signed-out")message("You have been signed out.");
+      if(reason==="password-changed")message("Password changed. Sign in with your new password.");
+      if(reason==="expired")message("Your session expired. Please sign in again.");
       if(verificationToken) {
         await verifyFromLink(verificationToken);
         message(state.textContent, state.textContent !== "Email confirmed. You can now sign in.");

@@ -1,1 +1,1 @@
-Recheck effective private directory protection, image validity and record consistency after correcting legacy file mode check.
+Verify account security assets, integrity checks and unchanged commercial gates. Read-only.
