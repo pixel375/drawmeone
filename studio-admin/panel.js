@@ -1147,6 +1147,7 @@
   }
 
   function resetQuoteDraft(){
+    pendingAdminMessages.delete('create_quote_draft');
     $("request-quote-form").reset();
     $("quote-lines").replaceChildren();
     addQuoteLine();
@@ -1461,6 +1462,7 @@
       const {response, data} = await post("request-actions.php", {
         action:"create_quote_draft", request_id:id,
         currency:$("quote-currency").value, scope, revision_allowance, lines,
+        operation_key:adminMessageKey("create_quote_draft",id,JSON.stringify({currency:$("quote-currency").value,scope,revision_allowance,lines})),
       }, csrf);
       if (response.status === 401) return sessionExpired();
       if (!response.ok || !data.ok) {
@@ -1471,9 +1473,10 @@
       resetQuoteDraft();
       await openRequest(id);
       requestText("request-detail-status",
+        data.already_saved?"Existing quote version "+data.version+" recovered ("+data.status+"). No new quote created.":
         "Draft quote version " + data.version + " saved privately. No customer contact.");
     } catch (_) {
-      requestText("request-detail-status", "Connection problem. Draft save not confirmed.");
+      requestText("request-detail-status", "Connection problem. Retry the unchanged quote to recover the original save.");
     } finally {
       requestBusy = false;
       updateRequestButtons();

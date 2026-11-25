@@ -287,7 +287,7 @@ try {
     [$code,$draft]=qa_http('/api/admin/request-actions.php',$tokenAdmin,
         '__Host-dmo_admin',[
             'action'=>'create_quote_draft','request_id'=>$requestA,
-            'currency'=>'CAD','scope'=>'Synthetic original portrait, no external rights',
+            'currency'=>'CAD','scope'=>'Synthetic original portrait, no external rights','operation_key'=>'10000000-0000-4000-8000-000000000006',
             'revision_allowance'=>2,'lines'=>[
                 ['description'=>'Illustration','amount_minor'=>2700],
                 ['description'=>'Background','amount_minor'=>300],
@@ -297,6 +297,11 @@ try {
         ($draft['total_minor']??0)===3000 &&
         is_int($draft['quote_id']??null),'artist_creates_exact_price_draft');
     $quoteId=$draft['quote_id'];
+    $retryQuote=['action'=>'create_quote_draft','request_id'=>$requestA,'currency'=>'CAD','scope'=>'Synthetic original portrait, no external rights','operation_key'=>'10000000-0000-4000-8000-000000000006','revision_allowance'=>2,'lines'=>[['description'=>'Illustration','amount_minor'=>2700],['description'=>'Background','amount_minor'=>300]]];
+    [$code,$replay]=qa_http('/api/admin/request-actions.php',$tokenAdmin,'__Host-dmo_admin',$retryQuote,$csrfAdmin);
+    qa_positive($code===200&&($replay['quote_id']??null)===$quoteId&&($replay['already_saved']??false),'quote_retry_recovers_original_version');
+    [$code]=qa_http('/api/admin/request-actions.php',$tokenAdmin,'__Host-dmo_admin',array_replace($retryQuote,['revision_allowance'=>3]),$csrfAdmin);
+    qa_positive($code===409,'changed_quote_operation_conflict');
     [$code,$unreleased]=qa_http('/api/request.php?ref='.urlencode($referenceA),$tokenA);
     qa_positive($code===200 && ($unreleased['quotes']??[])===[],
         'new_draft_still_hidden');

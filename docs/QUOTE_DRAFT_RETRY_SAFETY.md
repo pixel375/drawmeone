@@ -1,0 +1,3 @@
+# Quote draft retry safety
+
+New Artist Desk clients attach a UUID operation key to a quote draft. The request row lock serializes quote versions. The audit receipt stores an HMAC of the normalized quote payload, including ordered lines, without copying its scope or prices into a second record. A same-key, same-payload retry returns the existing version and its current status; changed content is rejected. Existing accepted quotes remain immutable and commercial feature gates remain unchanged. The browser keeps the key only in memory and clears it on successful save or explicit discard. Older clients remain compatible without retry safety. Synthetic HTTP and browser coverage checks lost-response recovery and conflicting payloads.

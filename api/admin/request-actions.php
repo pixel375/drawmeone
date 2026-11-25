@@ -34,6 +34,7 @@ try {
     $note = null;
     $messageKey=null;
     $quote = null;
+    $quoteKey=null;
     $deadline = null;
     $orderId = null;
     $withdrawId = null;
@@ -79,10 +80,11 @@ try {
     } else {
         if (array_diff(array_keys($input), [
             'action', 'request_id', 'currency', 'scope',
-            'revision_allowance', 'lines',
+            'revision_allowance', 'lines','operation_key',
         ]) !== []) {
             dmo_json(422, ['ok' => false, 'error' => 'unexpected_fields']);
         }
+        $quoteKey=dmo_message_operation_key($input);
         $quote = dmo_workflow_quote_input($input);
     }
 
@@ -237,6 +239,8 @@ try {
             ]);
         }
 
+        $prior=dmo_quote_draft_replay($db,$requestId,(int)$admin['user_id'],$quoteKey,$quote);
+        if($prior!==null){$db->commit();dmo_json(200,$prior);}
         if (!dmo_messages_request_open((string)$currentStatus)) {
             $db->rollBack();
             dmo_json(409,['ok'=>false,'error'=>'request_closed']);
@@ -293,7 +297,7 @@ try {
         dmo_workflow_audit(
             $db, (int) $admin['user_id'], $requestId,
             'quote.draft_created',
-            ['quote_id' => $quoteId, 'version' => $version]
+            ['quote_id' => $quoteId, 'version' => $version,'operation_key'=>$quoteKey,'payload_digest'=>dmo_quote_draft_digest($quote)]
         );
         $db->commit();
         dmo_json(201, [

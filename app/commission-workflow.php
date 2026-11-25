@@ -204,3 +204,32 @@ function dmo_workflow_quote_input(array $input): array
         'total_minor' => $sum,
     ];
 }
+
+/** Read an existing quote operation under the caller's locked request row. */
+function dmo_quote_draft_replay(PDO $db,int $request,int $actor,?string $key,array $quote): ?array
+{
+    if($key===null)return null;
+    $digest=dmo_quote_draft_digest($quote);
+    $q=$db->prepare("SELECT JSON_UNQUOTE(JSON_EXTRACT(details_json,'$.quote_id')) AS quote_id,
+        JSON_UNQUOTE(JSON_EXTRACT(details_json,'$.payload_digest')) AS digest
+        FROM dmo_audit_log WHERE entity_type='commission_request' AND entity_id=:request
+        AND actor_id=:actor AND action='quote.draft_created'
+        AND JSON_UNQUOTE(JSON_EXTRACT(details_json,'$.operation_key'))=:operation ORDER BY id DESC LIMIT 1");
+    $q->execute(['request'=>$request,'actor'=>$actor,'operation'=>$key]);
+    $row=$q->fetch();
+    if(!is_array($row))return null;
+    if(!is_string($row['digest'])||!hash_equals($row['digest'],$digest)){
+        $db->rollBack();dmo_json(409,['ok'=>false,'error'=>'operation_key_conflict']);
+    }
+    $q=$db->prepare('SELECT id,version_number,status,total_minor FROM dmo_quotes WHERE id=:id AND request_id=:request');
+    $q->execute(['id'=>$row['quote_id'],'request'=>$request]);$saved=$q->fetch();
+    if(!is_array($saved)){
+        $db->rollBack();dmo_json(409,['ok'=>false,'error'=>'quote_receipt_unavailable']);
+    }
+    return ['ok'=>true,'quote_id'=>(int)$saved['id'],'version'=>(int)$saved['version_number'],
+        'status'=>$saved['status'],'total_minor'=>(int)$saved['total_minor'],'already_saved'=>true];
+}
+function dmo_quote_draft_digest(array $quote): string
+{
+    return hash_hmac('sha256','quote-draft|'.json_encode($quote,JSON_THROW_ON_ERROR),dmo_config('DMO_APP_KEY'));
+}

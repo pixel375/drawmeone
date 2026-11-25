@@ -455,10 +455,11 @@ async function verifyRequestIsolation(browser) {
     await page.waitForFunction(()=>document.querySelector("#request-note-save")?.disabled===false);
     assert.equal(await page.locator("#request-note-body").inputValue(),"");
     assert.deepEqual(posts,[]);
-    let saved=0;
+    let saved=0;const quoteKeys=[];
     await page.route("**/api/admin/request-actions.php*",route=>{
       const body=route.request().postDataJSON();assert.equal(body.action,"create_quote_draft");assert.equal(body.request_id,42);
-      saved++;return reply(route,{ok:true,version:1});
+      quoteKeys.push(body.operation_key);
+      saved++;return saved===1?route.abort("failed"):reply(route,{ok:true,version:1,status:"draft",already_saved:true});
     });
     await page.locator("#request-note-body").fill("Keep this separate note");
     await page.locator("#quote-scope").fill("Synthetic quote scope for QA");
@@ -466,8 +467,12 @@ async function verifyRequestIsolation(browser) {
     await page.locator(".quote-line-price").first().fill("20.00");
     page.once("dialog",dialog=>dialog.accept());
     await page.locator("#quote-save").click();
-    await page.waitForFunction(()=>document.querySelector("#request-detail-status")?.textContent.includes("Draft quote version 1 saved"));
-    assert.equal(saved,1);
+    await page.waitForFunction(()=>document.querySelector("#request-detail-status")?.textContent.includes("Retry the unchanged quote"));
+    assert.equal(await page.locator("#quote-scope").inputValue(),"Synthetic quote scope for QA");
+    page.once("dialog",dialog=>dialog.accept());
+    await page.locator("#quote-save").click();
+    await page.waitForFunction(()=>document.querySelector("#request-detail-status")?.textContent.includes("Existing quote version 1 recovered"));
+    assert.equal(saved,2);assert.equal(quoteKeys[0],quoteKeys[1]);assert.match(quoteKeys[0],/^[0-9a-f-]{36}$/);
     assert.equal(await page.locator("#quote-scope").inputValue(),"");
     assert.equal(await page.locator("#request-note-body").inputValue(),"Keep this separate note");
     console.log("PASS: artist request draft isolation, discard protection, quote reset and stale responses");
