@@ -14,6 +14,7 @@ try {
     dmo_json(200, [
         'ok' => true,
         'authenticated' => true,
+        'privacy_self_service_enabled'=>dmo_config('DMO_PRIVACY_SELF_SERVICE_ENABLED')==='1',
         'active_sessions' => (int)$devices->fetchColumn(),
         'user' => [
             'display_name' => $session['display_name'],

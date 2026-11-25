@@ -115,7 +115,7 @@ try {
         'DMO_CUSTOMER_MESSAGING_ENABLED'=>'1',
         'DMO_ORDER_ADMIN_ENABLED'=>'1','DMO_ORDER_TERMS_APPROVED'=>'1',
         'DMO_MANUAL_PAYMENT_ENABLED'=>'1','DMO_MANUAL_PAYMENT_TERMS_APPROVED'=>'1',
-        'DMO_REGISTRATION_ENABLED'=>'0','DMO_REQUESTS_ENABLED'=>'1','DMO_INTAKE_CONTROL_ENABLED'=>'1',
+        'DMO_REGISTRATION_ENABLED'=>'0','DMO_REQUESTS_ENABLED'=>'1','DMO_INTAKE_CONTROL_ENABLED'=>'1','DMO_PRIVACY_SELF_SERVICE_ENABLED'=>'1',
     ] as $name=>$value) putenv($name.'='.$value);
     if (!is_string($log)) throw new RuntimeException('Local server log unavailable.');
     $process=proc_open([
@@ -573,6 +573,44 @@ try {
     qa_positive($code===200&&$retry['already_submitted']===true&&$retry['public_ref']===$submitted['public_ref'],'idempotent_retry_survives_intake_pause');
     [$code,$history]=qa_http('/api/requests.php',$tokenA);
     qa_positive($code===200&&$history['new_requests_open']===false,'history_available_during_pause');
+    $password='CI-positive-disposable-password!';
+    $export=['action'=>'export','current_password'=>$password];
+    [$code]=qa_http('/api/auth/privacy.php',null,'__Host-dmo_session',$export);
+    qa_positive($code===401,'privacy_export_requires_account');
+    [$code]=qa_http('/api/auth/privacy.php',$tokenA,'__Host-dmo_session',$export);
+    qa_positive($code===403,'privacy_export_requires_csrf');
+    [$code]=qa_http('/api/auth/privacy.php',$tokenA,'__Host-dmo_session',array_replace($export,['current_password'=>'wrong']),$csrfA);
+    qa_positive($code===403,'privacy_export_requires_password');
+    [$code,$result]=qa_http('/api/auth/privacy.php',$tokenA,'__Host-dmo_session',$export,$csrfA);
+    qa_positive($code===200&&$result['export']['profile']['email']==='positive-a@example.invalid','owner_exports_own_records');
+    $serialized=json_encode($result,JSON_THROW_ON_ERROR);
+    qa_positive(!str_contains($serialized,$referenceB)&&!str_contains($serialized,'positive-b@example.invalid')&&!str_contains($serialized,'password_hash')&&!str_contains($serialized,'manual-hmac-v1')&&!str_contains($serialized,'storage_key'),'export_excludes_unrelated_records_and_secrets');
+    qa_positive(count(array_filter($result['export']['requests'],fn($r)=>$r['public_ref']===$referenceA))===1,'export_includes_historical_request');
+    $privacy=['action'=>'submit','current_password'=>$password,'kind'=>'deletion','note'=>'Synthetic deletion request for review.'];
+    [$code,$opened]=qa_http('/api/auth/privacy.php',$tokenA,'__Host-dmo_session',$privacy,$csrfA);
+    qa_positive($code===200&&$opened['case']['status']==='submitted'&&$opened['data_deleted']===false,'privacy_request_does_not_delete');
+    [$code]=qa_http('/api/auth/privacy.php',$tokenA,'__Host-dmo_session',$privacy,$csrfA);
+    qa_positive($code===409,'one_active_privacy_case');
+    [$code,$other]=qa_http('/api/auth/privacy.php',$tokenB);
+    qa_positive($code===200&&$other['case']===null,'other_customer_cannot_view_case');
+    [$code]=qa_http('/api/admin/privacy.php',$tokenA,'__Host-dmo_admin');
+    qa_positive(in_array($code,[401,403],true),'customer_cannot_read_privacy_queue');
+    [$code,$queue]=qa_http('/api/admin/privacy.php',$tokenAdmin,'__Host-dmo_admin');
+    qa_positive($code===200&&count($queue['cases'])===1&&$queue['cases'][0]['customer_id']===$a,'admin_privacy_queue');
+    $decision=['customer_id'=>$a,'expected_version'=>$opened['case']['version'],'status'=>'in_review','reply'=>'Reviewing retention requirements.','confirm_record'=>true];
+    [$code,$progress]=qa_http('/api/admin/privacy.php',$tokenAdmin,'__Host-dmo_admin',$decision,$csrfAdmin);
+    qa_positive($code===200&&$progress['case']['status']==='in_review','admin_records_review');
+    [$code]=qa_http('/api/admin/privacy.php',$tokenAdmin,'__Host-dmo_admin',$decision,$csrfAdmin);
+    qa_positive($code===409,'privacy_stale_decision_blocked');
+    [$code,$done]=qa_http('/api/admin/privacy.php',$tokenAdmin,'__Host-dmo_admin',array_replace($decision,['expected_version'=>$progress['case']['version'],'status'=>'declined','reply'=>'Synthetic retained records decision.']),$csrfAdmin);
+    qa_positive($code===200&&$done['data_deleted']===false,'manual_outcome_only');
+    [$code,$own]=qa_http('/api/auth/privacy.php',$tokenA);
+    qa_positive($code===200&&$own['case']['status']==='declined'&&$own['case']['reply']==='Synthetic retained records decision.','customer_sees_outcome');
+    [$code,$opened]=qa_http('/api/auth/privacy.php',$tokenA,'__Host-dmo_session',array_replace($privacy,['kind'=>'access']),$csrfA);
+    [$code,$withdrawn]=qa_http('/api/auth/privacy.php',$tokenA,'__Host-dmo_session',['action'=>'withdraw','current_password'=>$password,'expected_version'=>$opened['case']['version']],$csrfA);
+    qa_positive($code===200&&$withdrawn['case']['status']==='withdrawn','customer_withdraws_open_case');
+    [$code,$queue]=qa_http('/api/admin/privacy.php',$tokenAdmin,'__Host-dmo_admin');
+    qa_positive($code===200&&$queue['cases']===[],'completed_or_withdrawn_cases_leave_open_queue');
     echo "DISPOSABLE_POSITIVE_HTTP=PASS\n";
 } catch(Throwable $error) {
     fwrite(STDERR,'DISPOSABLE_POSITIVE_HTTP=FAIL ('.get_class($error).

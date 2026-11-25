@@ -86,3 +86,6 @@ DMO_INTAKE_CONTROL_ENABLED=0
 
 # Explicit continuation approval for immutable previously published policies.
 # DMO_HISTORICAL_POLICY_PINS={"previous-version":"64_LOWERCASE_HEX_CHARACTERS"}
+
+# Optional self-service structured export and privacy case submission; no automatic deletion.
+DMO_PRIVACY_SELF_SERVICE_ENABLED=0

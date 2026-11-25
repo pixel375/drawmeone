@@ -92,6 +92,7 @@ try {
         ['key' => 'offsite', 'label' => 'Independent off-site recovery',
          'status' => 'planned',
          'detail' => 'Off-site copy and separately stored recovery key not configured'],
+        ['key'=>'privacy_self_service','label'=>'Customer privacy self-service','status'=>dmo_config('DMO_PRIVACY_SELF_SERVICE_ENABLED')==='1'?'ready':'blocked','detail'=>'Scoped customer export and manual privacy requests; no automated deletion'],
         ['key'=>'payment_exceptions','label'=>'Payment exceptions','status'=>dmo_payment_exceptions_enabled()?'ready':'blocked','detail'=>'Manual dispute holds and external full refund records; no money movement'],
         ['key'=>'manual_payments','label'=>'Manual payment reconciliation','status'=>dmo_manual_payments_enabled()?'ready':'blocked',
          'detail'=>'Requires independently checked receiving-account records and separate owner approval'],
