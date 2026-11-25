@@ -1,1 +1,1 @@
-Verify read-only private configuration review and closed example defaults.
+Verify privacy credential clearing, printable summary improvements and configuration warning detail.

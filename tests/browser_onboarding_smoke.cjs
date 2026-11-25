@@ -275,12 +275,15 @@ async function privacySelfService(browser){
     page.once("dialog",dialog=>dialog.accept());
     await page.locator("#privacy-submit").click();
     await waitText(page,"#privacy-case","submitted");
+    await waitText(page,"#privacy-notice","Request recorded for manual review");
+    await page.waitForFunction(()=>document.querySelector("#privacy-password").value===""&&!document.querySelector("#privacy-withdraw").disabled);
     assert.equal(await page.locator("#privacy-password").inputValue(),"");
     assert.equal(await page.locator("#privacy-action option[value=deletion]").isDisabled(),true);
     await page.locator("#privacy-password").fill("ci-current-password");
     page.once("dialog",dialog=>dialog.accept());
     await page.locator("#privacy-withdraw").click();
     await waitText(page,"#privacy-case","withdrawn");
+    await waitText(page,"#privacy-notice","Request withdrawn.");
     assert.equal(await page.locator("#privacy-withdraw").isVisible(),false);
     await page.locator("#privacy-history summary").click();
     await waitText(page,"#privacy-history-list","withdrawn");

@@ -33,7 +33,8 @@ try{
         $q->execute(['customer'=>$session['user_id'],'ref'=>$ref]);$request=$q->fetch(PDO::FETCH_ASSOC);
         if(!is_array($request)){$status=404;$request=null;}
         else{
-            $id=(int)$request['id'];$pin=dmo_policy_receipt($db,$id);
+            $id=(int)$request['id'];$receipt=dmo_policy_receipt_record($db,$id);
+            $pin=$receipt['state']==='recorded'&&$receipt['version']===$request['policy_version']?$receipt['sha256']:null;
             $quotes=dmo_quote_customer_rows($db,$id,$request['policy_version']);
             $orders=dmo_orders_customer_rows($db,$id);
             $accepted=array_values(array_filter($quotes,static fn($row)=>$row['status']==='accepted'));
@@ -49,8 +50,8 @@ try{
 http_response_code($status);
 function esc(mixed $s): string{return dmo_info_escape((string)$s);}
 ?>
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>Private commission summary | Draw Me One</title><link rel="stylesheet" href="/public-info.css?v=1"></head>
-<body><a class="skip" href="#main">Skip to summary</a><header><a href="/commission.html">Draw Me One</a><nav><a href="/commission.html">My commissions</a></nav></header><main id="main" tabindex="-1">
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>Private commission summary | Draw Me One</title><link rel="stylesheet" href="/public-info.css?v=2"></head>
+<body class="private-summary"><a class="skip" href="#main">Skip to summary</a><header><a href="/commission.html">Draw Me One</a><nav><a href="/commission.html">My commissions</a></nav></header><main id="main" tabindex="-1">
 <p class="eyebrow">Private customer record</p><h1>Commission summary</h1>
 <?php if(!$request): ?>
 <div class="notice"><h2><?= $status===503?'Summary unavailable':'Commission not found' ?></h2><p>Return to your private commission workspace and try again.</p><a href="/commission.html">My commissions</a></div>

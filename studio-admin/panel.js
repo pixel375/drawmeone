@@ -194,15 +194,23 @@
     const link=document.createElement("a");link.href=url;link.download="drawmeone-launch-configuration.json";document.body.append(link);link.click();link.remove();
     setTimeout(()=>URL.revokeObjectURL(url),1000);
   });
+  function renderConfigurationReview(report){
+    const list=$("configuration-issues"),status=$("configuration-status");list.replaceChildren();
+    if(report?.mode!=="review_only"||report.authorizes_launch!==false||!Array.isArray(report.issues)){status.textContent="Configuration review unavailable.";return;}
+    const codes=report.issues.filter(x=>typeof x==="string"&&/^[A-Za-z0-9_:]+$/.test(x)&&x.length<=180).slice(0,200);
+    status.textContent=report.issue_count+" warning(s) · "+report.enabled_gate_count+" of "+report.known_gate_count+" switches enabled · no launch authorization.";
+    for(const code of codes)list.append(textNode("li",code.replaceAll("_"," ").replaceAll(":"," · "),"small"));
+    if(!codes.length)list.append(textNode("li","No warnings reported by this review.","small"));
+  }
   async function overview() {
     const generation=++overviewGeneration;
-    renderLaunchEvidence(null);
+    renderLaunchEvidence(null);renderConfigurationReview(null);
     const { response, data } = await get("overview.php");
     if(generation!==overviewGeneration||leavingSession)return;
     if (response.status === 401) return sessionExpired();
     if (!response.ok || !data.ok) return showError("Unable to load live studio counts.");
     if(!intakeBusy)renderIntake(data.intake);
-    renderLaunchEvidence(data.launch_evidence);
+    renderLaunchEvidence(data.launch_evidence);renderConfigurationReview(data.configuration_review);
     const counters = {
       "stat-requests": data.counts?.requests_for_review,
       "stat-orders": data.counts?.active_orders,
@@ -2319,7 +2327,7 @@
     ++overviewGeneration;
     ++artworkGeneration;
     artworkRecords=[];artworkWriteEnabled=false;$("artwork-list").replaceChildren();
-    renderLaunchEvidence(null);
+    renderLaunchEvidence(null);renderConfigurationReview(null);
     closeRequestDetail(true);clearPrivacyQueue();clearFinance();clearCustomers();setRequestCustomer();$("customer-query").value="";
     $("workspace").hidden = true;
     const url = new URL(location.href);

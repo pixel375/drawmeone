@@ -247,7 +247,7 @@
       if(generation!==privacyGeneration||leaving||!csrf)return;
       if(!response.ok||!data.ok)throw Error("privacy_status");
       privacyReady=data.enabled===true;renderPrivacyCase(data.case);renderPrivacyHistory(data.history,older);
-    }catch(_){if(generation===privacyGeneration){privacyReady=false;privacyCase=null;privacyCursor=null;$("privacy-withdraw").hidden=true;$("privacy-history-list").replaceChildren();$("privacy-history-more").hidden=true;$("privacy-case").textContent="Request status unavailable. Refresh before retrying.";$("privacy-history-status").textContent="Case history unavailable. Refresh to retry.";}}
+    }catch(_){if(generation===privacyGeneration){privacyReady=false;privacyCase=null;privacyCursor=null;for(const opt of $("privacy-action").options)opt.disabled=false;$("privacy-withdraw").hidden=true;$("privacy-history-list").replaceChildren();$("privacy-history-more").hidden=true;$("privacy-case").textContent="Request status unavailable. Refresh before retrying.";$("privacy-history-status").textContent="Case history unavailable. Refresh to retry.";}}
     finally{if(generation===privacyGeneration){privacyLoading=false;$("privacy-history-refresh").disabled=$("privacy-history-more").disabled=false;syncPrivacyForm();}}
   }
   $("privacy-history-refresh").addEventListener("click",()=>{if(!privacyBusy)loadPrivacyCase();});
@@ -265,6 +265,7 @@
       if(!window.confirm("Submit this privacy request for manual review? No data is changed or deleted automatically."))return;
       payload.kind=action;payload.note=$("privacy-note").value.trim();
     }
+    $("privacy-password").value="";
     ++privacyGeneration;const generation=privacyGeneration;
     privacyBusy=true;for(const field of form.querySelectorAll("input,select,textarea,button"))field.disabled=true;
     $("sign-out").disabled=true;$("security-submit").disabled=true;$("privacy-notice").textContent="Processing…";
@@ -282,7 +283,7 @@
         const link=document.createElement("a");link.href=url;link.download="drawmeone-customer-records.json";document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);
         $("privacy-notice").textContent="Export prepared. Store this private file securely.";
       }else{
-        renderPrivacyCase(body.case);$("privacy-note").value="";await loadPrivacyCase();
+        $("privacy-note").value="";await loadPrivacyCase();
         $("privacy-notice").textContent=withdraw?"Request withdrawn.":"Request recorded for manual review. No data has been deleted.";
       }
     }catch(_){if(generation===privacyGeneration){privacyReady=false;$("privacy-notice").textContent="Outcome uncertain. Refresh before retrying.";}}

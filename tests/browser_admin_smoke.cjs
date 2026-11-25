@@ -28,6 +28,7 @@ const mockAdmin = {
       requests_for_review: 0, active_orders: 0,
       payments_to_verify: 0, messages_last_seven_days: 0
     },
+    configuration_review:{mode:"review_only",authorizes_launch:false,issue_count:1,enabled_gate_count:2,known_gate_count:36,issues:["dependency:DMO_REQUESTS_ENABLED:DMO_AUTH_ENABLED"]},
     retention:{mode:"review_only",counts:{expired_sessions:3,privacy_open_30d:1,closed_no_order_365d:2}},
     integrity:{checks:{order_quote_mismatch:0,paid_without_evidence:1},issue_count:1,scope:"database_only"},
     launch_evidence:{generated_at:"2026-11-25T00:00:00+00:00",scope:"configuration_only",authorizes_launch:false,published_artwork_count:1,published_package_count:0,intake_open:false,stages:[{key:"prepare",label:"1. Preparation",configuration_ready:false,configuration_pending:["Approved policies"],external_evidence_required:["Independent recovery test"]}]},
@@ -130,6 +131,11 @@ async function verifyArtistDesk(browser, width) {
     assert.match(await page.locator("#launch-evidence-stages").innerText(),/Independent recovery test/);
     assert.equal(await page.locator("#launch-evidence-export").isEnabled(),true);
     await evidence.locator("summary").click();
+    const config=page.locator(".integrity-details").filter({hasText:"Private configuration review (read-only)"});
+    await config.locator("summary").click();
+    assert.match(await page.locator("#configuration-status").innerText(),/1 warning/);
+    assert.match(await page.locator("#configuration-issues").innerText(),/DMO REQUESTS ENABLED/);
+    await config.locator("summary").click();
     const retention=page.locator(".integrity-details").filter({hasText:"Retention review (read-only)"});
     await retention.locator("summary").click();
     assert.match(await page.locator("#retention-status").innerText(),/Read-only inventory/);
