@@ -21,6 +21,7 @@ $allowed = [
     '/api/admin/requests.php',
     '/api/admin/order-create.php',
     '/api/admin/delivery-draft.php',
+    '/api/delivery.php',
     '/api/admin/request.php',
     '/api/admin/request-actions.php',
     '/api/admin/quote-send.php',

@@ -117,7 +117,7 @@ try {
         'DMO_REQUEST_TERMS_APPROVED' => '1',
         'DMO_REFERENCES_ENABLED' => '1',
         'DMO_ADMIN_ENABLED' => '1',
-        'DMO_REQUEST_ADMIN_WRITES_ENABLED'=>'1','DMO_ORDER_ADMIN_ENABLED'=>'1','DMO_ORDER_TERMS_APPROVED'=>'1','DMO_DELIVERY_DRAFTS_ENABLED'=>'1',
+        'DMO_REQUEST_ADMIN_WRITES_ENABLED'=>'1','DMO_ORDER_ADMIN_ENABLED'=>'1','DMO_ORDER_TERMS_APPROVED'=>'1','DMO_DELIVERY_DRAFTS_ENABLED'=>'1','DMO_DELIVERY_RELEASE_ENABLED'=>'1','DMO_DELIVERY_TERMS_APPROVED'=>'1',
     ] as $name => $value) putenv($name . '=' . $value);
 
     $db = dmo_database();
@@ -226,6 +226,48 @@ try {
     [$code]=ref_http('/api/admin/delivery-draft.php?id='.$id,$artistCookie);
     ref_assert($code===404,'removed_draft_cannot_be_downloaded');
     ref_assert($db->query('SELECT payment_status FROM dmo_orders')->fetchColumn()==='unverified','staging_does_not_verify_payment');
+    $advance=['action'=>'set_production_status','request_id'=>$requestA,'order_id'=>$order,'expected_status'=>'awaiting_arrangement','status'=>'in_progress'];
+    [$code]=ref_http('/api/admin/request-actions.php',$artistCookie,$advance,$artistCsrf);
+    ref_assert($code===409,'unpaid_order_cannot_start_production');
+    $db->prepare("UPDATE dmo_orders SET payment_status='paid' WHERE id=:id")->execute(['id'=>$order]);
+    [$code]=ref_http('/api/admin/request-actions.php',$artistCookie,$advance,$artistCsrf);
+    ref_assert($code===409,'paid_flag_without_evidence_cannot_start');
+    $db->prepare("INSERT INTO dmo_payments (order_id,method,currency,amount_minor,provider_reference,status,verified_by,verified_at) VALUES (:order,'bank_transfer','CAD',3000,:ref,'verified',:artist,UTC_TIMESTAMP())")->execute(['order'=>$order,'ref'=>'manual-hmac-v1:'.str_repeat('a',64),'artist'=>$artist]);
+    [$code]=ref_http('/api/admin/request-actions.php',$artistCookie,$advance,$artistCsrf);
+    ref_assert($code===200,'verified_payment_allows_production');
+    $ready=array_replace($advance,['expected_status'=>'in_progress','status'=>'ready_for_delivery']);
+    [$code]=ref_http('/api/admin/request-actions.php',$artistCookie,$ready,$artistCsrf);
+    ref_assert($code===409,'ready_requires_staged_artwork');
+    [$code,$saved]=ref_http('/api/admin/delivery-draft.php',$artistCookie,null,$artistCsrf,$upload);
+    ref_assert($code===201,'stage_final_artwork');
+    $finalId=$saved['draft_id'];
+    [$code]=ref_http('/api/admin/request-actions.php',$artistCookie,$ready,$artistCsrf);
+    ref_assert($code===200,'artist_marks_ready');
+    [$code,$data]=ref_http('/api/request.php?ref='.$refA,$cookieA);
+    ref_assert($code===200 && $data['deliveries']===[],'ready_is_not_released');
+    [$code]=ref_http('/api/delivery.php?id=1',$cookieA);
+    ref_assert($code===404,'no_download_before_release');
+    $release=['action'=>'release_delivery','request_id'=>$requestA,'order_id'=>$order,'draft_id'=>$finalId,'confirm_final'=>true];
+    [$code]=ref_http('/api/admin/request-actions.php',$artistCookie,array_replace($release,['confirm_final'=>false]),$artistCsrf);
+    ref_assert($code===422,'explicit_final_release_required');
+    [$code,$result]=ref_http('/api/admin/request-actions.php',$artistCookie,$release,$artistCsrf);
+    ref_assert($code===201 && $result['status']==='completed' && $result['customer_visible']===true,'final_release_completes_order');
+    $delivery=$result['delivery_id'];
+    [$code,$data]=ref_http('/api/request.php?ref='.$refA,$cookieA);
+    ref_assert($code===200 && count($data['deliveries'])===1 && $data['deliveries'][0]['id']===$delivery && !isset($data['deliveries'][0]['storage_key']),'owner_sees_safe_delivery_metadata');
+    [$code,$json,$bytes,$headers]=ref_http('/api/delivery.php?id='.$delivery,$cookieA);
+    ref_assert($code===200 && substr($bytes,8,4)==='WEBP' && str_contains(strtolower($headers),'no-store'),'owner_downloads_final_artwork');
+    [$code]=ref_http('/api/delivery.php?id='.$delivery,$cookieB);
+    ref_assert($code===404,'other_customer_cannot_download_final');
+    [$code]=ref_http('/api/delivery.php?id='.$delivery);
+    ref_assert($code===401,'anonymous_cannot_download_final');
+    [$code]=ref_http('/api/admin/request-actions.php',$artistCookie,$release,$artistCsrf);
+    ref_assert($code===409,'duplicate_release_denied');
+    [$code]=ref_http('/api/admin/request-actions.php',$artistCookie,array_replace($remove,['draft_id'=>$finalId]),$artistCsrf);
+    ref_assert($code===409,'released_draft_cannot_be_removed');
+    $db->prepare("UPDATE dmo_orders SET payment_status='unverified' WHERE id=:id")->execute(['id'=>$order]);
+    [$code]=ref_http('/api/delivery.php?id='.$delivery,$cookieA);
+    ref_assert($code===404,'download_rechecks_current_payment_state');
     echo "DISPOSABLE_DELIVERY_DRAFTS=PASS\n";
 } catch(Throwable $error){
     fwrite(STDERR,"DISPOSABLE_DELIVERY_DRAFTS=FAIL ".$error->getMessage()."\n");exit(1);

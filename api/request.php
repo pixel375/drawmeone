@@ -3,6 +3,7 @@ declare(strict_types=1);
 require_once dirname(__DIR__) . '/app/references.php';
 require_once dirname(__DIR__) . '/app/quotes.php';
 require_once dirname(__DIR__) . '/app/orders.php';
+require_once dirname(__DIR__) . '/app/deliveries.php';
 dmo_reject_non_get();
 
 try {
@@ -75,6 +76,7 @@ try {
     $summary=dmo_requests_list_summary(['status'=>$request['status'], 'order_status'=>$orders[0]['status']??null,
         'visible_quote_status'=>$latest['status']??null,'visible_quote_expired'=>$latest['is_expired']??false]);
     $request['workflow_stage']=$summary['workflow_stage'];
+    $deliveries=dmo_delivery_customer_rows($db,(int)$session['user_id'],(int)$request['id']);
     unset($request['id']);
     dmo_json(200, [
         'ok' => true,
@@ -89,6 +91,7 @@ try {
             dmo_messages_request_open((string) $request['status']),
         'quotes' => $quotes,
         'orders' => $orders,
+        'deliveries' => $deliveries,
         'quotes_visible' => count($quotes) > 0,
         'payments_enabled' => false,
     ]);

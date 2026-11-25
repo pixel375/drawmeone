@@ -28,6 +28,7 @@ try {
         'detail' => $detail,
         'manual_payments_enabled' => dmo_manual_payments_enabled() && dmo_messages_request_open((string)$detail['request']['status']),
         'payment_records' => dmo_payment_admin_rows($db,$id),
+        'fulfillment_options' => dmo_fulfillment_options($db,$id),
         'delivery_drafts' => dmo_delivery_drafts($db,$id),
         'delivery_staging_enabled' => dmo_delivery_staging_enabled($db),
         'notification_options' => dmo_notification_options($db,$detail),

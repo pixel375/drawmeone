@@ -65,3 +65,7 @@ DMO_DELIVERY_DRAFTS_ENABLED=0
 # Manual external payment reconciliation: explicit owner approval required.
 DMO_MANUAL_PAYMENT_ENABLED=0
 DMO_MANUAL_PAYMENT_TERMS_APPROVED=0
+
+# Paid production and final customer download; owner approval required.
+DMO_DELIVERY_RELEASE_ENABLED=0
+DMO_DELIVERY_TERMS_APPROVED=0
