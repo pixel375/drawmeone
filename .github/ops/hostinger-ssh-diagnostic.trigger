@@ -1,1 +1,1 @@
-Verify new artist work queues, read-only.
+Retest notice formatting and artist work queues after correcting smoke fixture.
