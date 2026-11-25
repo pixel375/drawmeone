@@ -549,6 +549,15 @@ try {
         $queue['requests'][0]['order_deadline']===$deadline,'due_order_queue_matches_actual_order');
     [$code,$agenda]=qa_http('/api/admin/requests.php?filter=scheduled&from_date='.$deadline.'&to_date='.$deadline,$tokenAdmin,'__Host-dmo_admin');
     qa_positive($code===200&&count($agenda['requests'])===1&&$agenda['requests'][0]['id']===$requestA,'agreed_agenda_inclusive_dates');
+    $calendarPath='/api/admin/requests.php?filter=scheduled&format=calendar&from_date='.$deadline.'&to_date='.$deadline;
+    [$code,,$calendar]=qa_http($calendarPath,$tokenAdmin,'__Host-dmo_admin');
+    qa_positive($code===200&&str_contains($calendar,"BEGIN:VCALENDAR\r\n")&&str_contains($calendar,'UID:'.$referenceA.'@drawmeone.com')&&str_contains($calendar,'DTSTART;VALUE=DATE:'.str_replace('-','',$deadline))&&!str_contains($calendar,'Test A')&&!str_contains($calendar,'private test drawing'),'agenda_calendar_minimal_all_day_event');
+    [$code]=qa_http($calendarPath,$tokenA);
+    qa_positive(in_array($code,[401,403],true),'calendar_export_artist_only');
+    [$code]=qa_http('/api/admin/requests.php?filter=scheduled&format=calendar',$tokenAdmin,'__Host-dmo_admin');
+    qa_positive($code===422,'calendar_requires_bounded_range');
+    [$code]=qa_http('/api/admin/requests.php?filter=requested_dates&format=calendar&from_date='.$deadline.'&to_date='.$deadline,$tokenAdmin,'__Host-dmo_admin');
+    qa_positive($code===422,'calendar_excludes_unagreed_dates');
     [$code,$agenda]=qa_http('/api/admin/requests.php?filter=scheduled&to_date=2000-01-01',$tokenAdmin,'__Host-dmo_admin');
     qa_positive($code===200&&$agenda['requests']===[],'agreed_agenda_excludes_outside_range');
     foreach(['filter=scheduled&from_date=2026-02-30','filter=scheduled&from_date=2027-01-01&to_date=2026-01-01','filter=all&from_date=2026-01-01'] as $query){

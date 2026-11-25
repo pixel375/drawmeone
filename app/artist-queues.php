@@ -54,3 +54,20 @@ function dmo_artist_schedule_date(mixed $value): ?string
         !checkdate((int)$parts[2],(int)$parts[3],(int)$parts[1]))dmo_json(422,['ok'=>false,'error'=>'invalid_schedule_date']);
     return $value;
 }
+
+/** Calendar projection deliberately includes only public reference and agreed
+ * date. Values are fixed-format ASCII so no escaping or line folding needed. */
+function dmo_artist_agenda_calendar(array $rows): string
+{
+    $lines=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Draw Me One//Artist Agenda//EN','CALSCALE:GREGORIAN','METHOD:PUBLISH'];
+    $stamp=gmdate('Ymd\\THis\\Z');
+    foreach($rows as $row){
+        $ref=$row['public_ref']??null;$date=substr((string)($row['order_deadline']??''),0,10);
+        if(!is_string($ref)||!preg_match('/^DMO-[0-9a-f]{20}$/D',$ref)||!preg_match('/^(20[0-9]{2})-([0-9]{2})-([0-9]{2})$/D',$date,$m)||!checkdate((int)$m[2],(int)$m[3],(int)$m[1]))throw new RuntimeException('Invalid agenda record');
+        $day=str_replace('-','',$date);
+        $end=(new DateTimeImmutable($date,new DateTimeZone('UTC')))->modify('+1 day')->format('Ymd');
+        array_push($lines,'BEGIN:VEVENT','UID:'.$ref.'@drawmeone.com','DTSTAMP:'.$stamp,'DTSTART;VALUE=DATE:'.$day,'DTEND;VALUE=DATE:'.$end,'SUMMARY:Draw Me One '.$ref,'CLASS:PRIVATE','TRANSP:TRANSPARENT','END:VEVENT');
+    }
+    $lines[]='END:VCALENDAR';
+    return implode("\r\n",$lines)."\r\n";
+}

@@ -22,6 +22,9 @@ try {
     if($customer!==null&&(!is_string($customer)||!preg_match('/^[1-9][0-9]{0,17}$/D',$customer)))dmo_json(422,['ok'=>false,'error'=>'invalid_customer_filter']);
     $fromDate=dmo_artist_schedule_date($_GET['from_date']??null);$toDate=dmo_artist_schedule_date($_GET['to_date']??null);
     if(($fromDate!==null||$toDate!==null)&&(!in_array($filter,['scheduled','requested_dates'],true)||($fromDate!==null&&$toDate!==null&&$fromDate>$toDate)))dmo_json(422,['ok'=>false,'error'=>'invalid_schedule_range']);
+    $format=$_GET['format']??'json';
+    if(!is_string($format)||!in_array($format,['json','calendar'],true))dmo_json(422,['ok'=>false,'error'=>'invalid_request_list_format']);
+    if($format==='calendar'&&($filter!=='scheduled'||$fromDate===null||$toDate===null||(new DateTimeImmutable($fromDate))->diff(new DateTimeImmutable($toDate))->days>365))dmo_json(422,['ok'=>false,'error'=>'calendar_range_required']);
     $search = trim($search);
     $page = (int) $pageText;
     $size = 40;
@@ -56,6 +59,14 @@ try {
     if($filter==='reply_due')$sort="(SELECT MAX(m.id) FROM dmo_messages m JOIN dmo_conversations c ON c.id=m.conversation_id WHERE c.request_id=r.id AND m.is_internal=0) ASC,r.id ASC";
     if(in_array($filter,['needs_schedule','paid_to_start','ready_to_deliver','revision_due'],true))$sort='o.agreed_deadline IS NULL ASC,o.agreed_deadline ASC,r.submitted_at ASC,r.id ASC';
     if(in_array($filter,['scheduled','requested_dates'],true))$sort=$dateColumn.' ASC,r.id ASC';
+    if($format==='calendar'){
+        $calendar=$db->prepare('SELECT r.public_ref,o.agreed_deadline AS order_deadline'.$from.$conditions.'ORDER BY '.$sort.' LIMIT 501');
+        $calendar->execute($params);$events=$calendar->fetchAll();
+        if(count($events)>500)dmo_json(422,['ok'=>false,'error'=>'calendar_range_too_large']);
+        $body=dmo_artist_agenda_calendar($events);
+        header('Content-Type: text/calendar; charset=utf-8');header('Content-Disposition: attachment; filename="drawmeone-delivery-agenda.ics"');
+        header('Cache-Control: no-store, private');header('X-Content-Type-Options: nosniff');echo $body;exit;
+    }
     // Limit and offset derive only from validated bounded integers.
     $offset = ($page - 1) * $size;
     $stmt = $db->prepare(

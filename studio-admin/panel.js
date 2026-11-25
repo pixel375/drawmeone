@@ -318,10 +318,17 @@
   let requestListGeneration = 0;
   let requestScheduleFrom="",requestScheduleTo="";
   function isScheduleFilter(value){return ["scheduled","requested_dates"].includes(value);}
+  let agendaExportBusy=false;
+  function syncAgendaExport(){
+    const button=$("request-agenda-export");
+    button.hidden=requestListFilter!=="scheduled";
+    button.disabled=agendaExportBusy||requestListFilter!=="scheduled"||!requestScheduleFrom||!requestScheduleTo||requestScheduleFrom>requestScheduleTo;
+  }
   function syncScheduleFilter(reset=false){
     const visible=isScheduleFilter($("request-list-filter").value);
     $("request-schedule-range").hidden=!visible;
     if(reset||!visible){$("request-schedule-from").value="";$("request-schedule-to").value="";requestScheduleFrom=requestScheduleTo="";}
+    syncAgendaExport();
   }
   $("request-list-filter").addEventListener("change",()=>syncScheduleFilter());
 
@@ -343,6 +350,7 @@
     const next = $("request-list-next");
     previous.disabled = next.disabled = true;
     status.textContent = "Loading requests…";
+    syncAgendaExport();
     list.replaceChildren();
     let response, data;
     try {
@@ -424,6 +432,21 @@
     requestListPage++; requests();
   });
   $("request-list-refresh").addEventListener("click", () => requests());
+  $("request-agenda-export").addEventListener("click",async()=>{
+    if($("request-agenda-export").disabled||leavingSession)return;
+    if(!window.confirm("Download agreed dates and commission references for the applied search and date range? This file can contain private business information. Import only into a trusted calendar; future changes are not synchronized."))return;
+    const query=new URLSearchParams({filter:"scheduled",format:"calendar",q:requestListQuery,from_date:requestScheduleFrom,to_date:requestScheduleTo});
+    if(requestCustomerId!==null)query.set("customer_id",String(requestCustomerId));
+    agendaExportBusy=true;syncAgendaExport();
+    try{
+      const response=await fetch("../api/admin/requests.php?"+query,{cache:"no-store",credentials:"same-origin"});
+      if(response.status===401)return sessionExpired();
+      if(!response.ok||!response.headers.get("content-type")?.includes("text/calendar"))throw Error("Calendar unavailable");
+      const file=await response.blob();if(leavingSession)return;
+      const url=URL.createObjectURL(file),link=document.createElement("a");link.href=url;link.download="drawmeone-delivery-agenda.ics";document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+      $("request-list-status").textContent="Calendar file prepared for the applied date range. Not synchronized.";
+    }catch(_){$("request-list-status").textContent="Calendar export unavailable. Apply a date range of at most one year, with no more than 500 orders.";}finally{agendaExportBusy=false;syncAgendaExport();}
+  });
 
   let messagePage=1, messageGeneration=0;
   async function messages() {
