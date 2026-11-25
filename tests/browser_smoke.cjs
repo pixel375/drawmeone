@@ -261,6 +261,40 @@ async function checkClosedWorkflows(browser) {
   } finally { await noJs.close(); }
 }
 
+async function checkHomepageIntake(browser) {
+  const context=await browser.newContext({viewport:{width:1440,height:900},reducedMotion:"reduce"});
+  const page=await context.newPage();
+  let reply={ok:true,requests_open:true,intake_reason:"open"},status=200;
+  try {
+    await mockPublicBackend(page);
+    await page.route("**/api/request-status.php*",route=>route.fulfill({status,contentType:"application/json",body:JSON.stringify(reply)}));
+    await page.goto(base+"/index.html",{waitUntil:"domcontentloaded"});
+    for(const site of ["studio","archive","journal","cinema"]){
+      await page.locator('[data-site-choice="'+site+'"]').click();
+      await page.waitForFunction(()=>document.querySelector("#contact [data-intake-cta]")?.textContent==="Start a commission request");
+      assert.equal(await page.locator("#contact [data-intake-label]").textContent(),"Commission requests open");
+      assert.match(await page.locator("#contact [data-intake-description]").textContent(),/not a confirmed order/);
+      assert.equal(await page.locator('#contact a[href$="commission.html"]').count(),1);
+    }
+    for(const [payload,http,label] of [
+      [{ok:true,requests_open:false,intake_reason:"paused"},200,"Requests temporarily paused"],
+      [{ok:true,requests_open:false,intake_reason:"at_capacity"},200,"Currently at capacity"],
+      [{ok:true,requests_open:true,intake_reason:"paused"},200,"Requests not open"],
+      [{ok:false},503,"Requests not open"]
+    ]){
+      reply=payload;status=http;
+      await page.reload({waitUntil:"domcontentloaded"});
+      await page.waitForFunction(label=>document.querySelector("#contact [data-intake-label]")?.textContent===label,label);
+      for(const site of ["studio","archive","journal","cinema"]){
+        await page.locator('[data-site-choice="'+site+'"]').click();
+        assert.equal(await page.locator("#contact [data-intake-label]").textContent(),label);
+        assert.equal(await page.locator("#contact [data-intake-cta]").textContent(),"Commission information");
+      }
+    }
+    console.log("PASS: all four designs reflect verified intake, pause, capacity and closed fallback");
+  }finally{await context.close();}
+}
+
 (async () => {
   const browser = await browserType.launch({ headless: true });
   try {
@@ -275,6 +309,7 @@ async function checkClosedWorkflows(browser) {
     }
     await checkPublishedPortfolio(browser);
     await checkClosedWorkflows(browser);
+    await checkHomepageIntake(browser);
     console.log("BROWSER_SMOKE=PASS");
   } finally { await browser.close(); }
 })().catch(error => {

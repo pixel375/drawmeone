@@ -1,0 +1,7 @@
+# Public homepage intake and keyboard navigation
+
+The previous Chromium run 45553300404 failed at an immediate hash assertion after Enter on the mobile light-mode portfolio skip link. All public layout, customer, admin and onboarding smoke contracts preceding that assertion passed; database, source, compatibility and live diagnostics passed. The failure is consistent with asynchronous fragment navigation, not proof of a broken production link. The test now waits for both hash and actual keyboard focus; every portfolio section is programmatically focusable and the skip link explicitly focuses the current section while leaving native navigation intact. Mobile keyboard coverage extends to all layouts in both color modes.
+
+All four public homepage layouts now render a shared server-derived intake state (open, paused, at capacity, unavailable). A request is not a confirmed order or a payment invitation. The status defaults closed, is refreshed after a persisted page restoration or return to a visible tab, and ignores outdated replies. Switching the layout reapplies the current state. The commission page remains the authority for access and actual submission; no flags or policies were changed. General contact remains available.
+
+The new cross-engine synthetic browser contract checks open, paused, full, contradictory and unavailable states across the four layouts. Hostinger diagnostics verify the updated versioned JS assets. No production customer, email, payment, artwork or provider transaction is created by these tests.

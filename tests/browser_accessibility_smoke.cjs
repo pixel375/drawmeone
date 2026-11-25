@@ -80,7 +80,7 @@ async function home(browser,site,width,mode="dark") {
         "closing gallery returns keyboard focus to the originating drawing");
       console.log("PASS: gallery modal accessibility and focus restoration");
     }
-    if(site==="studio"&&width===390) {
+    if(width===390) {
       await page.keyboard.press("Tab");
       const focused=await page.evaluate(()=>({
         tag:document.activeElement?.tagName,
@@ -89,8 +89,9 @@ async function home(browser,site,width,mode="dark") {
       assert(focused.tag==="A"&&/Skip to portfolio/i.test(focused.text),
         "homepage keyboard focus starts at skip link");
       await page.keyboard.press("Enter");
-      const hash=new URL(page.url()).hash;
-      assert.equal(hash,"#portfolio","skip link navigates to gallery");
+      await page.waitForFunction(()=>location.hash==="#portfolio"&&document.activeElement?.id==="portfolio");
+      assert.equal(new URL(page.url()).hash,"#portfolio","skip link navigates to gallery");
+      assert.equal(await page.locator("#portfolio").evaluate(el=>el===document.activeElement),true,"skip link focuses visible gallery section");
       console.log("PASS: homepage keyboard skip link");
     }
   } finally{await context.close();}
@@ -116,6 +117,7 @@ async function closedPage(browser,url,width) {
       const label=await page.evaluate(()=>document.activeElement?.textContent?.trim());
       assert.equal(label,"Skip to main content","keyboard skip link is first accessible control");
       await page.keyboard.press("Enter");
+      await page.waitForFunction(()=>location.hash==="#main");
       assert.equal(new URL(page.url()).hash,"#main","skip link reaches main landmark");
       console.log("PASS: "+url+" skip-to-main keyboard navigation");
     }
@@ -174,6 +176,7 @@ async function authenticatedAdmin(browser,width) {
       assert.equal(await page.evaluate(()=>document.activeElement?.classList.contains("skip")),
         true,"artist keyboard starts at Skip to dashboard");
       await page.keyboard.press("Enter");
+      await page.waitForFunction(()=>document.activeElement?.id==="main");
       assert.equal(await page.evaluate(()=>document.activeElement?.id),"main",
         "Artist Desk skip link moves keyboard focus into main");
       console.log("PASS: authenticated Artist Desk skip-to-main keyboard focus");
@@ -256,6 +259,7 @@ async function authenticatedCustomer(browser,width) {
       assert.equal(await page.evaluate(()=>document.activeElement?.classList.contains("skip")),
         true,"customer keyboard starts at Skip to content");
       await page.keyboard.press("Enter");
+      await page.waitForFunction(()=>document.activeElement?.id==="main");
       assert.equal(await page.evaluate(()=>document.activeElement?.id),"main",
         "customer skip link moves keyboard focus into main");
       console.log("PASS: authenticated customer skip-to-main keyboard focus");
@@ -287,7 +291,7 @@ async function authenticatedCustomer(browser,width) {
     for(const site of Object.values(preset)) {
       await home(browser,site,1440,"light");
     }
-    await home(browser,"studio",390,"light");
+    for(const site of Object.values(preset))await home(browser,site,390,"light");
     for(const file of ["/commission.html","/account.html","/password-reset.html"]){
       await closedPage(browser,file,390);
       await closedPage(browser,file,1440);

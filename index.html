@@ -29,8 +29,8 @@
   <link rel="stylesheet" href="./concepts.css?v=10">
   <link rel="stylesheet" href="./polish.css?v=13">
   <link rel="stylesheet" href="./branding.css?v=10">
-  <script defer src="./concepts.js?v=11"></script>
-  <script defer src="./studio.js?v=11"></script>
+  <script defer src="./concepts.js?v=12"></script>
+  <script defer src="./studio.js?v=12"></script>
   <script defer src="./gallery.js?v=13"></script>
 </head>
 <body>
@@ -46,7 +46,7 @@
         <a href="./commission.html">Commissions</a>
       </nav>
       <div class="header-actions">
-        <span class="header-state"><span class="live-dot" aria-hidden="true"></span> Building the studio</span>
+        <span class="header-state"><span class="live-dot" aria-hidden="true"></span> <span data-intake-label>Requests not open</span></span>
         <button class="mode-shortcut" id="header-mode" type="button" aria-label="Switch to light mode" title="Toggle light and dark appearance"><span aria-hidden="true" id="header-mode-icon">☀</span></button>
       </div>
     </header>
@@ -56,12 +56,12 @@
         <div class="hero-copy">
           <p class="eyebrow"><span class="eyebrow-line"></span> DRAWN BY HAND, WITH PERSONALITY</p>
           <h1 id="hero-heading">A little art.<br><em>A lot of heart.</em></h1>
-          <p class="hero-description">Character portraits, original creations, and the joy of drawing by hand. A personal art portfolio taking shape, with custom commissions coming soon.</p>
+          <p class="hero-description">Character portraits, original creations, and the joy of drawing by hand. A personal art portfolio for original drawings and custom commission enquiries.</p>
           <div class="hero-buttons">
             <a href="#portfolio" class="primary-button">Explore the drawings <span aria-hidden="true">↗</span></a>
             <a href="#process" class="text-button">How it works <span aria-hidden="true">↗</span></a>
           </div>
-          <p class="hero-footnote">Independent art studio <span aria-hidden="true">✳</span> Coming soon</p>
+          <p class="hero-footnote">Independent art studio <span aria-hidden="true">✳</span> <span data-intake-label>Requests not open</span></p>
         </div>
         <div class="hero-visual" aria-label="Featured artwork display">
           <div class="hero-halo" aria-hidden="true"></div>
@@ -78,7 +78,7 @@
         <span class="hero-side-label" aria-hidden="true">A LITTLE BIT OF MAGIC, MADE FOR YOU</span>
       </section>
 
-      <section class="portfolio-section" id="portfolio" aria-labelledby="portfolio-title">
+      <section class="portfolio-section" id="portfolio" tabindex="-1" aria-labelledby="portfolio-title">
         <div class="section-topline"><span>01 / SELECTED WORK</span><span class="portfolio-year">THE PORTFOLIO</span></div>
         <div class="portfolio-intro">
           <h2 id="portfolio-title">Every piece<br><em>has a story.</em></h2>
@@ -102,27 +102,27 @@
         <div class="section-topline"><span>02 / THE EXPERIENCE</span><span>PERSONAL, FROM START TO FINISH</span></div>
         <div class="experience-inner">
           <div class="experience-lead">
-            <p class="eyebrow"><span class="eyebrow-line"></span> COMING TO DRAW ME ONE</p>
+            <p class="eyebrow"><span class="eyebrow-line"></span> CUSTOM COMMISSIONS</p>
             <h2 id="process-title">A drawing<br>that's <em>yours.</em></h2>
-            <p>Custom artwork is personal. The future request process will make it simple to share your idea and work out the details directly with the artist.</p>
+            <p>Custom artwork is personal. The request process is designed to make it simple to share your idea and work out the details directly with the artist.</p>
           </div>
           <div class="experience-steps">
             <article class="step"><span class="step-number">01</span><div><h3>Tell the story.</h3><p>Send an idea, describe the feeling, and include any reference photos you'd like.</p></div><span class="step-arrow" aria-hidden="true">↗</span></article>
             <article class="step"><span class="step-number">02</span><div><h3>Make it yours.</h3><p>Discuss the scope, price, and timeline before anything is confirmed.</p></div><span class="step-arrow" aria-hidden="true">↗</span></article>
-            <article class="step"><span class="step-number">03</span><div><h3>Watch it come to life.</h3><p>Once commissions open, your custom drawing takes shape.</p></div><span class="step-arrow" aria-hidden="true">↗</span></article>
+            <article class="step"><span class="step-number">03</span><div><h3>Watch it come to life.</h3><p>After the quote and payment arrangements are confirmed, your custom drawing takes shape.</p></div><span class="step-arrow" aria-hidden="true">↗</span></article>
           </div>
         </div>
       </section>
 
       <section class="contact-section" id="contact" aria-labelledby="contact-title">
         <div class="contact-deco" aria-hidden="true">✳</div>
-        <p class="eyebrow">SOMETHING GOOD IS ON THE WAY</p>
+        <p class="eyebrow">GET IN TOUCH</p>
         <h2 id="contact-title">Have a question?<br><em>Say hello.</em></h2>
-        <p>We're getting the private commission system ready. For general questions about the studio, email us directly. New commissions and payments aren't being accepted through the site yet.</p>
-        <span class="contact-status" id="commission-status">COMMISSION REQUESTS ARE NOT OPEN YET</span>
+        <p data-intake-description>New commission requests are not open. General studio questions are welcome by email.</p>
+        <span class="contact-status" id="commission-status" data-intake-label>COMMISSION REQUESTS ARE NOT OPEN YET</span>
         <div class="contact-actions">
           <a href="mailto:support@drawmeone.com?subject=Draw%20Me%20One%20inquiry" class="primary-button">Email the studio <span aria-hidden="true">↗</span></a>
-          <a href="./commission.html" class="text-button">Commission information <span aria-hidden="true">↗</span></a>
+          <a href="./commission.html" class="text-button"><span data-intake-cta>Commission information</span> <span aria-hidden="true">↗</span></a>
         </div>
       </section>
     </main>

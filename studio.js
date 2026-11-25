@@ -122,17 +122,42 @@
     document.addEventListener("dmo:site-change",()=>requestAnimationFrame(tick));
     tick();
   }
-  // Intentionally use server-side intake status, never sample Design Lab
-  // pricing or visitor localStorage, to communicate commission availability.
-  fetch("./api/request-status.php",{cache:"no-store"})
-    .then(response => response.ok ? response.json() : null)
-    .then(data => {
-      if (!data || data.requests_open !== true) return;
-      const flag = document.getElementById("commission-status");
-      const title = document.getElementById("contact-title");
-      if (flag) flag.textContent = "COMMISSION REQUESTS ARE OPEN";
-      if (title) title.textContent = "Your next drawing starts here.";
-    })
-    .catch(() => {}); // Leave default closed status on temporary API failures.
+  // All four layouts share server-reported availability. No client-side
+  // setting grants permission to submit requests or initiate payment.
+  const intakeCopy={
+    not_available:["Requests not open","New commission requests are not open. General studio questions are welcome by email.","Commission information"],
+    paused:["Requests temporarily paused","New commission requests are temporarily paused. General studio questions are welcome by email.","Commission information"],
+    at_capacity:["Currently at capacity","The studio is at capacity for new requests. Check the commission page for availability or email a general question.","Commission information"],
+    open:["Commission requests open","Share your idea through the private commission workspace. A request is not a confirmed order; scope and price are agreed before any payment.","Start a commission request"]
+  };
+  let intakeState="not_available",intakeGeneration=0;
+  function renderIntake(){
+    const [label,description,cta]=intakeCopy[intakeState];
+    for(const [selector,value] of [["[data-intake-label]",label],["[data-intake-description]",description],["[data-intake-cta]",cta]]){
+      document.querySelectorAll(selector).forEach(el=>{el.textContent=value;});
+    }
+  }
+  async function refreshIntake(){
+    const generation=++intakeGeneration;
+    intakeState="not_available";renderIntake();
+    try{
+      const response=await fetch("./api/request-status.php",{cache:"no-store"});
+      if(!response.ok)return;
+      const data=await response.json();
+      if(generation!==intakeGeneration||data?.ok!==true)return;
+      if(data.requests_open===true&&data.intake_reason==="open")intakeState="open";
+      else if(data.requests_open===false&&["paused","at_capacity"].includes(data.intake_reason))intakeState=data.intake_reason;
+      renderIntake();
+    }catch(_){/* default closed; never advertise unconfirmed availability */}
+  }
+  document.addEventListener("dmo:site-change",renderIntake);
+  window.addEventListener("pageshow",event=>{if(event.persisted)refreshIntake();});
+  document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")refreshIntake();});
+  // Native navigation updates the hash and scroll; explicitly focus the
+  // current gallery section, including after a layout switch.
+  document.querySelector(".skip-link")?.addEventListener("click",()=>{
+    document.getElementById("portfolio")?.focus({preventScroll:true});
+  });
+  refreshIntake();
   reflect();
 })();

@@ -1,1 +1,1 @@
-Verify offline recovery source and schema/cancellation/invoice integrity checks; no production mutations.
+Verify homepage live intake assets and keyboard portfolio targets; read-only.
