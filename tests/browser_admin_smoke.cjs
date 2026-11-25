@@ -782,6 +782,38 @@ async function verifyUnpaidCancellation(browser){
     console.log("PASS: artist cancels only eligible unpaid order");
   }finally{await page.close();}
 }
+async function verifyDesignHistory(browser){
+  const page=await browser.newPage({viewport:{width:390,height:844}});
+  const posts=[];
+  const settings={site_style:"studio",color_theme:"ember",gallery_layout:"rows",default_mode:"light",logo:"original"};
+  let version=2,restored=false;
+  try{
+    await simulateBackend(page,posts);
+    await page.route("**/api/admin/design.php*",async route=>{
+      const respond=(status,data)=>route.fulfill({status,contentType:"application/json",body:JSON.stringify(data)});
+      if(route.request().method()==="GET")return respond(200,{ok:true,write_enabled:true,presentation:"published",
+        draft:{exists:true,version,settings:{...settings,color_theme:restored?"ember":"canvas"}},
+        published:{exists:true,version:2,settings:{...settings,color_theme:"canvas"}},
+        history:[{id:17,version:1,settings}]});
+      const body=route.request().postDataJSON();
+      assert.deepEqual(body,{action:"restore_draft",expected_version:2,snapshot_id:17});
+      restored=true;version=3;
+      return respond(200,{ok:true,draft_version:3});
+    });
+    await page.goto(base+"/studio-admin/index.php",{waitUntil:"domcontentloaded"});
+    await page.locator("#workspace").waitFor({state:"visible"});
+    await page.locator('[data-view="settings"]').click();
+    await page.locator("#design-history").locator('option[value="17"]').waitFor({state:"attached"});
+    await page.locator("#design-history").selectOption("17");
+    page.once("dialog",dialog=>dialog.accept());
+    await page.locator("#design-restore").click();
+    await page.waitForFunction(()=>document.querySelector("#design-state")?.textContent.includes("Draft v3"));
+    assert.equal(await page.locator("#design-color").inputValue(),"ember");
+    assert.match(await page.locator("#design-state").textContent(),/Published v2/);
+    assert.deepEqual(posts,[]);
+    console.log("PASS: artist restores historical appearance into draft without publishing");
+  }finally{await page.close();}
+}
 async function verifyClosedDesk(browser) {
   const page=await browser.newPage({viewport:{width:390,height:844}});
   await page.route("**/api/admin/status.php*",route=>route.fulfill({
@@ -819,6 +851,7 @@ async function verifyClosedDesk(browser) {
     await verifyPrivacyQueue(browser);
     await verifyCheckoutLinks(browser);
     await verifyUnpaidCancellation(browser);
+    await verifyDesignHistory(browser);
     console.log("ADMIN_BROWSER_SMOKE=PASS");
   } finally {await browser.close();}
 })().catch(error=>{

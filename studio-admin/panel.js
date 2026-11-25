@@ -1744,6 +1744,7 @@
 
   let designDraftVersion = 0;
   let designWriteEnabled = false;
+  let designBusy=false,designGeneration=0,designHistory=[];
   const designIds = {
     site_style: "design-site",
     color_theme: "design-color",
@@ -1764,8 +1765,7 @@
     designDraftVersion = Number.isSafeInteger(data.draft?.version)
       ? data.draft.version : 0;
     designWriteEnabled = data.write_enabled === true;
-    const snapshot = data.draft?.exists
-      ? data.draft.settings : (data.published?.settings || {});
+    const snapshot = (data.draft?.exists ? data.draft.settings : data.published?.settings) || {};
     for (const [key, id] of Object.entries(designIds)) {
       if (typeof snapshot[key] === "string" &&
           Array.from($(id).options).some(option => option.value === snapshot[key])) {
@@ -1776,69 +1776,74 @@
       ? "Published v" + data.published.version : "Not published yet";
     $("design-state").textContent = "Draft v" + designDraftVersion +
       " · " + version + " · " +
-      (designWriteEnabled ? "Editing available" : "Editing locked until setup is complete");
-    $("design-save").disabled = !designWriteEnabled;
-    $("design-publish").disabled = !designWriteEnabled || designDraftVersion === 0;
+      (designWriteEnabled ? "Editing available" : "Editing locked until setup is complete")+
+      (data.presentation==="published"?" · Public presentation":" · Development preview");
+    designHistory=Array.isArray(data.history)?data.history.filter(x=>Number.isSafeInteger(x.id)&&x.id>0&&Number.isSafeInteger(x.version)&&x.version>0):[];
+    const history=$("design-history");
+    history.replaceChildren(new Option(designHistory.length?"Choose a previous version":"No previous versions",""));
+    for(const item of designHistory)history.append(new Option("Published v"+item.version,String(item.id)));
+    syncDesignControls();
   }
 
-  async function designLoad() {
-    $("design-state").textContent = "Loading draft and published settings…";
-    const { response, data } = await get("design.php");
-    if (response.status === 401) return sessionExpired();
-    if (!response.ok || !data.ok) {
-      $("design-state").textContent = "Settings are unavailable. Please retry.";
-      return;
+  function syncDesignControls(){
+    const locked=designBusy||!designWriteEnabled;
+    for(const id of Object.values(designIds))$(id).disabled=locked;
+    $("design-save").disabled=locked;
+    $("design-publish").disabled=locked||designDraftVersion===0;
+    $("design-history").disabled=locked||designHistory.length===0;
+    $("design-restore").disabled=locked||!designHistory.some(x=>String(x.id)===$("design-history").value);
+    $("design-reload").disabled=designBusy;
+  }
+  async function designLoad(){
+    const generation=++designGeneration;
+    designWriteEnabled=false;syncDesignControls();
+    $("design-state").textContent="Loading draft and published settings…";
+    try{
+      const {response,data}=await get("design.php");
+      if(generation!==designGeneration||leavingSession)return;
+      if(response.status===401)return sessionExpired();
+      if(!response.ok||!data.ok)throw Error("unavailable");
+      designDisplay(data);
+    }catch(_){
+      if(generation===designGeneration&&!leavingSession)$("design-state").textContent="Settings are unavailable. Reload before editing.";
     }
-    designDisplay(data);
   }
-
-  async function designAction(action) {
-    if (!designWriteEnabled || !csrf) return;
-    const button = action === "save_draft" ? $("design-save") : $("design-publish");
-    button.disabled = true;
-    $("design-state").textContent = action === "save_draft"
-      ? "Saving design draft…" : "Publishing saved design draft…";
-    try {
-      const body = {
-        action,
-        expected_version: designDraftVersion,
-      };
-      if (action === "save_draft") body.settings = designValues();
-      const { response, data } = await post("design.php", body, csrf);
-      if (response.status === 409) {
-        $("design-state").textContent =
-          "This draft changed in another tab. Reload before saving again.";
-        return;
-      }
-      if (!response.ok || !data.ok) {
-        $("design-state").textContent = "Unable to save settings. Check server configuration.";
+  async function designAction(action){
+    if(designBusy||!designWriteEnabled||!csrf)return;
+    const body={action,expected_version:designDraftVersion};
+    if(action==="save_draft")body.settings=designValues();
+    if(action==="restore_draft"){
+      const snapshot=designHistory.find(x=>String(x.id)===$("design-history").value);
+      if(!snapshot)return;
+      body.snapshot_id=snapshot.id;
+    }
+    designBusy=true;syncDesignControls();
+    $("design-state").textContent="Saving design settings…";
+    try{
+      const {response,data}=await post("design.php",body,csrf);
+      if(leavingSession)return;
+      if(response.status===401)return sessionExpired();
+      if(!response.ok||!data.ok){
+        designWriteEnabled=false;
+        $("design-state").textContent=response.status===409?"This draft changed in another tab. Reload before editing.":"Change not confirmed. Reload before editing.";
         return;
       }
       await designLoad();
-    } catch (_) {
-      $("design-state").textContent = "Connection failed. No changes confirmed.";
-    } finally {
-      button.disabled = !designWriteEnabled;
-      if (action === "publish") {
-        $("design-publish").disabled = !designWriteEnabled || designDraftVersion === 0;
-      }
+    }catch(_){
+      designWriteEnabled=false;
+      $("design-state").textContent="Connection failed. Reload before editing.";
+    }finally{
+      designBusy=false;syncDesignControls();
     }
   }
-
-  $("design-form").addEventListener("submit", event => {
-    event.preventDefault();
-    designAction("save_draft");
+  $("design-form").addEventListener("submit",event=>{event.preventDefault();designAction("save_draft");});
+  $("design-reload").addEventListener("click",()=>{if(!designBusy)designLoad();});
+  $("design-history").addEventListener("change",syncDesignControls);
+  $("design-publish").addEventListener("click",()=>{
+    if(!designBusy&&designWriteEnabled&&window.confirm("Publish the last saved design draft? Unsaved changes will not be included."))designAction("publish");
   });
-  $("design-reload").addEventListener("click", () => {
-    designLoad().catch(() => {
-      $("design-state").textContent = "Connection failed. Please try again.";
-    });
-  });
-  $("design-publish").addEventListener("click", () => {
-    if (!designWriteEnabled) return;
-    if (window.confirm("Publish the last saved design draft? Unsaved changes will not be included.")) {
-      designAction("publish");
-    }
+  $("design-restore").addEventListener("click",()=>{
+    if(!designBusy&&designWriteEnabled&&window.confirm("Replace your saved draft with this previous design? The public design will not change."))designAction("restore_draft");
   });
 
   // Commission catalog editor. Displayed amounts are dollars, but the API
@@ -2109,6 +2114,7 @@
     ++requestLoadGeneration;
     ++requestListGeneration;
     ++messageGeneration;
+    ++designGeneration;
     clearPrivacyQueue();
     $("workspace").hidden = true;
     const url = new URL(location.href);

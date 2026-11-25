@@ -18,6 +18,8 @@ $allowed = [
     '/api/request-withdraw.php',
     '/api/quote-response.php',
     '/api/admin/overview.php',
+    '/api/site-settings.php',
+    '/api/admin/design.php',
     '/api/admin/intake.php',
     '/api/request-status.php',
     '/api/policy.php',

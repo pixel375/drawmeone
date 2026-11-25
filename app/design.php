@@ -84,3 +84,23 @@ function dmo_design_presentation(): string
 {
     return dmo_config('DMO_PUBLIC_DESIGN_ENABLED')==='1'?'published':'preview';
 }
+
+/** Previous published designs, private and strictly allowlisted; no user IDs. */
+function dmo_design_history(PDO $db): array
+{
+    $q=$db->query("SELECT id,details_json,created_at FROM dmo_audit_log WHERE action='design.snapshot' AND entity_type='user' ORDER BY id DESC LIMIT 20");
+    $out=[];
+    foreach($q->fetchAll(PDO::FETCH_ASSOC) as $row){
+        $data=json_decode((string)$row['details_json'],true);
+        if(!is_array($data)||!is_int($data['version']??null)||$data['version']<1)continue;
+        $settings=dmo_design_normalize($data['settings']??null);
+        if($settings===null)continue;
+        $out[]=['id'=>(int)$row['id'],'version'=>$data['version'],'settings'=>$settings,'archived_at'=>$row['created_at']];
+    }
+    return $out;
+}
+function dmo_design_archive(PDO $db,int $actor,int $version,array $settings): void
+{
+    $db->prepare("INSERT INTO dmo_audit_log (actor_id,action,entity_type,entity_id,details_json) VALUES (:actor,'design.snapshot','user',:entity,:details)")
+        ->execute(['actor'=>$actor,'entity'=>$actor,'details'=>json_encode(['version'=>$version,'settings'=>$settings],JSON_THROW_ON_ERROR)]);
+}

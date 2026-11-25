@@ -312,7 +312,7 @@ jobs:
             echo "mobile_artist_desk=stale_or_missing_mobile_layout"
             exit 1
           }
-          [[ "$desk_page" == *'panel.js?v=45'* ]] &&
+          [[ "$desk_page" == *'panel.js?v=46'* ]] &&
           [[ "$desk_page" == *'id="artwork-filter"'* ]] &&
           [[ "$desk_page" == *'id="artwork-unpublish-selected"'* ]] || {
             echo "artist_artwork_library=stale_html"
@@ -322,13 +322,15 @@ jobs:
             echo "artist_artwork_library=stale_css"
             exit 1
           }
-          desk_js=$(curl -fsSL --max-time 15 "https://drawmeone.com/studio-admin/panel.js?v=45")
+          desk_js=$(curl -fsSL --max-time 15 "https://drawmeone.com/studio-admin/panel.js?v=46")
           [[ "$desk_js" == *'artwork-unpublish-selected'* ]] &&
           [[ "$desk_js" == *'No artworks match this view.'* ]] || {
             echo "artist_artwork_library=stale_js"
             exit 1
           }
           echo "artist_artwork_library=deployed"
+          [[ "$desk_page" == *'id="design-history"'* ]] && [[ "$desk_js" == *'restore_draft'* ]] || { echo "design_history=stale_assets"; exit 1; }
+          echo "design_history=deployed"
           [[ "$desk_page" == *'id="request-list-query"'* ]] &&
           [[ "$desk_page" == *'id="request-list-next"'* ]] &&
           [[ "$desk_js" == *'requestListGeneration'* ]] &&

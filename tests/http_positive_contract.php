@@ -779,6 +779,25 @@ try {
     qa_positive($code===200&&$saved['draft_version']===2,'design_second_draft_saved');
     [$code,$public]=qa_http('/api/site-settings.php');
     qa_positive($code===200&&$public['version']===1&&$public['settings']===$settings,'design_new_draft_leaves_published_unchanged');
+    [$code]=qa_http('/api/admin/design.php');
+    qa_positive($code===401,'design_history_private');
+    [$code,$published]=qa_http('/api/admin/design.php',$tokenAdmin,'__Host-dmo_admin',['action'=>'publish','expected_version'=>2],$csrfAdmin);
+    qa_positive($code===200&&$published['published_version']===2,'design_second_publish_archives_previous');
+    [$code,$published]=qa_http('/api/admin/design.php',$tokenAdmin,'__Host-dmo_admin',['action'=>'publish','expected_version'=>2],$csrfAdmin);
+    qa_positive($code===200&&$published['published_version']===2&&$published['unchanged']===true,'design_repeat_publish_no_new_version');
+    [$code,$private]=qa_http('/api/admin/design.php',$tokenAdmin,'__Host-dmo_admin');
+    qa_positive($code===200&&count($private['history'])===1&&$private['history'][0]['version']===1&&$private['history'][0]['settings']===$settings,'design_history_preserves_original');
+    $restore=['action'=>'restore_draft','expected_version'=>2,'snapshot_id'=>$private['history'][0]['id']];
+    [$code]=qa_http('/api/admin/design.php',$tokenAdmin,'__Host-dmo_admin',array_replace($restore,['expected_version'=>1]),$csrfAdmin);
+    qa_positive($code===409,'design_restore_stale_draft_blocked');
+    [$code]=qa_http('/api/admin/design.php',$tokenAdmin,'__Host-dmo_admin',array_replace($restore,['snapshot_id'=>PHP_INT_MAX]),$csrfAdmin);
+    qa_positive($code===404,'design_unknown_snapshot_rejected');
+    [$code,$restored]=qa_http('/api/admin/design.php',$tokenAdmin,'__Host-dmo_admin',$restore,$csrfAdmin);
+    qa_positive($code===200&&$restored['draft_version']===3,'design_restore_creates_draft_only');
+    [$code,$private]=qa_http('/api/admin/design.php',$tokenAdmin,'__Host-dmo_admin');
+    qa_positive($code===200&&$private['draft']['settings']===$settings,'design_restored_draft_matches_snapshot');
+    [$code,$public]=qa_http('/api/site-settings.php');
+    qa_positive($code===200&&$public['version']===2&&$public['settings']['color_theme']==='canvas'&&!isset($public['history']),'design_restore_does_not_change_public');
     echo "DISPOSABLE_POSITIVE_HTTP=PASS\n";
 } catch(Throwable $error) {
     fwrite(STDERR,'DISPOSABLE_POSITIVE_HTTP=FAIL ('.get_class($error).

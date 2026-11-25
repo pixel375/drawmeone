@@ -20,7 +20,7 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
 <meta name="theme-color" content="#151317">
 <title>Artist's Desk · Draw Me One</title>
 <link rel="stylesheet" href="./panel.css?v=39">
-<script defer src="./panel.js?v=45"></script>
+<script defer src="./panel.js?v=46"></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to dashboard</a>
@@ -388,7 +388,12 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
           <button type="submit" class="quiet" id="design-save" disabled>Save draft</button>
           <button type="button" class="primary" id="design-publish" disabled>Publish draft</button>
         </div>
-        <p class="small">Drafts never affect the public site. Publishing requires an authenticated administrator and a second, explicitly enabled server-side write switch. The old Design Lab remains a development preview until the public site is converted to admin-controlled themes.</p>
+        <p class="small">Drafts never affect the public site. Publishing requires an authenticated administrator and a server-side write switch. Public presentation is controlled separately.</p>
+        <label>Previous published design
+          <select id="design-history" disabled><option value="">No previous versions</option></select>
+        </label>
+        <button type="button" class="quiet" id="design-restore" disabled>Restore selected version to draft</button>
+        <p class="small">Restoring replaces the saved draft only. Review and publish separately to change the public design.</p>
       </form>
       <section class="mail-check" aria-labelledby="mail-check-heading">
         <div class="mail-check-head">
