@@ -163,6 +163,7 @@ function dmo_api_headers(): void
     header('X-Content-Type-Options: nosniff');
     header('Referrer-Policy: no-referrer');
     header('X-Frame-Options: DENY');
+    header('X-Robots-Tag: noindex, nofollow');
     header('Access-Control-Allow-Origin: https://drawmeone.com');
     header('Vary: Origin');
 }

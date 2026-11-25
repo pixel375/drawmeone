@@ -52,11 +52,16 @@ function http_call(string $path, ?string $cookie = null, ?array $json = null,
         $options[CURLOPT_POST] = true;
         $options[CURLOPT_POSTFIELDS] = json_encode($json, JSON_THROW_ON_ERROR);
     }
+    $responseHeaders=[];
+    $options[CURLOPT_HEADERFUNCTION]=static function($curl,string $line)use(&$responseHeaders):int{
+        if(str_contains($line,':')){[$name,$value]=explode(':',$line,2);$responseHeaders[strtolower(trim($name))]=trim($value);}
+        return strlen($line);
+    };
     curl_setopt_array($curl, $options);
     $raw = curl_exec($curl);
     $code = (int) curl_getinfo($curl, CURLINFO_RESPONSE_CODE);
     curl_close($curl);
-    return [$code, is_string($raw) ? json_decode($raw, true) : null];
+    return [$code, is_string($raw) ? json_decode($raw, true) : null,$responseHeaders];
 }
 
 $process = null;
@@ -170,7 +175,8 @@ try {
 
     [$status] = http_call('/api/request.php?ref=' . urlencode($ref1));
     http_check($status === 401, 'anonymous_customer_detail_rejected');
-    [$status,$own] = http_call('/api/request.php?ref=' . urlencode($ref1),$cookieA);
+    [$status,$own,$headers] = http_call('/api/request.php?ref=' . urlencode($ref1),$cookieA);
+    http_check(str_contains($headers['cache-control']??'','no-store')&&str_contains($headers['cache-control']??'','private')&&($headers['x-content-type-options']??'')==='nosniff'&&($headers['referrer-policy']??'')==='no-referrer'&&($headers['x-frame-options']??'')==='DENY','private_request_security_headers');
     http_check($status === 200 && ($own['ok'] ?? false) &&
         ($own['request']['public_ref'] ?? '') === $ref1,
         'verified_customer_reads_own_request');
@@ -194,6 +200,10 @@ try {
 
     [$status] = http_call('/api/admin/overview.php');
     http_check($status === 401,'unauthenticated_artist_dashboard_rejected');
+    foreach(['/api/admin/finance.php','/api/admin/customers.php','/api/admin/privacy.php','/api/admin/artworks.php'] as $path){
+        [$status,,$headers]=http_call($path);
+        http_check($status===401&&str_contains($headers['cache-control']??'','no-store')&&($headers['x-robots-tag']??'')==='noindex, nofollow','private_admin_route_denied_and_uncacheable');
+    }
 
     $message = ['ref'=>$ref1,'body'=>'CI test message should not persist'];
     [$status] = http_call('/api/request-message.php',$cookieA,$message);

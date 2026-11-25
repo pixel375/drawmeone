@@ -98,3 +98,6 @@ After a successful SSH connection test, delete the plaintext private key from un
 ## Programmatic verification of runs
 
 The workflow posts a GitHub commit status under `drawmeone/hostinger-ssh-readonly` for the specific trigger commit. The status is `success` only when the SSH/PHP/database diagnostic step finished successfully; otherwise it is `failure`. This requires narrowly scoped `statuses: write` permission for its GitHub Actions token, not server-side write access. Status descriptions include no server credentials or private data. The connected GitHub integration can read those statuses without accessing private Actions logs.
+
+
+Apache routing parity checks now cover the reviewed API files against both directory-level allowlists. Finance and Customers are explicitly permitted routes but still require admin authentication. Production anonymous probes require the application guard (401 or gated 503), not a generic Apache 403, and internal files must return 403/404. Ops scripts are denied over HTTP. API JSON responses use noindex/nofollow in addition to private/no-store. No authenticated production data is fetched by diagnostics.

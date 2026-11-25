@@ -8,7 +8,7 @@
 # Protect accidentally misplaced configuration and database dumps.
 # Real secrets must still live OUTSIDE public_html.
 <IfModule mod_authz_core.c>
-  <FilesMatch "(^\.env($|\.)|^\.git|\.sql(\.gz)?$|\.pem$|\.key$)">
+  <FilesMatch "(^\.env($|\.)|^\.git|\.sql(\.gz)?$|\.pem$|\.key$|\.bak$|\.dump$)">
     Require all denied
   </FilesMatch>
 </IfModule>

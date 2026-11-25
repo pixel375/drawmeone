@@ -1,1 +1,1 @@
-Expand live syntax coverage for recent authenticated features.
+Verify production Apache allowlists and private route guards after deploy.

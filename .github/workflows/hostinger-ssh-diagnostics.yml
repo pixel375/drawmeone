@@ -259,9 +259,9 @@ jobs:
             echo "dynamic_artwork_sitemap=no"
             exit 1
           fi
-          for path in tests/ci_router.php docs/ROADMAP.md .github/workflows/disposable-integration.yml; do
+          for path in tests/ci_router.php docs/ROADMAP.md .github/workflows/disposable-integration.yml app/finance-report.php ops/backup_freshness.py; do
             code=$(curl -sSL --max-time 12 -o /dev/null -w '%{http_code}' "https://drawmeone.com/$path" || true)
-            [[ "$code" != "200" ]] || { echo "private_internal_http_access=FAIL"; exit 1; }
+            [[ "$code" == "403" || "$code" == "404" ]] || { echo "private_internal_http_access=FAIL"; exit 1; }
           done
           echo "private_internal_http_access=denied"
           if curl -fsSL --max-time 12 https://drawmeone.com/ | grep -F 'mailto:support@drawmeone.com' >/dev/null; then
@@ -296,6 +296,11 @@ jobs:
           done
           [[ "$synced" == "yes" ]] || { echo "deployment_sync=expected_versions_unavailable"; exit 1; }
           echo "deployment_sync=expected_versions_present"
+          for endpoint in finance customers privacy overview; do
+            status=$(curl -sS --max-time 12 -o /dev/null -w '%{http_code}' "https://drawmeone.com/api/admin/$endpoint.php")
+            [[ "$status" == "401" || "$status" == "503" ]] || { echo "admin_route_${endpoint}=unexpected_$status"; exit 1; }
+            echo "admin_route_${endpoint}=guarded"
+          done
           # The three alternate layouts render their contact CTAs from JS.
           # Check that Hostinger serves the newly versioned asset, not stale code.
           [[ "$public_home" == *'concepts.js?v=13'* ]] || {
