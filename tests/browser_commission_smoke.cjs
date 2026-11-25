@@ -294,14 +294,18 @@ async function readonlyQuoteStatuses(browser) {
   } finally {await page.close();}
 }
 async function detailRaceAndRecovery(browser) {
-  const page=await browser.newPage({viewport:{width:390,height:844}});
+  const page=await browser.newPage({viewport:{width:390,height:844},reducedMotion:"reduce"});
   await installMocks(page,{signedIn:true,open:false});
-  let delayed=true;
+  let releaseA,seenA,finishedA,delayed=true;
+  const holdA=new Promise(resolve=>releaseA=resolve);
+  const startedA=new Promise(resolve=>seenA=resolve);
+  const completedA=new Promise(resolve=>finishedA=resolve);
   await page.route("**/api/request.php*",async route=>{
     const ref=new URL(route.request().url()).searchParams.get("ref");
     if(ref===A && delayed){
-      delayed=false;
-      await new Promise(resolve=>setTimeout(resolve,950));
+      delayed=false;seenA();await holdA;
+      try{await answer(route,detail(ref));}finally{finishedA();}
+      return;
     }
     return answer(route,detail(ref));
   });
@@ -309,12 +313,16 @@ async function detailRaceAndRecovery(browser) {
     await page.goto(base+"/commission.html",{waitUntil:"domcontentloaded"});
     await page.locator('#my-request-list button[aria-label$="'+A+'"]').waitFor();
     await page.locator('#my-request-list button[aria-label$="'+A+'"]').click();
+    await startedA;
     assert.equal(await page.locator("#detail-content").isVisible(),false,
       "no old request data displayed during loading");
+    const selectedB=page.waitForResponse(response=>response.url().includes("/api/request.php?ref="+B));
     await page.locator('#my-request-list button[aria-label$="'+B+'"]').click();
-    await page.locator("#detail-content").waitFor({state:"visible"});
+    await selectedB;
+    await page.waitForFunction(ref=>document.querySelector("#detail-ref")?.textContent===ref&&!document.querySelector("#detail-content")?.hidden,B);
     assert.equal(await page.locator("#detail-ref").innerText(),B);
-    await page.waitForTimeout(1050);
+    releaseA();await completedA;
+    await page.waitForTimeout(150);
     assert.equal(await page.locator("#detail-ref").innerText(),B,
       "slower request A cannot replace selected request B");
     assert.equal(await page.locator("#detail-quote-section").isVisible(),false,
@@ -336,7 +344,7 @@ async function detailRaceAndRecovery(browser) {
     await page.locator("#detail-content").waitFor({state:"visible"});
     assert.equal(await page.locator("#detail-ref").innerText(),B);
     console.log("PASS: out-of-order detail responses isolated; refresh recovers failures");
-  } finally {await page.close();}
+  } finally {releaseA();await page.close();}
 }
 async function openIntake(browser) {
   const context=await browser.newContext({

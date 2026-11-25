@@ -648,7 +648,8 @@
     if (leavingSession || (detailMutationBusy() && state.selectedRef !== ref)) return;
     if(state.selectedRef!==null&&state.selectedRef!==ref&&!confirmDiscardDetailDrafts())return;
     const sequence = ++detailRequestSequence;
-    if (state.selectedRef !== ref) { clearDetailDrafts(); detailFullThread=false; }
+    const switching=state.selectedRef!==ref;
+    if (switching) { clearDetailDrafts(); detailFullThread=false; }
     $("detail-thread-full").hidden = true;
     state.selectedRef = ref;
     const panel = $("my-request-detail");
@@ -674,13 +675,13 @@
     $("detail-orders").replaceChildren();
     $("detail-quote-feedback").textContent = "";
     showFact("detail-ref","Loading " + ref + "...");
-    panel.scrollIntoView({behavior:"smooth",block:"start"});
+    if(switching)panel.scrollIntoView({behavior:"instant",block:"start"});
     try {
       const {response,body} = await getJSON(
         "./api/request.php?ref=" + encodeURIComponent(ref) + (detailFullThread ? "&thread=full" : "")
       );
-      if (response.status === 401) return customerSessionExpired();
       if (sequence !== detailRequestSequence || state.selectedRef !== ref) return;
+      if (response.status === 401) return customerSessionExpired();
       if (!response.ok || !body.ok ||
           body.request?.public_ref !== ref) {
         throw new Error("Request unavailable");

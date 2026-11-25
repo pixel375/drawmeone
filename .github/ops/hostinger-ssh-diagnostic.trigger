@@ -1,1 +1,1 @@
-Verify public portfolio filters, gallery curation and public theme; read-only.
+Verify customer request selection race correction and public gallery improvements; read-only.
