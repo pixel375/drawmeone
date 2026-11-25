@@ -19,8 +19,8 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
 <meta name="robots" content="noindex,nofollow">
 <meta name="theme-color" content="#151317">
 <title>Artist's Desk · Draw Me One</title>
-<link rel="stylesheet" href="./panel.css?v=43">
-<script defer src="./panel.js?v=55"></script>
+<link rel="stylesheet" href="./panel.css?v=44">
+<script defer src="./panel.js?v=56"></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to dashboard</a>
@@ -69,6 +69,7 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
       <button type="button" data-view="requests">Orders & quotes</button>
       <button type="button" data-view="messages">Messages</button>
       <button type="button" data-view="finance">Payments</button>
+      <button type="button" data-view="customers">Customers</button>
       <button type="button" data-view="artwork">Artwork</button>
       <button type="button" data-view="packages">Services & pricing</button>
       <button type="button" data-view="settings">Website settings</button>
@@ -144,6 +145,7 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
 
     <section data-panel="requests" class="content-panel" hidden>
       <div class="section-intro"><h2>Orders & requests</h2><p>Review customer briefs, private artist notes, and quote drafts. Customer submissions and quote sending stay closed.</p></div>
+      <div id="request-customer-scope" hidden><p id="request-customer-label" class="small"></p><button id="request-customer-clear" type="button" class="quiet">Show all customers</button></div>
       <form id="request-list-filters" class="request-list-filters">
         <label for="request-list-query">Find by reference or customer name
           <input id="request-list-query" type="search" maxlength="80" placeholder="Search commissions">
@@ -270,6 +272,18 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
         <span id="message-list-status" role="status" aria-live="polite">Loading messages…</span>
         <button type="button" class="quiet" id="message-list-next" disabled>Next</button>
       </div>
+    </section>
+
+    <section data-panel="customers" class="content-panel" hidden>
+      <div class="section-intro"><h2>Customers</h2><p>Private customer lookup for commission support. Account status and request history are read-only; no account impersonation or deletion.</p></div>
+      <form id="customer-filters" class="request-list-filters">
+        <label for="customer-query">Name, email or commission reference<input id="customer-query" type="search" maxlength="160" autocomplete="off"></label>
+        <label for="customer-state">Account status<select id="customer-state"><option value="all">All customers</option><option value="verified">Active and verified</option><option value="unverified">Awaiting email verification</option><option value="inactive">Inactive accounts</option></select></label>
+        <button class="quiet" type="submit">Search customers</button>
+      </form>
+      <p id="customer-directory-status" class="small" role="status">Select Customers to load records.</p>
+      <div id="customer-directory-list" class="record-list"></div>
+      <button id="customer-directory-next" class="quiet" type="button" hidden>Load older customers</button>
     </section>
 
     <section data-panel="finance" class="content-panel" hidden>

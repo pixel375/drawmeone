@@ -18,6 +18,8 @@ try {
         !is_string($filter) || !in_array($filter, ['all','review','other','orders','quote_waiting','accepted','due','quote_followup','payment_review','payment_hold','checkout_followup','reply_due','overdue','upcoming','revision_due','proof_waiting'], true)) {
         dmo_json(422, ['ok'=>false,'error'=>'invalid_request_list_filter']);
     }
+    $customer=$_GET['customer_id']??null;
+    if($customer!==null&&(!is_string($customer)||!preg_match('/^[1-9][0-9]{0,17}$/D',$customer)))dmo_json(422,['ok'=>false,'error'=>'invalid_customer_filter']);
     $search = trim($search);
     $page = (int) $pageText;
     $size = 40;
@@ -28,6 +30,7 @@ try {
         $where[] = '(LOCATE(:ref, r.public_ref) > 0 OR LOCATE(:name, u.display_name) > 0)';
         $params = ['ref'=>$search, 'name'=>$search];
     }
+    if($customer!==null){$where[]="r.customer_id=:customer AND u.role='customer'";$params['customer']=(int)$customer;}
     $review = "r.status IN ('submitted','clarification_needed') AND NOT EXISTS (SELECT 1 FROM dmo_quotes q WHERE q.request_id=r.id AND q.status IN ('sent','accepted')) AND NOT EXISTS (SELECT 1 FROM dmo_orders o WHERE o.request_id=r.id)";
     if ($filter === 'review') $where[] = '(' . $review . ')';
     if ($filter === 'other') $where[] = 'NOT (' . $review . ')';

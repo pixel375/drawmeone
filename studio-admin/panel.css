@@ -332,3 +332,5 @@ footer{padding:28px 0 70px;border-top:1px solid var(--line);color:var(--muted);f
 .artwork-library-filters,.artwork-library-filters label,.artwork-library-filters select,.artwork-library-filters .small{min-width:0;max-width:100%}.artwork-library-filters label{flex:1 1 220px}.artwork-library-filters select{flex:1 1 auto;width:100%;text-overflow:ellipsis}.artwork-library-filters .small{overflow-wrap:anywhere}@media(max-width:650px){.artwork-library-filters label{flex:0 1 auto;display:grid;grid-template-columns:minmax(0,1fr);gap:5px}.artwork-library-filters select{max-width:100%}}
 
 #finance-summary{margin:16px 0 20px}#finance-records .notification-card{min-width:0;overflow-wrap:anywhere}#finance-records button{max-width:100%;white-space:normal}#finance-export{white-space:normal;max-width:100%}
+
+#request-customer-scope{margin:0 0 16px;padding:12px;border:1px solid var(--line);border-radius:8px}#request-customer-scope[hidden]{display:none!important}#customer-directory-list .notification-card{overflow-wrap:anywhere;min-width:0}#customer-directory-list button{max-width:100%;white-space:normal}#customer-directory-next{margin-top:12px}

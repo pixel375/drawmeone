@@ -19,6 +19,7 @@ $allowed = [
     '/api/quote-response.php',
     '/api/admin/overview.php',
     '/api/admin/finance.php',
+    '/api/admin/customers.php',
     '/api/site-settings.php',
     '/api/admin/design.php',
     '/api/admin/packages.php',

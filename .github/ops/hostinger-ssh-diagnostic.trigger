@@ -1,1 +1,1 @@
-Verify artist read-only finance report and corrected privacy browser regression.
+Verify private customer directory and exact customer request scope.

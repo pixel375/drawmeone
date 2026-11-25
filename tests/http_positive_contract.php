@@ -132,6 +132,19 @@ try {
         usleep(100000);
     }
     qa_positive($ready,'local_positive_server_ready');
+    [$code]=qa_http('/api/admin/customers.php',$tokenA,'__Host-dmo_admin');
+    qa_positive(in_array($code,[401,403],true),'customer_directory_admin_only');
+    [$code,$directory]=qa_http('/api/admin/customers.php?state=verified',$tokenAdmin,'__Host-dmo_admin');
+    qa_positive($code===200&&count($directory['customers'])===2&&!in_array($admin,array_column($directory['customers'],'id'),true),'customer_directory_excludes_admin');
+    [$code,$directory]=qa_http('/api/admin/customers.php?q='.urlencode($referenceA),$tokenAdmin,'__Host-dmo_admin');
+    qa_positive($code===200&&count($directory['customers'])===1&&$directory['customers'][0]['id']===$a&&$directory['customers'][0]['request_count']===1,'customer_lookup_by_commission_reference');
+    qa_positive(!str_contains(json_encode($directory,JSON_THROW_ON_ERROR),'password_hash')&&!str_contains(json_encode($directory,JSON_THROW_ON_ERROR),'session_hash'),'customer_directory_no_credentials');
+    [$code,$history]=qa_http('/api/admin/requests.php?customer_id='.$a,$tokenAdmin,'__Host-dmo_admin');
+    qa_positive($code===200&&count($history['requests'])===1&&$history['requests'][0]['id']===$requestA,'customer_history_exact_id_scope');
+    [$code,$history]=qa_http('/api/admin/requests.php?customer_id='.$admin,$tokenAdmin,'__Host-dmo_admin');
+    qa_positive($code===200&&$history['requests']===[],'customer_history_excludes_admin');
+    [$code]=qa_http('/api/admin/customers.php?state=invalid',$tokenAdmin,'__Host-dmo_admin');
+    qa_positive($code===422,'customer_directory_invalid_filter_denied');
     [$code,$archived]=qa_http('/api/policy.php?version=qa-policy-v0&sha256='.$oldPin);
     qa_positive($code===200&&$archived['policy']['version']==='qa-policy-v0','explicitly_pinned_historical_policy_readable');
     [$code,,$policyHtml]=qa_http('/policy.php?version=qa-policy-v0&sha256='.$oldPin);

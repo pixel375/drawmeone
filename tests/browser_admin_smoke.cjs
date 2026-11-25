@@ -39,6 +39,7 @@ const mockAdmin = {
   },
   "requests.php": {ok:true,readonly:true,requests:[]},
   "messages.php": {ok:true,readonly:true,messages:[]},
+  "customers.php":{ok:true,readonly:true,customers:[{id:44,display_name:"Synthetic Customer",email:"ci@example.invalid",account_status:"active",email_verified:true,request_count:1,last_request_at:"2026-11-25"}],next_before:null},
   "finance.php":{ok:true,readonly:true,scope:"local_records_only",as_of:"2026-11-25",summary:[{currency:"CAD",record_state:"reconciled",record_count:1,amount_minor:3000}],records:[{id:88,order_id:87,request_id:86,public_ref:"CI-86",method:"bank_transfer",currency:"CAD",amount_minor:3000,status:"verified",record_state:"reconciled",created_at:"2026-11-25",verified_at:"2026-11-25"}],next_before:null},
   "artworks.php": {
     ok:true,write_enabled:false,
@@ -62,7 +63,7 @@ const mockAdmin = {
     customer_login_enabled:false,customer_registration_enabled:false
   }
 };
-const tabs = ["overview","requests","messages","finance","artwork","packages","settings"];
+const tabs = ["overview","requests","messages","finance","customers","artwork","packages","settings"];
 async function simulateBackend(page, observedPosts) {
   await page.route("**/api/admin/**", route => {
     if (route.request().method() !== "GET") {
@@ -166,6 +167,9 @@ async function verifyArtistDesk(browser, width) {
         assert.equal(await page.locator("#request-detail").isVisible(),false);
       } else if(name==="messages"){
         await page.locator("#message-list .empty-state").waitFor();
+      } else if(name==="customers"){
+        await page.locator("#customer-directory-list article").first().waitFor();
+        assert.match(await page.locator("#customer-directory-list").innerText(),/Synthetic Customer/);
       } else if(name==="finance"){
         await page.locator("#finance-records article").first().waitFor();
         assert.match(await page.locator("#finance-summary").innerText(),/CAD 30.00/);

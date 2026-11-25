@@ -141,6 +141,7 @@ const syntheticAdmin={
     ]},
   "requests.php":{ok:true,readonly:true,requests:[]},
   "messages.php":{ok:true,readonly:true,messages:[]},
+  "customers.php":{ok:true,readonly:true,customers:[{id:44,display_name:"Synthetic Customer",email:"ci@example.invalid",account_status:"active",email_verified:true,request_count:1,last_request_at:"2026-11-25"}],next_before:null},
   "finance.php":{ok:true,readonly:true,scope:"local_records_only",as_of:"2026-11-25",summary:[{currency:"CAD",record_state:"reconciled",record_count:1,amount_minor:3000}],records:[{id:88,order_id:87,request_id:86,public_ref:"CI-86",method:"bank_transfer",currency:"CAD",amount_minor:3000,status:"verified",record_state:"reconciled",created_at:"2026-11-25",verified_at:"2026-11-25"}],next_before:null},
   "artworks.php":{ok:true,write_enabled:false,artworks:[
     {id:4,visibility:"draft",featured:false,sort_order:0,width:640,height:480,
@@ -184,9 +185,10 @@ async function authenticatedAdmin(browser,width) {
         "Artist Desk skip link moves keyboard focus into main");
       console.log("PASS: authenticated Artist Desk skip-to-main keyboard focus");
     }
-    for(const name of ["overview","requests","messages","finance","artwork","packages","settings"]){
+    for(const name of ["overview","requests","messages","finance","customers","artwork","packages","settings"]){
       await page.locator('[data-view="'+name+'"]').click();
       await page.locator('[data-panel="'+name+'"]').waitFor({state:"visible"});
+      if(name==="customers") await page.locator("#customer-directory-list article").first().waitFor();
       if(name==="finance") await page.locator("#finance-records article").first().waitFor();
       if(name==="artwork") await page.locator(".artwork-library-card").first()
         .waitFor({state:"visible"});
