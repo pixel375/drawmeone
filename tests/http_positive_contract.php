@@ -51,7 +51,7 @@ function qa_http(string $path,?string $cookie=null,string $cookieName='__Host-dm
     $body=curl_exec($curl);
     $status=(int)curl_getinfo($curl,CURLINFO_RESPONSE_CODE);
     curl_close($curl);
-    return [$status,is_string($body)?json_decode($body,true):null];
+    return [$status,is_string($body)?json_decode($body,true):null,is_string($body)?$body:""];
 }
 
 $process=null;
@@ -134,6 +134,13 @@ try {
     qa_positive($ready,'local_positive_server_ready');
     [$code,$archived]=qa_http('/api/policy.php?version=qa-policy-v0&sha256='.$oldPin);
     qa_positive($code===200&&$archived['policy']['version']==='qa-policy-v0','explicitly_pinned_historical_policy_readable');
+    [$code,,$policyHtml]=qa_http('/policy.php?version=qa-policy-v0&sha256='.$oldPin);
+    qa_positive($code===200&&str_contains($policyHtml,htmlspecialchars($archived['policy']['terms'],ENT_QUOTES|ENT_SUBSTITUTE,'UTF-8'))&&str_contains($policyHtml,'Permanent version link'),'policy_html_exact_archived_text');
+    [$code,,$policyHtml]=qa_http('/policy.php?version=qa-policy-v0&sha256='.str_repeat('0',64));
+    qa_positive($code===404&&!str_contains($policyHtml,htmlspecialchars($archived['policy']['terms'],ENT_QUOTES|ENT_SUBSTITUTE,'UTF-8')),'policy_html_wrong_pin_denied');
+    [$code,$currentPolicy]=qa_http('/api/policy.php');
+    [$htmlCode,,$policyHtml]=qa_http('/policy.php');
+    qa_positive($code===200&&$htmlCode===200&&str_contains($policyHtml,htmlspecialchars($currentPolicy['policy']['privacy'],ENT_QUOTES|ENT_SUBSTITUTE,'UTF-8')),'policy_html_current_matches_api');
     [$code]=qa_http('/api/policy.php?version=qa-policy-v0&sha256='.str_repeat('0',64));
     qa_positive($code===404,'historical_document_wrong_digest_denied');
     qa_positive(dmo_policy_request_eligible($db,$requestA,'qa-policy-v0'),'archived_receipt_matches_request_version');
@@ -809,6 +816,8 @@ try {
     $item['id']=$new['id'];
     [$code,$catalog]=qa_http('/api/catalog.php');
     qa_positive($code===200&&!in_array($item['id'],array_column($catalog['tiers'],'id'),true),'catalog_draft_private');
+    [$code,,$serviceHtml]=qa_http('/services.php');
+    qa_positive($code===200&&!str_contains($serviceHtml,'CI Portrait'),'services_html_draft_hidden');
     [$code,$private]=qa_http('/api/admin/packages.php',$tokenAdmin,'__Host-dmo_admin');
     $row=array_values(array_filter($private['catalog']['tiers'],fn($r)=>$r['id']===$item['id']))[0];
     $revision=$row['revision'];
@@ -819,6 +828,8 @@ try {
     qa_positive($code===200,'catalog_explicit_publish');
     [$code,$catalog]=qa_http('/api/catalog.php');
     qa_positive($code===200&&count($catalog['tiers'])===1&&$catalog['tiers'][0]['name']===$item['name']&&!isset($catalog['tiers'][0]['revision'])&&$catalog['requests_open']===false,'catalog_public_approved_and_paused');
+    [$code,,$serviceHtml]=qa_http('/services.php');
+    qa_positive($code===200&&str_contains($serviceHtml,'CI Portrait')&&str_contains($serviceHtml,'CAD 10.00 – 20.00')&&str_contains($serviceHtml,'Requests temporarily paused'),'services_html_published_estimates_and_pause');
     [$code,$private]=qa_http('/api/admin/packages.php',$tokenAdmin,'__Host-dmo_admin');
     $row=array_values(array_filter($private['catalog']['tiers'],fn($r)=>$r['id']===$item['id']))[0];
     $current=$row['revision'];
@@ -831,6 +842,8 @@ try {
     qa_positive($code===200,'catalog_unpublish');
     [$code,$catalog]=qa_http('/api/catalog.php');
     qa_positive($code===200&&$catalog['tiers']===[],'catalog_unpublished_hidden');
+    [$code,,$serviceHtml]=qa_http('/services.php');
+    qa_positive($code===200&&!str_contains($serviceHtml,'CI Portrait'),'services_html_unpublished_hidden');
     require_once dirname(__DIR__).'/app/catalog.php';
     $db->beginTransaction();
     try{

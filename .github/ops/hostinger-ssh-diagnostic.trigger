@@ -1,1 +1,1 @@
-Verify pricing catalog source and artist settings; read-only.
+Verify server-rendered services and policy pages; read-only.

@@ -80,3 +80,13 @@ function dmo_policy_request_eligible(PDO $db,int $requestId,string $version): bo
     $archived=dmo_policy_archived($version);
     return $receipt!==null&&$archived!==null&&hash_equals($archived['sha256'],$receipt);
 }
+
+/** Identical policy selection for JSON and server-rendered HTML. */
+function dmo_policy_public_reference(mixed $version,mixed $sha): ?array
+{
+    if($version===null&&$sha===null)return dmo_policy_current();
+    if(!is_string($version)||!preg_match('/^[a-zA-Z0-9][a-zA-Z0-9._-]{2,39}$/D',$version)||
+        !is_string($sha)||!preg_match('/^[a-f0-9]{64}$/D',$sha))return null;
+    $doc=$version===dmo_config('DMO_REQUEST_POLICY_VERSION')?dmo_policy_current():dmo_policy_archived($version);
+    return $doc!==null&&hash_equals($doc['sha256'],$sha)?$doc:null;
+}
