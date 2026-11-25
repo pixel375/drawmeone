@@ -23,9 +23,9 @@ try {
         $offset = ($page - 1) * $size;
         $stmt = $db->prepare(
             'SELECT r.public_ref, r.subject_type, r.status, ' .
-            'r.submitted_at, r.preferred_deadline, r.tier_snapshot_json, t.name AS tier_name ' .
+            'r.submitted_at, r.preferred_deadline, r.tier_snapshot_json, t.name AS tier_name, ' . dmo_requests_stage_columns() .
             'FROM dmo_commission_requests r ' .
-            'LEFT JOIN dmo_commission_tiers t ON t.id = r.tier_id ' .
+            'LEFT JOIN dmo_commission_tiers t ON t.id = r.tier_id ' . dmo_requests_stage_joins() .
             'WHERE r.customer_id = :customer ' .
             'ORDER BY r.submitted_at DESC, r.id DESC LIMIT 41 OFFSET ' . $offset
         );
@@ -35,7 +35,7 @@ try {
         if ($hasMore) array_pop($rows);
         dmo_json(200, [
             'ok' => true,
-            'requests' => array_map('dmo_requests_historical_tier', $rows),
+            'requests' => array_map('dmo_requests_list_summary', $rows),
             'page' => $page, 'page_size' => $size, 'has_more' => $hasMore && $page < 9999,
             'new_requests_open' => dmo_requests_open(),
         ]);

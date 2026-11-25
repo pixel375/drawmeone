@@ -320,6 +320,32 @@ try {
         ],$csrfAdmin);
     qa_positive($code===409,'duplicate_order_confirmation_rejected');
 
+    $orderId=$order['order_id'];
+    $deadline=(new DateTimeImmutable('today',new DateTimeZone('UTC')))->modify('+5 days')->format('Y-m-d');
+    $schedule=['action'=>'set_order_deadline','request_id'=>$requestA,'order_id'=>$orderId,
+        'expected_deadline'=>null,'agreed_deadline'=>$deadline,'confirm_agreement'=>true];
+    [$code]=qa_http('/api/admin/request-actions.php',$tokenA,'__Host-dmo_admin',$schedule,$csrfA);
+    qa_positive(in_array($code,[401,403],true),'customer_cannot_edit_order_deadline');
+    [$code]=qa_http('/api/admin/request-actions.php',$tokenAdmin,'__Host-dmo_admin',$schedule,null);
+    qa_positive($code===403,'order_deadline_requires_csrf');
+    [$code]=qa_http('/api/admin/request-actions.php',$tokenAdmin,'__Host-dmo_admin',
+        array_replace($schedule,['agreed_deadline'=>'2026-02-30']),$csrfAdmin);
+    qa_positive($code===422,'invalid_order_deadline_rejected');
+    [$code]=qa_http('/api/admin/request-actions.php',$tokenAdmin,'__Host-dmo_admin',
+        array_replace($schedule,['confirm_agreement'=>false]),$csrfAdmin);
+    qa_positive($code===422,'explicit_deadline_agreement_required');
+    [$code,$saved]=qa_http('/api/admin/request-actions.php',$tokenAdmin,'__Host-dmo_admin',$schedule,$csrfAdmin);
+    qa_positive($code===200 && $saved['agreed_deadline']===$deadline && $saved['payment_status']==='unverified',
+        'artist_records_agreed_date_without_payment');
+    [$code]=qa_http('/api/admin/request-actions.php',$tokenAdmin,'__Host-dmo_admin',$schedule,$csrfAdmin);
+    qa_positive($code===409,'stale_deadline_conflict_rejected');
+    [$code,$queue]=qa_http('/api/admin/requests.php?filter=due',$tokenAdmin,'__Host-dmo_admin');
+    qa_positive($code===200 && count($queue['requests'])===1 &&
+        $queue['requests'][0]['workflow_stage']==='awaiting_arrangement' &&
+        $queue['requests'][0]['order_deadline']===$deadline,'due_order_queue_matches_actual_order');
+    [$code,$history]=qa_http('/api/requests.php',$tokenA);
+    qa_positive($code===200 && $history['requests'][0]['workflow_stage']==='awaiting_arrangement' &&
+        $history['requests'][0]['order_deadline']===$deadline,'customer_history_reflects_order_not_initial_request_status');
     [$code,$overview]=qa_http('/api/admin/overview.php',
         $tokenAdmin,'__Host-dmo_admin');
     if (!($code===200 &&
@@ -342,7 +368,8 @@ try {
     [$code,$customerDetail]=qa_http('/api/request.php?ref='.urlencode($referenceA),$tokenA);
     qa_positive($code===200 && count($customerDetail['orders']??[])===1 &&
         ($customerDetail['orders'][0]['payment_status']??'')==='unverified' &&
-        ($customerDetail['orders'][0]['total_minor']??null)===3000,
+        ($customerDetail['orders'][0]['total_minor']??null)===3000 &&
+        $customerDetail['orders'][0]['agreed_deadline']===$deadline,
         'customer_sees_correct_unpaid_order');
     [$code,$otherDetail]=qa_http('/api/request.php?ref='.urlencode($referenceB),$tokenB);
     qa_positive($code===200 && ($otherDetail['quotes']??[])===[] &&

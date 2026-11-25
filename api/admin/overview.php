@@ -15,6 +15,7 @@ try {
         'active_orders' => "SELECT COUNT(*) FROM dmo_orders " .
             "WHERE status IN ('awaiting_arrangement','in_progress','ready_for_delivery'," .
             "'queued','drawing','awaiting_feedback','revision')",
+        'orders_due_soon' => "SELECT COUNT(*) FROM dmo_orders WHERE status IN ('awaiting_arrangement','in_progress','ready_for_delivery','queued','drawing','awaiting_feedback','revision') AND agreed_deadline IS NOT NULL AND DATE(agreed_deadline)<=DATE_ADD(UTC_DATE(),INTERVAL 7 DAY)",
         'payments_to_verify' => "SELECT COUNT(*) FROM dmo_payments " .
             "WHERE status = 'pending_verification'",
         'messages_last_seven_days' => "SELECT COUNT(*) FROM dmo_messages " .
@@ -60,7 +61,7 @@ try {
          'detail' => 'Requires both independent quote switches'],
         ['key' => 'orders', 'label' => 'Order confirmation',
          'status' => dmo_orders_admin_enabled() ? 'ready' : 'blocked',
-         'detail' => 'Only unpaid/unverified order creation is implemented'],
+         'detail' => 'Unpaid confirmation and individually agreed scheduling; no payment verification'],
         ['key' => 'backup', 'label' => 'Encrypted local backup',
          'status' => $localBackup['ready'] ? 'ready' : 'blocked',
          'detail' => $localBackup['ready']

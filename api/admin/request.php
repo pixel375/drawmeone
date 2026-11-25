@@ -16,6 +16,11 @@ try {
     if ($detail === null) {
         dmo_json(404, ['ok' => false, 'error' => 'request_not_found']);
     }
+    foreach ($detail['orders'] as &$order) {
+        $order['deadline_editable'] = dmo_messages_request_open((string)$detail['request']['status']) &&
+            dmo_orders_deadline_editable($order);
+    }
+    unset($order);
     dmo_json(200, [
         'ok' => true,
         'detail' => $detail,

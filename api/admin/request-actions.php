@@ -13,7 +13,7 @@ try {
 
     $action = $input['action'] ?? null;
     $requestId = dmo_workflow_id($input['request_id'] ?? null);
-    if (!in_array($action, ['add_private_note', 'create_quote_draft', 'send_customer_message','set_review_status'], true)) {
+    if (!in_array($action, ['add_private_note', 'create_quote_draft', 'send_customer_message','set_review_status','set_order_deadline'], true)) {
         dmo_json(422, ['ok' => false, 'error' => 'unsupported_action']);
     }
 
@@ -21,7 +21,21 @@ try {
     // exits with an uncommitted transaction.
     $note = null;
     $quote = null;
-    if ($action === 'set_review_status') {
+    $deadline = null;
+    $orderId = null;
+    if ($action === 'set_order_deadline') {
+        if (count($input) !== 6 || array_diff(array_keys($input),
+            ['action','request_id','order_id','expected_deadline','agreed_deadline','confirm_agreement']) !== [] ||
+            ($input['confirm_agreement'] ?? null) !== true ||
+            !array_key_exists('expected_deadline',$input) || !array_key_exists('agreed_deadline',$input) ||
+            ($input['expected_deadline'] !== null && (!is_string($input['expected_deadline']) ||
+                !preg_match('/^\d{4}-\d{2}-\d{2}$/D',$input['expected_deadline'])))) {
+            dmo_json(422,['ok'=>false,'error'=>'invalid_order_deadline_input']);
+        }
+        if (!dmo_orders_admin_enabled()) dmo_json(503,['ok'=>false,'error'=>'order_planning_disabled']);
+        $orderId=dmo_workflow_id($input['order_id']??null);
+        $deadline=dmo_orders_validate_agreed_date($input['agreed_deadline']);
+    } elseif ($action === 'set_review_status') {
         if (count($input) !== 4 || array_diff(array_keys($input),
             ['action','request_id','expected_status','status']) !== [] ||
             !in_array($input['expected_status'] ?? null,['submitted','clarification_needed'],true) ||
@@ -61,6 +75,31 @@ try {
         if ($currentStatus === false) {
             $db->rollBack();
             dmo_json(404, ['ok' => false, 'error' => 'request_not_found']);
+        }
+
+        if ($action === 'set_order_deadline') {
+            $order=$db->prepare('SELECT id,status,payment_status,agreed_deadline FROM dmo_orders ' .
+                'WHERE id=:order_id AND request_id=:request_id LIMIT 1 FOR UPDATE');
+            $order->execute(['order_id'=>$orderId,'request_id'=>$requestId]);
+            $row=$order->fetch(PDO::FETCH_ASSOC);
+            if (!is_array($row)) {
+                $db->rollBack();
+                dmo_json(404,['ok'=>false,'error'=>'order_not_found']);
+            }
+            $previous=dmo_orders_date_value($row['agreed_deadline']);
+            if (!dmo_messages_request_open((string)$currentStatus) ||
+                !dmo_orders_deadline_editable($row) || $previous !== $input['expected_deadline']) {
+                $db->rollBack();
+                dmo_json(409,['ok'=>false,'error'=>'order_planning_conflict']);
+            }
+            if ($previous !== $deadline) {
+                $db->prepare('UPDATE dmo_orders SET agreed_deadline=:deadline WHERE id=:id')
+                    ->execute(['deadline'=>$deadline,'id'=>$orderId]);
+                dmo_workflow_audit($db,(int)$admin['user_id'],$requestId,'order.agreed_deadline_changed',
+                    ['order_id'=>$orderId,'from'=>$previous,'to'=>$deadline]);
+            }
+            $db->commit();
+            dmo_json(200,['ok'=>true,'agreed_deadline'=>$deadline,'payment_status'=>'unverified']);
         }
 
         if ($action === 'set_review_status') {

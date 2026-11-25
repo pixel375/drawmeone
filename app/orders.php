@@ -31,8 +31,7 @@ function dmo_orders_customer_rows(PDO $db, int $requestId): array
             'quote_id' => (int) $row['accepted_quote_id'],
             'status' => (string) $row['status'],
             'payment_status' => (string) $row['payment_status'],
-            'agreed_deadline' => $row['agreed_deadline'] === null
-                ? null : (string) $row['agreed_deadline'],
+            'agreed_deadline' => dmo_orders_date_value($row['agreed_deadline']),
             'created_at' => (string) $row['created_at'],
             'updated_at' => (string) $row['updated_at'],
             'currency' => (string) $row['currency'],
@@ -52,4 +51,34 @@ function dmo_orders_status_label(string $state): string
         'cancelled' => 'Cancelled',
         default => 'Order under review',
     };
+}
+
+/** Only pre-payment scheduling, not a payment or fulfillment transition. */
+function dmo_orders_deadline_editable(array $order): bool
+{
+    return dmo_orders_admin_enabled() &&
+        ($order['status'] ?? null) === 'awaiting_arrangement' &&
+        ($order['payment_status'] ?? null) === 'unverified';
+}
+
+function dmo_orders_date_value(mixed $value): ?string
+{
+    if (!is_string($value)) return null;
+    $date = substr($value,0,10);
+    return preg_match('/^\d{4}-\d{2}-\d{2}$/D',$date) ? $date : null;
+}
+
+function dmo_orders_validate_agreed_date(mixed $value): ?string
+{
+    if ($value === null) return null;
+    if (!is_string($value) || !preg_match('/^\d{4}-\d{2}-\d{2}$/D',$value)) {
+        dmo_json(422,['ok'=>false,'error'=>'invalid_agreed_deadline']);
+    }
+    $date = DateTimeImmutable::createFromFormat('!Y-m-d',$value,new DateTimeZone('UTC'));
+    $today = new DateTimeImmutable('today',new DateTimeZone('UTC'));
+    if ($date === false || $date->format('Y-m-d') !== $value ||
+        $date < $today || $date > $today->modify('+2 years')) {
+        dmo_json(422,['ok'=>false,'error'=>'invalid_agreed_deadline']);
+    }
+    return $value;
 }

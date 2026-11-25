@@ -13,7 +13,7 @@ try {
     if (!is_string($search) || strlen($search) > 160 ||
         preg_match('/[\x00-\x1f\x7f]/', $search) ||
         !is_string($pageText) || !preg_match('/^[1-9][0-9]{0,3}$/D', $pageText) ||
-        !is_string($filter) || !in_array($filter, ['all','review','other'], true)) {
+        !is_string($filter) || !in_array($filter, ['all','review','other','orders','quote_waiting','accepted','due'], true)) {
         dmo_json(422, ['ok'=>false,'error'=>'invalid_request_list_filter']);
     }
     $search = trim($search);
@@ -29,15 +29,20 @@ try {
     $review = "r.status IN ('submitted','clarification_needed') AND NOT EXISTS (SELECT 1 FROM dmo_quotes q WHERE q.request_id=r.id AND q.status IN ('sent','accepted')) AND NOT EXISTS (SELECT 1 FROM dmo_orders o WHERE o.request_id=r.id)";
     if ($filter === 'review') $where[] = '(' . $review . ')';
     if ($filter === 'other') $where[] = 'NOT (' . $review . ')';
+    $activeOrders = "o.status IN ('awaiting_arrangement','in_progress','ready_for_delivery','queued','drawing','awaiting_feedback','revision')";
+    if ($filter === 'orders') $where[] = $activeOrders;
+    if ($filter === 'quote_waiting') $where[] = "o.id IS NULL AND vq.status='sent' AND vq.validity_ends_at>UTC_TIMESTAMP()";
+    if ($filter === 'accepted') $where[] = "o.id IS NULL AND vq.status='accepted'";
+    if ($filter === 'due') $where[] = $activeOrders . " AND o.agreed_deadline IS NOT NULL AND DATE(o.agreed_deadline)<=DATE_ADD(UTC_DATE(),INTERVAL 7 DAY)";
     $from = ' FROM dmo_commission_requests r JOIN dmo_users u ON u.id = r.customer_id ' .
-        'LEFT JOIN dmo_commission_tiers t ON t.id = r.tier_id ';
+        'LEFT JOIN dmo_commission_tiers t ON t.id = r.tier_id ' . dmo_requests_stage_joins();
     $conditions = $where === [] ? '' : 'WHERE ' . implode(' AND ', $where) . ' ';
     // Limit and offset derive only from validated bounded integers.
     $offset = ($page - 1) * $size;
     $stmt = $db->prepare(
         'SELECT r.id, r.public_ref, r.subject_type, r.status, ' .
         'r.preferred_contact, r.submitted_at, LEFT(r.brief, 500) AS brief_excerpt, ' .
-        'u.display_name AS customer_name, r.tier_snapshot_json, t.name AS tier_name ' .
+        'u.display_name AS customer_name, r.tier_snapshot_json, t.name AS tier_name, ' . dmo_requests_stage_columns() .
         $from . $conditions . 'ORDER BY r.submitted_at DESC, r.id DESC LIMIT ' .
         ($size + 1) . ' OFFSET ' . $offset
     );
@@ -46,7 +51,7 @@ try {
     $hasMore = count($rows) > $size;
     if ($hasMore) array_pop($rows);
     dmo_json(200, [
-        'ok'=>true, 'requests'=>array_map('dmo_requests_historical_tier', $rows), 'readonly'=>true,
+        'ok'=>true, 'requests'=>array_map('dmo_requests_list_summary', $rows), 'readonly'=>true,
         'page'=>$page, 'page_size'=>$size, 'has_more'=>$hasMore && $page < 9999,
     ]);
 } catch (Throwable $error) {

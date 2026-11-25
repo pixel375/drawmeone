@@ -194,3 +194,42 @@ function dmo_messages_request_open(string $status): bool
         'closed', 'archived', 'refunded',
     ], true);
 }
+
+/** Shared list summary: only released quotes and confirmed order metadata. */
+function dmo_requests_stage_joins(): string
+{
+    return 'LEFT JOIN dmo_orders o ON o.id=(SELECT oo.id FROM dmo_orders oo ' .
+        'WHERE oo.request_id=r.id ORDER BY oo.id DESC LIMIT 1) ' .
+        'LEFT JOIN dmo_quotes vq ON vq.id=(SELECT qq.id FROM dmo_quotes qq ' .
+        "WHERE qq.request_id=r.id AND qq.sent_at IS NOT NULL AND qq.status IN ('sent','accepted','declined','superseded') " .
+        "ORDER BY (qq.status='accepted') DESC, qq.version_number DESC LIMIT 1) ";
+}
+
+function dmo_requests_stage_columns(): string
+{
+    return 'o.status AS order_status, o.agreed_deadline AS order_deadline, ' .
+        'vq.status AS visible_quote_status, ' .
+        'CASE WHEN vq.validity_ends_at IS NOT NULL AND vq.validity_ends_at <= UTC_TIMESTAMP() ' .
+        'THEN 1 ELSE 0 END AS visible_quote_expired ';
+}
+
+function dmo_requests_list_summary(array $row): array
+{
+    $row=dmo_requests_historical_tier($row);
+    $stage=(string)$row['status'];
+    if (dmo_messages_request_open($stage)) {
+        if (is_string($row['order_status']??null)) {
+            $stage=$row['order_status'];
+        } elseif (($row['visible_quote_status']??null)==='accepted') {
+            $stage='quote_accepted';
+        } elseif (($row['visible_quote_status']??null)==='sent') {
+            $stage=(int)$row['visible_quote_expired']===1 ? 'quote_expired' : 'quote_available';
+        } elseif (($row['visible_quote_status']??null)==='declined') {
+            $stage='quote_declined';
+        }
+    }
+    $row['workflow_stage']=$stage;
+    $row['order_deadline']=is_string($row['order_deadline']??null) ? substr($row['order_deadline'],0,10) : null;
+    unset($row['visible_quote_expired']);
+    return $row;
+}
