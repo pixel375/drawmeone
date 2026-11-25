@@ -50,7 +50,7 @@ footer{border-top:1px solid var(--line);padding-top:20px;margin-top:28px;font-si
 .skip-link:focus{top:10px}
 button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 </style>
-<script defer src="./account.js?v=19"></script>
+<script defer src="./account.js?v=20"></script>
 </head>
 <body>
 <a class="skip-link" href="#main">Skip to main content</a>
@@ -92,7 +92,7 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-off
     <small>Use at least 12 characters. Never reuse your email password.</small>
     <label for="signup-password-confirm">Confirm password</label>
     <input id="signup-password-confirm" name="password_confirm" type="password" minlength="12" maxlength="128" autocomplete="new-password" required>
-    <p><a id="signup-policy-link" href="./policy.html#privacy" target="_blank" rel="noopener noreferrer">Read the privacy policy</a> (opens in a new tab).</p>
+    <p><a id="signup-policy-link" href="./policy.php#privacy" target="_blank" rel="noopener noreferrer">Read the privacy policy</a> (opens in a new tab).</p>
     <label class="privacy-ack"><input id="signup-privacy-ack" type="checkbox" required> I have read the privacy policy.</label>
     <div id="captcha-signup" class="turnstile-slot"></div>
     <button type="submit" id="submit-signup" class="primary" disabled>Create account</button>
@@ -156,7 +156,7 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-off
   </div>
 </section>
 
-<footer>Private customer information will never appear in the public artwork gallery. Backend setup and email verification must be completed before registrations are enabled.</footer>
+<footer>Private customer information will never appear in the public artwork gallery. Backend setup and email verification must be completed before registrations are enabled. <a href="./policy.php#privacy">Privacy policy</a></footer>
 </main>
 </body>
 </html>

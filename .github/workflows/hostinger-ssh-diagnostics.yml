@@ -283,11 +283,11 @@ jobs:
           # The three alternate layouts render their contact CTAs from JS.
           # Check that Hostinger serves the newly versioned asset, not stale code.
           public_home=$(curl -fsSL --max-time 15 "https://drawmeone.com/")
-          [[ "$public_home" == *'concepts.js?v=12'* ]] || {
+          [[ "$public_home" == *'concepts.js?v=13'* ]] || {
             echo "alternate_contact_asset=stale_homepage"
             exit 1
           }
-          alt_js=$(curl -fsSL --max-time 15 "https://drawmeone.com/concepts.js?v=12")
+          alt_js=$(curl -fsSL --max-time 15 "https://drawmeone.com/concepts.js?v=13")
           alt_count=$(printf '%s' "$alt_js" | grep -o 'class="concept-email-actions"' | wc -l)
           [[ "$alt_count" == "3" ]] || {
             echo "alternate_contact_asset=missing_layout_action"
@@ -370,7 +370,7 @@ jobs:
           [[ "$directory" == *'<h1>Published drawings</h1>'* ]] && [[ "$directory" != *'assets/demo/'* ]] || { echo "authentic_portfolio=directory_unavailable"; exit 1; }
           echo "authentic_portfolio=deployed"
           services=$(curl -fsSL --max-time 15 https://drawmeone.com/services.php)
-          [[ "$services" == *'<h1>Commission services</h1>'* ]] || { echo "services_page=stale"; exit 1; }
+          [[ "$services" == *'<h1>Commission services</h1>'* ]] && [[ "$public_home" == *'href="./services.php"'* ]] || { echo "services_page=stale"; exit 1; }
           policy_status=$(curl -sSL --max-time 15 -o /dev/null -w '%{http_code}' https://drawmeone.com/policy.php)
           [[ "$policy_status" == "200" || "$policy_status" == "404" ]] || { echo "policy_page=unexpected_status"; exit 1; }
           echo "public_information_pages=deployed"
@@ -378,14 +378,14 @@ jobs:
           # Public commission intake remains closed, but its signed-in history
           # assets must include the new browser-only filters and status labels.
           commission_page=$(curl -fsSL --max-time 15 "https://drawmeone.com/commission.html")
-          [[ "$commission_page" == *'commission.js?v=38'* ]] &&
+          [[ "$commission_page" == *'commission.js?v=39'* ]] &&
           [[ "$commission_page" == *'commission.css?v=28'* ]] &&
           [[ "$commission_page" == *'id="request-history-search"'* ]] &&
           [[ "$commission_page" == *'id="request-history-filter"'* ]] || {
             echo "customer_history=stale_html"
             exit 1
           }
-          commission_js=$(curl -fsSL --max-time 15 "https://drawmeone.com/commission.js?v=38")
+          commission_js=$(curl -fsSL --max-time 15 "https://drawmeone.com/commission.js?v=39")
           [[ "$commission_js" == *'function renderRequestHistory()'* ]] &&
           [[ "$commission_js" == *'readableRequestStatus(r.workflow_stage || r.status)'* ]] &&
           [[ "$commission_js" == *'requestsFetchSequence'* ]] || {
@@ -461,12 +461,12 @@ jobs:
           # v3.9 registration remains closed, but verify the versioned
           # customer signup and recovery assets are deployed safely.
           customer_page=$(curl -fsSL --max-time 15 "https://drawmeone.com/account.html")
-          [[ "$customer_page" == *'account.js?v=19'* ]] &&
+          [[ "$customer_page" == *'account.js?v=20'* ]] &&
           [[ "$customer_page" == *'id="signup-password-confirm"'* ]] || {
             echo "customer_onboarding_assets=stale_signup"
             exit 1
           }
-          customer_js=$(curl -fsSL --max-time 15 "https://drawmeone.com/account.js?v=19")
+          customer_js=$(curl -fsSL --max-time 15 "https://drawmeone.com/account.js?v=20")
           [[ "$customer_js" == *'signupPasswordConfirm.setCustomValidity'* ]] &&
           [[ "$customer_js" == *'Too many sign-in attempts'* ]] || {
             echo "customer_onboarding_assets=stale_signup_script"
@@ -491,11 +491,11 @@ jobs:
           # v4.0 public accessibility: validate deployed revised theme
           # picker contrast and skip-to-main links. Read-only assets only.
           home_html=$(curl -fsSL --max-time 15 "https://drawmeone.com/")
-          [[ "$home_html" == *'styles.css?v=13'* ]] || {
+          [[ "$home_html" == *'styles.css?v=14'* ]] || {
             echo "a11y_homepage=stale_version"
             exit 1
           }
-          home_css=$(curl -fsSL --max-time 15 "https://drawmeone.com/styles.css?v=13")
+          home_css=$(curl -fsSL --max-time 15 "https://drawmeone.com/styles.css?v=14")
           [[ "$home_css" == *'.lab-label small{font-size:10px'* ]] &&
           [[ "$home_css" == *'opacity:1;color:var(--ink)'* ]] || {
             echo "a11y_homepage=stale_accessibility_css"

@@ -54,7 +54,7 @@ main{padding:38px 0 56px}h1{font:normal clamp(32px,5vw,58px)/1.15 Georgia,serif;
 </head>
 <body>
 <a class="skip" href="#main">Skip to drawings</a>
-<header><a href="/">drawmeone.</a><nav aria-label="Main navigation"><a href="/#portfolio">Home gallery</a><a href="/commission.html">Commissions</a></nav></header>
+<header><a href="/">drawmeone.</a><nav aria-label="Main navigation"><a href="/#portfolio">Home gallery</a><a href="/services.php">Services</a><a href="/commission.html">Commissions</a></nav></header>
 <main id="main" tabindex="-1">
 <h1>Published drawings</h1>
 <p class="intro">Original artwork shared by the artist. Select a drawing to view it individually.</p>

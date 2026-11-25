@@ -1,1 +1,1 @@
-Verify server-rendered services and policy pages; read-only.
+Verify service/policy pages and updated customer navigation; read-only.

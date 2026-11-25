@@ -343,7 +343,7 @@
       status=await response.json();
       if(status.registration_available){
         if(typeof status.policy_version!=="string"||!/^[a-zA-Z0-9][a-zA-Z0-9._-]{2,39}$/.test(status.policy_version)||typeof status.policy_sha256!=="string"||!/^[a-f0-9]{64}$/.test(status.policy_sha256))status.registration_available=false;
-        else $("signup-policy-link").href="./policy.html?"+new URLSearchParams({version:status.policy_version,sha256:status.policy_sha256})+"#privacy";
+        else $("signup-policy-link").href="./policy.php?"+new URLSearchParams({version:status.policy_version,sha256:status.policy_sha256})+"#privacy";
       }
       if(!status.auth_available || !status.turnstile_site_key){
         state.textContent = verificationToken

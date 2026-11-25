@@ -653,7 +653,7 @@
       showFact("detail-deadline",r.preferred_deadline);
       const policy=$("detail-policy");policy.replaceChildren();
       if(typeof r.policy_version==="string"&&/^[a-zA-Z0-9][a-zA-Z0-9._-]{2,39}$/.test(r.policy_version)&&typeof r.policy_sha256==="string"&&/^[a-f0-9]{64}$/.test(r.policy_sha256)){
-        const link=document.createElement("a");link.href="./policy.html?"+new URLSearchParams({version:r.policy_version,sha256:r.policy_sha256});link.target="_blank";link.rel="noopener noreferrer";link.textContent="Read version "+r.policy_version;policy.append(link);
+        const link=document.createElement("a");link.href="./policy.php?"+new URLSearchParams({version:r.policy_version,sha256:r.policy_sha256});link.target="_blank";link.rel="noopener noreferrer";link.textContent="Read version "+r.policy_version;policy.append(link);
       }else policy.textContent=r.policy_version?"Version "+r.policy_version+" (document receipt unavailable)":"Unavailable";
       showFact("detail-brief",r.brief);
       $("detail-thread-full").hidden = body.messages_have_older !== true;
@@ -881,6 +881,7 @@
         daily_request_limit:"Maximum three new requests per 24 hours.",
         customer_login_required:"Please sign in again to submit a request.",
         invalid_deadline:"Choose a valid future deadline.",
+        catalog_no_longer_available:"The published catalog is no longer available. Refresh and choose again, or send a custom idea.",
         tier_no_longer_available:"The selected package is no longer available. Refresh and choose again.",
         addon_no_longer_available:"An add-on is no longer available. Refresh and choose again.",
         addon_not_available_for_tier:"An add-on is not offered with this package.",
@@ -912,7 +913,7 @@
       state.service = s.body;
       if(state.service.requests_open){
         if(typeof s.body.policy_version!=="string"||!/^[a-zA-Z0-9][a-zA-Z0-9._-]{2,39}$/.test(s.body.policy_version)||typeof s.body.policy_sha256!=="string"||!/^[a-f0-9]{64}$/.test(s.body.policy_sha256))state.service.requests_open=false;
-        else $("request-policy-link").href="./policy.html?"+new URLSearchParams({version:s.body.policy_version,sha256:s.body.policy_sha256});
+        else $("request-policy-link").href="./policy.php?"+new URLSearchParams({version:s.body.policy_version,sha256:s.body.policy_sha256});
       }
       state.catalog = c.body;
       state.auth = a.body;

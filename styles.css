@@ -374,3 +374,7 @@ h1 em,h2 em{font-style:normal;color:var(--accent)}
 :root:not([data-presentation="preview"]):not([data-gallery-state="artwork"]) .hero{grid-template-columns:1fr!important;min-height:0}
 :root:not([data-presentation="preview"]) [data-demo-caption]{display:none!important}
 .portfolio-directory-link{margin:22px 0;text-align:center}
+
+.footer,.at-footer,.ed-footer,.sg-footer{flex-wrap:wrap}
+.public-footer-links{display:flex;flex-wrap:wrap;gap:12px;flex-basis:100%;min-width:0}
+.public-footer-links a,.at-footer .public-footer-links a,.ed-footer .public-footer-links a,.sg-footer .public-footer-links a{font-size:12px;letter-spacing:normal;font-weight:600;text-decoration:underline;text-underline-offset:3px;padding:4px 0;border:0}

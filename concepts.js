@@ -169,6 +169,8 @@
     studioMain.insertAdjacentElement("afterend",active);
     const mount=active.querySelector(".concept-gallery-slot");
     if(mount) mount.appendChild(feed);
+    const footer=active.querySelector("footer");
+    if(footer)footer.insertAdjacentHTML("beforeend","<nav class=\"public-footer-links\" aria-label=\"Footer links\"><a href=\"./services.php\">Services &amp; pricing</a><a href=\"./policy.php\">Terms &amp; privacy</a><a href=\"./account.html\">My account</a></nav>");
   }
   document.addEventListener("dmo:site-change",event=>{
     activate(event.detail.site);

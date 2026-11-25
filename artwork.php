@@ -133,6 +133,6 @@ footer{padding:24px 0 45px;border-top:1px solid var(--line);font-size:12px;color
     <figcaption><?= dmo_artwork_page_escape($label) ?></figcaption>
   </figure>
 </main>
-<footer><a href="/#portfolio">← Back to the gallery</a><span>Draw Me One · Original artwork</span></footer>
+<footer><a href="/#portfolio">← Back to the gallery</a><a href="/services.php">Commission services</a><span>Draw Me One · Original artwork</span></footer>
 </body>
 </html>

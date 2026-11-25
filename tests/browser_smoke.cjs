@@ -351,6 +351,28 @@ async function checkPublishedPresentation(browser){
   }finally{await context.close();}
 }
 
+async function checkPublicInformation(browser){
+  const context=await browser.newContext({viewport:{width:320,height:844},javaScriptEnabled:false});
+  try{
+    const page=await context.newPage();
+    await page.goto(base+"/index.html");
+    assert.equal(await page.locator('.public-footer-links a[href="./services.php"]').isVisible(),true);
+    const response=await page.goto(base+"/services.php");
+    assert([200,503].includes(response.status()),"service page renders even when local DB absent");
+    assert.equal(await page.getByRole("heading",{name:"Commission services",exact:true}).isVisible(),true);
+    assert.equal(await page.getByRole("heading",{name:"Frequently asked questions"}).isVisible(),true);
+    const faq=page.locator("details").first();
+    await faq.locator("summary").click();
+    assert.equal(await faq.evaluate(el=>el.open),true);
+    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth+2),true);
+    const policy=await page.goto(base+"/policy.php?version=invalid&sha256="+ "0".repeat(64));
+    assert.equal(policy.status(),404);
+    assert.equal(await page.getByRole("heading",{name:"Approved policies unavailable"}).isVisible(),true);
+    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth+2),true);
+    console.log("PASS: no-JavaScript public information and invalid policy, 320px");
+  }finally{await context.close();}
+}
+
 (async () => {
   const browser = await browserType.launch({ headless: true });
   try {
@@ -367,6 +389,7 @@ async function checkPublishedPresentation(browser){
     await checkClosedWorkflows(browser);
     await checkHomepageIntake(browser);
     await checkPublishedPresentation(browser);
+    await checkPublicInformation(browser);
     console.log("BROWSER_SMOKE=PASS");
   } finally { await browser.close(); }
 })().catch(error => {
