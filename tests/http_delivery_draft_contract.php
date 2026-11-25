@@ -117,7 +117,7 @@ try {
         'DMO_REQUEST_TERMS_APPROVED' => '1',
         'DMO_REFERENCES_ENABLED' => '1',
         'DMO_ADMIN_ENABLED' => '1',
-        'DMO_REQUEST_ADMIN_WRITES_ENABLED'=>'1','DMO_ORDER_ADMIN_ENABLED'=>'1','DMO_ORDER_TERMS_APPROVED'=>'1','DMO_DELIVERY_DRAFTS_ENABLED'=>'1','DMO_DELIVERY_RELEASE_ENABLED'=>'1','DMO_DELIVERY_TERMS_APPROVED'=>'1','DMO_ARTWORK_REVIEW_ENABLED'=>'1',
+        'DMO_REQUEST_ADMIN_WRITES_ENABLED'=>'1','DMO_ORDER_ADMIN_ENABLED'=>'1','DMO_ORDER_TERMS_APPROVED'=>'1','DMO_DELIVERY_DRAFTS_ENABLED'=>'1','DMO_DELIVERY_RELEASE_ENABLED'=>'1','DMO_DELIVERY_TERMS_APPROVED'=>'1','DMO_ARTWORK_REVIEW_ENABLED'=>'1','DMO_PAYMENT_EXCEPTIONS_ENABLED'=>'1','DMO_PAYMENT_EXCEPTIONS_TERMS_APPROVED'=>'1',
     ] as $name => $value) putenv($name . '=' . $value);
 
     $db = dmo_database();
@@ -296,7 +296,30 @@ try {
     ref_assert($code===409,'duplicate_release_denied');
     [$code]=ref_http('/api/admin/request-actions.php',$artistCookie,array_replace($remove,['draft_id'=>$finalId]),$artistCsrf);
     ref_assert($code===409,'released_draft_cannot_be_removed');
-    $db->prepare("UPDATE dmo_orders SET payment_status='unverified' WHERE id=:id")->execute(['id'=>$order]);
+    $hold=['action'=>'set_payment_exception','request_id'=>$requestA,'order_id'=>$order,'decision'=>'hold','reason'=>'dispute','expected_state'=>'paid','confirm_external_check'=>true];
+    [$code]=ref_http('/api/admin/request-actions.php',$cookieA,$hold,$csrfA);
+    ref_assert(in_array($code,[401,403],true),'customer_cannot_change_payment_hold');
+    [$code]=ref_http('/api/admin/request-actions.php',$artistCookie,$hold,$artistCsrf);
+    ref_assert($code===200,'artist_records_payment_hold');
+    [$code]=ref_http('/api/delivery.php?id='.$delivery,$cookieA);
+    ref_assert($code===404,'hold_revokes_future_download');
+    [$code,$data]=ref_http('/api/request.php?ref='.$refA,$cookieA);
+    ref_assert($code===200 && $data['orders'][0]['payment_status']==='on_hold' && $data['deliveries']===[],'customer_sees_hold_without_file_access');
+    [$code]=ref_http('/api/admin/request-actions.php',$artistCookie,$hold,$artistCsrf);
+    ref_assert($code===409,'stale_hold_rejected');
+    $restore=array_replace($hold,['decision'=>'restore','reason'=>'settled','expected_state'=>'on_hold']);
+    [$code]=ref_http('/api/admin/request-actions.php',$artistCookie,$restore,$artistCsrf);
+    ref_assert($code===200,'settled_payment_restores_access');
+    [$code]=ref_http('/api/delivery.php?id='.$delivery,$cookieA);
+    ref_assert($code===200,'restored_customer_download');
+    $refund=array_replace($hold,['decision'=>'refund','reason'=>'full_external_refund']);
+    [$code]=ref_http('/api/admin/request-actions.php',$artistCookie,$refund,$artistCsrf);
+    ref_assert($code===200,'external_full_refund_recorded');
+    [$code]=ref_http('/api/delivery.php?id='.$delivery,$cookieA);
+    ref_assert($code===404,'refund_blocks_future_download');
+    [$code]=ref_http('/api/admin/request-actions.php',$artistCookie,$restore,$artistCsrf);
+    ref_assert($code===409,'refund_cannot_be_restored_as_hold');
+    $db->prepare("UPDATE dmo_orders SET payment_status='paid' WHERE id=:id")->execute(['id'=>$order]);
     [$code]=ref_http('/api/delivery.php?id='.$delivery,$cookieA);
     ref_assert($code===404,'download_rechecks_current_payment_state');
     echo "DISPOSABLE_DELIVERY_DRAFTS=PASS\n";

@@ -1,1 +1,1 @@
-Read-only verify proof review and delivery assets; no commercial activation.
+Read-only verify financial exception workflow assets and unchanged launch gates.

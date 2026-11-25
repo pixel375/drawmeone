@@ -69,11 +69,11 @@ function dmo_payment_reconcile(PDO $db,array $admin,int $requestId,array $input)
         if(!is_array($request)||!dmo_messages_request_open($request['status'])||
             !hash_equals(dmo_requests_policy_version(),$request['policy_version']))
             throw new DmoPaymentConflict('request_not_eligible');
-        $q=$db->prepare("SELECT o.status,o.payment_status,q.currency,q.total_minor FROM dmo_orders o " .
+        $q=$db->prepare("SELECT o.status,o.payment_status,q.currency,q.total_minor," . dmo_order_exception_sql() . " AS exception_action FROM dmo_orders o " .
             "JOIN dmo_quotes q ON q.id=o.accepted_quote_id AND q.request_id=o.request_id AND q.status='accepted' " .
             "WHERE o.id=:order AND o.request_id=:request FOR UPDATE");
         $q->execute(['order'=>$orderId,'request'=>$requestId]);$order=$q->fetch(PDO::FETCH_ASSOC);
-        if(!is_array($order)||$order['status']!=='awaiting_arrangement'||$order['payment_status']!=='unverified')
+        if(!is_array($order)||$order['status']!=='awaiting_arrangement'||$order['payment_status']!=='unverified'||dmo_order_exception_status($order['exception_action'])!==null)
             throw new DmoPaymentConflict('order_not_eligible');
         if(!$reject&&($input['currency']!==$order['currency']||$input['amount_minor']!==(int)$order['total_minor']))
             throw new DmoPaymentConflict('full_quote_amount_required');
@@ -109,4 +109,60 @@ function dmo_payment_reconcile(PDO $db,array $admin,int $requestId,array $input)
     }
     dmo_json($record?201:200,['ok'=>true,'payment_id'=>$paymentId,'status'=>$status,
         'payment_status'=>$status==='verified'?'paid':'unverified','provider_verified'=>false,'money_moved'=>false]);
+}
+
+function dmo_payment_exceptions_enabled(): bool
+{
+    return dmo_orders_admin_enabled() &&
+        dmo_config('DMO_PAYMENT_EXCEPTIONS_ENABLED')==='1' &&
+        dmo_config('DMO_PAYMENT_EXCEPTIONS_TERMS_APPROVED')==='1';
+}
+function dmo_payment_exception_apply(PDO $db,array $admin,int $requestId,array $input): never
+{
+    if(!dmo_payment_exceptions_enabled())dmo_json(503,['ok'=>false,'error'=>'payment_exceptions_disabled']);
+    $decision=$input['decision']??null;
+    $reason=$input['reason']??null;
+    $expected=$input['expected_state']??null;
+    if(count($input)!==7||array_diff(array_keys($input),['action','request_id','order_id','decision','reason','expected_state','confirm_external_check'])!==[]||
+        !in_array($decision,['hold','restore','refund'],true)||
+        !in_array($expected,['paid','on_hold'],true)||
+        !in_array($reason,['dispute','reversal','reconciliation_error','settled','full_external_refund'],true)||
+        ($input['confirm_external_check']??null)!==true||
+        ($decision==='hold'&&!in_array($reason,['dispute','reversal','reconciliation_error'],true))||
+        ($decision==='restore'&&$reason!=='settled')||
+        ($decision==='refund'&&$reason!=='full_external_refund'))
+        dmo_json(422,['ok'=>false,'error'=>'invalid_payment_exception']);
+    $orderId=dmo_workflow_id($input['order_id']??null);
+    if(!dmo_auth_rate_limit($db,'payment-exception',(string)$admin['user_id'],15,60))
+        dmo_json(429,['ok'=>false,'error'=>'too_many_attempts']);
+    $db->beginTransaction();
+    try{
+        $lock=$db->prepare('SELECT id FROM dmo_commission_requests WHERE id=:id FOR UPDATE');
+        $lock->execute(['id'=>$requestId]);
+        if($lock->fetchColumn()===false)throw new DmoPaymentConflict('request_not_found');
+        $q=$db->prepare("SELECT o.payment_status,o.status,q.currency,q.total_minor,".dmo_order_exception_sql()." AS exception_action
+            FROM dmo_orders o JOIN dmo_quotes q ON q.id=o.accepted_quote_id AND q.request_id=o.request_id
+            WHERE o.id=:order AND o.request_id=:request AND q.status='accepted' FOR UPDATE");
+        $q->execute(['order'=>$orderId,'request'=>$requestId]);$row=$q->fetch(PDO::FETCH_ASSOC);
+        if(!is_array($row))throw new DmoPaymentConflict('order_not_eligible');
+        $state=dmo_order_exception_status($row['exception_action'])??$row['payment_status'];
+        if($state!==$expected||($decision==='hold'&&$state!=='paid')||
+            ($decision==='restore'&&$state!=='on_hold')||($decision==='refund'&&!in_array($state,['paid','on_hold'],true)))
+            throw new DmoPaymentConflict('payment_exception_state_changed');
+        $p=$db->prepare("SELECT id FROM dmo_payments WHERE order_id=:order AND status='verified'
+            AND verified_by IS NOT NULL AND verified_at IS NOT NULL AND currency=:currency AND amount_minor=:amount
+            AND provider_reference LIKE 'manual-hmac-v1:%' LIMIT 1 FOR UPDATE");
+        $p->execute(['order'=>$orderId,'currency'=>$row['currency'],'amount'=>(int)$row['total_minor']]);
+        $payment=$p->fetchColumn();
+        if($payment===false)throw new DmoPaymentConflict('original_payment_evidence_required');
+        $action=match($decision){'hold'=>'payment.access_held','restore'=>'payment.access_restored','refund'=>'payment.full_refund_recorded'};
+        // Preserve the original receipt record; access state is a separate, audited decision.
+        $db->prepare('UPDATE dmo_orders SET payment_status=:status WHERE id=:id')
+            ->execute(['status'=>$decision==='restore'?'paid':'unverified','id'=>$orderId]);
+        dmo_workflow_audit($db,(int)$admin['user_id'],$requestId,$action,
+            ['order_id'=>$orderId,'payment_id'=>(int)$payment,'reason'=>$reason]);
+        $db->commit();
+    }catch(DmoPaymentConflict $e){if($db->inTransaction())$db->rollBack();dmo_json(409,['ok'=>false,'error'=>$e->getMessage()]);}
+    catch(Throwable $e){if($db->inTransaction())$db->rollBack();throw $e;}
+    dmo_json(200,['ok'=>true,'payment_status'=>match($decision){'hold'=>'on_hold','restore'=>'paid','refund'=>'refunded'},'money_moved'=>false]);
 }

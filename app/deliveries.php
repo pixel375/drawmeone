@@ -119,7 +119,7 @@ function dmo_fulfillment_payment_sql(): string
     return "o.payment_status='paid' AND EXISTS (SELECT 1 FROM dmo_payments p
         WHERE p.order_id=o.id AND p.status='verified' AND p.verified_at IS NOT NULL
         AND p.verified_by IS NOT NULL AND p.currency=q.currency AND p.amount_minor=q.total_minor
-        AND p.provider_reference LIKE 'manual-hmac-v1:%')";
+        AND p.provider_reference LIKE 'manual-hmac-v1:%') AND COALESCE(".dmo_order_exception_sql().",'') NOT IN ('payment.access_held','payment.full_refund_recorded')";
 }
 function dmo_fulfillment_options(PDO $db,int $requestId): array
 {

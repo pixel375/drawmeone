@@ -167,6 +167,7 @@
     quote_expired:"Quote expired",
     quote_declined:"Quote declined",
     quote_inactive:"Quote no longer available",
+    payment_on_hold:"Payment under review",payment_refunded:"External refund recorded",
     awaiting_arrangement:"Awaiting payment arrangements",
     queued:"In the artist queue",
     drawing:"Drawing in progress",
@@ -408,6 +409,8 @@
         renderText("small","Order recorded: " + (order.created_at || "Not available"))
       );
       card.append(renderText("small","Agreed delivery date: "+(order.agreed_deadline||"Not agreed yet")));
+      if(order.payment_status==="on_hold")card.append(renderText("p","Payment is under review. Artwork access is paused. Please contact the artist.","small"));
+      if(order.payment_status==="refunded")card.append(renderText("p","A full external refund has been recorded. Please contact the artist if you have questions.","small"));
       if (order.payment_status === "paid") card.append(renderText("p","The artist has recorded receipt after manual reconciliation. This is not an automated provider receipt.","small"));
       if (order.payment_status === "unverified") {
         card.append(renderText("p",

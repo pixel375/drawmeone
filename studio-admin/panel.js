@@ -77,6 +77,7 @@
       "stat-due": data.counts?.orders_due_soon,
       "stat-quote-followup": data.counts?.quotes_to_follow_up,
       "stat-payments": data.counts?.payments_to_verify,
+      "stat-holds": data.counts?.payment_holds,
       "stat-messages": data.counts?.messages_last_seven_days,
     };
     for (const [name, value] of Object.entries(counters)) {
@@ -131,7 +132,7 @@
   function workflowLabel(stage) {
     const labels={submitted:"Awaiting review",clarification_needed:"Clarification needed",
       quote_available:"Awaiting quote decision",quote_accepted:"Quote accepted",quote_expired:"Quote expired",
-      quote_declined:"Quote declined",quote_inactive:"Quote no longer available",awaiting_arrangement:"Awaiting payment arrangements",
+      quote_declined:"Quote declined",quote_inactive:"Quote no longer available",payment_on_hold:"Payment under review",payment_refunded:"External refund recorded",awaiting_arrangement:"Awaiting payment arrangements",
       in_progress:"Artwork in progress",queued:"Queued",drawing:"Drawing in progress",
       awaiting_feedback:"Awaiting feedback",revision:"Revisions in progress",
       ready_for_delivery:"Ready for delivery",completed:"Completed",rejected:"Declined",cancelled:"Cancelled"};
@@ -594,7 +595,7 @@
     }
   }
 
-  function renderPaymentRecords(orders,records,enabled) {
+  function renderPaymentRecords(orders,records,enabled,exceptionsEnabled=false) {
     const root=$("request-payment-records");root.replaceChildren();
     if(!enabled)root.append(textNode("p","Manual reconciliation is disabled until approved.","small"));
     for(const order of orders||[]){
@@ -602,6 +603,27 @@
       const card=document.createElement("article");card.className="notification-card";
       card.append(textNode("strong","Order #"+order.id+" · "+formatQuoteMoney(order.total_minor,order.currency)));
       for(const p of rows)card.append(textNode("p","Payment #"+p.id+" · "+p.method+" · "+formatQuoteMoney(p.amount_minor,p.currency)+" · "+p.status,"small"));
+      const payment=order.payment_status;
+      if(payment==="on_hold")card.append(textNode("p","Payment on hold. Production and downloads are blocked.","small"));
+      if(payment==="refunded")card.append(textNode("p","Full external refund recorded. No refund was sent by this website.","small"));
+      if(exceptionsEnabled&&["paid","on_hold"].includes(payment)){
+        const actions=payment==="paid"?[["hold","Place payment hold"],["refund","Record completed external refund"]]:[["restore","Restore settled payment"],["refund","Record completed external refund"]];
+        for(const [decision,label] of actions){
+          const button=textNode("button",label,"quiet");button.type="button";
+          button.addEventListener("click",()=>{
+            if(requestBusy)return;
+            let reason=decision==="restore"?"settled":"full_external_refund";
+            if(decision==="hold"){
+              const selected=window.prompt("Reason: dispute, reversal, or reconciliation_error","dispute");
+              if(!["dispute","reversal","reconciliation_error"].includes(selected))return;
+              reason=selected;
+            }
+            const message=decision==="hold"?"Place an access hold? This blocks artwork delivery, but does not move money.":decision==="restore"?"Confirm you checked the receiving account and the full original payment is settled again?":"Confirm the full original amount has ALREADY been refunded externally? This website does not issue a refund. This record is final.";
+            if(!window.confirm(message))return;
+            reconcilePayment({action:"set_payment_exception",order_id:order.id,decision,reason,expected_state:payment,confirm_external_check:true});
+          });card.append(button);
+        }
+      }
       const pending=rows.find(p=>p.status==="pending_verification");
       if(enabled&&order.status==="awaiting_arrangement"&&order.payment_status==="unverified"){
         const form=document.createElement("form");form.className="payment-evidence-form";
@@ -641,14 +663,14 @@
   async function reconcilePayment(body){
     if(requestBusy||selectedRequestId===null)return;
     const prompt=body.action==="verify_payment_evidence"?"Confirm this exact external payment as received? This does not charge money or release artwork.":body.action==="reject_payment_evidence"?"Reject this evidence? It will remain in the audit history.":"Record pending evidence only? The order stays unpaid until reconciliation.";
-    if(!window.confirm(prompt))return;
+    if(body.action!=="set_payment_exception"&&!window.confirm(prompt))return;
     const id=selectedRequestId;requestBusy=true;updateRequestButtons();
     try{
       const {response,data}=await post("request-actions.php",{...body,request_id:id},csrf);
       if(response.status===401)return sessionExpired();
       if(!response.ok||!data.ok){requestText("request-detail-status","Payment record not changed ("+(data.error||response.status)+").");return;}
       await openRequest(id);await requests();
-      requestText("request-detail-status",data.status==="verified"?"Manual reconciliation recorded. No money moved or artwork released.":"Payment evidence "+data.status+". No money moved.");
+      requestText("request-detail-status",body.action==="set_payment_exception"?"Payment exception recorded: "+data.payment_status+". No money moved.":data.status==="verified"?"Manual reconciliation recorded. No money moved or artwork released.":"Payment evidence "+data.status+". No money moved.");
     }catch(_){requestText("request-detail-status","Payment update not confirmed. Refresh before retrying.");}
     finally{requestBusy=false;updateRequestButtons();}
   }
@@ -935,7 +957,7 @@
     renderAdminOrders(item.orders, item.quotes);
     renderNotifications(data.notification_options,data.notifications_enabled===true);
     renderDeliveryDrafts(item.orders,data.delivery_drafts,data.delivery_staging_enabled===true,data.fulfillment_options||[],data.artwork_reviews||[]);
-    renderPaymentRecords(item.orders,data.payment_records,data.manual_payments_enabled===true);
+    renderPaymentRecords(item.orders,data.payment_records,data.manual_payments_enabled===true,data.payment_exceptions_enabled===true);
     requestText("request-detail-status", requestWriteEnabled
       ? "Admin draft editing available. Nothing is sent to the customer."
       : "Viewing only. Private note and quote creation are disabled on the server.");

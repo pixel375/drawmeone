@@ -72,3 +72,7 @@ DMO_DELIVERY_TERMS_APPROVED=0
 
 # Optional customer proof review workflow; disabled until approved.
 DMO_ARTWORK_REVIEW_ENABLED=0
+
+# Manual financial exceptions; no provider-side refund capability.
+DMO_PAYMENT_EXCEPTIONS_ENABLED=0
+DMO_PAYMENT_EXCEPTIONS_TERMS_APPROVED=0

@@ -27,6 +27,7 @@ try {
         'ok' => true,
         'detail' => $detail,
         'manual_payments_enabled' => dmo_manual_payments_enabled() && dmo_messages_request_open((string)$detail['request']['status']),
+        'payment_exceptions_enabled' => dmo_payment_exceptions_enabled(),
         'payment_records' => dmo_payment_admin_rows($db,$id),
         'artwork_reviews' => dmo_review_orders($db,$id),
         'fulfillment_options' => dmo_fulfillment_options($db,$id),

@@ -22,6 +22,7 @@ try {
             "WHERE status IN ('awaiting_arrangement','in_progress','ready_for_delivery'," .
             "'queued','drawing','awaiting_feedback','revision')",
         'orders_due_soon' => "SELECT COUNT(*) FROM dmo_orders WHERE status IN ('awaiting_arrangement','in_progress','ready_for_delivery','queued','drawing','awaiting_feedback','revision') AND agreed_deadline IS NOT NULL AND DATE(agreed_deadline)<=DATE_ADD(UTC_DATE(),INTERVAL 7 DAY)",
+        'payment_holds' => "SELECT COUNT(*) FROM dmo_orders o WHERE ".dmo_order_exception_sql()."='payment.access_held'",
         'payments_to_verify' => "SELECT COUNT(*) FROM dmo_payments " .
             "WHERE status = 'pending_verification'",
         'messages_last_seven_days' => "SELECT COUNT(*) FROM dmo_messages " .
@@ -83,6 +84,7 @@ try {
         ['key' => 'offsite', 'label' => 'Independent off-site recovery',
          'status' => 'planned',
          'detail' => 'Off-site copy and separately stored recovery key not configured'],
+        ['key'=>'payment_exceptions','label'=>'Payment exceptions','status'=>dmo_payment_exceptions_enabled()?'ready':'blocked','detail'=>'Manual dispute holds and external full refund records; no money movement'],
         ['key'=>'manual_payments','label'=>'Manual payment reconciliation','status'=>dmo_manual_payments_enabled()?'ready':'blocked',
          'detail'=>'Requires independently checked receiving-account records and separate owner approval'],
         ['key' => 'payments', 'label' => 'Verified payment processing',

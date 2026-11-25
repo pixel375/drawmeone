@@ -19,7 +19,7 @@ function dmo_orders_customer_rows(PDO $db, int $requestId): array
     $query = $db->prepare(
         'SELECT o.id, o.accepted_quote_id, o.status, o.payment_status, ' .
         'o.agreed_deadline, o.created_at, o.updated_at, ' .
-        'q.currency, q.total_minor FROM dmo_orders o ' .
+        'q.currency, q.total_minor, ' . dmo_order_exception_sql() . ' AS payment_exception FROM dmo_orders o ' .
         'JOIN dmo_quotes q ON q.id = o.accepted_quote_id AND q.request_id = o.request_id ' .
         'WHERE o.request_id = :request ORDER BY o.id DESC LIMIT 3'
     );
@@ -30,7 +30,7 @@ function dmo_orders_customer_rows(PDO $db, int $requestId): array
             'id' => (int) $row['id'],
             'quote_id' => (int) $row['accepted_quote_id'],
             'status' => (string) $row['status'],
-            'payment_status' => (string) $row['payment_status'],
+            'payment_status' => dmo_order_exception_status($row['payment_exception']) ?? (string) $row['payment_status'],
             'agreed_deadline' => dmo_orders_date_value($row['agreed_deadline']),
             'created_at' => (string) $row['created_at'],
             'updated_at' => (string) $row['updated_at'],
@@ -81,4 +81,23 @@ function dmo_orders_validate_agreed_date(mixed $value): ?string
         dmo_json(422,['ok'=>false,'error'=>'invalid_agreed_deadline']);
     }
     return $value;
+}
+
+/** The latest financial exception is derived from immutable audit events. */
+function dmo_order_exception_sql(string $alias='o'): string
+{
+    // Internal aliases only; never passed a request parameter.
+    if($alias!=='o')throw new InvalidArgumentException('Invalid order alias');
+    return "(SELECT a.action FROM dmo_audit_log a WHERE a.entity_type='commission_request'
+        AND a.entity_id=o.request_id AND a.action IN ('payment.access_held','payment.access_restored','payment.full_refund_recorded')
+        AND JSON_UNQUOTE(JSON_EXTRACT(a.details_json,'$.order_id'))=CAST(o.id AS CHAR)
+        ORDER BY a.id DESC LIMIT 1)";
+}
+function dmo_order_exception_status(mixed $action): ?string
+{
+    return match($action){
+        'payment.access_held'=>'on_hold',
+        'payment.full_refund_recorded'=>'refunded',
+        default=>null,
+    };
 }

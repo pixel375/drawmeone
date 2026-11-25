@@ -74,6 +74,7 @@ try {
     $latest = $quotes[0] ?? [];
     foreach ($quotes as $candidate) if ($candidate['status']==='accepted') { $latest=$candidate; break; }
     $summary=dmo_requests_list_summary(['status'=>$request['status'], 'order_status'=>$orders[0]['status']??null,
+        'payment_exception'=>match($orders[0]['payment_status']??null){'on_hold'=>'payment.access_held','refunded'=>'payment.full_refund_recorded',default=>null},
         'visible_quote_status'=>$latest['status']??null,'visible_quote_expired'=>$latest['is_expired']??false]);
     $request['workflow_stage']=$summary['workflow_stage'];
     $deliveries=dmo_delivery_customer_rows($db,(int)$session['user_id'],(int)$request['id']);
