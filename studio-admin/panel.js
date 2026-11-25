@@ -2247,7 +2247,8 @@
     $('package-unsaved').hidden=!dirty.fields&&!dirty.compat;
     $('package-unsaved').textContent=dirty.fields?'Unsaved package changes. Save before publishing or editing extras.':'Unsaved extra availability. Save before publishing or editing package details.';
     $('package-revert').disabled=packageBusy||packageLoading||!packageHasChanges();
-    packageCompatibilityControls();
+    $('package-duplicate').disabled=packageBusy||packageLoading||!packageWrite||!row||packageHasChanges();
+    packageCompatibilityControls();renderPackagePreview();
   }
 
   function packageRows(kind) {
@@ -2399,6 +2400,37 @@
     finally{if(generation===packageGeneration){packageLoading=false;packageControls();}}
   }
 
+  function renderPackagePreview(){
+    const name=$("package-name").value.trim(),description=$("package-description").value.trim(),slug=$("package-slug").value.trim(),currency=$("package-currency").value;
+    const low=parsePrice($("package-min").value),high=parsePrice($("package-max").value);
+    const features=packageSelected.kind==="tier"?$("package-features").value.split("\n").map(x=>x.trim()).filter(Boolean):[];
+    $("package-preview-name").textContent=name||"Unnamed package";
+    const validPrice=Number.isSafeInteger(low)&&Number.isSafeInteger(high)&&low>=0&&high>=low&&high<=10000000;
+    $("package-preview-price").textContent=validPrice?currency+" "+moneyText(low)+(low===high?"":" – "+moneyText(high))+" estimated":"Estimate not set or invalid";
+    $("package-preview-description").textContent=description||"Description not yet entered.";
+    const list=$("package-preview-features");list.replaceChildren();
+    for(const feature of features.slice(0,20))list.append(textNode("li",feature));list.hidden=!list.childElementCount;
+    const record=packageRows(packageSelected.kind).find(x=>x.id===packageSelected.id);
+    const mode=$("package-compatibility-mode").value;
+    const selected=new Set([...$("package-compatibility-options").querySelectorAll("input:checked")].map(x=>Number(x.value)));
+    const extras=packageRows("addon").filter(x=>x.is_active&&(mode!=="selected"||selected.has(x.id)));
+    $("package-preview-extras").textContent=packageSelected.kind!=="tier"?"":!record?"New tier: review extra availability after saving.":extras.length?"Published extras selected: "+extras.map(x=>x.name).join(", "):"No published extras selected.";
+    const issues=[];if(!name)issues.push("name");if(!description)issues.push("description");if(!/^[a-z0-9][a-z0-9-]{1,79}$/.test(slug))issues.push("valid unique slug");if(!validPrice)issues.push("valid estimates");if(features.length>20||features.some(x=>x.length>180))issues.push("shorter feature list");
+    $("package-preview-check").textContent=issues.length?"Before publication, complete: "+issues.join(", ")+".":"Basic fields complete. Server validation and explicit publication approval still required.";
+  }
+  $("package-duplicate").addEventListener("click",()=>{
+    const record=packageRows(packageSelected.kind).find(x=>x.id===packageSelected.id);
+    if(!record||!packageWrite||packageBusy||packageLoading||packageHasChanges())return;
+    if(!window.confirm("Copy the saved package fields into a new unsaved draft? Its visibility and extra compatibility will not be copied. Review the unique slug and extras before saving or publishing."))return;
+    const kind=packageSelected.kind;packageSelect(kind,null,true);
+    $("package-name").value=(String(record.name||"Package").slice(0,113)+" (copy)").slice(0,120);
+    $("package-slug").value="";$("package-description").value=record.description||"";
+    $("package-currency").value=record.currency==="USD"?"USD":"CAD";
+    $("package-min").value=moneyText(record.estimate_min_minor);$("package-max").value=moneyText(record.estimate_max_minor);
+    $("package-order").value=String(record.sort_order||0);$("package-features").value=Array.isArray(record.features)?record.features.join("\n"):"";
+    packageControls();packageShow("Copied into an unsaved draft. Choose a new slug. Extra availability must be reviewed separately.");
+    $("package-slug").focus();
+  });
   function packagePayload() {
     const name = $("package-name").value.trim();
     const slug = $("package-slug").value.trim();

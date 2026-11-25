@@ -19,8 +19,8 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
 <meta name="robots" content="noindex,nofollow">
 <meta name="theme-color" content="#151317">
 <title>Artist's Desk · Draw Me One</title>
-<link rel="stylesheet" href="./panel.css?v=50">
-<script defer src="./panel.js?v=82"></script>
+<link rel="stylesheet" href="./panel.css?v=51">
+<script defer src="./panel.js?v=83"></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to dashboard</a>
@@ -400,7 +400,7 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
             </label>
           </div>
           <div class="package-form-actions">
-            <button type="button" class="quiet" id="package-refresh">Reload</button>
+            <button type="button" class="quiet" id="package-refresh">Reload</button><button type="button" class="quiet" id="package-duplicate" disabled>Copy into new draft</button>
             <p id="package-unsaved" class="small" role="status" hidden></p><button type="button" class="quiet" id="package-revert" disabled>Discard unsaved changes</button>
           <button type="submit" class="quiet" id="package-save" disabled>Save unpublished</button>
             <button type="button" class="primary" id="package-visibility" disabled>Publish</button>
@@ -414,6 +414,7 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
             <button type="button" class="quiet" id="package-compatibility-save" disabled>Save extra availability</button>
             <p id="package-compatibility-status" class="small" role="status"></p>
           </fieldset>
+          <details class="package-preview" id="package-preview"><summary>Preview customer-facing package</summary><p class="small">Private preview of the editor values. It does not publish or change anything.</p><article class="package-preview-card"><h3 id="package-preview-name"></h3><p id="package-preview-price" class="package-preview-price"></p><p id="package-preview-description"></p><ul id="package-preview-features"></ul><p id="package-preview-extras" class="small"></p><p id="package-preview-check" class="small" role="status"></p></article></details>
           <p id="package-message" class="notice" role="status" aria-live="polite">Edits and publication are disabled until the admin security setup and pricing are approved.</p>
           <p class="small">New items are always created unpublished. Publishing requires a separate server-side switch and artist approval. No prices are seeded. New request availability is controlled separately.</p>
         </form>

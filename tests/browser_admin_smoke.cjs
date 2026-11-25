@@ -1088,6 +1088,13 @@ async function verifyPackageCompatibility(browser){
     page.once("dialog",dialog=>dialog.accept());
     await page.locator("#package-revert").click();
     assert.equal(await page.locator("#package-name").inputValue(),"CI Tier");
+    await page.locator("#package-preview summary").click();
+    assert.match(await page.locator("#package-preview-price").innerText(),/CAD 10.00 – 20.00/);
+    await page.locator("#package-name").fill("Preview draft");assert.equal(await page.locator("#package-preview-name").innerText(),"Preview draft");
+    page.once("dialog",d=>d.accept());await page.locator("#package-revert").click();
+    page.once("dialog",d=>d.accept());await page.locator("#package-duplicate").click();
+    assert.equal(await page.locator("#package-slug").inputValue(),"");assert.equal(await page.locator("#package-name").inputValue(),"CI Tier (copy)");assert.equal(await page.locator("#package-visibility").isEnabled(),false);
+    page.once("dialog",d=>d.accept());await page.locator("#package-tier-list .package-list-item").first().click();
     await page.locator("#package-compatibility-mode").selectOption("selected");
     await page.locator('#package-compatibility-options input[value="11"]').check();
     assert.equal(await page.locator("#package-save").isEnabled(),false);
