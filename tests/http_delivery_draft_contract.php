@@ -336,6 +336,10 @@ try {
     file_put_contents($file,'corrupted CI image');
     ref_assert(dmo_integrity_media($db)['deliveries']['invalid']===1,'integrity_detects_corrupt_private_file');
     file_put_contents($file,$contents);
+    chmod(dirname($file),0755);clearstatcache(true);
+    ref_assert(dmo_integrity_media($db)['deliveries']['invalid']===1,'integrity_detects_exposed_image_directory');
+    chmod(dirname($file),0700);clearstatcache(true);
+    ref_assert(dmo_integrity_media($db)['deliveries']['invalid']===0,'integrity_accepts_resecured_directory');
     echo "DISPOSABLE_DELIVERY_DRAFTS=PASS\n";
 } catch(Throwable $error){
     fwrite(STDERR,"DISPOSABLE_DELIVERY_DRAFTS=FAIL ".$error->getMessage()."\n");exit(1);

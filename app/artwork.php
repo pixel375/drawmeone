@@ -101,7 +101,7 @@ function dmo_artwork_make_webp(
     );
     $written = $copied && imagewebp($canvas, $path, $quality);
     imagedestroy($canvas);
-    if (!$written || !is_file($path) || filesize($path) < 100) {
+    if (!$written || !is_file($path) || !chmod($path,0600) || filesize($path) < 100) {
         throw new RuntimeException('Unable to write optimized image.');
     }
     return ['width' => $w, 'height' => $h, 'bytes' => filesize($path)];

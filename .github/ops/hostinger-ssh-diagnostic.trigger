@@ -1,1 +1,1 @@
-Verify operational integrity dashboard, database and private media consistency. Read-only.
+Recheck effective private directory protection, image validity and record consistency after correcting legacy file mode check.

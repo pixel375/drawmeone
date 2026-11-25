@@ -58,7 +58,11 @@ function dmo_integrity_media(PDO $db,int $limit=10000): array
                     $bad=false;
                     foreach(($spec['paths'])($row) as $file){
                         if(is_link(dirname($file))||is_link(dirname(dirname($file)))||is_link($file)||
-                            !is_file($file)||!is_readable($file)||((int)fileperms($file)&0077)!==0){
+                            !is_file($file)||!is_readable($file)||
+                            ((int)fileperms(dirname($file))&0077)!==0||
+                            ((int)fileperms(dirname(dirname($file)))&0077)!==0||
+                            ((int)fileperms($file)&0022)!==0||
+                            ($kind==='deliveries'&&((int)fileperms($file)&0077)!==0)){
                             $bad=true;break;
                         }
                         $info=@getimagesize($file);
