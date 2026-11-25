@@ -301,17 +301,26 @@
     list.replaceChildren();root.hidden=true;
     if(!attention||typeof attention!=="object"||leavingSession)return;
     const labels={clarifications:"Clarification requested",quotes:"Review quote",proofs:"Review artwork proof",invoices:"Review payment arrangements",artist_replies:"Recent artist reply",deliveries:"View finished artwork"};
+    const grouped=new Map();
     for(const [key,label] of Object.entries(labels)){
       const refs=Array.isArray(attention[key])?attention[key].filter(ref=>typeof ref==="string"&&/^DMO-[0-9a-f]{20}$/.test(ref)).slice(0,10):[];
       for(const ref of new Set(refs)){
-        const card=document.createElement("article"),description=document.createElement("div");
-        description.append(renderText("strong",label),renderText("small",ref));
-        const button=renderText("button","View details","text-button");button.type="button";
-        button.setAttribute("aria-label",label+" for "+ref);
-        button.addEventListener("click",()=>openDetail(ref));
-        card.append(description,button);list.append(card);
+        if(!grouped.has(ref))grouped.set(ref,[]);
+        grouped.get(ref).push(label);
       }
     }
+    for(const [ref,updates] of grouped){
+      const card=document.createElement("article"),description=document.createElement("div");
+      description.append(renderText("strong",ref));
+      const items=document.createElement("ul");items.className="customer-attention-labels";
+      for(const update of updates)items.append(renderText("li",update));
+      description.append(items);
+      const button=renderText("button","View details","text-button");button.type="button";
+      button.setAttribute("aria-label","View commission updates for "+ref);
+      button.addEventListener("click",()=>openDetail(ref));
+      card.append(description,button);list.append(card);
+    }
+    $("customer-attention-count").textContent=grouped.size+" commission"+(grouped.size===1?"":"s")+" with recent updates or available actions.";
     root.hidden=list.childElementCount===0;
   }
 

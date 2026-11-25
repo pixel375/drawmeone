@@ -657,10 +657,11 @@ async function verifyCustomerAttention(browser){
     await page.goto(base+"/commission.html",{waitUntil:"domcontentloaded"});
     await page.locator("#customer-attention").waitFor({state:"visible"});
     assert.equal(await page.locator("#my-request-list button").count(),1);
-    await page.getByRole("button",{name:"Clarification requested for "+A}).waitFor();
-    await page.getByRole("button",{name:"Recent artist reply for "+A}).waitFor();
+    assert.equal(await page.locator("#customer-attention-items article").count(),1);
+    await page.getByText("Clarification requested",{exact:true}).waitFor();
+    await page.getByText("Recent artist reply",{exact:true}).waitFor();
     await page.locator("#request-history-sort").selectOption("deadline");
-    await page.getByRole("button",{name:"Review quote for "+A}).click();
+    await page.getByRole("button",{name:"View commission updates for "+A}).click();
     await page.waitForFunction(ref=>document.querySelector("#detail-ref")?.textContent.includes(ref),A);
     await checkOverflow(page,"customer attention");
     assert.deepEqual(mock.posts,[]);
