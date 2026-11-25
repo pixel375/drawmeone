@@ -20,7 +20,7 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
 <meta name="theme-color" content="#151317">
 <title>Artist's Desk · Draw Me One</title>
 <link rel="stylesheet" href="./panel.css?v=45">
-<script defer src="./panel.js?v=64"></script>
+<script defer src="./panel.js?v=65"></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to dashboard</a>
@@ -315,6 +315,8 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
           <input id="artwork-files" type="file" accept="image/jpeg,image/png,image/webp" multiple aria-label="Choose artwork images for upload">
           <div class="artwork-toolbar-actions">
             <button type="button" class="quiet" id="artwork-upload" disabled>Upload as drafts</button>
+            <button type="button" class="quiet" id="artwork-upload-stop" hidden>Stop after current file</button>
+            <button type="button" class="quiet" id="artwork-upload-resume" hidden>Upload remaining files</button>
             <button type="button" class="quiet" id="artwork-refresh">Refresh library</button>
           </div>
           <progress id="artwork-progress" value="0" max="1" hidden aria-label="Artwork upload progress"></progress>

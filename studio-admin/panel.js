@@ -1480,6 +1480,7 @@
   let artworkPage=1,artworkGeneration=0,artworkLoading=false;
   // In-memory drafts survive filtering, paging and server refreshes, but never a sign-in session.
   const artworkDrafts=new Map();
+  let artworkPendingFiles=[],artworkUploadRunning=false,artworkStopRequested=false;
   function artworkDraftKey(id,field){return id+":"+field;}
   function artworkDraftInput(work,field,input){
     const key=artworkDraftKey(work.id,field),base=String(work[field]??"");
@@ -1524,6 +1525,11 @@
     $("artwork-unsaved-count").textContent=artworkDrafts.size+" unsaved artwork field(s). Save individual edits or discard them. Unsaved edits are not published.";
     $("artwork-discard-edits").disabled=artworkBusy||artworkLoading;
     $("artwork-upload").disabled = !canWrite;
+    $("artwork-upload-resume").hidden=artworkPendingFiles.length===0;
+    $("artwork-upload-resume").disabled=!canWrite;
+    $("artwork-upload-resume").textContent="Upload "+artworkPendingFiles.length+" remaining file(s)";
+    $("artwork-upload-stop").hidden=!artworkUploadRunning;
+    $("artwork-upload-stop").disabled=artworkStopRequested;
     $("artwork-publish-selected").disabled = !canWrite ||
       !checked.some(input => input.dataset.visibility === "draft");
     $("artwork-unpublish-selected").disabled = !canWrite ||
@@ -1748,62 +1754,80 @@
   $("artwork-publish-selected").addEventListener("click",()=>batchArtwork("published"));
   $("artwork-unpublish-selected").addEventListener("click",()=>batchArtwork("draft"));
 
-  $("artwork-upload").addEventListener("click", async () => {
-    if (!artworkWriteEnabled || artworkBusy) return;
-    const selected = [...$("artwork-files").files];
-    if (!selected.length) {
-      $("artwork-upload-message").textContent = "Select artwork images first.";
+  $("artwork-files").addEventListener("change",()=>{
+    artworkPendingFiles=[];
+    artworkControls();
+    $("artwork-upload-message").textContent=$("artwork-files").files.length+" file(s) selected. Uploads remain private drafts.";
+  });
+  $("artwork-upload-stop").addEventListener("click",()=>{
+    if(!artworkUploadRunning)return;
+    artworkStopRequested=true;artworkControls();
+    $("artwork-upload-message").textContent="Stopping after the current file. Unattempted files will be retained.";
+  });
+  $("artwork-upload").addEventListener("click",()=>uploadArtworkFiles([...$("artwork-files").files]));
+  $("artwork-upload-resume").addEventListener("click",()=>uploadArtworkFiles([...artworkPendingFiles]));
+  async function uploadArtworkFiles(selected){
+    if(!artworkWriteEnabled||artworkBusy||artworkLoading)return;
+    if(!selected.length){
+      $("artwork-upload-message").textContent="Select artwork images first.";
       return;
     }
-    artworkBusy = true;
+    artworkBusy=true;artworkUploadRunning=true;artworkStopRequested=false;artworkPendingFiles=[];
     artworkControls();
-    const progress = $("artwork-progress");
-    progress.hidden = false;
-    progress.max = selected.length;
-    progress.value = 0;
-    const report = $("artwork-upload-results");
+    const progress=$("artwork-progress"),report=$("artwork-upload-results");
+    progress.hidden=false;progress.max=selected.length;progress.value=0;
     report.replaceChildren();
-    let success = 0;
-    for (let i = 0; i < selected.length; i++) {
-      const file = selected[i];
-      const entry = document.createElement("li");
-      entry.textContent = (i + 1) + ". " + file.name + " — ";
-      report.append(entry);
-      if (!["image/jpeg","image/png","image/webp"].includes(file.type) ||
-          file.size > 8 * 1024 * 1024 || file.size < 1) {
-        entry.textContent += "Skipped (unsupported format or file too large).";
-        progress.value = i + 1;
-        continue;
-      }
-      try {
-        const body = new FormData();
-        body.append("artwork",file);
-        const response = await fetch(api + "artwork-upload.php",{
-          method:"POST", credentials:"same-origin",cache:"no-store",
-          headers:{"X-DMO-CSRF":csrf},body,
-        });
-        const data = await response.json();
-        if (response.status === 401) {sessionExpired();break;}
-        if (response.ok && data.ok) {
-          success++;
-          entry.textContent += "Saved privately as draft #" + data.artwork_id;
-        } else {
-          entry.textContent += "Failed (" + (data.error || response.status) + ")";
+    let success=0,rejected=0,uncertain=0,attempted=0,stopReason="";
+    for(let i=0;i<selected.length;i++){
+      if(leavingSession||artworkStopRequested){stopReason="Upload stopped.";break;}
+      const file=selected[i],entry=document.createElement("li");
+      entry.textContent=(i+1)+". "+file.name+" — ";report.append(entry);
+      const acceptedType=["image/jpeg","image/png","image/webp"].includes(file.type)||
+        (!file.type&&/\.(jpe?g|png|webp)$/i.test(file.name));
+      if(!acceptedType||file.size>8*1024*1024||file.size<1){
+        rejected++;entry.textContent+="Skipped (unsupported format or file too large).";
+      }else{
+        try{
+          const body=new FormData();body.append("artwork",file);
+          const response=await fetch(api+"artwork-upload.php",{method:"POST",credentials:"same-origin",cache:"no-store",headers:{"X-DMO-CSRF":csrf},body});
+          if(response.status===401){sessionExpired();return;}
+          const data=await response.json();
+          if(response.ok&&data.ok===true&&Number.isSafeInteger(data.artwork_id)&&data.artwork_id>0){
+            success++;entry.textContent+="Saved privately as draft #"+data.artwork_id;
+          }else if(response.status===409&&data.error==="artwork_upload_busy"){
+            entry.textContent+="Not attempted by server (another upload is active).";
+            stopReason="Another upload is active. Resume the remaining files later.";
+            break;
+          }else if(response.status>=400&&response.status<500&&data.ok===false){
+            rejected++;entry.textContent+="Rejected ("+(data.error||response.status)+")";
+            if(response.status===403||response.status===429||data.error==="artwork_library_limit")stopReason="Uploads stopped by server.";
+          }else{
+            uncertain++;entry.textContent+="Upload outcome not confirmed. Check the library before selecting this file again.";
+            stopReason="Upload interrupted.";
+          }
+        }catch(_){
+          uncertain++;entry.textContent+="Upload outcome not confirmed. Check the library before selecting this file again.";
+          stopReason="Upload interrupted.";
         }
-      } catch (_) {
-        entry.textContent += "Network error; upload not confirmed.";
       }
-      progress.value = i + 1;
-      $("artwork-upload-message").textContent =
-        "Processed " + (i + 1) + " of " + selected.length + " images.";
+      attempted=i+1;progress.value=attempted;
+      $("artwork-upload-message").textContent="Processed "+attempted+" of "+selected.length+" images.";
+      if(stopReason)break;
     }
-    artworkBusy = false;
-    $("artwork-files").value = "";
-    await artworksLoad();
-    $("artwork-upload-message").textContent = success + " of " + selected.length +
-      " drawings saved as unpublished drafts. Review before publishing.";
-  });
-
+    if(leavingSession)return;
+    if(artworkStopRequested&&!stopReason&&attempted<selected.length)stopReason="Upload stopped.";
+    // Never automatically retry a file with an ambiguous outcome. Only untouched
+    // files (including an explicit busy rejection before insertion) can resume.
+    artworkPendingFiles=selected.slice(attempted);
+    artworkUploadRunning=false;artworkStopRequested=false;
+    $("artwork-files").value="";
+    const refreshed=await artworksLoad();
+    artworkBusy=false;artworkControls();
+    if(leavingSession)return;
+    $("artwork-upload-message").textContent=(stopReason?stopReason+" ":"")+success+" saved as private drafts · "+rejected+" rejected/skipped · "+uncertain+" unconfirmed · "+artworkPendingFiles.length+" remaining."+
+      (uncertain?" Review the library for the unconfirmed file before reselecting it.":"")+
+      (refreshed?"":" Library refresh failed; refresh before continuing.");
+  }
 
   // Administrative SMTP readiness, without showing secrets or permitting
   // arbitrary email recipients. Tests go to the authenticated admin only.
@@ -2471,7 +2495,7 @@
     ++packageGeneration;
     ++overviewGeneration;
     ++artworkGeneration;
-    artworkRecords=[];artworkDrafts.clear();artworkWriteEnabled=false;$("artwork-list").replaceChildren();
+    artworkRecords=[];artworkDrafts.clear();artworkPendingFiles=[];artworkWriteEnabled=false;$("artwork-list").replaceChildren();
     renderLaunchEvidence(null);renderConfigurationReview(null);clearAdminSecurity();
     closeRequestDetail(true);clearPrivacyQueue();clearFinance();clearCustomers();setRequestCustomer();$("customer-query").value="";
     $("workspace").hidden = true;

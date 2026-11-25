@@ -356,6 +356,34 @@ async function verifyArtworkDrafts(browser){
     console.log("PASS: artwork drafts survive filtering, tab changes and rejected saves");
   }finally{await page.close();}
 }
+async function verifyInterruptedArtworkUpload(browser){
+  const page=await browser.newPage({viewport:{width:390,height:844}});
+  await simulateBackend(page,[]);
+  let calls=0;const uploaded=[];
+  await page.route("**/api/admin/artworks.php*",route=>route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({...mockAdmin["artworks.php"],write_enabled:true})}));
+  await page.route("**/api/admin/artwork-upload.php*",route=>{
+    calls++;const body=route.request().postData()||"";
+    uploaded.push(body.includes("first.png")?"first":body.includes("second.png")?"second":body.includes("third.png")?"third":"unknown");
+    if(calls===2)return route.fulfill({status:502,contentType:"text/plain",body:"Gateway interrupted"});
+    return route.fulfill({status:201,contentType:"application/json",body:JSON.stringify({ok:true,artwork_id:100+calls})});
+  });
+  try{
+    await page.goto(base+"/studio-admin/index.php",{waitUntil:"domcontentloaded"});
+    await page.locator("#workspace").waitFor({state:"visible"});
+    await page.locator('[data-view="artwork"]').click();
+    await page.locator("#artwork-upload").waitFor();
+    await page.waitForFunction(()=>document.querySelector("#artwork-upload")?.disabled===false);
+    await page.locator("#artwork-files").setInputFiles(["first.png","second.png","third.png"].map(name=>({name,mimeType:"image/png",buffer:Buffer.from("synthetic CI upload")})));
+    await page.locator("#artwork-upload").click();
+    await page.waitForFunction(()=>document.querySelector("#artwork-upload-message")?.textContent.includes("1 unconfirmed · 1 remaining"));
+    assert.deepEqual(uploaded,["first","second"]);
+    await page.locator("#artwork-upload-resume").click();
+    await page.waitForFunction(()=>document.querySelector("#artwork-upload-message")?.textContent.includes("0 unconfirmed · 0 remaining"));
+    assert.deepEqual(uploaded,["first","second","third"],"ambiguous upload was not retried");
+    assert.equal(await page.locator("#artwork-upload-resume").isVisible(),false);
+    console.log("PASS: interrupted bulk artwork upload resumes only untouched files");
+  }finally{await page.close();}
+}
 async function verifyRequestIsolation(browser) {
   const page=await browser.newPage({viewport:{width:390,height:844},reducedMotion:"reduce"});
   const posts=[];
@@ -1035,6 +1063,7 @@ async function verifyClosedDesk(browser) {
     await verifyClosedDesk(browser);
     await verifyBulkArtworkChoices(browser);
     await verifyArtworkDrafts(browser);
+    await verifyInterruptedArtworkUpload(browser);
     await verifyRequestIsolation(browser);
     await verifyRequestList(browser);
     await verifyFreshAdminSignIn(browser);

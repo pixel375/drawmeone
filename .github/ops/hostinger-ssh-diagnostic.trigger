@@ -1,1 +1,1 @@
-Retest corrected hosted gallery URL pattern and private media checks.
+Verify artwork editing, concurrent upload and commission composer release; read-only inspection only.
