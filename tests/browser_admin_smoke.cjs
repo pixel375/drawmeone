@@ -527,6 +527,34 @@ async function verifyQuoteFollowup(browser) {
   }finally{await page.close();}
 }
 
+async function verifyCustomerNotice(browser) {
+  const page=await browser.newPage({viewport:{width:320,height:844},reducedMotion:"reduce"});
+  const posts=[];await simulateBackend(page,posts);
+  const row={id:94,status:"submitted",public_ref:"CI-94"};
+  const notice={kind:"quote",event_id:95,status:"not_sent",can_send:true};
+  const answer=(route,data)=>route.fulfill({status:200,contentType:"application/json",body:JSON.stringify(data)});
+  await page.route("**/api/admin/requests.php*",route=>answer(route,{ok:true,requests:[row]}));
+  await page.route("**/api/admin/request.php?*",route=>answer(route,{ok:true,notifications_enabled:true,notification_options:[notice],detail:{request:row,messages:[],quotes:[],orders:[],references:[],addons:[]}}));
+  await page.route("**/api/admin/request-actions.php*",route=>{
+    assert.deepEqual(route.request().postDataJSON(),{action:"send_notification",request_id:94,kind:"quote",event_id:95,confirm_send:true});
+    notice.status="accepted";notice.can_send=false;
+    return answer(route,{ok:true,transport_accepted:true,delivery_confirmed:false});
+  });
+  try{
+    await page.goto(base+"/studio-admin/index.php",{waitUntil:"domcontentloaded"});
+    await page.locator("#workspace").waitFor({state:"visible"});
+    await page.locator('[data-view="requests"]').click();
+    await page.locator("#request-list .request-open").first().click();
+    page.once("dialog",dialog=>dialog.accept());
+    await page.locator("#request-notifications button").click();
+    await page.waitForFunction(()=>document.querySelector("#request-detail-status")?.textContent.includes("Inbox delivery has not been confirmed"));
+    assert.equal(await page.locator("#request-notifications button").count(),0);
+    assert.match(await page.locator("#request-notifications").innerText(),/inbox delivery not confirmed/);
+    assert.deepEqual(posts,[]);
+    console.log("PASS: explicit notice action and no duplicate button");
+  }finally{await page.close();}
+}
+
 async function verifyClosedDesk(browser) {
   const page=await browser.newPage({viewport:{width:390,height:844}});
   await page.route("**/api/admin/status.php*",route=>route.fulfill({
@@ -557,6 +585,7 @@ async function verifyClosedDesk(browser) {
     await verifyReviewAndInbox(browser);
     await verifyOrderPlanning(browser);
     await verifyQuoteFollowup(browser);
+    await verifyCustomerNotice(browser);
     console.log("ADMIN_BROWSER_SMOKE=PASS");
   } finally {await browser.close();}
 })().catch(error=>{

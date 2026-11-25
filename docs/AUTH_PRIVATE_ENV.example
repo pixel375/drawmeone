@@ -55,3 +55,6 @@ DMO_MAIL_TRANSPORT=
 # DMO_SMTP_PASSWORD_B64=PRIVATE_BASE64_OF_PASSWORD_NOT_ENCRYPTION
 # Never commit SMTP credentials to GitHub. Use GitHub Environment Secret
 # DMO_SMTP_PASSWORD and the fixed SSH configuration workflow instead.
+
+# Optional explicit artist-triggered customer notices; keep disabled until approved.
+DMO_CUSTOMER_NOTIFICATIONS_ENABLED=0

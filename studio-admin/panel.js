@@ -594,11 +594,56 @@
     }
   }
 
+  function renderNotifications(options,enabled) {
+    const root=$("request-notifications");
+    root.replaceChildren();
+    if(!enabled)root.append(textNode("p","Customer email notices are disabled until approved.","small"));
+    if(!Array.isArray(options)||!options.length){
+      root.append(textNode("p","No current quote or unpaid order notice is available.","small"));
+      return;
+    }
+    const statusLabels={not_sent:"Not sent",accepted:"Accepted by mail server; inbox delivery not confirmed",
+      failed:"Transport did not confirm acceptance; automatic retry disabled",
+      uncertain:"Attempt reserved; outcome uncertain; automatic retry disabled"};
+    for(const option of options){
+      const card=document.createElement("article");
+      card.className="notification-card";
+      card.append(textNode("strong",(option.kind==="quote"?"Quote":"Order")+" #"+option.event_id),
+        textNode("p",statusLabels[option.status]||"Unknown status","small"));
+      if(option.can_send===true&&enabled){
+        const button=textNode("button","Send account-update email","quiet");
+        button.type="button";
+        button.disabled=requestBusy;
+        button.addEventListener("click",()=>sendCustomerNotice(option));
+        card.append(button);
+      }else if(enabled&&option.status==="not_sent"){
+        card.append(textNode("p","Not eligible: check customer email preference, verification and current offer/order status.","small"));
+      }
+      root.append(card);
+    }
+  }
+  async function sendCustomerNotice(option){
+    if(requestBusy||selectedRequestId===null||option.can_send!==true)return;
+    if(!window.confirm("Send one generic account-update email to this verified customer? No commission details or payment request will be included."))return;
+    const id=selectedRequestId;
+    requestBusy=true;updateRequestButtons();
+    try{
+      const {response,data}=await post("request-actions.php",{action:"send_notification",request_id:id,kind:option.kind,event_id:option.event_id,confirm_send:true},csrf);
+      if(response.status===401)return sessionExpired();
+      await openRequest(id);
+      requestText("request-detail-status",response.ok&&data.transport_accepted===true
+        ?"Mail server accepted the notice. Inbox delivery has not been confirmed."
+        :"Notice not confirmed. Review its recorded status before contacting the customer.");
+    }catch(_){requestText("request-detail-status","Notice outcome uncertain. Refresh before taking any further action.");}
+    finally{requestBusy=false;updateRequestButtons();}
+  }
+
   function updateRequestButtons() {
     $("request-detail-close").disabled = requestBusy;
     $("request-thread-full").disabled = requestBusy;
     $("request-review-save").disabled = requestBusy || !reviewStatus;
     $("request-review-status").disabled = requestBusy || !reviewStatus;
+    for(const button of $("request-notifications").querySelectorAll("button"))button.disabled=requestBusy;
     for(const button of $("request-quotes").querySelectorAll("button[data-quote-withdraw]"))button.disabled=requestBusy;
     for(const field of $("request-orders").querySelectorAll(".order-date-form input,.order-date-form button"))field.disabled=requestBusy;
     for (const field of $("request-note-form").querySelectorAll("textarea")) {
@@ -632,7 +677,7 @@
       "request-tier","request-contact","request-deadline","request-brief-text"]) {
       requestText(id, "—");
     }
-    for (const id of ["request-thread","request-quotes","request-references","request-orders"]) {
+    for (const id of ["request-thread","request-quotes","request-references","request-orders","request-notifications"]) {
       $(id).replaceChildren();
     }
   }
@@ -706,6 +751,7 @@
     renderQuotes(item.quotes);
     renderRequestReferences(item.references);
     renderAdminOrders(item.orders, item.quotes);
+    renderNotifications(data.notification_options,data.notifications_enabled===true);
     requestText("request-detail-status", requestWriteEnabled
       ? "Admin draft editing available. Nothing is sent to the customer."
       : "Viewing only. Private note and quote creation are disabled on the server.");

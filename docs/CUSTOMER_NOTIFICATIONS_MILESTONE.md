@@ -1,0 +1,7 @@
+# Transactional customer notices milestone
+
+Adds explicit, optional artist-triggered email notices for a current released quote or unverified confirmed order. Recipient comes only from the verified active customer attached to the selected request, and the customer must have selected email contact. Fixed plain-text templates contain no private artwork, price, message, attachment, recipient override or payment links. No automatic customer email is sent by quote/order creation.
+
+The private DMO_CUSTOMER_NOTIFICATIONS_ENABLED switch defaults to off and additionally requires existing policy, mail and admin write gates. Attempts are rate limited. An audit reservation commits before calling SMTP; subsequent attempts for the same event are blocked even if a process crashes or SMTP acceptance is uncertain. Audit records contain only event IDs/kind and outcome, never email content or addresses. SMTP acceptance is not proof of inbox delivery. No automatic retry is provided: unresolved or failed attempts require separate operator review. A quote may change after reservation; notices direct customers to the latest account state, not the old quote itself.
+
+Disposable tests exercise reservation, duplicate prevention, ownership and email preference without sending live email. Browser tests cover the explicit action and status presentation. Fixed prior browser assertion and stale diagnostic expression. Actual customer notification delivery is not verified, and all production switches remain unchanged.

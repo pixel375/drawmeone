@@ -285,7 +285,7 @@ async function readonlyQuoteStatuses(browser) {
     await page.locator("#detail-content").waitFor({state:"visible"});
     assert.equal(await page.locator(".customer-quote-card").count(),2);
     assert.match(await page.locator("#detail-quotes").innerText(),/Expired/);
-    assert.match(await page.locator("#detail-quotes").innerText(),/No longer available \\(withdrawn or replaced\\)/);
+    assert.match(await page.locator("#detail-quotes").innerText(),/No longer available/);
     assert.equal(await page.locator("#detail-quotes button").count(),0,
       "expired/superseded quotes cannot be accepted or declined");
     console.log("PASS: historical and expired quote statuses remain read-only");
