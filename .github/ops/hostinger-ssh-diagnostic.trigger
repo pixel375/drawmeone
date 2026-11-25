@@ -1,1 +1,1 @@
-Verify upload receipts for portfolio, customer references and private delivery drafts; read-only.
+Verify retained delivery draft recovery and EXIF capability; read-only.

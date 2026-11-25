@@ -1,0 +1,3 @@
+# Delivery draft selection safeguards
+
+Selected private delivery artwork is retained in memory per order while reviewing the same request, including after a lost upload response. The artist can retry the original receipt after reopening the request or explicitly discard or replace the selected file. Switching requests or closing details uses the existing discard confirmation. A successful receipt clears the selection. No browser storage, automatic upload, payment, or delivery. The browser test exercises loss, reopen, same-key retry and draft removal. Live diagnostics now report PHP EXIF support without changing server configuration.

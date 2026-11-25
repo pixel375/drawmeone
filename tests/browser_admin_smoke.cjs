@@ -734,11 +734,14 @@ async function verifyDeliveryDraftManagement(browser) {
   const answer=(route,data)=>route.fulfill({status:200,contentType:"application/json",body:JSON.stringify(data)});
   await page.route("**/api/admin/requests.php*",route=>answer(route,{ok:true,requests:[row]}));
   await page.route("**/api/admin/request.php?*",route=>answer(route,{ok:true,delivery_staging_enabled:true,delivery_drafts:drafts,detail:{request:row,orders:[order],messages:[],quotes:[],references:[],addons:[]}}));
+  const stageKeys=[];
   await page.route("**/api/admin/delivery-draft.php",route=>{
     assert.equal(route.request().method(),"POST");
     assert.match(route.request().headers()["content-type"],/multipart\/form-data/);
+    stageKeys.push((route.request().postData()||"").match(/name="operation_key"\r?\n\r?\n([0-9a-f-]{36})/)?.[1]);
     drafts=[{id:98,order_id:97,width:320,height:240,bytes:500,created_at:"2026-11-25"}];
-    return answer(route,{ok:true,draft_id:98,customer_visible:false});
+    if(stageKeys.length===1)return route.abort("failed");
+    return answer(route,{ok:true,draft_id:98,already_saved:true,released:false});
   });
   await page.route("**/api/admin/request-actions.php*",route=>{
     assert.deepEqual(route.request().postDataJSON(),{action:"remove_delivery_draft",request_id:96,draft_id:98,confirm_remove:true});
@@ -750,8 +753,16 @@ async function verifyDeliveryDraftManagement(browser) {
     await page.locator('[data-view="requests"]').click();
     await page.locator("#request-list .request-open").first().click();
     await page.locator(".delivery-draft-form input").setInputFiles({name:"fixture.png",mimeType:"image/png",buffer:Buffer.from("synthetic image fixture")});
-    await page.locator(".delivery-draft-form button").click();
-    await page.waitForFunction(()=>document.querySelector("#request-detail-status")?.textContent.includes("Artwork staged privately"));
+    await page.getByRole("button",{name:"Stage privately",exact:true}).click();
+    await page.waitForFunction(()=>document.querySelector("#request-detail-status")?.textContent.includes("Draft upload not confirmed"));
+    assert.match(await page.locator("#request-drafts-warning").innerText(),/delivery artwork selection/);
+    await page.locator("#request-list .request-open").first().click();
+    await page.getByRole("button",{name:"Retry staging",exact:true}).waitFor();
+    assert.match(await page.locator(".delivery-draft-form").innerText(),/fixture.png/);
+    await page.getByRole("button",{name:"Retry staging",exact:true}).click();
+    await page.waitForFunction(()=>document.querySelector("#request-detail-status")?.textContent.includes("Existing artwork #98 recovered"));
+    assert.match(stageKeys[0]||"",/^[0-9a-f-]{36}$/);assert.equal(stageKeys[0],stageKeys[1]);
+    assert.equal(await page.locator("#request-drafts-warning").isVisible(),false);
     assert.match(await page.getByRole("link",{name:"Open private preview"}).getAttribute("href"),/id=98&view=preview$/);
     page.once("dialog",dialog=>dialog.accept());
     await page.getByRole("button",{name:"Remove draft",exact:true}).click();

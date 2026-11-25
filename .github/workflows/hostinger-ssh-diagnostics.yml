@@ -204,6 +204,7 @@ jobs:
             echo "php_curl=" . (extension_loaded("curl") ? "yes" : "no") . "\n";
             echo "gd_available=" . (extension_loaded("gd") ? "yes" : "no") . "\n";
             echo "gd_webp=" . (function_exists("imagewebp") ? "yes" : "no") . "\n";
+            echo "jpeg_exif_orientation=" . (function_exists("exif_read_data") ? "yes" : "no") . "\n";
             echo "imagick_available=" . (extension_loaded("imagick") ? "yes" : "no") . "\n";
             echo "upload_limit=" . ini_get("upload_max_filesize") . "\n";
             echo "post_limit=" . ini_get("post_max_size") . "\n";

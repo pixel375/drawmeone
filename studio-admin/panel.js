@@ -925,6 +925,7 @@
     finally{requestBusy=false;updateRequestButtons();}
   }
 
+  const pendingDeliveryFiles=new Map();
   function renderDeliveryDrafts(orders,drafts,enabled,options=[],reviews=[]) {
     const root=$("request-delivery-drafts");
     root.replaceChildren();
@@ -981,20 +982,46 @@
     }
     if(!enabled)return;
     for(const order of orders||[]){
-      if(!["awaiting_arrangement","in_progress","ready_for_delivery","queued","drawing","awaiting_feedback","revision"].includes(order.status))continue;
-      if((drafts||[]).filter(d=>d.order_id===order.id).length>=4)continue;
+      const eligible=["awaiting_arrangement","in_progress","ready_for_delivery","queued","drawing","awaiting_feedback","revision"].includes(order.status)&&
+        (drafts||[]).filter(d=>d.order_id===order.id).length<4;
+      const previous=pendingDeliveryFiles.get(order.id);
+      if(!eligible&&!previous)continue;
       const form=document.createElement("form");
       form.className="delivery-draft-form";
       const label=textNode("label","Stage artwork for order #"+order.id);
-      const file=document.createElement("input");file.type="file";file.required=true;
+      const file=document.createElement("input");file.type="file";
       file.accept="image/jpeg,image/png,image/webp";label.append(file);
+      if(!eligible)label.hidden=true;
+      const retained=textNode("p","","small");retained.setAttribute("role","status");
       const button=textNode("button","Stage privately","quiet");button.type="submit";
-      form.append(label,textNode("p","JPEG, PNG or WebP; up to 8 MB. Re-encoded to high-quality WebP without embedded metadata.","small"),button);
+      const discard=textNode("button","Discard selected artwork","quiet");discard.type="button";
+      function reflect(){
+        const selected=pendingDeliveryFiles.get(order.id);
+        retained.textContent=selected?"Selected: "+selected.name+" · kept in this request until staged or discarded.":"No artwork selected.";
+        file.required=eligible&&!selected;
+        discard.hidden=!selected;
+        button.textContent=selected&&deliveryDraftUploadKeys.has(selected)?"Retry staging":"Stage privately";
+        updateRequestDraftIndicator();
+      }
+      file.addEventListener("change",()=>{
+        if(!file.files?.length)return;
+        if(pendingDeliveryFiles.has(order.id)&&!window.confirm("Replace the retained delivery artwork with this new selection?")){file.value="";return;}
+        pendingDeliveryFiles.set(order.id,file.files[0]);reflect();
+      });
+      discard.addEventListener("click",()=>{
+        if(requestBusy||!window.confirm("Discard the selected delivery artwork?"))return;
+        pendingDeliveryFiles.delete(order.id);file.value="";reflect();
+        if(!eligible)form.remove();
+      });
+      form.append(label,textNode("p","JPEG, PNG or WebP; up to 8 MB. Re-encoded to high-quality WebP without embedded metadata.","small"),retained,button,discard);
       form.addEventListener("submit",event=>{
         event.preventDefault();
-        if(requestBusy||!file.files?.length)return;
-        stageDeliveryDraft(order.id,file.files[0]);
+        const selected=pendingDeliveryFiles.get(order.id);
+        if(requestBusy||!selected)return;
+        if(!eligible&&!deliveryDraftUploadKeys.has(selected))return;
+        stageDeliveryDraft(order.id,selected);
       });
+      reflect();
       root.append(form);
     }
   }
@@ -1042,10 +1069,13 @@
       if(response.status===401)return sessionExpired();
       const data=await response.json();
       if(!response.ok||!data.ok){requestText("request-detail-status","Draft not staged ("+(data.error||response.status)+").");return;}
+      pendingDeliveryFiles.delete(orderId);
       await openRequest(id);
       requestText("request-detail-status",data.already_saved?"Existing artwork #"+data.draft_id+" recovered ("+(data.released?"released":"staged") + "). No additional draft created.":"Artwork staged privately. Customer access and payment status unchanged.");
-    }catch(_){requestText("request-detail-status","Draft upload not confirmed. Retry the same selected file to recover the original receipt.");}
-    finally{requestBusy=false;updateRequestButtons();}
+    }catch(_){requestText("request-detail-status","Draft upload not confirmed. Retry the retained file to recover the original receipt.");}
+    finally{requestBusy=false;updateRequestButtons();
+      if(pendingDeliveryFiles.has(orderId))for(const button of $("request-delivery-drafts").querySelectorAll("button[type=submit]")){const form=button.closest("form");if(form?.contains(document.activeElement)||$("request-delivery-drafts").querySelectorAll("button[type=submit]").length===1)button.textContent="Retry staging";}
+    }
   }
 
   function renderNotifications(options,enabled) {
@@ -1103,6 +1133,7 @@
     if($("request-note-body").value!=="")kinds.push("private note");
     if($("request-message-body").value!=="")kinds.push("customer message");
     if(quoteHasDraft())kinds.push("quote");
+    if(pendingDeliveryFiles.size)kinds.push("delivery artwork selection");
     return kinds;
   }
   function updateRequestDraftIndicator(){
@@ -1155,7 +1186,7 @@
     addQuoteLine();
   }
   function resetRequestDrafts() {
-    pendingAdminMessages.clear();
+    pendingAdminMessages.clear();pendingDeliveryFiles.clear();
     $("request-note-form").reset();
     $("request-message-form").reset();
     resetQuoteDraft();
