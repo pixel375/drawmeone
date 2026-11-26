@@ -2565,11 +2565,13 @@
     for (const list of lists) {
       const target = $(list.id);
       target.replaceChildren();
-      const records = packageRows(list.kind);
+      const all=packageRows(list.kind),query=$("package-search").value.trim().toLocaleLowerCase(),filter=$("package-filter").value;
+      const records=all.filter(record=>(filter==="all"||(filter==="public"?record.is_active===true:record.is_active!==true))&&(!query||[record.name,record.slug,record.description].some(value=>String(value||"").toLocaleLowerCase().includes(query))));
+      $(list.id+"-count").textContent=records.length+" of "+all.length+" items";
       if (records.length === 0) {
         const note = document.createElement("p");
         note.className = "small";
-        note.textContent = "No items created.";
+        note.textContent = all.length?"No items match this view.":"No items created.";
         target.appendChild(note);
       }
       for (const record of records) {
@@ -2577,7 +2579,7 @@
         button.type = "button";
         button.className = "package-list-item";
         if (packageSelected.kind === list.kind && packageSelected.id === record.id) {
-          button.classList.add("selected");
+          button.classList.add("selected");button.setAttribute("aria-current","true");
         }
         const name = document.createElement("strong");
         name.textContent = record.name || record.slug;
@@ -2591,6 +2593,9 @@
     }
   }
 
+  $("package-search").addEventListener("input",renderPackageLists);
+  $("package-filter").addEventListener("change",renderPackageLists);
+  $("package-clear-filter").addEventListener("click",()=>{$("package-search").value="";$("package-filter").value="all";renderPackageLists();});
   function packageCompatibilityControls(){
     const record=packageSelected.kind==="tier"?packageRows("tier").find(row=>row.id===packageSelected.id):null;
     const state=record?.compatibility;
@@ -2697,7 +2702,12 @@
     const selected=new Set([...$("package-compatibility-options").querySelectorAll("input:checked")].map(x=>Number(x.value)));
     const extras=packageRows("addon").filter(x=>x.is_active&&(mode!=="selected"||selected.has(x.id)));
     $("package-preview-extras").textContent=packageSelected.kind!=="tier"?"":!record?"New tier: review extra availability after saving.":extras.length?"Published extras selected: "+extras.map(x=>x.name).join(", "):"No published extras selected.";
-    const issues=[];if(!name)issues.push("name");if(!description)issues.push("description");if(!/^[a-z0-9][a-z0-9-]{1,79}$/.test(slug))issues.push("valid unique slug");if(!validPrice)issues.push("valid estimates");if(features.length>20||features.some(x=>x.length>180))issues.push("shorter feature list");
+    const issues=packageTextIssues(name,description,features);
+    if(!description)issues.push("description");
+    if(!/^[a-z0-9][a-z0-9-]{1,79}$/.test(slug)||packageRows(packageSelected.kind).some(row=>row.id!==packageSelected.id&&row.slug===slug))issues.push("valid unique slug");
+    if(!validPrice)issues.push("valid estimates");
+    const bytes=value=>new TextEncoder().encode(value).length;
+    $("package-text-count").textContent=bytes(name)+" / 120 name bytes · "+bytes(description)+" / 2500 description bytes"+(packageSelected.kind==="tier"?" · "+features.length+" / 20 features":"");
     $("package-preview-check").textContent=issues.length?"Before publication, complete: "+issues.join(", ")+".":"Basic fields complete. Server validation and explicit publication approval still required.";
   }
   $("package-duplicate").addEventListener("click",()=>{
@@ -2713,6 +2723,15 @@
     packageControls();packageShow("Copied into an unsaved draft. Choose a new slug. Extra availability must be reviewed separately.");
     $("package-slug").focus();
   });
+  function packageTextIssues(name,description,features){
+    const bytes=value=>new TextEncoder().encode(value).length;
+    const controls=value=>/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/.test(value);
+    const issues=[];
+    if(bytes(name)<2||bytes(name)>120||controls(name))issues.push("name (2–120 UTF-8 bytes)");
+    if(bytes(description)>2500||controls(description))issues.push("description (up to 2500 UTF-8 bytes)");
+    if(features.length>20||features.some(value=>bytes(value)<2||bytes(value)>180||controls(value)))issues.push("up to 20 features (2–180 UTF-8 bytes each)");
+    return issues;
+  }
   function packagePayload() {
     const name = $("package-name").value.trim();
     const slug = $("package-slug").value.trim();
@@ -2727,8 +2746,9 @@
       packageShow("Enter valid minimum and maximum estimates, or leave both blank.", true);
       return null;
     }
+    if(packageRows(packageSelected.kind).some(row=>row.id!==packageSelected.id&&row.slug===slug)){packageShow("That slug is already used. Choose another one.",true);return null;}
     const order = Number($("package-order").value);
-    if (!Number.isSafeInteger(order) || order < -10000 || order > 10000) {
+    if (!$("package-order").value.trim()||!Number.isSafeInteger(order) || order < -10000 || order > 10000) {
       packageShow("Sort order must be a whole number between -10000 and 10000.", true);
       return null;
     }
@@ -2741,11 +2761,9 @@
     if (packageSelected.kind === "tier") {
       item.features = $("package-features").value.split("\n")
         .map(x => x.trim()).filter(Boolean);
-      if (item.features.length > 20 || item.features.some(x => x.length > 180)) {
-        packageShow("Use up to 20 short features, 180 characters each.", true);
-        return null;
-      }
     }
+    const issues=packageTextIssues(name,item.description,item.features||[]);
+    if(issues.length){packageShow("Check "+issues.join(", ")+".",true);return null;}
     return item;
   }
 

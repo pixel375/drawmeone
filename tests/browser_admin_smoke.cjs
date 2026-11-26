@@ -1234,6 +1234,18 @@ async function verifyPackageCompatibility(browser){
     await page.locator("#package-tier-list .package-list-item").first().click();
     await page.locator("#package-name").fill("Unsaved name");
     assert.equal(await page.locator("#package-unsaved").isVisible(),true);
+    await page.locator("#package-filter").selectOption("public");
+    assert.equal(await page.locator("#package-tier-list .package-list-item").count(),0);
+    assert.equal(await page.locator("#package-addon-list .package-list-item").count(),1);
+    await page.locator("#package-search").fill("no matching extra");
+    assert.equal(await page.locator("#package-addon-list .package-list-item").count(),0);
+    await page.locator("#package-clear-filter").click();
+    assert.equal(await page.locator("#package-name").inputValue(),"Unsaved name");
+    await page.locator("#package-name").fill("é".repeat(61));
+    assert.match(await page.locator("#package-text-count").innerText(),/122 \/ 120 name bytes/);
+    await page.locator("#package-save").click();
+    assert.match(await page.locator("#package-message").innerText(),/UTF-8 bytes/);
+    await page.locator("#package-name").fill("Unsaved name");
     assert.equal(await page.locator("#package-compatibility-mode").isEnabled(),false);
     await page.locator('[data-view="overview"]').click();
     await page.locator('[data-view="packages"]').click();

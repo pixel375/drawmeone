@@ -65,3 +65,5 @@ The existing tier/add-on mapping is now editable in Artist's Desk, with separate
 
 
 Pricing editor now tracks unsaved package fields and extra compatibility independently. Changes survive tab navigation; selecting a different item or reloading requires confirmation. Publish and other conflicting actions are blocked until pending changes are saved or discarded. Failed writes preserve form inputs and uncertain network outcomes require a fresh read. No rates or approval switches changed.
+
+Session XXV: catalog lists support literal local name/slug/description search and publication filters without discarding the active editor. UTF-8 byte limits, duplicate slugs within the loaded inventory, blank sort orders and feature lengths are checked before saving. The server remains authoritative; publication approval is unchanged.

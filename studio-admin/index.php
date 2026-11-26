@@ -20,7 +20,7 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
 <meta name="theme-color" content="#151317">
 <title>Artist's Desk · Draw Me One</title>
 <link rel="stylesheet" href="./panel.css?v=54">
-<script defer src="./panel.js?v=104"></script>
+<script defer src="./panel.js?v=105"></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to dashboard</a>
@@ -399,16 +399,20 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
       </div>
       <div class="package-workspace">
         <aside class="package-sidebar">
+          <label for="package-search">Find a package or extra</label><input id="package-search" type="search" maxlength="120" autocomplete="off">
+          <label for="package-filter">Publication status</label><select id="package-filter"><option value="all">All items</option><option value="public">Published</option><option value="draft">Unpublished</option></select>
+          <button type="button" class="quiet" id="package-clear-filter">Clear list filters</button>
           <div class="package-sidebar-heading"><strong>Commission tiers</strong><button type="button" class="quiet" id="package-new-tier">+ New</button></div>
-          <div id="package-tier-list" class="package-list"><p class="small">Loading tiers…</p></div>
+          <p id="package-tier-list-count" class="small" role="status"></p><div id="package-tier-list" class="package-list"><p class="small">Loading tiers…</p></div>
           <div class="package-sidebar-heading"><strong>Optional add-ons</strong><button type="button" class="quiet" id="package-new-addon">+ New</button></div>
-          <div id="package-addon-list" class="package-list"><p class="small">Loading add-ons…</p></div>
+          <p id="package-addon-list-count" class="small" role="status"></p><div id="package-addon-list" class="package-list"><p class="small">Loading add-ons…</p></div>
         </aside>
         <form id="package-form" class="package-form" novalidate>
           <div class="package-form-head">
             <span class="overline" id="package-kind-label">NEW COMMISSION TIER</span>
             <h3 id="package-edit-title">New commission tier</h3>
             <p class="small" id="package-editor-status">Loading editor availability…</p>
+            <p id="package-text-count" class="small" role="status"></p>
           </div>
           <div class="package-fields">
             <label>Internal slug <input id="package-slug" type="text" maxlength="80" pattern="[a-z0-9][a-z0-9-]+" placeholder="simple-sketch" required></label>
