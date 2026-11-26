@@ -18,6 +18,8 @@ function dmo_retention_report(PDO $db): array
         'rate_limits_expired_7d'=>"SELECT COUNT(*) FROM dmo_rate_limits WHERE expires_at<=DATE_SUB(UTC_TIMESTAMP(),INTERVAL 7 DAY)",
         'closed_no_order_365d'=>"SELECT COUNT(*) FROM dmo_commission_requests r WHERE r.status IN $closed AND r.updated_at<=DATE_SUB(UTC_TIMESTAMP(),INTERVAL 365 DAY) AND NOT EXISTS(SELECT 1 FROM dmo_orders o WHERE o.request_id=r.id)",
         'closed_with_order_365d'=>"SELECT COUNT(*) FROM dmo_commission_requests r WHERE r.status IN $closed AND r.updated_at<=DATE_SUB(UTC_TIMESTAMP(),INTERVAL 365 DAY) AND EXISTS(SELECT 1 FROM dmo_orders o WHERE o.request_id=r.id)",
+        'agreement_records_preserve'=>"SELECT COUNT(*) FROM dmo_quotes WHERE sent_at IS NOT NULL OR status='accepted'",
+        'payment_records_preserve'=>"SELECT COUNT(*) FROM dmo_payments",
         'open_payment_holds'=>"SELECT COUNT(*) FROM dmo_orders o WHERE ".dmo_order_exception_sql()."='payment.access_held'",
     ];
     // Age from the original submission, not the most recent review update.
@@ -36,7 +38,31 @@ function dmo_retention_report(PDO $db): array
         $queries['closed_unreleased_drafts_365d']="SELECT COUNT(*) FROM dmo_delivery_drafts d JOIN dmo_commission_requests r ON r.id=d.request_id WHERE r.status IN $closed AND r.updated_at<=DATE_SUB(UTC_TIMESTAMP(),INTERVAL 365 DAY) AND d.created_at<=DATE_SUB(UTC_TIMESTAMP(),INTERVAL 365 DAY) AND NOT EXISTS(SELECT 1 FROM dmo_deliverables f WHERE f.order_id=d.order_id AND f.storage_key=d.storage_key)";
         $queries['released_delivery_records']="SELECT COUNT(*) FROM dmo_deliverables";
     }
+    if(dmo_review_schema_ready($db)&&dmo_delivery_schema_ready($db)){
+        $queries['proof_linked_drafts_preserve']="SELECT COUNT(*) FROM dmo_delivery_drafts d WHERE EXISTS(SELECT 1 FROM dmo_artwork_reviews v WHERE v.draft_id=d.id)";
+    }
     $counts=[];
     foreach($queries as $key=>$sql)$counts[$key]=(int)$db->query($sql)->fetchColumn();
     return ['mode'=>'review_only','as_of'=>gmdate('c'),'counts'=>$counts];
+}
+
+/** Count-only preview of possible future auth housekeeping batches.
+ * Never returns row identifiers, SQL commands, files or deletion authorization.
+ * Business and media data are deliberately excluded even if old.
+ */
+function dmo_retention_cleanup_preview(PDO $db,int $limit=100): array
+{
+    if($limit<1||$limit>1000)throw new InvalidArgumentException('Invalid preview bound');
+    $predicates=[
+        'sessions'=>"FROM dmo_sessions WHERE expires_at<=DATE_SUB(UTC_TIMESTAMP(),INTERVAL 30 DAY)",
+        'tokens'=>"FROM dmo_auth_tokens WHERE expires_at<=DATE_SUB(UTC_TIMESTAMP(),INTERVAL 30 DAY) OR consumed_at<=DATE_SUB(UTC_TIMESTAMP(),INTERVAL 30 DAY)",
+        'rate_limits'=>"FROM dmo_rate_limits WHERE expires_at<=DATE_SUB(UTC_TIMESTAMP(),INTERVAL 7 DAY)",
+    ];
+    $batches=[];
+    foreach($predicates as $class=>$predicate){
+        $count=(int)$db->query('SELECT COUNT(*) FROM (SELECT 1 '.$predicate.' LIMIT '.($limit+1).') candidates')->fetchColumn();
+        $batches[$class]=['preview_count'=>min($count,$limit),'more_candidates'=>$count>$limit];
+    }
+    return ['mode'=>'preview_only','as_of'=>gmdate('c'),'batch_limit'=>$limit,'batches'=>$batches,
+        'business_records'=>'excluded_manual_review','media'=>'excluded_manual_review','legal_hold_status'=>'not_managed','authorizes_deletion'=>false];
 }

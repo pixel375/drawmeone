@@ -42,8 +42,9 @@ try{
         $db->rollBack();dmo_json(409,['ok'=>false,'error'=>'privacy_request_changed']);
     }
     $case['status']=$input['status'];$case['reply']=$reply;unset($case['version'],$case['updated_at']);
-    dmo_privacy_append($db,(int)$admin['user_id'],$user,$case);$db->commit();
-    dmo_json(200,['ok'=>true,'case'=>dmo_privacy_latest($db,$user),'data_deleted'=>false,'data_changed'=>false]);
+    dmo_privacy_append($db,(int)$admin['user_id'],$user,$case);
+    $recorded=dmo_privacy_latest($db,$user);$db->commit();
+    dmo_json(200,['ok'=>true,'case'=>$recorded,'data_deleted'=>false,'data_changed'=>false]);
 }catch(Throwable $e){
     if(isset($db)&&$db->inTransaction())$db->rollBack();
     dmo_log_problem($e,'admin privacy');dmo_json(503,['ok'=>false,'error'=>'privacy_service_unavailable']);

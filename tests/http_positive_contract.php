@@ -923,6 +923,13 @@ try {
     $serialized=json_encode($result,JSON_THROW_ON_ERROR);
     qa_positive(!str_contains($serialized,$referenceB)&&!str_contains($serialized,'positive-b@example.invalid')&&!str_contains($serialized,'password_hash')&&!str_contains($serialized,'manual-hmac-v1')&&!str_contains($serialized,'storage_key'),'export_excludes_unrelated_records_and_secrets');
     qa_positive(count(array_filter($result['export']['requests'],fn($r)=>$r['public_ref']===$referenceA))===1,'export_includes_historical_request');
+    require_once dirname(__DIR__).'/app/privacy.php';
+    foreach([[1,8388608],[10000,256]] as [$rows,$bytes]){
+        $bounded=false;
+        try{dmo_privacy_export($db,$a,['email'=>'positive-a@example.invalid'],$rows,$bytes);}catch(LengthException $e){$bounded=true;}
+        qa_positive($bounded,'privacy_export_refuses_oversized_response');
+        qa_positive((int)$db->query('SELECT COUNT(*) FROM dmo_users')->fetchColumn()>=3,'privacy_export_releases_streaming_cursor');
+    }
     $privacy=['action'=>'submit','current_password'=>$password,'kind'=>'deletion','note'=>'Synthetic deletion request for review.'];
     [$code,$opened]=qa_http('/api/auth/privacy.php',$tokenA,'__Host-dmo_session',$privacy,$csrfA);
     qa_positive($code===200&&$opened['case']['status']==='submitted'&&$opened['data_deleted']===false,'privacy_request_does_not_delete');

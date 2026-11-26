@@ -294,6 +294,15 @@ try {
     $before=[];
     foreach(['dmo_sessions','dmo_auth_tokens','dmo_rate_limits','dmo_users','dmo_audit_log'] as $table)$before[$table]=(int)$db->query('SELECT COUNT(*) FROM '.$table)->fetchColumn();
     $report=dmo_retention_report($db);
+    $preview=dmo_retention_cleanup_preview($db,1);
+    auth_check($preview['mode']==='preview_only'&&$preview['authorizes_deletion']===false&&$preview['legal_hold_status']==='not_managed','cleanup_preview_never_authorizes_deletion');
+    foreach(['sessions','tokens','rate_limits'] as $class)auth_check($preview['batches'][$class]['preview_count']===1&&$preview['batches'][$class]['more_candidates']===false,'cleanup_preview_only_aged_'.$class);
+    $db->prepare("INSERT INTO dmo_rate_limits (key_hash,hits,window_started_at,expires_at) VALUES (:hash,1,DATE_SUB(UTC_TIMESTAMP(),INTERVAL 9 DAY),DATE_SUB(UTC_TIMESTAMP(),INTERVAL 8 DAY))")->execute(['hash'=>hash('sha256','retention-ci-second-old-counter')]);
+    $before['dmo_rate_limits']++;
+    $preview=dmo_retention_cleanup_preview($db,1);
+    auth_check($preview['batches']['rate_limits']['preview_count']===1&&$preview['batches']['rate_limits']['more_candidates']===true,'cleanup_preview_reports_truncation');
+    $invalid=false;try{dmo_retention_cleanup_preview($db,1001);}catch(InvalidArgumentException $e){$invalid=true;}
+    auth_check($invalid,'cleanup_preview_rejects_unbounded_batch');
     auth_check($report['mode']==='review_only'&&$report['counts']['sessions_expired_30d']===1&&$report['counts']['tokens_expired_30d']===1&&$report['counts']['rate_limits_expired_7d']===1,'retention_counts_aged_auth_records');
     auth_check($report['counts']['expired_tokens']>=$report['counts']['tokens_expired_30d'],'retention_distinguishes_all_expired_from_aged');
     foreach($before as $table=>$count)auth_check((int)$db->query('SELECT COUNT(*) FROM '.$table)->fetchColumn()===$count,'retention_preserves_'.$table);

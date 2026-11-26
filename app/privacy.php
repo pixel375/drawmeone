@@ -8,7 +8,7 @@ function dmo_privacy_lock_user(PDO $db,int $id): ?array {
     $q->execute(['id'=>$id]);$u=$q->fetch(PDO::FETCH_ASSOC);return is_array($u)?$u:null;
 }
 function dmo_privacy_reauth(PDO $db,array $session,mixed $password): array {
-    if(!is_string($password)||strlen($password)<1||strlen($password)>128)dmo_json(422,['ok'=>false,'error'=>'invalid_password']);
+    if(!is_string($password)||strlen($password)<1||strlen($password)>128){$db->rollBack();dmo_json(422,['ok'=>false,'error'=>'invalid_password']);}
     $user=dmo_privacy_lock_user($db,(int)$session['user_id']);
     $q=$db->prepare('SELECT id FROM dmo_sessions WHERE id=:session AND user_id=:user AND session_hash=:hash AND expires_at>UTC_TIMESTAMP() FOR UPDATE');
     $q->execute(['session'=>$session['session_id'],'user'=>$session['user_id'],'hash'=>$session['session_hash']]);
@@ -19,7 +19,10 @@ function dmo_privacy_reauth(PDO $db,array $session,mixed $password): array {
 function dmo_privacy_case(array $row): array {
     $d=json_decode($row['details_json'],true,8,JSON_THROW_ON_ERROR);
     if(!is_array($d)||!in_array($d['kind']??null,['access','correction','deletion'],true)||
-        !in_array($d['status']??null,['submitted','in_review','resolved','declined','withdrawn'],true))
+        !in_array($d['status']??null,['submitted','in_review','resolved','declined','withdrawn'],true)||
+        (isset($d['case_id'])&&(!is_int($d['case_id'])||$d['case_id']<1||$d['case_id']>(int)$row['id']))||
+        !is_string($d['note']??'')||!is_string($d['reply']??'')||
+        strlen($d['note']??'')>1000||strlen($d['reply']??'')>1000)
         throw new RuntimeException('Invalid privacy case');
     return ['version'=>(int)$row['id'],'case_id'=>(int)($d['case_id']??$row['id']),'kind'=>$d['kind'],'status'=>$d['status'],
         'note'=>(string)($d['note']??''),'reply'=>(string)($d['reply']??''),'updated_at'=>$row['created_at']];
@@ -34,13 +37,14 @@ function dmo_privacy_append(PDO $db,int $actor,int $user,array $data): void {
     $q->execute(['actor'=>$actor,'user'=>$user,'details'=>json_encode($data,JSON_THROW_ON_ERROR)]);
 }
 function dmo_privacy_text(mixed $value,int $max,int $min=0): string {
-    if(!is_string($value)||strlen($value)>$max||preg_match('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/',$value)||strlen(trim($value))<$min)
+    if(!is_string($value)||strlen($value)>$max||preg_match('//u',$value)!==1||preg_match('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/',$value)||strlen(trim($value))<$min)
         dmo_json(422,['ok'=>false,'error'=>'invalid_privacy_text']);
     return trim($value);
 }
 
 /** Explicit allowlists; no credentials, internal notes, raw provider references or storage paths. */
-function dmo_privacy_export(PDO $db,int $user,array $profile): array {
+function dmo_privacy_export(PDO $db,int $user,array $profile,int $rowLimit=10000,int $byteLimit=8388608): array {
+    if($rowLimit<1||$rowLimit>10000||$byteLimit<256||$byteLimit>8388608)throw new InvalidArgumentException('Invalid export bounds');
     $spec=[
         'requests'=>"SELECT r.public_ref,r.subject_type,r.brief,r.preferred_contact,r.preferred_deadline,r.status,r.policy_version,r.submitted_at,r.updated_at,r.tier_snapshot_json,t.name AS tier_name FROM dmo_commission_requests r LEFT JOIN dmo_commission_tiers t ON t.id=r.tier_id WHERE r.customer_id=:user ORDER BY r.id",
         'addons'=>"SELECT r.public_ref,a.name,ra.addon_snapshot_json FROM dmo_request_addons ra JOIN dmo_commission_requests r ON r.id=ra.request_id JOIN dmo_addons a ON a.id=ra.addon_id WHERE r.customer_id=:user ORDER BY r.id,a.id",
@@ -58,21 +62,31 @@ function dmo_privacy_export(PDO $db,int $user,array $profile): array {
     if(dmo_delivery_schema_ready($db))$spec['delivery_metadata']="SELECT r.public_ref,f.id,f.order_id,f.mime_type,f.byte_size,f.created_at FROM dmo_deliverables f JOIN dmo_orders o ON o.id=f.order_id JOIN dmo_commission_requests r ON r.id=o.request_id WHERE r.customer_id=:user ORDER BY f.id";
     $export=['format'=>'drawmeone-customer-records-v1','generated_at'=>gmdate('c'),'profile'=>$profile,
         'scope'=>'Customer-visible structured records and selected account/financial metadata. Image bytes, credentials, internal records and other personal data requiring individual review are not included. Request additional access for a fuller response.'];
-    $bytes=0;$count=0;
+    // Count the envelope, collection keys and row separators too. Avoid
+    // PDO buffering an entire large result before the per-export cap applies.
+    $flags=JSON_THROW_ON_ERROR|JSON_INVALID_UTF8_SUBSTITUTE|JSON_UNESCAPED_SLASHES;
+    $bytes=strlen(json_encode(['ok'=>true,'export'=>$export],$flags));$count=0;
+    $db->setAttribute(PDO::MYSQL_ATTR_USE_BUFFERED_QUERY,false);
+    try{
     foreach($spec as $name=>$sql){
-        $q=$db->prepare($sql.' LIMIT 10001');$q->execute(['user'=>$user]);$items=[];
+        $bytes+=strlen(json_encode($name,$flags))+4;
+        $q=$db->prepare($sql.' LIMIT '.($rowLimit+1));$q->execute(['user'=>$user]);$items=[];
+        try{
         while($row=$q->fetch(PDO::FETCH_ASSOC)){
-            if(++$count>10000)throw new LengthException('Export exceeds self-service row limit');
+            if(++$count>$rowLimit)throw new LengthException('Export exceeds self-service row limit');
             if($name==='requests')$row=dmo_requests_historical_tier($row);
             if($name==='addons'){$row['name']=dmo_requests_snapshot_name($row['addon_snapshot_json'],$row['name']);unset($row['addon_snapshot_json']);}
             if($name==='orders'){$row['payment_status']=dmo_order_exception_status($row['exception_action'])??$row['payment_status'];unset($row['exception_action']);}
             if($name==='privacy_requests')$row=dmo_privacy_case($row);
-            $bytes+=strlen(json_encode($row,JSON_THROW_ON_ERROR|JSON_INVALID_UTF8_SUBSTITUTE));
-            if($bytes>8*1024*1024)throw new LengthException('Export exceeds self-service byte limit');
+            $bytes+=strlen(json_encode($row,$flags))+1;
+            if($bytes>$byteLimit)throw new LengthException('Export exceeds self-service byte limit');
             $items[]=$row;
         }
+        }finally{$q->closeCursor();}
         $export[$name]=$items;
     }
+    }finally{$db->setAttribute(PDO::MYSQL_ATTR_USE_BUFFERED_QUERY,true);}
+    if($bytes>$byteLimit)throw new LengthException('Export exceeds self-service byte limit');
     return $export;
 }
 

@@ -5,7 +5,9 @@ try{
     $db=dmo_database();$session=dmo_customer_require($db);$user=(int)$session['user_id'];
     if(($_SERVER['REQUEST_METHOD']??'')==='GET'){
         $before=dmo_privacy_cursor($_GET['before']??null);
-        dmo_json(200,['ok'=>true,'enabled'=>dmo_privacy_enabled(),'case'=>dmo_privacy_latest($db,$user),'history'=>dmo_privacy_history($db,$user,$before,false)]);
+        $db->exec('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ');$db->beginTransaction();
+        $result=['ok'=>true,'enabled'=>dmo_privacy_enabled(),'case'=>dmo_privacy_latest($db,$user),'history'=>dmo_privacy_history($db,$user,$before,false)];
+        $db->commit();dmo_json(200,$result);
     }
     $input=dmo_auth_json_request();dmo_auth_verify_csrf($session);
     if(!dmo_privacy_enabled())dmo_json(503,['ok'=>false,'error'=>'privacy_self_service_disabled']);
@@ -30,7 +32,8 @@ try{
         if(!dmo_privacy_open($latest)||$latest['version']!==($input['expected_version']??null)){$db->rollBack();dmo_json(409,['ok'=>false,'error'=>'privacy_request_changed']);}
         $latest['status']='withdrawn';unset($latest['version'],$latest['updated_at']);dmo_privacy_append($db,$user,$user,$latest);
     }
-    $db->commit();dmo_json(200,['ok'=>true,'case'=>dmo_privacy_latest($db,$user),'data_deleted'=>false]);
+    $recorded=dmo_privacy_latest($db,$user);
+    $db->commit();dmo_json(200,['ok'=>true,'case'=>$recorded,'data_deleted'=>false]);
 }catch(LengthException $e){
     if(isset($db)&&$db->inTransaction())$db->rollBack();
     dmo_json(413,['ok'=>false,'error'=>'export_requires_manual_review']);
