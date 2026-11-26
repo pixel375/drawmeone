@@ -83,16 +83,20 @@ try {
             'deadline'=>"CASE WHEN history_stage IN ".$closed." OR order_deadline IS NULL THEN '9999-12-31' ELSE DATE(order_deadline) END ASC,submitted_at DESC,history_id DESC",
             default=>'submitted_at DESC,history_id DESC',
         };
-        $stmt=$db->prepare('SELECT * FROM (SELECT owned.*,'.$stage.' AS history_stage FROM ('.$base.') owned) history'.$where.' ORDER BY '.$order.' LIMIT 41 OFFSET '.$offset);
+        $history=' FROM (SELECT owned.*,'.$stage.' AS history_stage FROM ('.$base.') owned) history'.$where;
+        $db->beginTransaction();
+        $count=$db->prepare('SELECT COUNT(*)'.$history);$count->execute($params);$total=(int)$count->fetchColumn();
+        $stmt=$db->prepare('SELECT *'.$history.' ORDER BY '.$order.' LIMIT 41 OFFSET '.$offset);
         $stmt->execute($params);
         $rows = $stmt->fetchAll();
         foreach($rows as &$row){unset($row['history_id'],$row['history_stage']);}unset($row);
         $hasMore = count($rows) > $size;
         if ($hasMore) array_pop($rows);
+        $db->commit();
         dmo_json(200, [
             'ok' => true,
             'requests' => array_map('dmo_requests_list_summary', $rows),
-            'page' => $page, 'page_size' => $size, 'has_more' => $hasMore && $page < 9999,
+            'page' => $page, 'page_size' => $size, 'matching_count'=>$total, 'has_more' => $hasMore && $page < 9999,
             'new_requests_open' => dmo_intake_public_state($db)['requests_open'],
             'attention' => $page===1?dmo_customer_attention($db,$customer):null,
         ]);

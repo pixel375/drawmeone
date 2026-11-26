@@ -315,8 +315,9 @@
       return date(a).localeCompare(date(b));
     });
     target.replaceChildren();
-    $("request-history-count").textContent = historyServerCriteria ? "Entire-history search: "+rows.length+" matching request(s) loaded"+(historyHasMore?" · More matches available":"") : rows.length
-      ? "Showing " + matches.length + " of " + rows.length + (historyHasMore ? " loaded requests · Older requests available" : " requests")
+    const total=Number.isSafeInteger(historyMatchingCount)&&historyMatchingCount>=rows.length?" of "+historyMatchingCount:"";
+    $("request-history-count").textContent = historyServerCriteria ? "Entire-history search: "+rows.length+total+" matching request(s) loaded"+(historyHasMore?" · More matches available":"") : rows.length
+      ? "Showing " + matches.length + " of " + rows.length + " loaded requests"+(total?" · "+historyMatchingCount+" total requests":"")+(historyHasMore?" · Older requests available":"")
       : "No requests yet";
     if (!rows.length) {
       target.append(renderText("p",
@@ -379,7 +380,7 @@
   }
 
   let requestsFetchSequence = 0;
-  let historyPage = 0;
+  let historyPage = 0,historyMatchingCount=null;
   let historyHasMore = false;
   let historyBusy = false;
   let historyServerCriteria=null;
@@ -388,6 +389,10 @@
   }
   $("request-history-search-all").addEventListener("click",()=>{
     historyServerCriteria={q:$("request-history-search").value.trim(),status:$("request-history-filter").value,sort:$("request-history-sort").value};loadMyRequests();
+  });
+  $("request-history-clear").addEventListener("click",()=>{
+    $("request-history-search").value="";$("request-history-filter").value="all";$("request-history-sort").value="recent";
+    historyServerCriteria=null;loadMyRequests();
   });
   function syncHistoryControls() {
     $("request-history-older").hidden = !historyHasMore;
@@ -403,7 +408,7 @@
     historyBusy = true;
     if (!append) {
       historyHasMore = false;
-      historyPage = 0;
+      historyPage = 0;historyMatchingCount=null;
       state.requests = [];
       renderCustomerAttention(null);
       target.replaceChildren(renderText("p","Loading your requests…","small"));
@@ -428,6 +433,7 @@
       for (const row of rows) merged.set(row.public_ref,row);
       state.requests = [...merged.values()];
       historyPage = page;
+      historyMatchingCount=Number.isSafeInteger(body.matching_count)&&body.matching_count>=0?body.matching_count:null;
       historyHasMore = body.has_more === true;
       if(!append)renderCustomerAttention(body.attention);
       renderRequestHistory();

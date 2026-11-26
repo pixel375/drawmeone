@@ -252,21 +252,21 @@ try {
         'admin_list_first_page_bounded');
     [$code,$second]=qa_http('/api/admin/requests.php?q=Test%20A&page=2',
         $tokenAdmin,'__Host-dmo_admin');
-    qa_positive($code===200 && count($second['requests'])===2 && $second['has_more']===false &&
+    qa_positive($code===200 && count($second['requests'])===2 && $second['has_more']===false && $second['matching_count']===42 &&
         array_intersect(array_column($first['requests'],'id'),array_column($second['requests'],'id'))===[],
         'admin_list_next_page_no_duplicates');
     [$code,$first]=qa_http('/api/requests.php?page=1',$tokenA);
     qa_positive($code===200 && count($first['requests'])===40 &&
-        $first['has_more']===true && $first['page']===1,'customer_history_first_page');
+        $first['has_more']===true && $first['page']===1 && $first['matching_count']===42,'customer_history_first_page');
     [$code,$second]=qa_http('/api/requests.php?page=2',$tokenA);
     qa_positive($code===200 && count($second['requests'])===2 && $second['has_more']===false &&
         array_intersect(array_column($first['requests'],'public_ref'),array_column($second['requests'],'public_ref'))===[] &&
         !in_array($referenceB,array_column(array_merge($first['requests'],$second['requests']),'public_ref'),true),
         'customer_history_pages_no_overlap_or_other_customer');
     [$code,$found]=qa_http('/api/requests.php?q='.urlencode($referenceA).'&status=active&sort=oldest',$tokenA);
-    qa_positive($code===200&&array_column($found['requests'],'public_ref')===[$referenceA]&&!isset($found['requests'][0]['history_id']),'full_history_finds_older_owned_reference');
+    qa_positive($code===200&&array_column($found['requests'],'public_ref')===[$referenceA]&&$found['matching_count']===1&&!isset($found['requests'][0]['history_id']),'full_history_finds_older_owned_reference');
     [$code,$found]=qa_http('/api/requests.php?q='.urlencode($referenceA),$tokenB);
-    qa_positive($code===200&&$found['requests']===[],'full_history_search_cross_account_denied');
+    qa_positive($code===200&&$found['requests']===[]&&$found['matching_count']===0,'full_history_search_cross_account_denied');
     [$code,$displayMatches]=qa_http('/api/requests.php?q='.urlencode('Awaiting artist review').'&status=active&page=1',$tokenA);
     qa_positive($code===200&&count($displayMatches['requests'])===40&&$displayMatches['has_more']===true&&
         count(array_filter($displayMatches['requests'],fn($row)=>$row['workflow_stage']!=='submitted'))===0,'full_history_matches_display_status_before_pagination');
