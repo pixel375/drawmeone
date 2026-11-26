@@ -213,7 +213,9 @@
   function syncPrivacyForm(){
     const exporting=$("privacy-action").value==="export";
     $("privacy-note-fields").hidden=exporting;
-    $("privacy-submit").disabled=privacyBusy||privacyLoading||(!exporting&&!privacyReady);
+    const bytes=new TextEncoder().encode($("privacy-note").value.trim()).length;
+    $("privacy-note-count").textContent=bytes+" / 1000 UTF-8 bytes"+(bytes>1000?" · Shorten your details before submitting.":"");
+    $("privacy-submit").disabled=privacyBusy||privacyLoading||!privacyReady||(!exporting&&bytes>1000);
     $("privacy-withdraw").disabled=privacyBusy||privacyLoading||!privacyReady;
   }
   function renderPrivacyHistory(history,older){
@@ -230,12 +232,13 @@
       }
       list.append(article);
     }
-    privacyCursor=Number.isSafeInteger(history?.next_before)?history.next_before:null;
+    const next=history?.next_before;
+    privacyCursor=Number.isSafeInteger(next)&&next>0&&(!older||next<privacyCursor)?next:null;
     $("privacy-history-more").hidden=privacyCursor===null;
     $("privacy-history-status").textContent=list.children.length?list.children.length+" case(s) loaded.":"No privacy case history.";
   }
   async function loadPrivacyCase(older=false){
-    if(older&&privacyCursor===null)return;
+    if(privacyLoading||(older&&privacyCursor===null))return;
     const generation=++privacyGeneration;
     privacyReady=false;privacyLoading=true;syncPrivacyForm();
     $("privacy-history-refresh").disabled=$("privacy-history-more").disabled=true;
@@ -245,9 +248,14 @@
       if(response.status===401)return freshSignIn("expired");
       const data=await response.json();
       if(generation!==privacyGeneration||leaving||!csrf)return;
-      if(!response.ok||!data.ok)throw Error("privacy_status");
+      if(!response.ok||!data.ok||!Array.isArray(data.history?.cases))throw Error("privacy_status");
       privacyReady=data.enabled===true;renderPrivacyCase(data.case);renderPrivacyHistory(data.history,older);
-    }catch(_){if(generation===privacyGeneration){privacyReady=false;privacyCase=null;privacyCursor=null;for(const opt of $("privacy-action").options)opt.disabled=false;$("privacy-withdraw").hidden=true;$("privacy-history-list").replaceChildren();$("privacy-history-more").hidden=true;$("privacy-case").textContent="Request status unavailable. Refresh before retrying.";$("privacy-history-status").textContent="Case history unavailable. Refresh to retry.";}}
+    }catch(_){if(generation===privacyGeneration){
+      privacyReady=false;privacyCase=null;for(const opt of $("privacy-action").options)opt.disabled=false;$("privacy-withdraw").hidden=true;
+      $("privacy-case").textContent="Request status unavailable. Refresh before retrying.";
+      if(older){$("privacy-history-status").textContent="Older cases unavailable. Previously loaded history retained; retry or refresh.";}
+      else{privacyCursor=null;$("privacy-history-list").replaceChildren();$("privacy-history-more").hidden=true;$("privacy-history-status").textContent="Case history unavailable. Refresh to retry.";}
+    }}
     finally{if(generation===privacyGeneration){privacyLoading=false;$("privacy-history-refresh").disabled=$("privacy-history-more").disabled=false;syncPrivacyForm();}}
   }
   $("privacy-history-refresh").addEventListener("click",()=>{if(!privacyBusy)loadPrivacyCase();});
@@ -256,7 +264,8 @@
     const form=$("privacy-form");
     if(privacyBusy||privacyLoading||securityBusy||!csrf||!form.reportValidity())return;
     const action=$("privacy-action").value;
-    if((withdraw||action!=="export")&&!privacyReady)return;
+    if(!privacyReady)return;
+    if(!withdraw&&action!=="export"&&new TextEncoder().encode($("privacy-note").value.trim()).length>1000)return;
     const payload={current_password:$("privacy-password").value,action:withdraw?"withdraw":action==="export"?"export":"submit"};
     if(withdraw){
       if(!privacyCase||!window.confirm("Withdraw this open privacy request?"))return;
@@ -286,7 +295,7 @@
         $("privacy-note").value="";await loadPrivacyCase();
         $("privacy-notice").textContent=withdraw?"Request withdrawn.":"Request recorded for manual review. No data has been deleted.";
       }
-    }catch(_){if(generation===privacyGeneration){privacyReady=false;$("privacy-notice").textContent="Outcome uncertain. Refresh before retrying.";}}
+    }catch(_){if(generation===privacyGeneration){privacyReady=false;$("privacy-notice").textContent="Outcome uncertain. Your unsent details remain in this page. Refresh the case status before retrying.";}}
     finally{
       privacyBusy=false;$("privacy-password").value="";
       for(const field of form.querySelectorAll("input,select,textarea,button"))field.disabled=false;
@@ -294,6 +303,7 @@
     }
   }
   $("privacy-action").addEventListener("change",syncPrivacyForm);
+  $("privacy-note").addEventListener("input",syncPrivacyForm);
   $("privacy-form").addEventListener("submit",event=>{event.preventDefault();applyPrivacy();});
   $("privacy-withdraw").addEventListener("click",()=>applyPrivacy(true));
 

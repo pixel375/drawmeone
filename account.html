@@ -50,7 +50,7 @@ footer{border-top:1px solid var(--line);padding-top:20px;margin-top:28px;font-si
 .skip-link:focus{top:10px}
 button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 </style>
-<script defer src="./account.js?v=24"></script>
+<script defer src="./account.js?v=25"></script>
 </head>
 <body>
 <a class="skip-link" href="#main">Skip to main content</a>
@@ -144,7 +144,7 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-off
       <form id="privacy-form">
         <label for="privacy-action">Action</label>
         <select id="privacy-action"><option value="export">Download customer records</option><option value="access">Request additional data access</option><option value="correction">Request a correction</option><option value="deletion">Request deletion</option></select>
-        <div id="privacy-note-fields" hidden><label for="privacy-note">Details (optional)</label><textarea id="privacy-note" maxlength="1000" rows="3" placeholder="Describe your request. Do not include passwords, card numbers or identity documents."></textarea></div>
+        <div id="privacy-note-fields" hidden><label for="privacy-note">Details (optional)</label><textarea id="privacy-note" maxlength="1000" rows="3" placeholder="Describe your request. Do not include passwords, card numbers or identity documents." aria-describedby="privacy-note-count"></textarea><small id="privacy-note-count" role="status"></small></div>
         <label for="privacy-password">Current password</label>
         <input id="privacy-password" type="password" autocomplete="current-password" maxlength="128" required>
         <button type="submit" class="primary" id="privacy-submit">Continue</button>

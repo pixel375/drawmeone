@@ -270,6 +270,9 @@ async function privacySelfService(browser){
     assert.equal(content.profile.email,"ci@example.invalid");
     await waitText(page,"#privacy-notice","Export prepared");
     await page.locator("#privacy-action").selectOption("deletion");
+    await page.locator("#privacy-note").fill("é".repeat(501));
+    assert.match(await page.locator("#privacy-note-count").innerText(),/1002 \/ 1000 UTF-8 bytes/);
+    assert.equal(await page.locator("#privacy-submit").isDisabled(),true);
     await page.locator("#privacy-note").fill("Synthetic privacy request.");
     await page.locator("#privacy-password").fill("ci-current-password");
     page.once("dialog",dialog=>dialog.accept());
@@ -287,6 +290,15 @@ async function privacySelfService(browser){
     assert.equal(await page.locator("#privacy-withdraw").isVisible(),false);
     await page.locator("#privacy-history summary").click();
     await waitText(page,"#privacy-history-list","withdrawn");
+    await page.route("**/api/auth/privacy.php",route=>route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({ok:true,enabled:true,case:{case_id:17,version:18,kind:"deletion",status:"withdrawn"},history:{cases:[{case_id:17,version:18,kind:"deletion",status:"withdrawn"}],next_before:18}})}));
+    await page.locator("#privacy-history-refresh").click();
+    await page.locator("#privacy-history-more").waitFor({state:"visible"});
+    await page.route("**/api/auth/privacy.php?before=*",route=>route.fulfill({status:503,body:"Unavailable"}));
+    await page.locator("#privacy-history-more").click();
+    await waitText(page,"#privacy-history-status","Previously loaded history retained");
+    assert.equal(await page.locator("#privacy-history-list article").count(),1);
+    assert.equal(await page.locator("#privacy-history-more").isVisible(),true);
+    assert.equal(await page.locator("#privacy-submit").isDisabled(),true);
     await page.route("**/api/auth/privacy.php",route=>route.fulfill({status:503,body:"Unavailable"}));
     await page.locator("#privacy-history-refresh").click();
     await waitText(page,"#privacy-case","Request status unavailable");
