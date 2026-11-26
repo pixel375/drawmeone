@@ -541,6 +541,11 @@
   let reviewStatus = null;
   let quoteDraftAllowed = false;
   const pendingAdminMessages=new Map();
+  function confirmChangedAdminOperation(action,id,body){
+    const prior=pendingAdminMessages.get(action);
+    return !prior||prior.id!==id||prior.body===body||
+      window.confirm("The previous save may already have succeeded. Changed content creates a separate record. Continue, or cancel and restore the original content before retrying?");
+  }
   function adminMessageKey(action,id,body){
     const prior=pendingAdminMessages.get(action);
     if(prior&&prior.id===id&&prior.body===body)return prior.key;
@@ -1238,9 +1243,9 @@
   }
   function requestDraftKinds(){
     const kinds=[];
-    if($("request-note-body").value!=="")kinds.push("private note");
-    if($("request-message-body").value!=="")kinds.push("customer message");
-    if(quoteHasDraft())kinds.push("quote");
+    if($("request-note-body").value!==""||pendingAdminMessages.has("add_private_note"))kinds.push("private note");
+    if($("request-message-body").value!==""||pendingAdminMessages.has("send_customer_message"))kinds.push("customer message");
+    if(quoteHasDraft()||pendingAdminMessages.has("create_quote_draft"))kinds.push("quote");
     if(pendingDeliveryFiles.size)kinds.push("delivery artwork selection");
     return kinds;
   }
@@ -1251,7 +1256,7 @@
   }
   function confirmDiscardRequestDrafts(){
     const kinds=requestDraftKinds();
-    return kinds.length===0||window.confirm("Discard the unsaved "+kinds.join(", ")+" for this request?");
+    return kinds.length===0||window.confirm("Discard the unsaved "+kinds.join(", ")+" for this request?"+(pendingAdminMessages.size?" A previous save may already have succeeded; discarding loses its retry key.":""));
   }
   for(const id of ["request-note-form","request-message-form","request-quote-form"]){
     $(id).addEventListener("input",updateRequestDraftIndicator);
@@ -1523,6 +1528,7 @@
       return;
     }
     const id = selectedRequestId;
+    if(!confirmChangedAdminOperation("add_private_note",id,body))return;
     requestBusy = true;
     updateRequestButtons();
     try {
@@ -1557,6 +1563,7 @@
       return;
     }
     const id = selectedRequestId;
+    if(!confirmChangedAdminOperation("send_customer_message",id,body))return;
     if (!window.confirm("Send this message to the customer's private account?")) return;
     requestBusy = true;
     updateRequestButtons();
@@ -1598,6 +1605,8 @@
       return;
     }
     const id = selectedRequestId;
+    const quotePayload=JSON.stringify({currency:$("quote-currency").value,scope,revision_allowance,lines});
+    if(!confirmChangedAdminOperation("create_quote_draft",id,quotePayload))return;
     if (!window.confirm("Create a NEW internal quote version? It will not be sent.")) return;
     requestBusy = true;
     updateRequestButtons();
@@ -1605,7 +1614,7 @@
       const {response, data} = await post("request-actions.php", {
         action:"create_quote_draft", request_id:id,
         currency:$("quote-currency").value, scope, revision_allowance, lines,
-        operation_key:adminMessageKey("create_quote_draft",id,JSON.stringify({currency:$("quote-currency").value,scope,revision_allowance,lines})),
+        operation_key:adminMessageKey("create_quote_draft",id,quotePayload),
       }, csrf);
       if (response.status === 401) return sessionExpired();
       if (!response.ok || !data.ok) {

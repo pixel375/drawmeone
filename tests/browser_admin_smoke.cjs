@@ -522,6 +522,11 @@ async function verifyRequestIsolation(browser) {
     await page.locator("#quote-save").click();
     await page.waitForFunction(()=>document.querySelector("#request-detail-status")?.textContent.includes("Retry the unchanged quote"));
     assert.equal(await page.locator("#quote-scope").inputValue(),"Synthetic quote scope for QA");
+    await page.locator("#quote-scope").fill("Changed quote scope for QA");
+    page.once("dialog",dialog=>dialog.dismiss());
+    await page.locator("#quote-save").click();
+    assert.equal(saved,1);
+    await page.locator("#quote-scope").fill("Synthetic quote scope for QA");
     page.once("dialog",dialog=>dialog.accept());
     await page.locator("#quote-save").click();
     await page.waitForFunction(()=>document.querySelector("#request-detail-status")?.textContent.includes("Existing quote version 1 recovered"));

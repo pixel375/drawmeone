@@ -50,7 +50,7 @@
   }
   function detailDraftKinds(){
     const kinds=[];
-    if($("detail-reply-body").value!=="")kinds.push("private message");
+    if($("detail-reply-body").value!==""||pendingReply)kinds.push("private message");
     if($("detail-reference-files").files.length||remainingReferences.length)kinds.push("selected reference images");
     if([...proofDrafts.values()].some(value=>value!==""))kinds.push("proof revision feedback");
     return kinds;
@@ -62,7 +62,7 @@
   }
   function confirmDiscardDetailDrafts(){
     const kinds=detailDraftKinds();
-    return !kinds.length||window.confirm("Discard your unsent "+kinds.join(", ")+" for this request?");
+    return !kinds.length||window.confirm("Discard your unsent "+kinds.join(", ")+" for this request?"+(pendingReply?" A previous send may already have succeeded; discarding loses its retry key.":""));
   }
   $("detail-reply-body").addEventListener("input",updateDetailDraftWarning);
   function syncReferenceResume(){
@@ -1005,6 +1005,13 @@
         !state.csrf) return;
     const body = $("detail-reply-body").value.trim();
     if (body.length < 2 || body.length > 3000) return;
+    if(pendingReply&&pendingReply.ref===ref&&pendingReply.body!==body){
+      if(!window.confirm("The previous message may already have been saved. Sending changed text creates a separate message. Continue?")){
+        $("detail-reply-body").value=pendingReply.body;
+        $("detail-reply-feedback").textContent="Original message restored. Retry unchanged to recover the earlier result.";
+        updateDetailDraftWarning();return;
+      }
+    }
     if(!pendingReply||pendingReply.ref!==ref||pendingReply.body!==body)pendingReply={ref,body,key:newKey()};
     state.messageBusy = true;
     $("detail-reply-body").disabled=true;
@@ -1021,9 +1028,10 @@
       if (!response.ok || !data.ok) {
         $("detail-reply-feedback").textContent = response.status === 429
           ? "Too many messages. Please retry later."
-          : (data.error === "conversation_closed"
-            ? "This request is no longer accepting messages."
-            : "Message could not be sent. Please try again.");
+          : data.error === "conversation_closed" ? "This request is no longer accepting messages."
+          : data.error === "conversation_limit" ? "This conversation has reached its storage limit. Contact the artist separately; do not send duplicate requests."
+          : response.status>=500 ? "Message not confirmed. Retry the unchanged message to recover the result."
+          : "Message could not be sent. Check the request and retry.";
         return;
       }
       pendingReply=null;

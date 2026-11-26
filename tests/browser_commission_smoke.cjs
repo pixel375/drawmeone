@@ -542,6 +542,11 @@ async function verifyReferenceRecovery(browser){
     await page.locator("#detail-reply-body").fill("Synthetic retry message");
     await page.locator("#detail-reply-send").click();
     await page.waitForFunction(()=>document.querySelector("#detail-reply-feedback")?.textContent.includes("Retry the unchanged"));
+    await page.locator("#detail-reply-body").fill("Changed retry message");
+    page.once("dialog",d=>d.dismiss());
+    await page.locator("#detail-reply-send").click();
+    assert.equal(messageCalls,1);
+    assert.equal(await page.locator("#detail-reply-body").inputValue(),"Synthetic retry message");
     await page.locator("#detail-reply-send").click();
     await page.waitForFunction(()=>document.querySelector("#detail-reply-feedback")?.textContent.includes("Message saved"));
     assert.equal(keys.length,2);assert.equal(keys[0],keys[1]);assert.match(keys[0],/^[0-9a-f-]{36}$/);
