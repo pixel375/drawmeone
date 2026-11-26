@@ -840,7 +840,7 @@ async function verifyOrderPlanning(browser) {
 async function verifyQuoteFollowup(browser) {
   const page=await browser.newPage({viewport:{width:390,height:844},reducedMotion:"reduce"});
   const posts=[];await simulateBackend(page,posts);
-  const row={id:92,status:"submitted",public_ref:"CI-92",workflow_stage:"quote_expired"};
+  const row={id:92,status:"submitted",public_ref:"CI-92",workflow_stage:"quote_expired",quote_expires_at:"2026-11-08 00:00:00"};
   const quote={id:93,version_number:1,status:"sent",is_expired:true,currency:"CAD",total_minor:1500,scope_description:"Synthetic portrait for review",revision_allowance:1,lines:[{description:"Portrait",amount_minor:1500}],sent_at:"2026-11-01",validity_ends_at:"2026-11-08"};
   const answer=(route,data)=>route.fulfill({status:200,contentType:"application/json",body:JSON.stringify(data)});
   await page.route("**/api/admin/requests.php*",route=>answer(route,{ok:true,requests:[row]}));
@@ -856,6 +856,8 @@ async function verifyQuoteFollowup(browser) {
     assert.equal(await page.locator('[data-request-queue="quote_expiring"]').count(),1);
     assert.equal(await page.locator('[data-request-queue="awaiting_evidence"]').count(),1);
     await page.locator('[data-request-queue="quote_followup"]').click();
+    await page.locator("#request-list .request-open").first().waitFor();
+    assert.match(await page.locator("#request-list").innerText(),/Offer expired: 2026-11-08 00:00:00 UTC/);
     await page.locator("#request-list .request-open").first().click();
     await page.locator("#request-quotes button[data-quote-withdraw]").waitFor();
     assert.match(await page.locator("#request-quotes").innerText(),/Expired/);

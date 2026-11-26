@@ -4,3 +4,5 @@ The dashboard and request filters share fixed SQL predicates for replies needed,
 Session XXI: artist request queues include the matching total independent of page size, computed in the same read transaction as the current list. Unapplied filters invalidate stale rows and pagination, and a generation guard discards in-flight results. A failed later page still permits backward navigation. No changes to queue eligibility or business gates.
 
 Session XXIII: live sent quotes within the next 72 hours are separated from expired/declined follow-up, with soonest expiry first. Unpaid arrangements with no active local payment evidence are separated from verification/hold queues; this is a work shortcut, not proof of non-payment, and no notices or payment actions are automatic. Counts share fixed query predicates with the filtered list.
+
+List cards now show released live/expired quote validity timestamps (UTC), and customer history distinguishes requested dates from agreed dates. Draft expiry, accepted/declined/superseded offer expiry and unrelated customer data are not added to list projections. Detail actions remain authoritative.

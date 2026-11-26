@@ -476,7 +476,7 @@
       record(list,
         (row.public_ref || "REQUEST") + " · " + workflowLabel(row.workflow_stage || row.status),
         row.customer_name || "Customer",
-        [row.tier_name || "Custom", row.subject_type || "", row.order_deadline ? "Agreed date: " + row.order_deadline : row.preferred_deadline ? "Requested date (not agreed): "+String(row.preferred_deadline).slice(0,10) : "", row.brief_excerpt || ""]
+        [row.tier_name || "Custom", row.subject_type || "", row.order_deadline ? "Agreed date: " + row.order_deadline : row.preferred_deadline ? "Requested date (not agreed): "+String(row.preferred_deadline).slice(0,10) : "", row.quote_expires_at ? (row.workflow_stage==="quote_expired"?"Offer expired: ":"Offer expires: ")+row.quote_expires_at+" UTC" : "", row.brief_excerpt || ""]
           .filter(Boolean).join(" · "),
         row.submitted_at || ""
       );

@@ -290,6 +290,8 @@ try {
     [$code,$initial]=qa_http('/api/request.php?ref='.urlencode($referenceA),$tokenA);
     qa_positive($code===200 && ($initial['quotes']??[])===[],
         'draft_not_visible_before_artist_release');
+    [$code,$preReleaseHistory]=qa_http('/api/requests.php?q='.urlencode($referenceA),$tokenA);
+    qa_positive($code===200&&array_key_exists('quote_expires_at',$preReleaseHistory['requests'][0])&&$preReleaseHistory['requests'][0]['quote_expires_at']===null,'draft_expiry_not_exposed_in_history');
 
     [$code,$status]=qa_http('/api/admin/request-actions.php',$tokenAdmin,'__Host-dmo_admin',[
         'action'=>'set_review_status','request_id'=>$requestB,'expected_status'=>'submitted','status'=>'clarification_needed'
@@ -425,7 +427,9 @@ try {
     $oldQuote=$quoteId;
     $db->prepare('UPDATE dmo_quotes SET validity_ends_at=DATE_ADD(UTC_TIMESTAMP(),INTERVAL 2 DAY) WHERE id=:id')->execute(['id'=>$oldQuote]);
     [$code,$expiring]=qa_http('/api/admin/requests.php?filter=quote_expiring',$tokenAdmin,'__Host-dmo_admin');
-    qa_positive($code===200&&$expiring['matching_count']===1&&$expiring['requests'][0]['id']===$requestA,'artist_expiring_live_quote_queue');
+    qa_positive($code===200&&$expiring['matching_count']===1&&$expiring['requests'][0]['id']===$requestA&&is_string($expiring['requests'][0]['quote_expires_at']),'artist_expiring_live_quote_queue');
+    [$code,$customerExpiry]=qa_http('/api/requests.php?q='.urlencode($referenceA),$tokenA);
+    qa_positive($code===200&&$customerExpiry['requests'][0]['quote_expires_at']===$expiring['requests'][0]['quote_expires_at']&&!isset($customerExpiry['requests'][0]['visible_quote_valid_until']),'customer_sees_released_offer_expiry');
     [$code,$expiryCounts]=qa_http('/api/admin/overview.php',$tokenAdmin,'__Host-dmo_admin');
     qa_positive($code===200&&$expiryCounts['counts']['quote_expiring']===1,'artist_expiring_quote_count');
     $db->prepare('UPDATE dmo_quotes SET validity_ends_at=DATE_SUB(UTC_TIMESTAMP(),INTERVAL 1 DAY) WHERE id=:id')->execute(['id'=>$oldQuote]);

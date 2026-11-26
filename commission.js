@@ -351,6 +351,8 @@
         renderText("small","Submitted " + (item.submitted_at || ""))
       );
       if(item.order_deadline)detail.append(renderText("small","Agreed date: "+item.order_deadline));
+      else if(item.preferred_deadline&&!closedRequestStatuses.has(item.workflow_stage||item.status))detail.append(renderText("small","Requested date (not agreed): "+String(item.preferred_deadline).slice(0,10)));
+      if(item.quote_expires_at&&["quote_available","quote_expired"].includes(item.workflow_stage))detail.append(renderText("small",(item.workflow_stage==="quote_expired"?"Offer expired: ":"Offer expires: ")+item.quote_expires_at+" UTC"));
       const button = document.createElement("button");
       button.type = "button";
       button.className = "text-button";

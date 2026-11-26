@@ -262,7 +262,7 @@ function dmo_requests_stage_joins(): string
 function dmo_requests_stage_columns(): string
 {
     return 'o.status AS order_status, o.agreed_deadline AS order_deadline, ' . dmo_order_exception_sql() . ' AS payment_exception, ' .
-        'vq.status AS visible_quote_status, ' .
+        'vq.status AS visible_quote_status, vq.validity_ends_at AS visible_quote_valid_until, ' .
         'CASE WHEN vq.validity_ends_at IS NOT NULL AND vq.validity_ends_at <= UTC_TIMESTAMP() ' .
         'THEN 1 ELSE 0 END AS visible_quote_expired ';
 }
@@ -301,7 +301,8 @@ function dmo_requests_list_summary(array $row): array
     $row['workflow_stage']=$stage;
     unset($row['payment_exception']);
     $row['order_deadline']=is_string($row['order_deadline']??null) ? substr($row['order_deadline'],0,10) : null;
-    unset($row['visible_quote_expired']);
+    $row['quote_expires_at']=in_array($stage,['quote_available','quote_expired'],true)&&is_string($row['visible_quote_valid_until']??null)?$row['visible_quote_valid_until']:null;
+    unset($row['visible_quote_expired'],$row['visible_quote_valid_until']);
     return $row;
 }
 
