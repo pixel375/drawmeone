@@ -514,7 +514,7 @@ async function verifyReferenceRecovery(browser){
   const page=await browser.newPage({viewport:{width:390,height:844}});
   await installMocks(page,{signedIn:true,open:false});
   let atCapacity=false;
-  await page.route("**/api/request.php?*",route=>answer(route,{...detail(A),can_upload_references:!atCapacity,can_reply:true,reference_capacity:{used:atCapacity?8:0,limit:8,availability:atCapacity?"capacity":"available"}}));
+  await page.route("**/api/request.php?*",route=>answer(route,{...detail(A),can_upload_references:!atCapacity,can_reply:true,references:[{id:901,width:320,height:240}],reference_capacity:{used:atCapacity?8:0,limit:8,availability:atCapacity?"capacity":"available"}}));
   const uploaded=[],uploadKeys=[];
   await page.route("**/api/request-attachment.php",route=>{
     const body=route.request().postData()||"";
@@ -532,6 +532,10 @@ async function verifyReferenceRecovery(browser){
     await page.goto(base+"/commission.html",{waitUntil:"domcontentloaded"});
     await page.locator('#my-request-list button[aria-label$="'+A+'"]').click();
     await page.locator("#detail-reference-form").waitFor({state:"visible"});
+    await page.locator("#detail-reference-list a").scrollIntoViewIfNeeded();
+    await page.waitForFunction(()=>document.querySelector("#detail-reference-list")?.textContent.includes("Preview unavailable"));
+    assert.match(await page.locator("#detail-reference-list").innerText(),/Reference 1 · 320 × 240 px/);
+    assert.equal(await page.locator("#detail-reference-list a").getAttribute("href"),"./api/reference.php?id=901&variant=display");
     await page.locator("#detail-reference-files").setInputFiles(["first.png","second.png","third.png"].map(name=>({name,mimeType:"image/png",buffer:Buffer.from("synthetic reference")})));
     await page.locator("#detail-reference-upload").click();
     await page.waitForFunction(()=>document.querySelector("#detail-reference-feedback")?.textContent.includes("1 unconfirmed · 2 remaining"));

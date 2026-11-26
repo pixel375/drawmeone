@@ -364,3 +364,5 @@ footer{padding:28px 0 70px;border-top:1px solid var(--line);color:var(--muted);f
 .request-section-links{display:flex;flex-wrap:wrap;gap:6px}.request-section-links button{min-height:44px;white-space:normal;max-width:100%}
 .request-detail [tabindex="-1"]:focus-visible{outline:2px solid var(--accent);outline-offset:4px}
 @media(max-width:600px){.request-milestones{grid-template-columns:repeat(2,minmax(0,1fr))}.request-detail-actions{justify-content:flex-start}}
+
+.private-reference-card{display:grid;gap:5px;align-content:start;min-width:0}.private-reference-card small{color:var(--muted);overflow-wrap:anywhere}.private-reference-card a .small{padding:8px;text-align:center;overflow-wrap:anywhere}

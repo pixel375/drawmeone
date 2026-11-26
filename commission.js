@@ -813,21 +813,25 @@
       const references = Array.isArray(body.references) ? body.references : [];
       const referenceRoot = $("detail-reference-list");
       referenceRoot.replaceChildren();
+      let referenceNumber=0;
       for (const reference of references) {
         if (!Number.isSafeInteger(reference.id) || reference.id < 1) continue;
+        referenceNumber++;
         const frame = document.createElement("a");
         frame.href = "./api/reference.php?id=" + reference.id + "&variant=display";
         frame.target = "_blank";
         frame.rel = "noopener noreferrer";
-        frame.setAttribute("aria-label", "Open private reference image");
+        frame.setAttribute("aria-label", "Open private reference image "+referenceNumber+" (opens in a new tab)");
         const image = document.createElement("img");
-        image.src = "./api/reference.php?id=" + reference.id + "&variant=thumb";
-        image.alt = "Private reference image";
-        image.loading = "lazy";
+        image.alt = "Private reference image "+referenceNumber;
+        image.loading = "lazy";image.decoding="async";
+        image.addEventListener("error",()=>frame.replaceChildren(renderText("span","Preview unavailable · open full image","small")),{once:true});
         frame.append(image);
+        image.src = "./api/reference.php?id=" + reference.id + "&variant=thumb";
         const item = document.createElement("div");
         item.className = "reference-item";
-        item.append(frame);
+        const dimensions=Number.isSafeInteger(reference.width)&&reference.width>0&&Number.isSafeInteger(reference.height)&&reference.height>0?" · "+reference.width+" × "+reference.height+" px":"";
+        item.append(frame,renderText("small","Reference "+referenceNumber+dimensions,"small"));
         if (body.can_manage_references === true) {
           const remove = document.createElement("button");
           remove.type = "button";

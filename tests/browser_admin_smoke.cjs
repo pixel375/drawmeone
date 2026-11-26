@@ -481,7 +481,7 @@ async function verifyRequestIsolation(browser) {
     customer_name:"Synthetic customer "+id,brief:"Synthetic brief "+id});
   const response=id=>({ok:true,admin_writes_enabled:true,customer_messaging_enabled:true,
     quote_sending_enabled:false,order_creation_enabled:false,
-    detail:{request:fixture(id),addons:[],messages:[],quotes:[],references:[],orders:[],conversation_message_count:id===42?500:0,conversation_message_limit:500}});
+    detail:{request:fixture(id),addons:[],messages:[],quotes:[],references:id===41?[{id:901,width:320,height:240}]:[],orders:[],conversation_message_count:id===42?500:0,conversation_message_limit:500}});
   const reply=(route,data,status=200)=>route.fulfill({status,contentType:"application/json",
     body:JSON.stringify(data)});
   let slow=null;
@@ -507,6 +507,10 @@ async function verifyRequestIsolation(browser) {
     await buttons.nth(0).click();
     await page.waitForFunction(()=>document.querySelector("#request-note-save")?.disabled===false);
     assert.equal(await page.locator("#request-at-a-glance").isVisible(),true);
+    await page.locator("#request-references a").scrollIntoViewIfNeeded();
+    await page.waitForFunction(()=>document.querySelector("#request-references")?.textContent.includes("Preview unavailable"));
+    assert.match(await page.locator("#request-references").innerText(),/Reference 1 · 320 × 240 px/);
+    assert.equal(await page.locator("#request-references a").getAttribute("href"),"../api/reference.php?id=901&variant=display");
     assert.equal(await page.locator("#request-milestones dt").count(),6);
     assert.match(await page.locator("#request-next-step").innerText(),/Review the brief/);
     await page.locator("#request-section-links").getByRole("button",{name:"Conversation",exact:true}).click();

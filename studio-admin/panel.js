@@ -664,19 +664,25 @@
       root.append(textNode("p", "No reference images attached.", "small"));
       return;
     }
+    let number=0;
     for (const item of records) {
       if (!Number.isSafeInteger(item.id) || item.id < 1) continue;
+      number++;
+      const card=document.createElement("div");card.className="private-reference-card";
       const frame = document.createElement("a");
       frame.href = "../api/reference.php?id=" + item.id + "&variant=display";
       frame.target = "_blank";
       frame.rel = "noopener noreferrer";
-      frame.setAttribute("aria-label", "View customer reference image privately");
+      frame.setAttribute("aria-label", "View customer reference "+number+" privately (opens in a new tab)");
       const img = document.createElement("img");
-      img.src = "../api/reference.php?id=" + item.id + "&variant=thumb";
-      img.alt = "Private customer reference";
-      img.loading = "lazy";
+      img.alt = "Private customer reference "+number;
+      img.loading = "lazy";img.decoding="async";
+      img.addEventListener("error",()=>frame.replaceChildren(textNode("span","Preview unavailable · open full image","small")),{once:true});
       frame.append(img);
-      root.append(frame);
+      img.src = "../api/reference.php?id=" + item.id + "&variant=thumb";
+      const dimensions=Number.isSafeInteger(item.width)&&item.width>0&&Number.isSafeInteger(item.height)&&item.height>0?" · "+item.width+" × "+item.height+" px":"";
+      card.append(frame,textNode("small","Reference "+number+dimensions));
+      root.append(card);
     }
   }
 
