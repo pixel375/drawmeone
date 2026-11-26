@@ -50,3 +50,5 @@ Session XX: A failed or in-progress readiness refresh clears previously displaye
 For the payment decision worksheet, operator reconciliation sequence, failure/closure/hold/refund handling and pilot evidence, see [PAYMENT_OPERATIONS_GUIDE.md](PAYMENT_OPERATIONS_GUIDE.md). Do not use a local synthetic run as merchant or settlement evidence.
 
 For operational triage, safe rollback, resource-diagnostic boundaries and resumption decisions, see [INCIDENT_AND_MAINTENANCE_RUNBOOK.md](INCIDENT_AND_MAINTENANCE_RUNBOOK.md).
+
+Use [Artist Desk starting guide and owner handoff](ARTIST_START_AND_OWNER_HANDOFF.md) for the visual pass, daily operations, consolidated owner decisions and stage evidence template after autonomous verification. See [search launch checklist](SEARCH_LAUNCH_CHECKLIST.md) for the separate indexing approval.

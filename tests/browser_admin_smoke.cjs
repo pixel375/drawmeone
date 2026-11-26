@@ -31,7 +31,7 @@ const mockAdmin = {
     configuration_review:{mode:"review_only",authorizes_launch:false,issue_count:1,enabled_gate_count:2,known_gate_count:36,issues:["dependency:DMO_REQUESTS_ENABLED:DMO_AUTH_ENABLED"]},
     retention:{mode:"review_only",counts:{expired_sessions:3,privacy_open_30d:1,closed_no_order_365d:2}},
     integrity:{checks:{order_quote_mismatch:0,paid_without_evidence:1},issue_count:1,scope:"database_only"},
-    launch_evidence:{generated_at:"2026-11-25T00:00:00+00:00",scope:"configuration_only",authorizes_launch:false,published_artwork_count:1,published_package_count:0,intake_open:false,stages:[{key:"prepare",label:"1. Preparation",configuration_ready:false,configuration_pending:["Approved policies"],external_evidence_required:["Independent recovery test"]}]},
+    launch_evidence:{generated_at:"2026-11-25T00:00:00+00:00",scope:"configuration_only",authorizes_launch:false,published_artwork_count:1,published_package_count:0,intake_open:false,stages:["prepare","onboarding","intake","payments","delivery","opening"].map((key,i)=>({key,label:(i+1)+". "+key,configuration_ready:false,configuration_pending:["Approved policies"],external_evidence_required:["Independent recovery test"]}))},
     readiness: [
       {key:"mail",label:"Transactional email",status:"ready",detail:"CI mock only"},
       {key:"accounts",label:"Customer accounts",status:"blocked",detail:"Closed"},
@@ -155,6 +155,14 @@ async function verifyArtistDesk(browser, width) {
       assert.equal(report.scope,"configuration_only");
       assert.equal(report.stages[0].external_evidence_required[0],"Independent recovery test");
     }
+    await page.route("**/api/admin/overview.php*",route=>route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({...mockAdmin["overview.php"],launch_evidence:{...mockAdmin["overview.php"].launch_evidence,stages:mockAdmin["overview.php"].launch_evidence.stages.slice(0,1)}})}));
+    await page.locator("#launch-refresh").click();
+    await page.waitForFunction(()=>document.querySelector("#launch-evidence-status")?.textContent==="Configuration report unavailable.");
+    assert.equal(await page.locator("#launch-evidence-export").isDisabled(),true);
+    assert.equal(await page.locator("#launch-evidence-stages .launch-check").count(),0);
+    await page.unroute("**/api/admin/overview.php*");
+    await page.locator("#launch-refresh").click();
+    await page.waitForFunction(()=>!document.querySelector("#launch-evidence-export").disabled);
     await evidence.locator("summary").click();
     const config=page.locator(".integrity-details").filter({hasText:"Private configuration review (read-only)"});
     await config.locator("summary").click();

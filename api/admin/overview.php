@@ -5,8 +5,11 @@ dmo_reject_non_get();
 try{
     $db=dmo_database();
     dmo_admin_require_session($db);
-    dmo_json(200,dmo_launch_overview($db));
+    $db->exec('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ');
+    $db->beginTransaction();$result=dmo_launch_overview($db);$db->commit();
+    dmo_json(200,$result);
 }catch(Throwable $error){
+    if(isset($db)&&$db->inTransaction())$db->rollBack();
     dmo_log_problem($error,'admin overview');
     dmo_json(503,['ok'=>false,'error'=>'admin_service_unavailable']);
 }

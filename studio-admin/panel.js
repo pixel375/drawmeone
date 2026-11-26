@@ -226,7 +226,18 @@
     launchEvidence=null;
     const list=$("launch-evidence-stages"),status=$("launch-evidence-status"),button=$("launch-evidence-export");
     list.replaceChildren();button.disabled=true;
-    if(report?.scope!=="configuration_only"||report.authorizes_launch!==false||!Array.isArray(report.stages)){
+    const expectedStages=["prepare","onboarding","intake","payments","delivery","opening"];
+    const validStrings=items=>Array.isArray(items)&&items.every(x=>typeof x==="string"&&x.trim()!=="");
+    if(report?.scope!=="configuration_only"||report.authorizes_launch!==false||
+      !Array.isArray(report.stages)||report.stages.length!==expectedStages.length||
+      !Number.isFinite(Date.parse(report.generated_at))||
+      !Number.isSafeInteger(report.published_artwork_count)||report.published_artwork_count<0||
+      !Number.isSafeInteger(report.published_package_count)||report.published_package_count<0||
+      typeof report.intake_open!=="boolean"||
+      !report.stages.every((stage,i)=>stage&&stage.key===expectedStages[i]&&typeof stage.label==="string"&&stage.label.trim()!==""&&
+        typeof stage.configuration_ready==="boolean"&&validStrings(stage.configuration_pending)&&
+        stage.configuration_ready===(stage.configuration_pending.length===0)&&
+        validStrings(stage.external_evidence_required)&&stage.external_evidence_required.length>0)){
       status.textContent="Configuration report unavailable.";return;
     }
     const clean={generated_at:String(report.generated_at||""),scope:"configuration_only",authorizes_launch:false,
