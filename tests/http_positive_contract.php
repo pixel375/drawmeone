@@ -259,6 +259,11 @@ try {
     qa_positive($code===200&&array_column($found['requests'],'public_ref')===[$referenceA]&&!isset($found['requests'][0]['history_id']),'full_history_finds_older_owned_reference');
     [$code,$found]=qa_http('/api/requests.php?q='.urlencode($referenceA),$tokenB);
     qa_positive($code===200&&$found['requests']===[],'full_history_search_cross_account_denied');
+    [$code,$displayMatches]=qa_http('/api/requests.php?q='.urlencode('Awaiting artist review').'&status=active&page=1',$tokenA);
+    qa_positive($code===200&&count($displayMatches['requests'])===40&&$displayMatches['has_more']===true&&
+        count(array_filter($displayMatches['requests'],fn($row)=>$row['workflow_stage']!=='submitted'))===0,'full_history_matches_display_status_before_pagination');
+    [$code,$privateMatches]=qa_http('/api/requests.php?q='.urlencode('Pagination test'),$tokenA);
+    qa_positive($code===200&&$privateMatches['requests']===[],'full_history_search_does_not_match_private_brief');
     [$code,$found]=qa_http('/api/requests.php?status=closed',$tokenA);
     qa_positive($code===200&&$found['requests']===[],'full_history_closed_filter_excludes_active');
     [$code,$found]=qa_http('/api/requests.php?sort=oldest',$tokenA);

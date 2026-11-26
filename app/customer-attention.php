@@ -37,9 +37,14 @@ function dmo_customer_attention(PDO $db,int $customer): array
         }
     }
     if(dmo_review_enabled($db)){
-        $q=$db->prepare('SELECT r.public_ref'.dmo_review_owner_query().' ORDER BY v.id DESC LIMIT 10');
+        $q=$db->prepare('SELECT r.id,r.public_ref,r.policy_version'.dmo_review_owner_query().' ORDER BY v.id DESC LIMIT 100');
         $q->execute(['customer'=>$customer]);
-        $result['proofs']=$q->fetchAll(PDO::FETCH_COLUMN);
+        foreach($q->fetchAll(PDO::FETCH_ASSOC) as $row){
+            if(!in_array($row['public_ref'],$result['proofs'],true)&&
+                dmo_policy_request_eligible($db,(int)$row['id'],(string)$row['policy_version']))
+                $result['proofs'][]=$row['public_ref'];
+            if(count($result['proofs'])>=10)break;
+        }
     }
     if(dmo_delivery_release_ready($db)){
         $q=$db->prepare('SELECT r.public_ref'.dmo_delivery_customer_query().' ORDER BY f.id DESC LIMIT 10');

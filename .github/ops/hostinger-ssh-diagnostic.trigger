@@ -1,1 +1,1 @@
-Session XVII: verify customer milestone, proof eligibility and proof load safeguards; read-only deployment and integrity check.
+Session XVII: verify final progress panel, proof eligibility, customer attention and display-label history search changes; read-only.

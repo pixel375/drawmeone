@@ -672,6 +672,7 @@ async function verifyProgressMilestones(browser){
     [{orders:[{...order,status:"cancelled",payment_status:"unverified"}],deliveries:[delivery],artwork_reviews:[proof]},/closed/,null],
     [{request:{...baseDetail.request,workflow_stage:"quote_declined"}},/no current offer/,null],
     [{orders:[order],artwork_reviews:[{...proof,can_respond:false}]},/not currently available to review/,null],
+    [{quotes:[{...detail(A).quotes[0],can_respond:false}],request:{...baseDetail.request,workflow_stage:"quote_available"}},/not currently available for a decision/,null],
   ];
   try{
     await page.goto(base+"/commission.html",{waitUntil:"domcontentloaded"});

@@ -42,8 +42,40 @@ try {
         if($search!==''){
             // Customer-visible metadata only, never private messages or briefs.
             $tier="COALESCE(NULLIF(TRIM(CASE WHEN JSON_VALID(tier_snapshot_json) THEN JSON_UNQUOTE(JSON_EXTRACT(tier_snapshot_json,'$.name')) ELSE NULL END),''),tier_name,'')";
-            $conditions[]="(LOCATE(:ref,public_ref)>0 OR LOCATE(:subject,REPLACE(subject_type,'_',' '))>0 OR LOCATE(:tier,".$tier.")>0 OR LOCATE(:stage,REPLACE(history_stage,'_',' '))>0)";
+            $matches=["LOCATE(:ref,public_ref)>0","LOCATE(:subject,REPLACE(subject_type,'_',' '))>0","LOCATE(:tier,".$tier.")>0","LOCATE(:stage,REPLACE(history_stage,'_',' '))>0"];
             foreach(['ref','subject','tier','stage'] as $key)$params[$key]=$search;
+            // Match the same human-readable labels shown in commission.js,
+            // as well as the raw status/category aliases used by older links.
+            $labels=[
+                'history_stage'=>[
+                    'submitted'=>'Awaiting artist review','clarification_needed'=>'Clarification requested',
+                    'quote_ready'=>'Quote under review','quoted'=>'Quote available','awaiting_customer'=>'Awaiting your response',
+                    'accepted'=>'Quote accepted','quote_accepted'=>'Quote accepted','quote_available'=>'Awaiting your quote decision',
+                    'quote_expired'=>'Quote expired','quote_declined'=>'Quote declined','quote_inactive'=>'Quote no longer available',
+                    'payment_on_hold'=>'Payment under review','payment_refunded'=>'External refund recorded',
+                    'awaiting_arrangement'=>'Awaiting payment arrangements','queued'=>'In the artist queue',
+                    'drawing'=>'Drawing in progress','in_progress'=>'In progress','awaiting_feedback'=>'Awaiting feedback',
+                    'revision'=>'Revisions in progress','ready_for_delivery'=>'Ready for delivery','completed'=>'Completed',
+                    'cancelled'=>'Cancelled','canceled'=>'Cancelled','rejected'=>'Declined by artist',
+                    'declined'=>'Declined','closed'=>'Closed','archived'=>'Archived','refunded'=>'Refunded',
+                ],
+                'subject_type'=>[
+                    'original_character'=>'Original character (OC)','fan_character'=>'Game, anime or fan character',
+                    'portrait'=>'Portrait','other'=>'Other',
+                ],
+            ];
+            $aliasIndex=0;
+            foreach($labels as $column=>$options){
+                $placeholders=[];
+                foreach($options as $value=>$label){
+                    if(stripos($label,$search)===false)continue;
+                    $key='display_alias_'.(++$aliasIndex);
+                    $params[$key]=$value;
+                    $placeholders[]=':'.$key;
+                }
+                if($placeholders)$matches[]=$column.' IN ('.implode(',',$placeholders).')';
+            }
+            $conditions[]='('.implode(' OR ',$matches).')';
         }
         $where=$conditions?' WHERE '.implode(' AND ',$conditions):'';
         $order=match($sort){

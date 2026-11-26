@@ -564,6 +564,7 @@
     else if(stage==="clarification_needed"){next="The artist has requested clarification. Review your conversation.";if(body.can_reply===true)jump("Go to private reply","detail-reply-form");}
     else if(quotes.some(q=>q.status==="sent"&&q.is_expired))next="The latest offer has expired. Contact the artist for an updated quote.";
     else if(stage==="quote_declined"||stage==="quote_inactive"||stage==="quote_expired")next="There is no current offer to accept. Contact the artist if you want to discuss a new quote.";
+    else if(stage==="quote_available"||quotes.some(q=>q.status==="sent"))next="A quote is recorded but is not currently available for a decision. Refresh or contact the artist.";
     $("detail-next-step").textContent=next;
     const entries=[["Request","Received"],["Quote",accepted?"Accepted":live?"Awaiting decision":quotes.length?"Historical offer(s)":"Not issued"],["Order",order?readableRequestStatus(order.status):"Not confirmed"],["Payment",!order?"No order":held?"Under review":refunded?"Refund recorded":order.payment_status==="paid"?"Verified by artist":"Not verified"],["Artwork review",held||refunded?"Access paused":review?(proofPending?"Awaiting review":({approved:"Approved",revision_requested:"Revision requested"}[review.status]||"Recorded")):"No proof available"],["Final artwork",held||refunded?"Access paused":delivery?"Download available":"Not currently available"]];
     for(const [label,value] of entries){const row=document.createElement("div");row.append(renderText("dt",label),renderText("dd",value));milestones.append(row);}

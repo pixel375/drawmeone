@@ -276,6 +276,8 @@ try {
     try {
         [$code,$blockedProof]=ref_http('/api/request.php?ref='.$refA,$cookieA);
         ref_assert($code===200&&$blockedProof['artwork_reviews'][0]['can_respond']===false,'invalid_policy_disables_proof_actions');
+        [$code,$blockedHistory]=ref_http('/api/requests.php',$cookieA);
+        ref_assert($code===200&&!in_array($refA,$blockedHistory['attention']['proofs'],true),'invalid_policy_hides_proof_attention_shortcut');
         [$code]=ref_http('/api/artwork-review.php?id='.$reviewId,$cookieA);
         ref_assert($code===404,'invalid_policy_denies_proof_bytes');
     } finally {
