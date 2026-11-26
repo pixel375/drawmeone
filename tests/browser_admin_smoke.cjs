@@ -345,6 +345,11 @@ async function verifyArtworkDrafts(browser){
     if(writes===1)return reply({ok:false,error:"ci_save_rejected"},422);
     if(payload.action==="set_order")sort=payload.sort_order;
     if(payload.action==="set_alt")alt=payload.alt;
+    if(payload.action==="batch_metadata"){
+      assert.equal(payload.confirm,true);assert.equal(payload.edits.length,2);
+      for(const edit of payload.edits){assert.equal(edit.id,4);if(edit.field==="alt")alt=edit.value;else sort=edit.value;}
+      return reply({ok:true,processed:2,updated:2});
+    }
     return reply({ok:true,id:4});
   });
   try{
@@ -376,7 +381,13 @@ async function verifyArtworkDrafts(browser){
     assert.equal(await desc.inputValue(),"");
     assert.equal(await page.locator("#artwork-unsaved").isVisible(),false);
     assert.equal(writes,2);
-    console.log("PASS: artwork drafts survive filtering, tab changes and rejected saves");
+    await order.fill("21");await card.locator("summary").click();await desc.fill("Batch description");
+    page.once("dialog",d=>d.dismiss());await page.locator("#artwork-save-edits").click();assert.equal(writes,2);
+    page.once("dialog",d=>d.accept());await page.locator("#artwork-save-edits").click();
+    await page.waitForFunction(()=>document.querySelector("#artwork-library-status")?.textContent.includes("Saved 2 artwork metadata"));
+    assert.equal(writes,3);assert.equal(sort,21);assert.equal(alt,"Batch description");
+    assert.equal(await page.locator("#artwork-unsaved").isVisible(),false);
+    console.log("PASS: artwork drafts survive filtering, tab changes and rejected saves; atomic metadata batch");
   }finally{await page.close();}
 }
 async function verifyGalleryMoves(browser){

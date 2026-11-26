@@ -20,7 +20,7 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
 <meta name="theme-color" content="#151317">
 <title>Artist's Desk · Draw Me One</title>
 <link rel="stylesheet" href="./panel.css?v=52">
-<script defer src="./panel.js?v=88"></script>
+<script defer src="./panel.js?v=89"></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to dashboard</a>
@@ -373,7 +373,7 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
         <label for="artwork-sort-mode">Order by<select id="artwork-sort-mode"><option value="recent">Recently uploaded</option><option value="gallery">Public gallery order (move drawings)</option><option value="oldest">Oldest first</option><option value="largest">Largest optimized files</option></select></label>
         <span id="artwork-visible-count" class="small" role="status" aria-live="polite"></span>
       </div>
-      <div id="artwork-unsaved" hidden><p id="artwork-unsaved-count" class="small" role="status"></p><button type="button" id="artwork-discard-edits" class="quiet">Discard unsaved artwork edits</button></div>
+      <div id="artwork-unsaved" hidden><p id="artwork-unsaved-count" class="small" role="status"></p><button type="button" id="artwork-save-edits" class="quiet" disabled>Save unsaved artwork edits</button> <button type="button" id="artwork-discard-edits" class="quiet">Discard unsaved artwork edits</button></div>
       <div id="artwork-list" class="artwork-library-grid" aria-label="Uploaded artwork">Loading artwork library…</div>
       <div class="request-list-pagination"><button id="artwork-prev" type="button" class="quiet" disabled>Previous</button><span id="artwork-page" class="small" role="status"></span><button id="artwork-next" type="button" class="quiet" disabled>Next</button></div>
     </section>

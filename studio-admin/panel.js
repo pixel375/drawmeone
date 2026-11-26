@@ -1747,6 +1747,38 @@
     artworkDrafts.clear();renderArtwork();artworkState("Unsaved artwork edits discarded.");
   });
 
+  $("artwork-save-edits").addEventListener("click",async()=>{
+    if(!artworkWriteEnabled||artworkBusy||artworkLoading||!artworkDrafts.size||artworkDrafts.size>60)return;
+    const edits=[];
+    for(const [key,draft] of artworkDrafts){
+      const [rawId,field]=key.split(":"),id=Number(rawId);
+      const work=artworkRecords.find(w=>w.id===id);
+      if(!work){artworkState("A drawing is no longer in this library. Refresh and review unsaved edits.");return;}
+      if(!artworkDraftCanSave(work,field))return;
+      const value=field==="sort_order"?Number(draft.value):draft.value.trim();
+      if(field==="sort_order"&&(!draft.value.trim()||!Number.isInteger(value)||value< -10000||value>10000)){
+        artworkState("Check sort order for drawing #"+id+" before saving the batch.");return;
+      }
+      if(field==="alt"&&(new TextEncoder().encode(value).length>240||/[\x00-\x1f\x7f]/.test(value))){
+        artworkState("Check description length for drawing #"+id+" before saving the batch.");return;
+      }
+      edits.push({id,field,expected:field==="sort_order"?Number(draft.base):draft.base,value});
+    }
+    if(!window.confirm("Save "+edits.length+" artwork metadata field(s) together? Published drawings will reflect these edits. No artwork will be published or unpublished."))return;
+    artworkBusy=true;artworkControls();
+    try{
+      const {response,data}=await post("artworks.php",{action:"batch_metadata",edits,confirm:true},csrf);
+      if(response.status===401)return sessionExpired();
+      if(!response.ok||!data.ok||data.processed!==edits.length){
+        if(response.status===409||response.status>=500)artworkWriteEnabled=false;
+        artworkState("Metadata batch not confirmed. No partial changes are applied. Refresh to review conflicts; unsaved edits are retained.");return;
+      }
+      for(const edit of edits)artworkDrafts.delete(artworkDraftKey(edit.id,edit.field));
+      if(await artworksLoad())artworkState("Saved "+data.processed+" artwork metadata field(s) together. Publication unchanged.");
+    }catch(_){artworkWriteEnabled=false;artworkState("Metadata save outcome uncertain. Refresh before retrying.");}
+    finally{artworkBusy=false;if(!leavingSession)artworkControls();}
+  });
+
   function artworkState(message) {
     $("artwork-library-status").textContent = message;
   }
@@ -1764,7 +1796,8 @@
     $("artwork-select-all").indeterminate=checked.length>0&&checked.length<selectable;
     $("artwork-selection-count").textContent=checked.length+" selected on this page";
     $("artwork-unsaved").hidden=artworkDrafts.size===0;
-    $("artwork-unsaved-count").textContent=artworkDrafts.size+" unsaved artwork field(s). Save individual edits or discard them. Unsaved edits are not published.";
+    $("artwork-unsaved-count").textContent=artworkDrafts.size+" unsaved artwork field(s). Save individual edits or up to 60 together. Unsaved edits are not published.";
+    $("artwork-save-edits").disabled=!canWrite||artworkDrafts.size===0||artworkDrafts.size>60;
     $("artwork-discard-edits").disabled=artworkBusy||artworkLoading;
     $("artwork-upload").disabled = !canWrite;
     $("artwork-upload-resume").hidden=artworkPendingFiles.length===0;
@@ -1939,6 +1972,13 @@
       if(response.status===401){sessionExpired();return false;}
       if(!response.ok||!data.ok||!Array.isArray(data.artworks))throw Error("unavailable");
       artworkRecords=data.artworks;
+      // Reconcile an already-applied edit after an interrupted response.
+      for(const [key,draft] of artworkDrafts){
+        const [id,field]=key.split(":"),work=artworkRecords.find(w=>w.id===Number(id));
+        if(!work)continue;
+        const applied=field==="sort_order"?draft.value.trim()!==""&&Number.isInteger(Number(draft.value))&&Number(draft.value)===work.sort_order:draft.value.trim()===String(work.alt??"");
+        if(applied)artworkDrafts.delete(key);
+      }
       artworkWriteEnabled=data.write_enabled===true&&data.truncated!==true;
       renderArtwork();
       artworkState(artworkRecords.length+" artwork entries · "+(data.truncated===true?"Library exceeds supported limit; writes locked":artworkWriteEnabled?"Uploads and publishing available":"Uploads locked until private server setup is complete"));

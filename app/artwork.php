@@ -384,3 +384,55 @@ function dmo_artwork_batch_featured(PDO $db,int $admin,array $input): never
         $db->commit();dmo_json(200,['ok'=>true,'updated'=>count($ids),'featured'=>$target]);
     }catch(Throwable $error){if($db->inTransaction())$db->rollBack();throw $error;}
 }
+
+
+/** Save bounded optional metadata edits atomically. No visibility or file changes. */
+function dmo_artwork_batch_metadata(PDO $db,int $admin,array $input): never
+{
+    $edits=$input['edits']??null;
+    if(count($input)!==3||array_diff(array_keys($input),['action','edits','confirm'])||
+        ($input['confirm']??null)!==true||!is_array($edits)||!array_is_list($edits)||count($edits)<1||count($edits)>60)
+        dmo_json(422,['ok'=>false,'error'=>'invalid_artwork_metadata_batch']);
+    $groups=[];
+    foreach($edits as $edit){
+        if(!is_array($edit)||count($edit)!==4||array_diff(array_keys($edit),['id','field','expected','value'])||
+            !is_int($edit['id']??null)||$edit['id']<1||!in_array($edit['field']??null,['alt','sort_order'],true))
+            dmo_json(422,['ok'=>false,'error'=>'invalid_artwork_metadata_batch']);
+        $id=$edit['id'];$field=$edit['field'];
+        if(isset($groups[$id][$field]))dmo_json(422,['ok'=>false,'error'=>'invalid_artwork_metadata_batch']);
+        foreach(['expected','value'] as $key){
+            $value=$edit[$key];
+            $valid=$field==='sort_order'?is_int($value)&&$value>=-10000&&$value<=10000:
+                is_string($value)&&strlen($value)<=240&&preg_match('//u',$value)===1&&!preg_match('/[\x00-\x1f\x7f]/',$value);
+            if(!$valid)dmo_json(422,['ok'=>false,'error'=>'invalid_artwork_metadata_batch']);
+        }
+        if($field==='alt')$edit['value']=trim($edit['value']);
+        $groups[$id][$field]=$edit;
+    }
+    ksort($groups,SORT_NUMERIC);
+    $db->beginTransaction();
+    try{
+        $lock=$db->prepare('SELECT alt_text,sort_order FROM dmo_portfolio_artworks WHERE id=:id FOR UPDATE');
+        $changes=[];
+        foreach($groups as $id=>$fields){
+            $lock->execute(['id'=>$id]);$row=$lock->fetch(PDO::FETCH_ASSOC);
+            if(!$row){$db->rollBack();dmo_json(409,['ok'=>false,'error'=>'artwork_metadata_batch_changed']);}
+            foreach($fields as $field=>$edit){
+                $current=$field==='alt'?(string)($row['alt_text']??''):(int)$row['sort_order'];
+                // An identical retry after a lost response is a no-op.
+                if($current===$edit['value'])continue;
+                if($current!==$edit['expected']){$db->rollBack();dmo_json(409,['ok'=>false,'error'=>'artwork_metadata_batch_changed']);}
+                $changes[]=$edit;
+            }
+        }
+        foreach($changes as $edit){
+            $field=$edit['field'];$value=$edit['value'];
+            $column=$field==='alt'?'alt_text':'sort_order';
+            $db->prepare('UPDATE dmo_portfolio_artworks SET '.$column.'=:value WHERE id=:id')
+                ->execute(['value'=>$field==='alt'&&$value===''?null:$value,'id'=>$edit['id']]);
+            dmo_artwork_record_audit($db,$admin,$edit['id'],$field==='alt'?'artwork.set_alt':'artwork.set_order');
+        }
+        $db->commit();
+        dmo_json(200,['ok'=>true,'processed'=>count($edits),'updated'=>count($changes)]);
+    }catch(Throwable $e){if($db->inTransaction())$db->rollBack();throw $e;}
+}

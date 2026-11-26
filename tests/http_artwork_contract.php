@@ -429,6 +429,25 @@ try {
     art_assert(str_contains($filteredDetail,'data-copy-artwork')&&str_contains($filteredDetail,'https://drawmeone.com/artwork.php?id='.$id.'"'),'share_uses_canonical_published_drawing_link');
     [$status,,$fallbackDetail]=art_http('/artwork.php?id='.$id2.'&view=featured');
     art_assert($status===200&&str_contains($fallbackDetail,'rel="prev" href="/artwork.php?id='.$id.'"'),'stale_filter_falls_back_to_all');
+    $metadata=['action'=>'batch_metadata','confirm'=>true,'edits'=>[
+        ['id'=>$id,'field'=>'sort_order','expected'=>-15,'value'=>-14],
+        ['id'=>$id2,'field'=>'alt','expected'=>'','value'=>'Synthetic second description'],
+    ]];
+    [$status,$savedMetadata]=art_http('/api/admin/artworks.php',$token,$csrf,$metadata);
+    art_assert($status===200&&$savedMetadata['updated']===2&&$savedMetadata['processed']===2,'atomic_metadata_batch');
+    [$status,$replayMetadata]=art_http('/api/admin/artworks.php',$token,$csrf,$metadata);
+    art_assert($status===200&&$replayMetadata['updated']===0,'metadata_batch_retry_noop');
+    $conflict=$metadata;$conflict['edits'][0]['expected']=-14;$conflict['edits'][0]['value']=-13;$conflict['edits'][1]['value']='Conflict';
+    [$status]=art_http('/api/admin/artworks.php',$token,$csrf,$conflict);
+    art_assert($status===409&&(int)$db->query('SELECT sort_order FROM dmo_portfolio_artworks WHERE id='.(int)$id)->fetchColumn()===-14,'metadata_conflict_rolls_back_all');
+    [$status]=art_http('/api/admin/artworks.php',$token,$csrf,array_replace($metadata,['confirm'=>false]));
+    art_assert($status===422,'metadata_batch_requires_confirmation');
+    $restore=['action'=>'batch_metadata','confirm'=>true,'edits'=>[
+        ['id'=>$id,'field'=>'sort_order','expected'=>-14,'value'=>-15],
+        ['id'=>$id2,'field'=>'alt','expected'=>'Synthetic second description','value'=>''],
+    ]];
+    [$status]=art_http('/api/admin/artworks.php',$token,$csrf,$restore);
+    art_assert($status===200,'metadata_restore_fixture');
     // Put both in the same featured group with a tied rank, then move
     // against the normal ID tiebreaker and verify the public order.
     [$status]=art_http('/api/admin/artworks.php',$token,$csrf,['id'=>$id2,'action'=>'set_featured','featured'=>true]);

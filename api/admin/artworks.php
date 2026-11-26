@@ -50,6 +50,7 @@ try {
     }
     $action = $input['action'] ?? null;
     if($action==='batch_visibility')dmo_artwork_batch_visibility($db,(int)$admin['user_id'],$input);
+    if($action==='batch_metadata')dmo_artwork_batch_metadata($db,(int)$admin['user_id'],$input);
     if($action==='batch_featured')dmo_artwork_batch_featured($db,(int)$admin['user_id'],$input);
     if($action==='move_published')dmo_artwork_move($db,(int)$admin['user_id'],$input);
     $id = dmo_artwork_id($input['id'] ?? null);
