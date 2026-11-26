@@ -22,8 +22,8 @@ Created 2026-11-26 (Session XXVI, pass 01). Baseline `6554d07`. **This is the li
 
 ### Regressions and release verification
 
-- [ ] **REG-01** [AUTO] Resolve Chromium privacy-history regression: distinguish failed older page from failed current refresh; preserve drafts and fail closed.
-- [ ] **REG-02** [AUTO] Extend privacy regression coverage: explicit retry, cursor/deduplication, status gating, UTF-8 and uncertain draft preservation.
+- [ ] **REG-01** [AUTO] Resolve Chromium privacy-history regression: distinguish failed older page from failed current refresh; preserve drafts and fail closed. **Pending CI:** test fix af6b2dd; see pass 01.
+- [ ] **REG-02** [AUTO] Extend privacy regression coverage: explicit retry, cursor/deduplication, status gating, UTF-8 and uncertain draft preservation. **Pending CI:** expanded test af6b2dd; see pass 01.
 - [ ] **REG-03** [AUTO] Audit recent CI failures, fix actual regressions; rerun relevant source, DB, Chromium, Firefox/WebKit and live deployment checks.
 - [ ] **REG-04** [AUTO] Verify exact release and workflow evidence; resolve additional defects. Final full release verification repeats after changes (see OPEN).
 
@@ -170,3 +170,10 @@ Created 2026-11-26 (Session XXVI, pass 01). Baseline `6554d07`. **This is the li
 
 - Created canonical checklist and established baseline. Next: REG-01/02, inspect Chromium failure before changing code or test; verify and record results.
 - All OWNER/AFTER/OPTIONAL items deferred. No production changes authorized.
+
+### 2026-11-26 — Session XXVI / pass 01 (implementation checkpoint)
+
+- Checklist creation `e036351`; README entry point `b8b74f6`. Initial inventory: 96 tasks (47 AUTO, 21 OWNER, 24 AFTER, 4 OPTIONAL), 16 categories including optional enhancements. This setup is complete; the launch checklist deliberately tracks only remaining launch work.
+- REG-01 / REG-02: inspected failed Chromium run 45765478164 and current account.js / onboarding test. Both older-page and current-refresh errors share the same case-status text. The old test waited for that already-present text, then could assert before the fresh GET completed; the existing current-refresh catch clears records, cursor and actions. No evidence yet of a production data-retention regression. Commit [af6b2dd](https://github.com/pixel375/drawmeone/commit/af6b2ddf0e2c32a258eab53dd78d22e5716459c1) changes test only: wait for the distinct current-history failure, count actual GETs, verify retry/overlap deduplication/non-decreasing cursor rejection, fail-closed export/actions, recovery, uncertain POST draft retention and password clearing. Existing UTF-8 assertion retained. No production JS changes or weakened assertions.
+- Verification pending: as of checkpoint, Actions API had not yet listed workflows for af6b2dd. Prior source/DB/deployment and Firefox/WebKit passed only on earlier commits; do not mark REG-01/02 complete yet. Next session/pass: inspect workflows for af6b2dd (Chromium + Firefox/WebKit; source/DB if triggered), fix any new failure, record actual run IDs and check off REG-01/02 only after verified. Then REG-03/04 and next AUTO items. If test-only path filters omit an applicable workflow, use authorized manual dispatch if available; do not fake CI success.
+- All OWNER/AFTER/OPTIONAL tasks skipped. No artwork, policies, customer records, payment settings, production flags, indexing, secrets or backup custody changed. No manual action needed.
