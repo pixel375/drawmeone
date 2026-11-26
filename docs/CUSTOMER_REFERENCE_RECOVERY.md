@@ -1,3 +1,5 @@
 # Customer reference upload recovery
 
 A customer can stop after the current image. Unattempted files are retained in request-scoped memory for resume. Confirmed uploads and ambiguous attempts are excluded from the resume list; an explicit rate-limit rejection preserves the current file. The list is refreshed before further uploads. Replacing remaining files requires confirmation. A request switch or sign-in reset clears private file references. The synthetic browser test checks interrupted uploads and unchanged-message key reuse. No production customer data or gate changes.
+
+Session XX: Customer reference uploads now retain the current file on explicit capacity, rate-limit, permission, closed-request or disabled-service responses; a confirmed pause is not counted as a rejection. Cumulative counts survive resume. An explicit discard button clears the in-memory remaining selection, never saved reference files. Only a genuinely unconfirmed first file may retry when new uploads are unavailable. Browser fixtures cover recovery totals, capacity pause and confirmed discard. No change to server upload limits or access gates.

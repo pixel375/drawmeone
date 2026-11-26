@@ -539,6 +539,16 @@ async function verifyReferenceRecovery(browser){
     await page.waitForFunction(()=>document.querySelector("#detail-reference-feedback")?.textContent.includes("0 unconfirmed · 0 remaining"));
     assert.deepEqual(uploaded,["first","second","second","third"]);
     assert.match(uploadKeys[1]||"",/^[0-9a-f-]{36}$/);assert.equal(uploadKeys[1],uploadKeys[2]);
+    assert.match(await page.locator("#detail-reference-feedback").innerText(),/3 saved/);
+    await page.route("**/api/request-attachment.php",route=>answer(route,{ok:false,error:"reference_limit_reached"},409));
+    await page.locator("#detail-reference-files").setInputFiles(["pause.png","later.png"].map(name=>({name,mimeType:"image/png",buffer:Buffer.from("synthetic limit fixture")})));
+    await page.locator("#detail-reference-upload").click();
+    await page.waitForFunction(()=>document.querySelector("#detail-reference-feedback")?.textContent.includes("0 unconfirmed · 2 remaining"));
+    assert.match(await page.locator("#detail-reference-feedback").innerText(),/current image is retained/);
+    page.once("dialog",d=>d.dismiss());await page.locator("#detail-reference-discard").click();
+    assert.equal(await page.locator("#detail-reference-resume").isVisible(),true);
+    page.once("dialog",d=>d.accept());await page.locator("#detail-reference-discard").click();
+    assert.equal(await page.locator("#detail-reference-resume").isVisible(),false);
     await page.locator("#detail-reply-body").fill("Synthetic retry message");
     await page.locator("#detail-reply-send").click();
     await page.waitForFunction(()=>document.querySelector("#detail-reply-feedback")?.textContent.includes("Retry the unchanged"));

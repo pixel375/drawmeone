@@ -24,6 +24,8 @@
   const proofDrafts=new Map();
   let pendingReply=null,remainingReferences=[],referenceStopRequested=false;
   const referenceUploadKeys=new WeakMap();
+  const referenceUnconfirmed=new WeakSet();
+  let referenceTotals=null;
   function customerSessionExpired() {
     if (leavingSession) return;
     leavingSession = true;
@@ -67,7 +69,9 @@
   $("detail-reply-body").addEventListener("input",updateDetailDraftWarning);
   function syncReferenceResume(){
     $("detail-reference-resume").hidden=!remainingReferences.length;
-    $("detail-reference-resume").disabled=state.uploadBusy||($("detail-reference-form").hidden&&!remainingReferences.some(file=>referenceUploadKeys.has(file)));
+    $("detail-reference-resume").disabled=detailMutationBusy()||($("detail-reference-form").hidden&&!referenceUnconfirmed.has(remainingReferences[0]));
+    $("detail-reference-discard").hidden=!remainingReferences.length;
+    $("detail-reference-discard").disabled=detailMutationBusy();
     $("detail-reference-resume").textContent="Upload "+remainingReferences.length+" remaining image(s)";
     $("detail-reference-stop").hidden=!state.uploadBusy;
     $("detail-reference-stop").disabled=referenceStopRequested;
@@ -76,7 +80,8 @@
   $("detail-reference-files").addEventListener("change",()=>{
     if(remainingReferences.length&&$("detail-reference-files").files.length){
       if(!window.confirm("Replace the remaining reference upload selection with these new files?"))$("detail-reference-files").value="";
-      else remainingReferences=[];
+      else {remainingReferences=[];referenceTotals=null;}
+    }else if($("detail-reference-files").files.length){referenceTotals=null;
     }
     syncReferenceResume();
   });
@@ -84,7 +89,7 @@
     if(state.uploadBusy){referenceStopRequested=true;syncReferenceResume();$("detail-reference-feedback").textContent="Stopping after the current image…";}
   });
   function clearDetailDrafts() {
-    proofDrafts.clear();pendingReply=null;remainingReferences=[];referenceStopRequested=false;
+    proofDrafts.clear();pendingReply=null;remainingReferences=[];referenceTotals=null;referenceStopRequested=false;
     $("detail-reply-body").value = "";
     $("detail-reference-files").value = "";
     $("detail-reference-feedback").textContent = "";
@@ -945,12 +950,19 @@
   }
 
   $("detail-reference-form").addEventListener("submit",event=>{
-    event.preventDefault();uploadReferences(Array.from($("detail-reference-files").files||[]));
+    event.preventDefault();uploadReferences(Array.from($("detail-reference-files").files||[]),false);
   });
-  $("detail-reference-resume").addEventListener("click",()=>uploadReferences([...remainingReferences]));
-  async function uploadReferences(files){
+  $("detail-reference-resume").addEventListener("click",()=>uploadReferences([...remainingReferences],true));
+  $("detail-reference-discard").addEventListener("click",()=>{
+    if(detailMutationBusy()||!remainingReferences.length)return;
+    if(!window.confirm("Discard remaining selected images? An interrupted upload may already be saved. Existing reference images will not be removed."))return;
+    remainingReferences=[];referenceTotals=null;
+    $("detail-reference-feedback").textContent="Remaining selection discarded. Saved references remain.";
+    syncReferenceResume();
+  });
+  async function uploadReferences(files,resuming=false){
     const ref=state.selectedRef;
-    if(!ref||detailMutationBusy()||!state.csrf||($("detail-reference-form").hidden&&!files.some(file=>referenceUploadKeys.has(file))))return;
+    if(!ref||detailMutationBusy()||!state.csrf||($("detail-reference-form").hidden&&!referenceUnconfirmed.has(files[0])))return;
     if(!files.length||files.length>8||files.some(file=>file.size>4*1024*1024||file.size<1||
       !(["image/jpeg","image/png","image/webp"].includes(file.type)||(!file.type&&/\.(jpe?g|png|webp)$/i.test(file.name))))){
       $("detail-reference-feedback").textContent="Choose up to eight JPEG, PNG or WebP images, maximum 4 MB each.";
@@ -960,42 +972,44 @@
     state.uploadBusy=true;referenceStopRequested=false;remainingReferences=[];
     $("detail-reference-files").disabled=true;$("detail-reference-upload").disabled=true;
     syncReferenceResume();
-    progress.hidden=false;progress.max=files.length;progress.value=0;
+    if(!resuming||!referenceTotals)referenceTotals={total:files.length,processed:0,saved:0,rejected:0};
+    const totals=referenceTotals,offset=totals.processed;
+    progress.hidden=false;progress.max=totals.total;progress.value=offset;
     let attempted=0,saved=0,rejected=0,uncertain=0,reason="";
     try{
       for(let i=0;i<files.length;i++){
         if(referenceStopRequested||leavingSession){reason="Upload stopped.";break;}
-        if(!referenceUploadKeys.has(files[i])){
-          if($("detail-reference-form").hidden){reason="New reference uploads unavailable.";break;}
-          referenceUploadKeys.set(files[i],newKey());
-        }
+        if($("detail-reference-form").hidden&&!referenceUnconfirmed.has(files[i])){reason="New reference uploads unavailable.";break;}
+        if(!referenceUploadKeys.has(files[i]))referenceUploadKeys.set(files[i],newKey());
         const payload=new FormData();payload.append("ref",ref);payload.append("reference",files[i]);payload.append("operation_key",referenceUploadKeys.get(files[i]));
         try{
           const response=await fetch("./api/request-attachment.php",{method:"POST",credentials:"same-origin",cache:"no-store",headers:{"X-DMO-CSRF":state.csrf},body:payload});
           if(response.status===401)return customerSessionExpired();
           const data=await response.json();
-          if(response.ok&&data.ok===true&&Number.isSafeInteger(data.attachment_id)&&data.attachment_id>0)saved++;
-          else if(response.status===429&&data.error==="too_many_uploads"){
-            reason="Upload rate limit reached. Try remaining images later.";break;
+          if(response.ok&&data.ok===true&&Number.isSafeInteger(data.attachment_id)&&data.attachment_id>0){saved++;referenceUnconfirmed.delete(files[i]);}
+          else if(response.status===429||response.status===403||["reference_limit_reached","request_closed","reference_upload_disabled","request_not_found"].includes(data.error)){
+            reason=data.error==="reference_limit_reached"?"Reference limit reached. The current image is retained. Remove an eligible reference or discard the remaining selection.":"Uploads paused ("+(data.error||response.status)+"). The current image is retained.";
+            break;
           }else if(response.status>=400&&response.status<500&&data.ok===false){
-            rejected++;reason="Upload stopped ("+(data.error||response.status)+").";
+            referenceUnconfirmed.delete(files[i]);rejected++;reason="Upload stopped ("+(data.error||response.status)+").";
           }else{
-            uncertain++;reason="Upload outcome not confirmed. Resume uses the original upload ID.";
+            referenceUnconfirmed.add(files[i]);uncertain++;reason="Upload outcome not confirmed. Resume uses the original upload ID.";
           }
         }catch(_){
-          uncertain++;reason="Connection interrupted. Resume uses the original upload ID.";
+          referenceUnconfirmed.add(files[i]);uncertain++;reason="Connection interrupted. Resume uses the original upload ID.";
         }
         if(uncertain)break;
-        attempted=i+1;progress.value=attempted;
-        status.textContent="Processed "+attempted+" of "+files.length+" reference images.";
+        attempted=i+1;progress.value=offset+attempted;
+        status.textContent="Processed "+(offset+attempted)+" of "+totals.total+" reference images.";
         if(reason)break;
       }
       if(leavingSession)return;
       remainingReferences=files.slice(attempted);
+      totals.processed+=attempted;totals.saved+=saved;totals.rejected+=rejected;
       $("detail-reference-files").value="";
       await openDetail(ref);
       if(leavingSession)return;
-      status.textContent=(reason?reason+" ":"")+saved+" saved · "+rejected+" rejected · "+uncertain+" unconfirmed · "+remainingReferences.length+" remaining."+
+      status.textContent=(reason?reason+" ":"")+totals.saved+" saved · "+totals.rejected+" rejected · "+uncertain+" unconfirmed · "+remainingReferences.length+" remaining."+
         (remainingReferences.length&&$("detail-reference-form").hidden?" Uploads are unavailable until the request permits more references.":"");
     }finally{
       state.uploadBusy=false;referenceStopRequested=false;progress.hidden=true;
