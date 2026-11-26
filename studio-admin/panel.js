@@ -428,7 +428,7 @@
       open.type = "button";
       open.className = "quiet request-open";
       open.textContent = "View brief & drafts";
-      open.addEventListener("click", () => openRequest(row.id).catch(() => {
+      open.addEventListener("click", () => openRequest(row.id,true).catch(() => {
         showError("Unable to open commission request.");
       }));
       list.lastElementChild?.appendChild(open);
@@ -511,7 +511,7 @@
         open.textContent = "View request & thread";
         open.addEventListener("click", () => {
           selectPanel("requests");
-          openRequest(row.request_id).catch(() => showError("Request unavailable."));
+          openRequest(row.request_id,true).catch(() => showError("Request unavailable."));
         });
         list.lastElementChild?.appendChild(open);
       }
@@ -541,6 +541,23 @@
   let reviewStatus = null;
   let quoteDraftAllowed = false;
   const pendingAdminMessages=new Map();
+  // Never restore financial acknowledgements or stale eligibility after a
+  // server refresh. Detect edited transient fields before manual navigation.
+  const transientRequestBaseline=new Map();
+  const transientRequestSelector="#request-review-status,#request-orders .order-date-form input,#request-payment-records form input,#request-payment-records form select";
+  const transientFieldValue=field=>field.type==="checkbox"?field.checked:field.value;
+  function captureTransientRequestFields(){
+    transientRequestBaseline.clear();
+    for(const field of document.querySelectorAll(transientRequestSelector)){
+      transientRequestBaseline.set(field,transientFieldValue(field));
+    }
+  }
+  function hasTransientRequestEdits(){
+    return [...transientRequestBaseline].some(([field,initial])=>field.isConnected&&transientFieldValue(field)!==initial);
+  }
+  function confirmTransientRefresh(){
+    return !hasTransientRequestEdits()||window.confirm("Refreshing will discard unsaved order, payment or review fields and reset their acknowledgements. Notes, messages, quote drafts and retained artwork remain in this request. Refresh anyway?");
+  }
   function confirmChangedAdminOperation(action,id,body){
     const prior=pendingAdminMessages.get(action);
     return !prior||prior.id!==id||prior.body===body||
@@ -1282,12 +1299,13 @@
     if($("request-message-body").value!==""||pendingAdminMessages.has("send_customer_message"))kinds.push("customer message");
     if(quoteHasDraft()||pendingAdminMessages.has("create_quote_draft"))kinds.push("quote");
     if(pendingDeliveryFiles.size)kinds.push("delivery artwork selection");
+    if(hasTransientRequestEdits())kinds.push("order, payment or review fields");
     return kinds;
   }
   function updateRequestDraftIndicator(){
     const kinds=requestDraftKinds();
     $("request-drafts-warning").hidden=kinds.length===0||selectedRequestId===null;
-    $("request-drafts-warning").textContent=kinds.length?"Unsaved "+kinds.join(", ")+". These edits belong to this request only.":"";
+    $("request-drafts-warning").textContent=kinds.length?"Unsaved "+kinds.join(", ")+". These edits belong to this request only."+(hasTransientRequestEdits()?" Order/payment/review fields are reset by a server refresh or another saved action. Complete the current form first.":""):"";
   }
   function confirmDiscardRequestDrafts(){
     const kinds=requestDraftKinds();
@@ -1296,6 +1314,11 @@
   for(const id of ["request-note-form","request-message-form","request-quote-form"]){
     $(id).addEventListener("input",updateRequestDraftIndicator);
     $(id).addEventListener("change",updateRequestDraftIndicator);
+  }
+  for(const event of ["input","change"]){
+    $("request-detail").addEventListener(event,e=>{
+      if(e.target instanceof Element&&e.target.matches(transientRequestSelector))updateRequestDraftIndicator();
+    });
   }
   function updateRequestButtons() {
     $("request-detail-close").disabled = requestBusy;
@@ -1342,6 +1365,7 @@
   }
 
   function clearRequestContent() {
+    transientRequestBaseline.clear();
     $("request-at-a-glance").hidden=true;
     $("request-milestones").replaceChildren();$("request-section-links").replaceChildren();$("request-next-step").textContent="";
     for (const id of ["request-detail-ref","request-detail-title","request-customer",
@@ -1354,12 +1378,13 @@
     }
   }
 
-  async function openRequest(id) {
+  async function openRequest(id,userInitiated=false) {
     const parsed = Number(id);
     if (!Number.isSafeInteger(parsed) || parsed < 1) return;
     if (requestBusy && selectedRequestId !== parsed) return;
     const switching = selectedRequestId !== parsed;
     if(switching&&selectedRequestId!==null&&!confirmDiscardRequestDrafts())return;
+    if(!switching&&userInitiated&&!confirmTransientRefresh())return;
     const generation = ++requestLoadGeneration;
     selectedRequestId = parsed;
     requestWriteEnabled = false;
@@ -1444,6 +1469,7 @@
     renderDeliveryDrafts(item.orders,data.delivery_drafts,data.delivery_staging_enabled===true,data.fulfillment_options||[],data.artwork_reviews||[]);
     renderPaymentRecords(item.orders,data.payment_records,data.manual_payments_enabled===true,data.payment_exceptions_enabled===true,Array.isArray(data.checkout_links)?data.checkout_links:[]);
     renderArtistRequestSummary(data);
+    captureTransientRequestFields();
     requestText("request-detail-status", requestWriteEnabled
       ? "Admin draft editing available. Nothing is sent to the customer."
       : "Viewing only. Private note and quote creation are disabled on the server.");
@@ -1451,10 +1477,11 @@
   }
 
   $("request-detail-refresh").addEventListener("click",()=>{
-    if(selectedRequestId!==null&&!requestBusy)openRequest(selectedRequestId);
+    if(selectedRequestId!==null&&!requestBusy)openRequest(selectedRequestId,true);
   });
   $("request-thread-full").addEventListener("click",()=>{
     if(selectedRequestId===null||requestBusy)return;
+    if(!confirmTransientRefresh())return;
     requestFullThread=true;
     openRequest(selectedRequestId);
   });
@@ -2690,7 +2717,7 @@
         card.append(textNode("strong",financeLabels[item.record_state]+" · "+financeAmount(item.amount_minor,item.currency)),
           textNode("p","Order #"+item.order_id+" · "+item.public_ref+" · "+String(item.method).replaceAll("_"," "),"small"),
           textNode("p","Recorded: "+item.created_at+(item.verified_at?" · Reviewed: "+item.verified_at:""),"small"));
-        const button=textNode("button","Open commission","quiet");button.type="button";button.addEventListener("click",()=>{if(!setRequestCustomer())return;requestListPage=1;requestListQuery="";requestListFilter="all";$("request-list-query").value="";$("request-list-filter").value="all";resetRequestSearchOptions();syncScheduleFilter(true);selectPanel("requests");openRequest(item.request_id);});card.append(button);$("finance-records").append(card);
+        const button=textNode("button","Open commission","quiet");button.type="button";button.addEventListener("click",()=>{if(!setRequestCustomer())return;requestListPage=1;requestListQuery="";requestListFilter="all";$("request-list-query").value="";$("request-list-filter").value="all";resetRequestSearchOptions();syncScheduleFilter(true);selectPanel("requests");openRequest(item.request_id,true);});card.append(button);$("finance-records").append(card);
       }
       financeCursor=Number.isSafeInteger(data.next_before)?data.next_before:null;
       financeReport={scope:"local_records_only",as_of:data.as_of,filter,currency};

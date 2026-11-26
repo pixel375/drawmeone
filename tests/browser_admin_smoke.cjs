@@ -736,6 +736,18 @@ async function verifyOrderPlanning(browser) {
     assert.equal(filter,"orders");
     await page.locator(".order-date-form input[type=date]").fill("2027-01-15");
     await page.locator(".order-date-form input[type=checkbox]").check();
+    assert.match(await page.locator("#request-drafts-warning").innerText(),/order, payment or review fields/);
+    page.once("dialog",dialog=>{assert.match(dialog.message(),/discard unsaved order/);dialog.dismiss();});
+    await page.locator("#request-detail-refresh").click();
+    assert.equal(await page.locator(".order-date-form input[type=date]").inputValue(),"2027-01-15");
+    assert.equal(await page.locator(".order-date-form input[type=checkbox]").isChecked(),true);
+    page.once("dialog",dialog=>dialog.accept());
+    await page.locator("#request-detail-refresh").click();
+    await page.locator(".order-date-form input[type=date]").waitFor();
+    assert.equal(await page.locator(".order-date-form input[type=date]").inputValue(),"");
+    assert.equal(await page.locator(".order-date-form input[type=checkbox]").isChecked(),false);
+    await page.locator(".order-date-form input[type=date]").fill("2027-01-15");
+    await page.locator(".order-date-form input[type=checkbox]").check();
     await page.locator(".order-date-form button").click();
     await page.waitForFunction(()=>document.querySelector("#request-detail-status")?.textContent.includes("Payment remains unverified"));
     assert.match(await page.locator("#request-orders").innerText(),/2027-01-15/);
