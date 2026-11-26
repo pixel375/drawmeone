@@ -2408,7 +2408,21 @@
     gallery_layout: "design-layout",
     default_mode: "design-mode",
     logo: "design-logo",
+    hero_title: "design-hero-title",
+    hero_emphasis: "design-hero-emphasis",
+    hero_intro: "design-hero-intro",
+    portfolio_cta: "design-portfolio-cta",
+    contact_title: "design-contact-title",
+    contact_emphasis: "design-contact-emphasis",
   };
+  const designCopyLimits={hero_title:80,hero_emphasis:80,hero_intro:500,portfolio_cta:80,contact_title:80,contact_emphasis:80};
+  function designCopyIssue(){
+    for(const [key,limit] of Object.entries(designCopyLimits)){
+      const value=$(designIds[key]).value;
+      if(/[\u0000-\u001f\u007f]/.test(value)||new TextEncoder().encode(value.trim()).length>limit)return "Shorten "+$(designIds[key]).labels[0].textContent.trim()+" to "+limit+" UTF-8 bytes; use plain single-line text.";
+    }
+    return "";
+  }
 
   function designValues() {
     const values = {};
@@ -2424,7 +2438,8 @@
     designWriteEnabled = data.write_enabled === true;
     const snapshot = (data.draft?.exists ? data.draft.settings : data.published?.settings) || {};
     for (const [key, id] of Object.entries(designIds)) {
-      if (typeof snapshot[key] === "string" &&
+      if(Object.hasOwn(designCopyLimits,key))$(id).value=typeof snapshot[key]==="string"?snapshot[key]:"";
+      else if (typeof snapshot[key] === "string" &&
           Array.from($(id).options).some(option => option.value === snapshot[key])) {
         $(id).value = snapshot[key];
       }
@@ -2449,8 +2464,10 @@
     const dirty=designDirty();
     $("design-unsaved").hidden=!dirty;
     for(const id of Object.values(designIds))$(id).disabled=locked;
-    $("design-save").disabled=locked;
-    $("design-publish").disabled=locked||designDraftVersion===0||dirty;
+    const copyIssue=designCopyIssue();
+    $("design-copy-feedback").textContent=copyIssue;
+    $("design-save").disabled=locked||!!copyIssue;
+    $("design-publish").disabled=locked||designDraftVersion===0||dirty||!!copyIssue;
     $("design-history").disabled=locked||designHistory.length===0;
     $("design-restore").disabled=locked||!designHistory.some(x=>String(x.id)===$("design-history").value);
     $("design-reload").disabled=designBusy;
@@ -2470,7 +2487,7 @@
     }
   }
   async function designAction(action){
-    if(designBusy||!designWriteEnabled||!csrf||(action==="publish"&&designDirty()))return;
+    if(designBusy||!designWriteEnabled||!csrf||(action==="publish"&&designDirty())||(action!=="restore_draft"&&designCopyIssue()))return;
     const body={action,expected_version:designDraftVersion};
     if(action==="save_draft")body.settings=designValues();
     if(action==="restore_draft"){
@@ -2498,7 +2515,7 @@
     }
   }
   $("design-form").addEventListener("submit",event=>{event.preventDefault();designAction("save_draft");});
-  for(const id of Object.values(designIds))$(id).addEventListener("change",syncDesignControls);
+  for(const id of Object.values(designIds))$(id).addEventListener(Object.hasOwn(designCopyLimits,$(id).name)?"input":"change",syncDesignControls);
   $("design-reload").addEventListener("click",()=>{if(!designBusy&&(!designDirty()||window.confirm("Discard unsaved appearance changes and reload?")))designLoad();});
   $("design-history").addEventListener("change",syncDesignControls);
   $("design-publish").addEventListener("click",()=>{

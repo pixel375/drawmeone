@@ -1194,11 +1194,16 @@ async function verifyDesignHistory(browser){
     await page.locator('[data-view="settings"]').click();
     await page.locator("#design-history").locator('option[value="17"]').waitFor({state:"attached"});
     await page.locator("#design-color").selectOption("aurora");
+    await page.locator("#design-hero-title").fill("é".repeat(41));
+    assert.equal(await page.locator("#design-save").isDisabled(),true);
+    assert.match(await page.locator("#design-copy-feedback").textContent(),/UTF-8 bytes/);
+    await page.locator("#design-hero-title").fill("Unsaved synthetic headline");
     assert.equal(await page.locator("#design-publish").isEnabled(),false);
     assert.equal(await page.locator("#design-unsaved").isVisible(),true);
     await page.locator('[data-view="overview"]').click();
     await page.locator('[data-view="settings"]').click();
     assert.equal(await page.locator("#design-color").inputValue(),"aurora");
+    assert.equal(await page.locator("#design-hero-title").inputValue(),"Unsaved synthetic headline");
     page.once("dialog",dialog=>dialog.dismiss());
     await page.locator("#design-reload").click();
     assert.equal(await page.locator("#design-color").inputValue(),"aurora");
@@ -1207,6 +1212,7 @@ async function verifyDesignHistory(browser){
     await page.locator("#design-restore").click();
     await page.waitForFunction(()=>document.querySelector("#design-state")?.textContent.includes("Draft v3"));
     assert.equal(await page.locator("#design-color").inputValue(),"ember");
+    assert.equal(await page.locator("#design-hero-title").inputValue(),"");
     await page.waitForFunction(()=>document.querySelector("#design-unsaved").hidden);
     assert.equal(await page.locator("#design-publish").isEnabled(),true);
     assert.match(await page.locator("#design-state").textContent(),/Published v2/);

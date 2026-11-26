@@ -19,8 +19,8 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
 <meta name="robots" content="noindex,nofollow">
 <meta name="theme-color" content="#151317">
 <title>Artist's Desk · Draw Me One</title>
-<link rel="stylesheet" href="./panel.css?v=54">
-<script defer src="./panel.js?v=105"></script>
+<link rel="stylesheet" href="./panel.css?v=55">
+<script defer src="./panel.js?v=106"></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to dashboard</a>
@@ -510,6 +510,16 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
             </select>
           </label>
         </div>
+        <fieldset class="design-copy-fields"><legend>Homepage text (optional)</legend>
+          <p class="small">Leave blank to keep the existing wording. Plain text only; saved drafts stay private until explicitly published. The support email and request availability remain controlled separately. Do not enter private details or unapproved claims.</p>
+          <label for="design-hero-title">Homepage heading, first line<input type="text" id="design-hero-title" name="hero_title" maxlength="80" autocomplete="off" aria-describedby="design-copy-feedback"></label>
+          <label for="design-hero-emphasis">Homepage heading, second line<input type="text" id="design-hero-emphasis" name="hero_emphasis" maxlength="80" autocomplete="off" aria-describedby="design-copy-feedback"></label>
+          <label for="design-hero-intro">Artist introduction<input type="text" id="design-hero-intro" name="hero_intro" maxlength="500" autocomplete="off" aria-describedby="design-copy-feedback"></label>
+          <label for="design-portfolio-cta">Portfolio button label<input type="text" id="design-portfolio-cta" name="portfolio_cta" maxlength="80" autocomplete="off" aria-describedby="design-copy-feedback"></label>
+          <label for="design-contact-title">Contact heading, first line<input type="text" id="design-contact-title" name="contact_title" maxlength="80" autocomplete="off" aria-describedby="design-copy-feedback"></label>
+          <label for="design-contact-emphasis">Contact heading, second line<input type="text" id="design-contact-emphasis" name="contact_emphasis" maxlength="80" autocomplete="off" aria-describedby="design-copy-feedback"></label>
+          <p id="design-copy-feedback" class="small" role="status"></p>
+        </fieldset>
         <p id="design-unsaved" class="small" role="status" hidden>Unsaved appearance changes. Save the draft before publishing.</p>
         <div class="design-actions">
           <button type="button" class="quiet" id="design-reload">Reload draft</button>

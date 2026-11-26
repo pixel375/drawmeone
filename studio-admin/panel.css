@@ -368,3 +368,5 @@ footer{padding:28px 0 70px;border-top:1px solid var(--line);color:var(--muted);f
 .private-reference-card{display:grid;gap:5px;align-content:start;min-width:0}.private-reference-card small{color:var(--muted);overflow-wrap:anywhere}.private-reference-card a .small{padding:8px;text-align:center;overflow-wrap:anywhere}
 
 .artwork-card-info [data-artwork-discard]{white-space:normal;overflow-wrap:anywhere}.artwork-card-info [data-artwork-discard][hidden]{display:none}
+
+.design-copy-fields{border:1px solid var(--line);border-radius:10px;padding:16px;margin:20px 0;min-width:0;display:grid;gap:12px}.design-copy-fields legend{font-weight:700;padding:0 6px}.design-copy-fields label{display:grid;gap:6px;font-size:12px;font-weight:700}.design-copy-fields input{min-width:0;width:100%;min-height:44px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit;padding:10px 12px}.design-copy-fields input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}

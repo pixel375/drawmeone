@@ -365,7 +365,7 @@ async function checkCompleteImageViewer(browser){
 async function checkPublishedPresentation(browser){
   const context=await browser.newContext({viewport:{width:390,height:844},reducedMotion:"reduce"});
   const page=await context.newPage();
-  const settings={site_style:"studio",color_theme:"ember",gallery_layout:"rows",default_mode:"light",logo:"01-minimal-pencil"};
+  const settings={site_style:"studio",color_theme:"ember",gallery_layout:"rows",default_mode:"light",logo:"01-minimal-pencil",hero_title:"CI heading",hero_intro:"Plain <b>text</b>",portfolio_cta:"See the drawings"};
   let payload={ok:true,presentation:"published",published:true,version:3,settings},http=200;
   const sampleAssets=[];
   page.on("request",request=>{if(new URL(request.url()).pathname.startsWith("/assets/demo/"))sampleAssets.push(request.url());});
@@ -377,6 +377,11 @@ async function checkPublishedPresentation(browser){
     await page.waitForFunction(()=>document.documentElement.dataset.presentation==="public");
     const state=()=>page.locator("html").evaluate(el=>[el.dataset.site,el.dataset.design,el.dataset.layout,el.dataset.mode,el.dataset.logo]);
     assert.deepEqual(await state(),["studio","ember","rows","light","01-minimal-pencil"]);
+    assert.equal(await page.locator('[data-studio-copy="hero_title"]').textContent(),"CI heading");
+    assert.equal(await page.locator('[data-studio-copy="hero_intro"]').textContent(),"Plain <b>text</b>");
+    assert.equal(await page.locator('[data-studio-copy="hero_intro"] b').count(),0);
+    assert.equal(await page.locator('[data-studio-copy="portfolio_cta"]').textContent(),"See the drawings");
+    for(const name of ["Portfolio","The process","Contact","Commissions"])assert.equal(await page.getByRole("navigation",{name:"Main navigation"}).getByRole("link",{name,exact:true}).isVisible(),true);
     assert.equal(await page.locator("#design-lab").isVisible(),false);
     await page.locator('[data-site-choice="cinema"]').evaluate(el=>el.click());
     assert.equal((await state())[0],"studio","hidden preview control cannot change published style");
@@ -388,6 +393,7 @@ async function checkPublishedPresentation(browser){
     for(const [body,code] of [
       [{...payload,settings:{...settings,site_style:"cinema"}},200],
       [{...payload,settings:{...settings,unexpected:"value"}},200],
+      [{...payload,settings:{...settings,hero_title:"é".repeat(41)}},200],
       [{...payload,published:false},200],
       [{ok:false},503]
     ]){
@@ -395,6 +401,7 @@ async function checkPublishedPresentation(browser){
       await page.reload({waitUntil:"domcontentloaded"});
       await page.waitForFunction(()=>document.documentElement.dataset.presentation==="public");
       assert.deepEqual(await state(),["studio","noir","masonry","dark","original"]);
+      assert.equal(await page.locator('[data-studio-copy="hero_title"]').textContent(),"A little art.");
       assert.equal(await page.locator("#design-lab").isVisible(),false);
     }
     const demoRequests=[];

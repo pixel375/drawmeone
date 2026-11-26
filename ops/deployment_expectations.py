@@ -86,7 +86,7 @@ DEPLOYMENT_FILES = [
     "api/admin/packages.php", "api/catalog.php", "app/requests.php", "studio-admin/panel.css",
     "gallery.js", "concepts.js", "studio.js", "styles.css", "api/portfolio.php", "api/artwork.php", "app/artwork.php",
     ".htaccess", "polish.css", "branding.css", "favicon.svg", "api/health.php",
-    "backend-status.php", "backend-status.html", "admin-preview.html", "commission-preview.html",
+    "backend-status.php", "backend-status.html", "admin-preview.html", "commission-preview.html", "app/design.php", "api/admin/design.php", "api/site-settings.php",
 ]
 
 def deployment_files(root):

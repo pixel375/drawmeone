@@ -13,6 +13,12 @@ function dmo_design_defaults(): array
     ];
 }
 
+/** Optional public plain-text copy; older settings/snapshots remain valid. */
+function dmo_design_copy_limits(): array
+{
+    return ['hero_title'=>80, 'hero_emphasis'=>80, 'hero_intro'=>500, 'portfolio_cta'=>80, 'contact_title'=>80, 'contact_emphasis'=>80];
+}
+
 function dmo_design_normalize(mixed $raw): ?array
 {
     if (!is_array($raw) || array_is_list($raw)) {
@@ -32,15 +38,21 @@ function dmo_design_normalize(mixed $raw): ?array
     ];
     // Explicitly reject unrecognized keys so secrets or dangerous
     // content cannot be stored in what will become a public document.
+    $copyLimits=dmo_design_copy_limits();
+    $copy=[];
     foreach ($raw as $key => $value) {
-        if (!is_string($key) || !isset($allowed[$key])) {
-            return null;
+        if (!is_string($key) || !is_string($value)) return null;
+        if (isset($copyLimits[$key])) {
+            if (preg_match('//u',$value)!==1 || preg_match('/[\x00-\x1F\x7F]/u',$value)!==0) return null;
+            $value=trim($value);
+            if (strlen($value)>$copyLimits[$key]) return null;
+            if ($value!=='') $copy[$key]=$value;
+            unset($raw[$key]);
+            continue;
         }
-        if (!is_string($value) || !in_array($value, $allowed[$key], true)) {
-            return null;
-        }
+        if (!isset($allowed[$key]) || !in_array($value,$allowed[$key],true)) return null;
     }
-    return array_replace(dmo_design_defaults(), $raw);
+    return array_replace(dmo_design_defaults(), $raw, $copy);
 }
 
 function dmo_design_load(PDO $db, string $context): array

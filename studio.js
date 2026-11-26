@@ -133,16 +133,27 @@
   // Published design settings are allowlisted as a complete document.
   // Missing, malformed or unreachable settings fall back to Studio with
   // preview controls hidden. A draft is never read by this runtime.
+  const copyLimits={hero_title:80,hero_emphasis:80,hero_intro:500,portfolio_cta:80,contact_title:80,contact_emphasis:80};
   function publishedChoices(data){
     const map={site:"site_style",design:"color_theme",layout:"gallery_layout",mode:"default_mode",logo:"logo"};
     const result={};
-    if(!data||typeof data!=="object"||Array.isArray(data)||Object.keys(data).length!==5)return null;
+    if(!data||typeof data!=="object"||Array.isArray(data)||Object.keys(data).some(key=>!Object.values(map).includes(key)&&!Object.hasOwn(copyLimits,key)))return null;
     for(const [name,field] of Object.entries(map)){
       const value=data[field];
       if(!allowed[name].includes(value)||(name==="site"&&value!=="studio"))return null;
       result[name]=value;
     }
+    for(const [key,limit] of Object.entries(copyLimits)){
+      if(!Object.hasOwn(data,key))continue;
+      if(typeof data[key]!=="string"||/[\u0000-\u001f\u007f]/.test(data[key])||new TextEncoder().encode(data[key].trim()).length>limit)return null;
+    }
     return result;
+  }
+  function applyPublishedCopy(data){
+    for(const el of document.querySelectorAll("[data-studio-copy]")){
+      const value=data[el.dataset.studioCopy];
+      if(typeof value==="string"&&value.trim())el.textContent=value.trim();
+    }
   }
   function applyPresentation(settings,preview){
     const oldSite=root.dataset.site,oldLayout=root.dataset.layout;
@@ -169,7 +180,8 @@
             for(const name of Object.keys(allowed))if(allowed[name].includes(pref?.[name]))choices[name]=pref[name];
           }catch(_){}
         }else if(data?.ok===true&&data.presentation==="published"&&data.published===true&&Number.isSafeInteger(data.version)&&data.version>0){
-          choices=publishedChoices(data.settings)||choices;
+          const verified=publishedChoices(data.settings);
+          if(verified){choices=verified;applyPublishedCopy(data.settings);}
         }
       }
     }catch(_){}finally{clearTimeout(timer);}
