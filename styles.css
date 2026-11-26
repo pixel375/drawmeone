@@ -384,3 +384,5 @@ h1 em,h2 em{font-style:normal;color:var(--accent)}
 .gallery-progress[hidden]{display:none}.gallery-progress:focus-visible,.portfolio-empty:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 .portfolio-error p{margin:0 0 12px}.portfolio-error .gallery-more-button{min-height:44px;max-width:100%;white-space:normal}
 .portfolio-error .gallery-more-button:disabled{cursor:wait;opacity:.7}
+
+.lightbox-image-feedback{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;color:#fff;font-size:13px;max-width:100%}.lightbox-image-feedback:has(p:empty):has(button[hidden]){display:none}.lightbox-image-feedback p{margin:0}.lightbox-image-feedback button{min-height:44px;padding:8px 14px;border:1px solid #aaa;border-radius:8px;background:transparent;color:#fff;font:inherit;cursor:pointer}.lightbox-image-feedback button[hidden]{display:none}.lightbox-image-feedback button:focus-visible{outline:2px solid #fff;outline-offset:3px}.lightbox-bottom button:disabled{opacity:.45;cursor:default}

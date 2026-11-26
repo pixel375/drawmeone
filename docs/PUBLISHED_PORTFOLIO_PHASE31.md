@@ -17,3 +17,5 @@ The published-portfolio regression passed on Chromium, Firefox and WebKit in [Ch
 
 
 Session XVIII: The homepage gallery now exposes a retry control after failed manifests, bounded to one fetch sequence at a time. It still fails closed in public mode and never requests design sample manifests there. Loading/empty/error/success states are announced; the visible count remains available after the last load-more button disappears, with keyboard focus transferred to that count. Failed retries restore button focus and successful retries focus the result. Multi-touch/cancelled swipes clear their pending gesture. Browser contracts cover failed retry, recovered empty result, and final gallery count. No publication settings changed.
+
+Session XIX: The full-image viewer now reports failed image loads, provides a bounded same-image retry, disables meaningless previous/next controls for a single drawing, and restores focus even if responsive layout changes replace gallery tiles. Existing public fallback remains a neutral unavailable image; no demo art is substituted.

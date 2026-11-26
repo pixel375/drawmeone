@@ -385,8 +385,18 @@ async function checkPublishedPresentation(browser){
     await page.reload({waitUntil:"domcontentloaded"});
     await page.locator("#portfolio-directory-note").waitFor({state:"visible"});
     await page.waitForFunction(()=>document.querySelector("#portfolio-gallery img")?.getAttribute("src")==="./assets/artwork-unavailable.svg");
+    await page.locator("#portfolio-gallery .art-tile").first().click();
+    await page.locator("#lightbox-retry").waitFor({state:"visible"});
+    assert.match(await page.locator("#lightbox-image-status").innerText(),/could not load/);
+    assert.equal(await page.getByRole("button",{name:"Next image",exact:true}).isDisabled(),true);
+    await page.route("**/api/artwork.php?*",route=>route.fulfill({contentType:"image/svg+xml",body:'<svg xmlns="http://www.w3.org/2000/svg" width="320" height="240"><rect width="320" height="240" fill="gray"/></svg>'}));
+    await page.locator("#lightbox-retry").click();
+    await page.waitForFunction(()=>document.querySelector("#lightbox-image-status")?.textContent===""&&document.querySelector("#lightbox-image")?.naturalWidth===320);
+    assert.equal(await page.locator("#lightbox-retry").isVisible(),false);
+    await page.keyboard.press("Escape");
+    assert.equal(await page.evaluate(()=>document.activeElement.classList.contains("art-tile")),true);
     assert.deepEqual(demoRequests,[]);
-    console.log("PASS: published design, separate visitor mode, stale preview isolation and safe fallback");
+    console.log("PASS: published design, separate visitor mode, stale preview isolation and safe fallback/retry");
   }finally{await context.close();}
 }
 

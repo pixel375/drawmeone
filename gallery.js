@@ -14,7 +14,9 @@
   const big = document.getElementById("lightbox-image");
   const count = document.getElementById("lightbox-counter");
   const pageLink = document.getElementById("lightbox-detail-link");
-  if (![gallery,notice,empty,error,retry,more,moreButton,remaining,progress,dialog,big,count,pageLink].every(Boolean)) return;
+  const imageStatus=document.getElementById("lightbox-image-status");
+  const imageRetry=document.getElementById("lightbox-retry");
+  if (![gallery,notice,empty,error,retry,more,moreButton,remaining,progress,dialog,big,count,pageLink,imageStatus,imageRetry].every(Boolean)) return;
 
   const realImage = /^(?:assets\/portfolio\/[a-z0-9][a-z0-9/_-]*\.(?:avif|webp|png|jpe?g)|api\/artwork\.php\?id=[1-9][0-9]{0,17}&v=display)$/i;
   const hostedImage = /^api\/artwork\.php\?id=[1-9][0-9]{0,17}&v=display$/;
@@ -47,8 +49,12 @@
     if (!entries.length) return;
     activeIndex=(i+entries.length)%entries.length;
     delete big.dataset.fallback;
+    imageRetry.hidden=true;
+    imageStatus.textContent="Loading drawing…";
     big.alt=imageAlt(entries[activeIndex]);
     big.src=entries[activeIndex].src;
+    if(big.complete&&big.naturalWidth>0)imageStatus.textContent="";
+    for(const button of dialog.querySelectorAll("[data-gallery-prev],[data-gallery-next]"))button.disabled=entries.length<=1;
     count.textContent=(activeIndex+1)+" / "+entries.length;
     const match=/^api\/artwork\.php\?id=([1-9][0-9]{0,17})&v=display$/.exec(entries[activeIndex].src);
     pageLink.hidden=!match;
@@ -68,7 +74,9 @@
   dialog.addEventListener("click",(event)=>{if(event.target===dialog)dialog.close();});
   dialog.addEventListener("close",()=>{
     big.removeAttribute("src");delete big.dataset.fallback;
+    imageRetry.hidden=true;imageStatus.textContent="";startX=null;
     if(lastFocused&&lastFocused.isConnected)lastFocused.focus();
+    else (gallery.children[Math.min(activeIndex,gallery.childElementCount-1)]||progress).focus({preventScroll:true});
   });
   dialog.addEventListener("keydown",(event)=>{
     if(event.key==="Escape"){event.preventDefault();if(dialog.open)dialog.close();return;}
@@ -86,6 +94,21 @@
   },{passive:true});
   stage.addEventListener("touchcancel",()=>{startX=null;},{passive:true});
   safeguard(big);
+  big.addEventListener("error",()=>{
+    if(!dialog.open||!entries.length)return;
+    imageStatus.textContent="This drawing could not load.";
+    imageRetry.hidden=false;
+  });
+  big.addEventListener("load",()=>{
+    if(dialog.open&&big.dataset.fallback!=="true"&&big.naturalWidth>0){
+      imageStatus.textContent="";imageRetry.hidden=true;
+    }
+  });
+  imageRetry.addEventListener("click",()=>{
+    if(!dialog.open||!entries.length)return;
+    dialog.querySelector("[data-gallery-close]").focus({preventScroll:true});
+    big.removeAttribute("src");showAt(activeIndex);
+  });
 
   function syncShowcase(){
     document.documentElement.dataset.hasArtwork=String(!isDemo && entries.length>0);
@@ -130,6 +153,7 @@
     if(!entries.length)return;
     const total=Math.min(visible,entries.length);
     // Append only new images; avoid redownloading and recreating all old tiles.
+    const focusedIndex=Array.from(gallery.children).indexOf(document.activeElement);
     if(total<renderedCount || gallery.childElementCount!==renderedCount){
       gallery.replaceChildren();
       renderedCount=0;
@@ -139,6 +163,9 @@
       for(let i=renderedCount;i<total;i++)fragment.appendChild(makeTile(entries[i],i));
       gallery.appendChild(fragment);
       renderedCount=total;
+    }
+    if(focusedIndex>=0&&!gallery.contains(document.activeElement)){
+      gallery.children[Math.min(focusedIndex,total-1)]?.focus({preventScroll:true});
     }
     gallery.classList.add("is-loaded");
     gallery.setAttribute("aria-label",isDemo?"Temporary sample images, not the artist's work":"Original drawings by Draw Me One");
