@@ -308,6 +308,49 @@ async function checkHomepageIntake(browser) {
   }finally{await context.close();}
 }
 
+async function checkCompleteImageViewer(browser){
+  for(const viewport of [{width:320,height:568},{width:844,height:390},{width:1440,height:900}]){
+    const context=await browser.newContext({viewport,reducedMotion:"reduce"});
+    const page=await context.newPage();
+    try{
+      await mockPublicBackend(page);
+      const reply=(route,data)=>route.fulfill({status:200,contentType:"application/json",body:JSON.stringify(data)});
+      await page.route("**/api/site-settings.php*",route=>reply(route,{ok:true,presentation:"published",published:true,version:1,settings:{site_style:"studio",color_theme:"noir",gallery_layout:"rows",default_mode:"dark",logo:"original"}}));
+      const artwork=(id,width,height)=>({src:"api/artwork.php?id="+id+"&v=display",thumb:"api/artwork.php?id="+id+"&v=thumb",width,height,alt:"Synthetic drawing "+id});
+      await page.route("**/api/portfolio.php*",route=>reply(route,{ok:true,works:[artwork(1,300,1500),artwork(2,1500,300)]}));
+      await page.route("**/api/artwork.php?*",route=>{
+        const id=new URL(route.request().url()).searchParams.get("id");
+        const [w,h]=id==="1"?[300,1500]:[1500,300];
+        return route.fulfill({status:200,contentType:"image/svg+xml",body:'<svg xmlns="http://www.w3.org/2000/svg" width="'+w+'" height="'+h+'"><rect width="'+w+'" height="'+h+'" fill="gray"/></svg>'});
+      });
+      await page.goto(base+"/index.html",{waitUntil:"domcontentloaded"});
+      const tiles=page.locator("#portfolio-gallery .art-tile");
+      await tiles.first().click();
+      for(const [id,w,h] of [[1,300,1500],[2,1500,300]]){
+        await page.waitForFunction(([w,h])=>{
+          const image=document.querySelector("#lightbox-image");
+          return image?.complete&&image.naturalWidth===w&&image.naturalHeight===h&&document.querySelector("#lightbox-image-status")?.textContent==="";
+        },[w,h]);
+        const geometry=await page.evaluate(()=>{
+          const rect=el=>{const b=el.getBoundingClientRect();return {left:b.left,top:b.top,right:b.right,bottom:b.bottom,width:b.width,height:b.height};};
+          const image=document.querySelector("#lightbox-image");
+          return {fit:getComputedStyle(image).objectFit,image:rect(image),stage:rect(document.querySelector(".lightbox-stage")),controls:[...document.querySelectorAll("[data-gallery-close], [data-gallery-prev], [data-gallery-next], #lightbox-detail-link")].map(rect),width:innerWidth,height:innerHeight};
+        });
+        assert.equal(geometry.fit,"contain","complete drawing must use contain, not cover");
+        assert(geometry.image.width>0&&geometry.image.height>0,"positive viewer dimensions");
+        for(const b of [geometry.stage,geometry.image,...geometry.controls]){
+          assert(b.width>0&&b.height>0&&b.left>=-1&&b.top>=-1&&b.right<=geometry.width+1&&b.bottom<=geometry.height+1,"viewer element outside viewport "+JSON.stringify({viewport,id,b}));
+        }
+        assert(geometry.image.left>=geometry.stage.left-1&&geometry.image.right<=geometry.stage.right+1&&geometry.image.top>=geometry.stage.top-1&&geometry.image.bottom<=geometry.stage.bottom+1,"image box must remain within stage");
+        if(id===1)await page.getByRole("button",{name:"Next image",exact:true}).click();
+      }
+      await page.getByRole("button",{name:"Close viewer"}).click();
+      await page.waitForFunction(()=>document.activeElement.classList.contains("art-tile"));
+      console.log("PASS: full portrait/landscape viewer and visible controls at "+viewport.width+"x"+viewport.height);
+    }finally{await context.close();}
+  }
+}
+
 async function checkPublishedPresentation(browser){
   const context=await browser.newContext({viewport:{width:390,height:844},reducedMotion:"reduce"});
   const page=await context.newPage();
@@ -499,6 +542,7 @@ async function checkPublicTheme(browser){
     await checkClosedWorkflows(browser);
     await checkHomepageIntake(browser);
     await checkPublishedPresentation(browser);
+    await checkCompleteImageViewer(browser);
     await checkPublicInformation(browser);
     await checkPublicTheme(browser);
     await checkPublicShare(browser);
