@@ -1137,6 +1137,8 @@ try {
     qa_positive($code===200,'catalog_restricted_tier_published');
     [$code,$catalog]=qa_http('/api/catalog.php');
     qa_positive($code===200&&$catalog['tiers'][0]['available_addon_ids']===[]&&count($catalog['addons'])===1,'catalog_restriction_public_empty_not_unrestricted');
+    [$code,,$serviceHtml]=qa_http('/services.php');
+    qa_positive($code===200&&str_contains($serviceHtml,'No published extras available for this package.')&&str_contains($serviceHtml,'CI Extra'),'services_distinguishes_restricted_tier_from_public_extras');
     [$code,$private]=qa_http('/api/admin/packages.php',$tokenAdmin,'__Host-dmo_admin');
     $row=array_values(array_filter($private['catalog']['tiers'],fn($r)=>$r['id']===$item['id']))[0];
     $restrict['expected_revision']=$row['revision'];$restrict['expected_compatibility_revision']=$row['compatibility']['revision'];
@@ -1145,6 +1147,8 @@ try {
     qa_positive($code===200,'catalog_live_extra_selection_saved');
     [$code,$catalog]=qa_http('/api/catalog.php');
     qa_positive($code===200&&$catalog['tiers'][0]['available_addon_ids']===[$extraRow['id']],'catalog_selected_extra_visible');
+    [$code,,$serviceHtml]=qa_http('/services.php');
+    qa_positive($code===200&&str_contains($serviceHtml,'<li>CI Extra · CAD 2.00 – 3.00</li>')&&!str_contains($serviceHtml,'No published extras available for this package.'),'services_lists_compatible_published_extra');
     [$code,$private]=qa_http('/api/admin/packages.php',$tokenAdmin,'__Host-dmo_admin');
     $row=array_values(array_filter($private['catalog']['tiers'],fn($r)=>$r['id']===$item['id']))[0];
     $restrict['expected_compatibility_revision']=$row['compatibility']['revision'];$restrict['mode']='all';$restrict['allowed_addon_ids']=[];
@@ -1152,6 +1156,8 @@ try {
     qa_positive($code===200,'catalog_unrestricted_restored');
     [$code,$catalog]=qa_http('/api/catalog.php');
     qa_positive($code===200&&array_key_exists('available_addon_ids',$catalog['tiers'][0])&&$catalog['tiers'][0]['available_addon_ids']===null,'catalog_unrestricted_public_null');
+    [$code,,$serviceHtml]=qa_http('/services.php');
+    qa_positive($code===200&&str_contains($serviceHtml,'<li>CI Extra · CAD 2.00 – 3.00</li>'),'services_unrestricted_tier_lists_public_extras');
     [$code,$report]=qa_http('/api/admin/overview.php',$tokenAdmin,'__Host-dmo_admin');
     $evidence=$report['launch_evidence']??null;
     qa_positive($code===200&&$report['configuration_review']['mode']==='review_only'&&$report['configuration_review']['authorizes_launch']===false,'configuration_review_report_not_authorization');
