@@ -20,7 +20,7 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
 <meta name="theme-color" content="#151317">
 <title>Artist's Desk · Draw Me One</title>
 <link rel="stylesheet" href="./panel.css?v=53">
-<script defer src="./panel.js?v=93"></script>
+<script defer src="./panel.js?v=94"></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to dashboard</a>
@@ -305,7 +305,9 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
       <form id="customer-filters" class="request-list-filters">
         <label for="customer-query">Name, email or commission reference<input id="customer-query" type="search" maxlength="160" autocomplete="off"></label>
         <label for="customer-state">Account status<select id="customer-state"><option value="all">All customers</option><option value="verified">Active and verified</option><option value="unverified">Awaiting email verification</option><option value="inactive">Inactive accounts</option></select></label>
+        <label for="customer-history">Commission history<select id="customer-history"><option value="all">Any history</option><option value="with_requests">With requests</option><option value="without_requests">No requests yet</option></select></label>
         <button class="quiet" type="submit">Search customers</button>
+        <button class="quiet" id="customer-clear-filters" type="button">Clear filters</button>
       </form>
       <p id="customer-directory-status" class="small" role="status">Select Customers to load records.</p>
       <div id="customer-directory-list" class="record-list"></div>

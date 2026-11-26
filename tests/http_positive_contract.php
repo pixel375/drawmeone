@@ -153,6 +153,12 @@ try {
     qa_positive($code===422,'invalid_artist_search_scope');
     [$code]=qa_http('/api/admin/customers.php?state=invalid',$tokenAdmin,'__Host-dmo_admin');
     qa_positive($code===422,'customer_directory_invalid_filter_denied');
+    [$code,$directory]=qa_http('/api/admin/customers.php?history=with_requests',$tokenAdmin,'__Host-dmo_admin');
+    qa_positive($code===200&&$directory['matching_count']===2&&count($directory['customers'])===2,'customer_directory_with_history_count');
+    [$code,$directory]=qa_http('/api/admin/customers.php?history=without_requests',$tokenAdmin,'__Host-dmo_admin');
+    qa_positive($code===200&&$directory['matching_count']===0&&$directory['customers']===[],'customer_directory_no_history_filter');
+    [$code]=qa_http('/api/admin/customers.php?history=invalid',$tokenAdmin,'__Host-dmo_admin');
+    qa_positive($code===422,'customer_directory_invalid_history_filter');
     [$code,$archived]=qa_http('/api/policy.php?version=qa-policy-v0&sha256='.$oldPin);
     qa_positive($code===200&&$archived['policy']['version']==='qa-policy-v0','explicitly_pinned_historical_policy_readable');
     [$code,,$policyHtml]=qa_http('/policy.php?version=qa-policy-v0&sha256='.$oldPin);

@@ -2725,15 +2725,15 @@
     finally{packageBusy=false;if(!leavingSession){if(refreshed)packageSelect(packageSelected.kind,packageSelected.id,true);else packageControls();}}
   });
 
-  let customerGeneration=0,customerCursor=null,customerSearch="",customerState="all";
+  let customerGeneration=0,customerCursor=null,customerSearch="",customerState="all",customerHistory="all";
   function clearCustomers(){++customerGeneration;customerCursor=null;$("customer-directory-list").replaceChildren();$("customer-directory-next").hidden=true;}
   async function loadCustomers(older=false){
     if(leavingSession||!csrf||(older&&customerCursor===null))return;
-    if(!older){clearCustomers();customerSearch=$("customer-query").value.trim();customerState=$("customer-state").value;}
+    if(!older){clearCustomers();customerSearch=$("customer-query").value.trim();customerState=$("customer-state").value;customerHistory=$("customer-history").value;}
     const generation=++customerGeneration,list=$("customer-directory-list"),status=$("customer-directory-status"),next=$("customer-directory-next");
     next.disabled=true;status.textContent="Loading customer records…";
     try{
-      const params=new URLSearchParams({q:customerSearch,state:customerState});if(older)params.set("before",String(customerCursor));
+      const params=new URLSearchParams({q:customerSearch,state:customerState,history:customerHistory});if(older)params.set("before",String(customerCursor));
       const {response,data}=await get("customers.php?"+params);
       if(generation!==customerGeneration||leavingSession)return;
       if(response.status===401)return sessionExpired();
@@ -2745,11 +2745,22 @@
         const btn=textNode("button","View commission history","quiet");btn.type="button";btn.disabled=row.request_count===0;
         btn.addEventListener("click",()=>{if(!setRequestCustomer(row.id))return;requestListPage=1;requestListQuery="";requestListFilter="all";$("request-list-query").value="";$("request-list-filter").value="all";resetRequestSearchOptions();syncScheduleFilter(true);selectPanel("requests");});card.append(btn);list.append(card);
       }
-      customerCursor=Number.isSafeInteger(data.next_before)?data.next_before:null;next.hidden=customerCursor===null;status.textContent=list.children.length+" customer(s) loaded.";
-    }catch(_){if(generation===customerGeneration){clearCustomers();next.disabled=false;status.textContent="Customer directory unavailable. Search again to retry.";}}
+      const previous=customerCursor;
+      customerCursor=Number.isSafeInteger(data.next_before)&&data.next_before>0&&(!older||data.next_before<previous)?data.next_before:null;next.hidden=customerCursor===null;
+      status.textContent=list.children.length+" customer(s) loaded"+(Number.isSafeInteger(data.matching_count)?" of "+data.matching_count+" matching":"")+".";
+      if(!list.children.length)status.textContent="No customers match these filters.";
+    }catch(_){if(generation===customerGeneration){
+      if(older){status.textContent="Older customers unavailable. Loaded results retained; retry or search again.";}
+      else{clearCustomers();next.disabled=false;status.textContent="Customer directory unavailable. Search again to retry.";}
+    }}
     finally{if(generation===customerGeneration)next.disabled=false;}
   }
   $("customer-filters").addEventListener("submit",event=>{event.preventDefault();loadCustomers();});
+  $("customer-clear-filters").addEventListener("click",()=>{$("customer-filters").reset();loadCustomers();});
+  for(const id of ["customer-query","customer-state","customer-history"])$(id).addEventListener(id==="customer-query"?"input":"change",()=>{
+    clearCustomers();$("customer-directory-next").disabled=false;
+    $("customer-directory-status").textContent="Filters changed. Search customers to apply.";
+  });
   $("customer-directory-next").addEventListener("click",()=>loadCustomers(true));
   let financeGeneration=0,financeCursor=null,financeRecords=[],financeReport=null;
   const financeLabels={pending:"Awaiting verification",reconciled:"Reconciled",held:"On hold",refunded:"Full refund recorded",rejected:"Rejected evidence",review:"Needs review"};

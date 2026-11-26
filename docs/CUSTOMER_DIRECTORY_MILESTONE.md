@@ -4,3 +4,5 @@ Authenticated artist-only lookup for commission support, returning bounded custo
 
 
 Changing exact customer scope now closes and clears previous commission details/drafts; changing scope is blocked while a mutation is outstanding. Payment shortcuts reset any previous customer scope before opening a commission. Failed directory or finance reads clear stale records.
+
+Session XXI: commission-history presence filter and matching count, scoped to customer accounts only. Filters invalidate stale results until submitted; clear filters reloads defaults. Older-page failures preserve existing results and allow retry. A non-decreasing cursor cannot loop. No account mutations or additional personal fields.

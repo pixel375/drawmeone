@@ -201,6 +201,14 @@ async function verifyArtistDesk(browser, width) {
       } else if(name==="customers"){
         await page.locator("#customer-directory-list article").first().waitFor();
         assert.match(await page.locator("#customer-directory-list").innerText(),/Synthetic Customer/);
+        await page.locator("#customer-history").selectOption("with_requests");
+        assert.equal(await page.locator("#customer-directory-list article").count(),0);
+        const filteredCustomers=page.waitForRequest(req=>req.url().includes("history=with_requests"));
+        await page.getByRole("button",{name:"Search customers",exact:true}).click();
+        await filteredCustomers;
+        await page.locator("#customer-directory-list article").first().waitFor();
+        await page.locator("#customer-clear-filters").click();
+        await page.locator("#customer-directory-list article").first().waitFor();
         await page.getByRole("button",{name:"View commission history"}).click();
         await page.locator("#request-list .empty-state").waitFor();
         assert.match(await page.locator("#request-customer-label").innerText(),/customer #44/);
