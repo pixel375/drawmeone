@@ -215,6 +215,12 @@
   $("privacy-queue-view").addEventListener("change",()=>{if(!privacyQueueBusy){clearPrivacyQueue();loadPrivacyQueue(false);}});
   $("privacy-queue-refresh").addEventListener("click",()=>loadPrivacyQueue(false));
   $("privacy-queue-next").addEventListener("click",()=>loadPrivacyQueue(true));
+  function openPrivacyFollowup(view){
+    if(privacyQueueBusy||leavingSession)return;
+    $("privacy-queue-view").value=view;loadPrivacyQueue(false);
+    $("privacy-queue-title").focus();$("privacy-queue-title").scrollIntoView({block:"start"});
+  }
+  document.querySelectorAll("[data-privacy-shortcut]").forEach(button=>button.addEventListener("click",()=>openPrivacyFollowup(button.dataset.privacyShortcut)));
   let overviewGeneration=0,launchEvidence=null;
   function renderLaunchEvidence(report){
     launchEvidence=null;
@@ -341,6 +347,11 @@
         for(const [key,label] of Object.entries(labels)){
           const value=review.counts[key];if(!Number.isSafeInteger(value)||value<0)continue;
           const row=document.createElement("div");row.className="retention-row";row.append(textNode("span",label),textNode("strong",value.toLocaleString()));card.append(row);
+          if((key==="privacy_open_7d"||key==="privacy_open_30d")&&value>0){
+            const shortcut=textNode("button","Review cases","quiet");shortcut.type="button";
+            shortcut.setAttribute("aria-label","Review privacy cases open at least "+(key==="privacy_open_7d"?"7":"30")+" days");
+            shortcut.addEventListener("click",()=>openPrivacyFollowup(key==="privacy_open_7d"?"open_7d":"open_30d"));card.append(shortcut);
+          }
         }
         retention.append(card);
       }
@@ -619,6 +630,10 @@
   $("message-list-query").addEventListener("keydown",event=>{if(event.key==="Enter"){event.preventDefault();applyMessageSearch();}});
   $("message-list-clear").addEventListener("click",()=>{$("message-list-query").value="";applyMessageSearch();});
   $("message-list-refresh").addEventListener("click",()=>messages());
+  $("recent-messages-shortcut").addEventListener("click",()=>{
+    $("message-list-filter").value="recent";$("message-list-query").value="";messageQuery="";messagePage=1;selectPanel("messages");
+    $("message-list-filter").focus();
+  });
   $("message-list-previous").addEventListener("click",()=>{if(messagePage>1){messagePage--;messages();}});
   $("message-list-next").addEventListener("click",()=>{messagePage++;messages();});
 

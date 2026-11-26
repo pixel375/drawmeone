@@ -13,7 +13,7 @@ try {
     if(!is_string($search)||strlen($search)>240||!preg_match('//u',$search)||preg_match('/[\x00-\x1f\x7f]/',$search))dmo_json(422,['ok'=>false,'error'=>'invalid_message_search']);
     $search=trim($search);
     if (!is_string($pageText) || !preg_match('/^[1-9][0-9]{0,3}$/D',$pageText) ||
-        !is_string($filter) || !in_array($filter,['all','customer','artist','internal','reply_due'],true)) {
+        !is_string($filter) || !in_array($filter,['all','customer','artist','internal','reply_due','recent'],true)) {
         dmo_json(422,['ok'=>false,'error'=>'invalid_message_filter']);
     }
     $page=(int)$pageText;
@@ -23,6 +23,7 @@ try {
         'customer'=>"WHERE m.is_internal=0 AND u.role='customer' ",
         'artist'=>"WHERE m.is_internal=0 AND u.role='admin' ",
         'internal'=>"WHERE m.is_internal=1 ",
+        'recent'=>"WHERE m.created_at>=DATE_SUB(UTC_TIMESTAMP(),INTERVAL 7 DAY) ",
         default=>'',
     };
     $params=[];

@@ -1055,8 +1055,9 @@ async function verifyPrivacyQueue(browser){
   try{
     await page.goto(base+"/studio-admin/index.php",{waitUntil:"domcontentloaded"});
     await page.locator("#workspace").waitFor({state:"visible"});
-    await page.locator("#privacy-queue-refresh").click();
+    await page.locator('[data-privacy-shortcut="open"]').click();
     await page.locator("#privacy-queue form").waitFor();
+    assert.equal(await page.locator("#privacy-queue-title").evaluate(el=>document.activeElement===el),true);
     const form=page.locator("#privacy-queue form");
     const agedRequest=page.waitForRequest(req=>req.url().includes("view=open_30d"));
     await page.locator("#privacy-queue-view").selectOption("open_30d");

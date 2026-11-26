@@ -20,7 +20,7 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
 <meta name="theme-color" content="#151317">
 <title>Artist's Desk · Draw Me One</title>
 <link rel="stylesheet" href="./panel.css?v=53">
-<script defer src="./panel.js?v=102"></script>
+<script defer src="./panel.js?v=103"></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to dashboard</a>
@@ -97,8 +97,8 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
 <article><span>AWAITING EVIDENCE</span><strong id="stat-awaiting-evidence">—</strong><small>Unpaid arrangements without active local payment evidence</small><button type="button" class="quiet stat-shortcut" data-request-queue="awaiting_evidence">View arrangements</button></article>
 <article><span>PAYMENT HOLDS</span><strong id="stat-holds">—</strong><small>Payment exceptions requiring attention</small><button type="button" class="quiet stat-shortcut" data-request-queue="payment_hold">Review holds</button></article>
 <article><span>INVOICE FOLLOW-UP</span><strong id="stat-checkout">—</strong><small>Expired or suspended local links needing external closure review</small><button type="button" class="quiet stat-shortcut" data-request-queue="checkout_followup">Review invoices</button></article>
-<article><span>OPEN PRIVACY REQUESTS</span><strong id="stat-privacy">—</strong><small>Require individual review</small></article>
-<article><span>MESSAGE ACTIVITY</span><strong id="stat-messages">—</strong><small>Last seven days, not an unread count</small></article></div><p class="small overview-empty" hidden>No non-empty counters in this group.</p></section>
+<article><span>OPEN PRIVACY REQUESTS</span><strong id="stat-privacy">—</strong><small>Require individual review</small><button type="button" class="quiet stat-shortcut" data-privacy-shortcut="open">Review privacy cases</button></article>
+<article><span>MESSAGE ACTIVITY</span><strong id="stat-messages">—</strong><small>Last seven days, not an unread count</small><button type="button" class="quiet stat-shortcut" id="recent-messages-shortcut">View recent activity</button></article></div><p class="small overview-empty" hidden>No non-empty counters in this group.</p></section>
       <p class="small">Activity reflects actual records. No placeholder orders, customers or payments are created.</p>
       <section class="launch-overview" aria-labelledby="intake-title">
         <h3 id="intake-title">Commission availability</h3>
@@ -116,7 +116,7 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
         <p class="small">This setting cannot enable customer registration, policy approval or commercial launch.</p>
       </section>
       <section class="launch-overview" aria-labelledby="privacy-queue-title">
-        <h3 id="privacy-queue-title">Privacy requests</h3>
+        <h3 id="privacy-queue-title" tabindex="-1">Privacy requests</h3>
         <p class="small">Review requests for additional access, corrections or deletion. These controls record decisions only; they do not change or delete customer data. Respond through a verified channel if the customer cannot sign in.</p>
         <label for="privacy-queue-view">Show <select id="privacy-queue-view"><option value="open">Open requests</option><option value="open_7d">Open at least 7 days</option><option value="open_30d">Open at least 30 days</option><option value="closed">Resolved, declined and withdrawn</option></select></label>
         <button type="button" class="quiet" id="privacy-queue-refresh">Load privacy requests</button>
@@ -293,7 +293,7 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
       <div class="section-intro"><h2>Messages</h2><p>Recent conversation activity, including internal notes. Open a request to read details and reply when customer messaging is enabled.</p></div>
       <div class="request-list-filters">
         <label for="message-list-filter">Message type
-          <select id="message-list-filter"><option value="all">All activity</option><option value="customer">Customer messages</option><option value="reply_due">Conversations awaiting artist reply</option><option value="artist">Artist replies</option><option value="internal">Private notes</option></select>
+          <select id="message-list-filter"><option value="all">All activity</option><option value="recent">Last seven days</option><option value="customer">Customer messages</option><option value="reply_due">Conversations awaiting artist reply</option><option value="artist">Artist replies</option><option value="internal">Private notes</option></select>
         </label>
         <label for="message-list-query">Search message, sender or request reference<input id="message-list-query" type="search" maxlength="240" autocomplete="off"></label>
         <button type="button" class="quiet" id="message-list-search">Apply search</button>

@@ -729,6 +729,8 @@ try {
     [$code]=qa_http($path,$tokenA);qa_positive(in_array($code,[401,403],true),'older_activity_admin_only');
     [$code]=qa_http('/api/admin/request.php?id='.$requestA.'&activity_before=0',$tokenAdmin,'__Host-dmo_admin');
     qa_positive($code===422,'invalid_activity_cursor');
+    [$code,$recent]=qa_http('/api/admin/messages.php?filter=recent',$tokenAdmin,'__Host-dmo_admin');
+    qa_positive($code===200&&$recent['matching_count']>0&&count($recent['messages'])<=50,'artist_recent_message_queue');
     [$code,$messages]=qa_http('/api/admin/messages.php?filter=internal&page=1',$tokenAdmin,'__Host-dmo_admin');
     qa_positive($code===200 && count($messages['messages'])===50 && $messages['has_more']===true &&
         count(array_filter($messages['messages'],fn($m)=>(int)$m['is_internal']!==1))===0,'artist_message_filter_and_page');
