@@ -31,12 +31,24 @@ function dmo_finance_ledger_sql(): string
       JOIN dmo_commission_requests r ON r.id=o.request_id
       LEFT JOIN dmo_quotes q ON q.id=o.accepted_quote_id";
 }
-function dmo_finance_report(PDO $db,string $state,string $currency,?int $before): array
+function dmo_finance_date(mixed $value): ?string
+{
+    if($value===null||$value==='')return null;
+    if(!is_string($value)||!preg_match('/^(20[0-9]{2})-([0-9]{2})-([0-9]{2})$/D',$value,$m)||!checkdate((int)$m[2],(int)$m[3],(int)$m[1]))
+        dmo_json(422,['ok'=>false,'error'=>'invalid_finance_date']);
+    return $value;
+}
+function dmo_finance_report(PDO $db,string $state,string $currency,?int $before,?string $from=null,?string $to=null): array
 {
     $ledger=dmo_finance_ledger_sql();
-    $groups=$db->query("SELECT currency,record_state,COUNT(*) AS record_count,SUM(amount_minor) AS amount_minor FROM ($ledger) ledger GROUP BY currency,record_state ORDER BY currency,record_state")->fetchAll(PDO::FETCH_ASSOC);
+    $dates=[];$dateParams=[];
+    if($from!==null){$dates[]='created_at>=:date_from';$dateParams['date_from']=$from.' 00:00:00';}
+    if($to!==null){$dates[]='created_at<DATE_ADD(:date_to,INTERVAL 1 DAY)';$dateParams['date_to']=$to;}
+    $dateWhere=$dates?' WHERE '.implode(' AND ',$dates):'';
+    $summary=$db->prepare("SELECT currency,record_state,COUNT(*) AS record_count,SUM(amount_minor) AS amount_minor FROM ($ledger) ledger".$dateWhere." GROUP BY currency,record_state ORDER BY currency,record_state");
+    $summary->execute($dateParams);$groups=$summary->fetchAll(PDO::FETCH_ASSOC);
     foreach($groups as &$g){$g['record_count']=(int)$g['record_count'];$g['amount_minor']=(int)$g['amount_minor'];}unset($g);
-    $where=[];$params=[];
+    $where=$dates;$params=$dateParams;
     if($state!=='all'){$where[]='record_state=:state';$params['state']=$state;}
     if($currency!=='all'){$where[]='currency=:currency';$params['currency']=$currency;}
     if($before!==null){$where[]='id<:before';$params['before']=$before;}
@@ -44,6 +56,7 @@ function dmo_finance_report(PDO $db,string $state,string $currency,?int $before)
     $q->execute($params);$rows=$q->fetchAll(PDO::FETCH_ASSOC);
     $more=count($rows)>25;if($more)array_pop($rows);
     foreach($rows as &$row)foreach(['id','order_id','request_id','amount_minor'] as $key)$row[$key]=(int)$row[$key];unset($row);
-    return ['ok'=>true,'readonly'=>true,'scope'=>'local_records_only','as_of'=>gmdate('c'),'summary'=>$groups,'records'=>$rows,
+    return ['ok'=>true,'readonly'=>true,'scope'=>'local_records_only','as_of'=>gmdate('c'),
+        'date_basis'=>'record_created_utc','date_from'=>$from,'date_to'=>$to,'summary'=>$groups,'records'=>$rows,
         'next_before'=>$more?$rows[count($rows)-1]['id']:null];
 }

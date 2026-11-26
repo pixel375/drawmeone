@@ -9,8 +9,10 @@ try{
        !in_array($currency,['all','CAD','USD'],true)||
        ($before!==null&&(!is_string($before)||!preg_match('/^[1-9][0-9]{0,17}$/D',$before))))
         dmo_json(422,['ok'=>false,'error'=>'invalid_finance_filter']);
+    $from=dmo_finance_date($_GET['from']??null);$to=dmo_finance_date($_GET['to']??null);
+    if($from!==null&&$to!==null&&$from>$to)dmo_json(422,['ok'=>false,'error'=>'invalid_finance_date_range']);
     $db->beginTransaction();
-    $report=dmo_finance_report($db,$state,$currency,$before===null?null:(int)$before);
+    $report=dmo_finance_report($db,$state,$currency,$before===null?null:(int)$before,$from,$to);
     $db->commit();dmo_json(200,$report);
 }catch(Throwable $e){
     if(isset($db)&&$db->inTransaction())$db->rollBack();

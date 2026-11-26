@@ -211,6 +211,17 @@ async function verifyArtistDesk(browser, width) {
         await page.locator("#finance-records article").first().waitFor();
         assert.match(await page.locator("#finance-summary").innerText(),/CAD 30.00/);
         assert.equal(await page.locator("#finance-export").isEnabled(),true);
+        await page.locator("#finance-from").fill("2026-11-01");
+        await page.locator("#finance-from").dispatchEvent("change");
+        assert.equal(await page.locator("#finance-export").isDisabled(),true);
+        await page.locator("#finance-refresh").click();
+        await page.locator("#finance-records article").first().waitFor();
+        page.once("dialog",d=>d.accept());const paymentDownload=page.waitForEvent("download");
+        await page.locator("#finance-export").click();
+        const ledger=JSON.parse(fs.readFileSync(await (await paymentDownload).path(),"utf8"));
+        assert.equal(ledger.date_from,"2026-11-01");assert.equal(ledger.date_basis,"record_created_utc");assert.equal(ledger.loaded_records_only,true);
+        await page.locator("#finance-clear-dates").click();
+        await page.locator("#finance-records article").first().waitFor();
       } else if(name==="artwork"){
         await page.locator("#artwork-list .artwork-library-card").first()
           .waitFor({state:"visible",timeout:12000});

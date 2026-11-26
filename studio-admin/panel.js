@@ -2767,10 +2767,16 @@
     if(leavingSession||!csrf||(older&&financeCursor===null))return;
     if(!older)clearFinance();
     const generation=++financeGeneration,filter=$("finance-state").value,currency=$("finance-currency").value;
+    const from=$("finance-from").value,to=$("finance-to").value;
+    if((from&&!$("finance-from").checkValidity())||(to&&!$("finance-to").checkValidity())||(from&&to&&from>to)){
+      clearFinance();$("finance-next").disabled=$("finance-refresh").disabled=false;
+      $("finance-status").textContent="Choose a valid UTC date range; start cannot follow end.";return;
+    }
     $("finance-next").disabled=$("finance-refresh").disabled=true;$("finance-export").disabled=true;
     $("finance-status").textContent="Loading payment records…";
     try{
       const params=new URLSearchParams({state:filter,currency});
+      if(from)params.set("from",from);if(to)params.set("to",to);
       if(older)params.set("before",String(financeCursor));
       const {response,data}=await get("finance.php?"+params);
       if(generation!==financeGeneration||leavingSession)return;
@@ -2793,20 +2799,26 @@
         const button=textNode("button","Open commission","quiet");button.type="button";button.addEventListener("click",()=>{if(!setRequestCustomer())return;requestListPage=1;requestListQuery="";requestListFilter="all";$("request-list-query").value="";$("request-list-filter").value="all";resetRequestSearchOptions();syncScheduleFilter(true);selectPanel("requests");openRequest(item.request_id,true);});card.append(button);$("finance-records").append(card);
       }
       financeCursor=Number.isSafeInteger(data.next_before)?data.next_before:null;
-      financeReport={scope:"local_records_only",as_of:data.as_of,filter,currency};
+      financeReport={scope:"local_records_only",as_of:data.as_of,filter,currency,date_basis:"record_created_utc",date_from:from||null,date_to:to||null,complete:financeCursor===null};
       $("finance-next").hidden=financeCursor===null;
       $("finance-status").textContent=financeRecords.length+" payment record(s) loaded · local evidence only.";
       $("finance-export").disabled=financeRecords.length===0;
-    }catch(_){if(generation===financeGeneration){clearFinance();$("finance-next").disabled=$("finance-refresh").disabled=false;$("finance-status").textContent="Payment records unavailable. Refresh to retry.";}}
+    }catch(_){if(generation===financeGeneration){
+      if(older){$("finance-status").textContent="Older payment records unavailable. Existing loaded records retained; retry or refresh. Export disabled until refreshed or retry succeeds.";}
+      else{clearFinance();$("finance-next").disabled=$("finance-refresh").disabled=false;$("finance-status").textContent="Payment records unavailable. Refresh to retry.";}
+    }}
     finally{if(generation===financeGeneration){$("finance-next").disabled=$("finance-refresh").disabled=false;}}
   }
   $("finance-state").addEventListener("change",()=>loadFinance());
   $("finance-currency").addEventListener("change",()=>loadFinance());
   $("finance-refresh").addEventListener("click",()=>loadFinance());
+  for(const id of ["finance-from","finance-to"])$(id).addEventListener("change",()=>{clearFinance();$("finance-next").disabled=$("finance-refresh").disabled=false;$("finance-status").textContent="Date range changed. Apply dates to load matching records.";});
+  $("finance-clear-dates").addEventListener("click",()=>{$("finance-from").value=$("finance-to").value="";loadFinance();});
   $("finance-next").addEventListener("click",()=>loadFinance(true));
   $("finance-export").addEventListener("click",()=>{
     if(!financeReport||leavingSession||!financeRecords.length)return;
-    const url=URL.createObjectURL(new Blob([JSON.stringify({...financeReport,loaded_records_only:true,records:financeRecords},null,2)],{type:"application/json"}));
+    if($("finance-export").disabled||!window.confirm("Download private payment records? This file contains commission references and amounts. Keep it secure. Loaded records only, not a bank statement."))return;
+    const url=URL.createObjectURL(new Blob([JSON.stringify({...financeReport,loaded_records_only:true,records:financeRecords},null,2)+"\n"],{type:"application/json"}));
     const link=document.createElement("a");link.href=url;link.download="drawmeone-payment-records.json";document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
   });
 

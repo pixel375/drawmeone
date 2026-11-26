@@ -20,7 +20,7 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
 <meta name="theme-color" content="#151317">
 <title>Artist's Desk · Draw Me One</title>
 <link rel="stylesheet" href="./panel.css?v=53">
-<script defer src="./panel.js?v=92"></script>
+<script defer src="./panel.js?v=93"></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to dashboard</a>
@@ -314,12 +314,15 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
 
     <section data-panel="finance" class="content-panel" hidden>
       <div class="section-intro"><h2>Payment records</h2><p>Local reconciliation evidence only. No provider balances, accounting profit, fees, taxes or automatic payment verification. Amounts are never combined across currencies.</p></div>
-      <p class="small">All-time recorded evidence by current state. Refunded, held, pending, rejected and inconsistent amounts are separate from reconciled records. Totals are not a bank statement.</p>
+      <p class="small">Recorded evidence by current state, for all dates or the selected creation-date range (UTC). Refunded, held, pending, rejected and inconsistent amounts are separate from reconciled records. Totals are not a bank statement.</p>
       <div id="finance-summary" class="launch-checks"></div>
       <div class="request-list-filters">
         <label for="finance-state">Record state<select id="finance-state"><option value="all">All records</option><option value="pending">Awaiting verification</option><option value="reconciled">Reconciled</option><option value="held">On hold</option><option value="refunded">Full refund recorded</option><option value="rejected">Rejected evidence</option><option value="review">Needs review</option></select></label>
         <label for="finance-currency">Currency<select id="finance-currency"><option value="all">All currencies</option><option value="CAD">CAD</option><option value="USD">USD</option></select></label>
-        <button type="button" class="quiet" id="finance-refresh">Refresh records</button>
+        <label for="finance-from">Recorded from (UTC)<input id="finance-from" type="date" min="2000-01-01" max="2099-12-31"></label>
+        <label for="finance-to">Recorded through (UTC)<input id="finance-to" type="date" min="2000-01-01" max="2099-12-31"></label>
+        <button type="button" class="quiet" id="finance-refresh">Apply dates / refresh</button>
+        <button type="button" class="quiet" id="finance-clear-dates">Clear dates</button>
       </div>
       <p id="finance-status" class="small" role="status">Select Payments to load records.</p>
       <div id="finance-records" class="record-list"></div>
