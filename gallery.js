@@ -11,7 +11,7 @@
   const remaining = document.getElementById("gallery-remaining");
   const progress = document.getElementById("gallery-progress");
   const dialog = document.getElementById("portfolio-lightbox");
-  const big = document.getElementById("lightbox-image");
+  let big = document.getElementById("lightbox-image");
   const count = document.getElementById("lightbox-counter");
   const pageLink = document.getElementById("lightbox-detail-link");
   const imageStatus=document.getElementById("lightbox-image-status");
@@ -49,15 +49,29 @@
   function showAt(i,retrying=false) {
     if (!entries.length) return;
     activeIndex=(i+entries.length)%entries.length;
-    delete big.dataset.fallback;
     imageRetry.hidden=true;
     imageStatus.textContent="Loading drawing…";
-    big.alt=imageAlt(entries[activeIndex]);
     const src=entries[activeIndex].src;
-    // WebKit may retain a failed image resource when the identical URL is
-    // immediately assigned again. An explicit retry gets a fresh URL only.
-    big.src=retrying?src+(src.includes("?")?"&":"?")+"retry="+Date.now()+"-"+(++retrySequence):src;
-    if(big.complete&&big.naturalWidth>0&&big.currentSrc===big.src)imageStatus.textContent="";
+    // Each navigation owns its own image and callbacks. A late failure or
+    // fallback load from a previous element must not change the new state.
+    const image=document.createElement("img");
+    image.id="lightbox-image";image.decoding="async";image.alt=imageAlt(entries[activeIndex]);
+    const previous=big;big=image;previous.replaceWith(image);previous.removeAttribute("src");
+    image.addEventListener("error",()=>{
+      if(big!==image||!dialog.open||image.dataset.fallback==="true")return;
+      image.dataset.fallback="true";
+      image.alt=isDemo?"Sample image currently unavailable":"Artwork image currently unavailable";
+      imageStatus.textContent="This drawing could not load.";imageRetry.hidden=false;
+      image.src=isDemo?fallback:unavailable;
+    });
+    image.addEventListener("load",()=>{
+      if(big===image&&dialog.open&&image.dataset.fallback!=="true"&&image.naturalWidth>0){
+        imageStatus.textContent="";imageRetry.hidden=true;
+      }
+    });
+    // Explicit retry revalidates the same validated drawing at the server.
+    image.src=retrying?src+(src.includes("?")?"&":"?")+"retry="+Date.now()+"-"+(++retrySequence):src;
+    if(image.complete&&image.naturalWidth>0&&image.currentSrc===image.src)imageStatus.textContent="";
     for(const button of dialog.querySelectorAll("[data-gallery-prev],[data-gallery-next]"))button.disabled=entries.length<=1;
     count.textContent=(activeIndex+1)+" / "+entries.length;
     const match=/^api\/artwork\.php\?id=([1-9][0-9]{0,17})&v=display$/.exec(entries[activeIndex].src);
@@ -66,9 +80,9 @@
     else pageLink.removeAttribute("href");
   }
   function openAt(index,button) {
-    lastFocused=button;showAt(index);
+    lastFocused=button;
     if (typeof dialog.showModal === "function") {
-      dialog.showModal();
+      dialog.showModal();showAt(index);
       dialog.querySelector("[data-gallery-close]").focus();
     } else window.open(entries[index].src,"_blank","noopener,noreferrer");
   }
@@ -97,17 +111,7 @@
     if(entries.length>1&&Math.abs(d)>65)showAt(activeIndex+(d<0?1:-1));
   },{passive:true});
   stage.addEventListener("touchcancel",()=>{startX=null;},{passive:true});
-  safeguard(big);
-  big.addEventListener("error",()=>{
-    if(!dialog.open||!entries.length)return;
-    imageStatus.textContent="This drawing could not load.";
-    imageRetry.hidden=false;
-  });
-  big.addEventListener("load",()=>{
-    if(dialog.open&&big.dataset.fallback!=="true"&&big.naturalWidth>0){
-      imageStatus.textContent="";imageRetry.hidden=true;
-    }
-  });
+  // Viewer callbacks are attached to each newly selected image in showAt.
   imageRetry.addEventListener("click",()=>{
     if(!dialog.open||!entries.length)return;
     dialog.querySelector("[data-gallery-close]").focus({preventScroll:true});

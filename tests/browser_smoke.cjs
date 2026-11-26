@@ -395,7 +395,15 @@ async function checkPublishedPresentation(browser){
     const retried=await freshRequest;
     assert.equal(new URL(retried.url()).searchParams.get("id"),"1");
     assert.equal(new URL(retried.url()).searchParams.get("v"),"display");
-    await page.waitForFunction(()=>document.querySelector("#lightbox-image-status")?.textContent===""&&document.querySelector("#lightbox-image")?.naturalWidth===320);
+    try{
+      await page.waitForFunction(()=>{
+        const img=document.querySelector("#lightbox-image");
+        return document.querySelector("#lightbox-image-status")?.textContent===""&&img?.complete&&img.naturalWidth>0&&img.src.includes("retry=")&&img.dataset.fallback!=="true";
+      });
+    }catch(error){
+      console.error("VIEWER_RETRY_STATE",await page.locator("#lightbox-image").evaluate(img=>({src:img.getAttribute("src"),currentSrc:img.currentSrc,complete:img.complete,width:img.naturalWidth,fallback:img.dataset.fallback,status:document.querySelector("#lightbox-image-status")?.textContent})));
+      throw error;
+    }
     assert.equal(await page.locator("#lightbox-retry").isVisible(),false);
     await page.keyboard.press("Escape");
     await page.waitForFunction(()=>document.activeElement.classList.contains("art-tile"));
