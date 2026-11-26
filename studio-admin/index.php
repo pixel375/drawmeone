@@ -20,7 +20,7 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
 <meta name="theme-color" content="#151317">
 <title>Artist's Desk · Draw Me One</title>
 <link rel="stylesheet" href="./panel.css?v=53">
-<script defer src="./panel.js?v=101"></script>
+<script defer src="./panel.js?v=102"></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to dashboard</a>
@@ -109,6 +109,8 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
           <label for="intake-capacity">Maximum simultaneous active requests</label>
           <input id="intake-capacity" type="number" min="1" max="100" step="1" required>
           <p class="small">The limit counts requests that are not closed. Existing orders and customer access remain available when new requests are paused.</p>
+          <p class="small" id="intake-draft-status" role="status"></p>
+          <button class="quiet" type="button" id="intake-discard" hidden>Discard unsent settings</button>
           <button class="quiet" type="submit" id="intake-save">Save intake settings</button>
         </form>
         <p class="small">This setting cannot enable customer registration, policy approval or commercial launch.</p>

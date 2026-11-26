@@ -67,39 +67,62 @@
     container.appendChild(item);
   }
 
-  let intakeVersion=null,intakeBusy=false;
+  let intakeVersion=null,intakeBusy=false,intakeSaved=null,intakeDraft=null,intakeEpoch=0;
+  function intakeFields(){return {paused:$("intake-mode").value==="paused",capacity:$("intake-capacity").value};}
+  function intakeSame(a,b){return a&&b&&a.paused===b.paused&&String(a.capacity)===String(b.capacity);}
+  function syncIntakeDraft(){
+    const conflict=!!intakeDraft&&intakeVersion!==null&&intakeDraft.version!==intakeVersion;
+    $("intake-draft-status").textContent=intakeDraft?(conflict?"Saved settings changed. Discard the older draft before editing the current settings.":intakeVersion===null?"Unsent settings retained. Refresh readiness before saving.":"Unsent settings retained in this page."):"";
+    $("intake-discard").hidden=!intakeDraft;
+    $("intake-discard").disabled=intakeBusy||intakeVersion===null;
+    $("intake-mode").disabled=$("intake-capacity").disabled=intakeBusy||intakeVersion===null||conflict;
+    $("intake-save").disabled=intakeBusy||intakeVersion===null||conflict;
+  }
+  function captureIntakeDraft(){
+    if(intakeBusy||intakeVersion===null||!intakeSaved||$("intake-mode").disabled)return;
+    const next=intakeFields();
+    intakeDraft=intakeSame(next,intakeSaved)?null:{...next,version:intakeVersion};
+    syncIntakeDraft();
+  }
+  for(const id of ["intake-mode","intake-capacity"])$(id).addEventListener("input",captureIntakeDraft);
+  $("intake-discard").addEventListener("click",()=>{
+    if(intakeBusy||intakeVersion===null||!intakeSaved||!intakeDraft)return;
+    if(!window.confirm("Discard unsent intake settings? Saved availability will not change."))return;
+    intakeDraft=null;$("intake-mode").value=intakeSaved.paused?"paused":"open";$("intake-capacity").value=String(intakeSaved.capacity);syncIntakeDraft();
+  });
   function renderIntake(data){
     const form=$("intake-form"),notice=$("intake-status");
-    const configured=data?.control_enabled===true;
-    form.hidden=!configured;intakeVersion=configured&&Number.isSafeInteger(data.version)?data.version:null;
-    if(!configured){notice.textContent=data?.requests_open?"Open under existing launch configuration. Artist capacity control is not enabled.":"New commissions are closed. Artist capacity control is not enabled.";return;}
-    $("intake-mode").value=data.paused?"paused":"open";
-    $("intake-capacity").value=String(data.capacity);
+    const configured=data?.control_enabled===true&&Number.isSafeInteger(data.version)&&data.version>=0&&typeof data.paused==="boolean"&&Number.isSafeInteger(data.capacity)&&data.capacity>=1&&data.capacity<=100;
+    intakeVersion=configured?data.version:null;intakeSaved=configured?{paused:data.paused,capacity:data.capacity}:null;
+    form.hidden=!configured&&!intakeDraft;
+    if(!configured){notice.textContent=data?.requests_open?"Open under existing launch configuration. Artist capacity control is not enabled.":"New commissions are closed or intake control is unavailable.";syncIntakeDraft();return;}
+    if(intakeSame(intakeDraft,intakeSaved))intakeDraft=null;
+    const shown=intakeDraft||intakeSaved;
+    $("intake-mode").value=shown.paused?"paused":"open";
+    $("intake-capacity").value=String(shown.capacity);
     const label={open:"Accepting new requests",paused:"Paused by artist",at_capacity:"At capacity",not_available:"Commercial launch gates remain closed"};
     notice.textContent=(label[data.reason]||"Unavailable")+" · "+data.active_requests+" / "+data.capacity+" active requests.";
-    $("intake-save").disabled=intakeBusy||intakeVersion===null;
+    syncIntakeDraft();
   }
   $("intake-form").addEventListener("submit",async event=>{
     event.preventDefault();
-    if(intakeBusy||intakeVersion===null||!csrf||!$("intake-form").reportValidity())return;
+    if(intakeBusy||intakeVersion===null||!csrf||$("intake-save").disabled||!$("intake-form").reportValidity())return;
     const paused=$("intake-mode").value==="paused",capacity=Number($("intake-capacity").value);
     if(!Number.isSafeInteger(capacity)||capacity<1||capacity>100)return;
     if(!window.confirm("Save these intake settings? Existing orders and commercial launch gates remain unchanged."))return;
-    intakeBusy=true;
-    for(const field of $("intake-form").querySelectorAll("input,select,button"))field.disabled=true;
+    const expected=intakeVersion;
+    intakeDraft={paused,capacity:String(capacity),version:expected};intakeBusy=true;++intakeEpoch;syncIntakeDraft();
     try{
-      const {response,data}=await post("intake.php",{expected_version:intakeVersion,paused,capacity,confirm_change:true},csrf);
+      const {response,data}=await post("intake.php",{expected_version:expected,paused,capacity,confirm_change:true},csrf);
+      if(leavingSession)return;
       if(response.status===401)return sessionExpired();
       if(!response.ok||!data.ok){
         $("intake-status").textContent=response.status===409?"Settings changed elsewhere. Refresh readiness before retrying.":"Settings not confirmed. Refresh readiness before retrying.";
         intakeVersion=null;return;
       }
-      renderIntake(data.intake);
+      intakeDraft=null;renderIntake(data.intake);
     }catch(_){intakeVersion=null;$("intake-status").textContent="Outcome uncertain. Refresh readiness before retrying.";}
-    finally{
-      intakeBusy=false;for(const field of $("intake-form").querySelectorAll("input,select,button"))field.disabled=false;
-      $("intake-save").disabled=intakeVersion===null;
-    }
+    finally{intakeBusy=false;++intakeEpoch;syncIntakeDraft();}
   });
   let privacyCursor=null,privacyQueueBusy=false,privacyQueueGeneration=0;
   const privacyDrafts=new Map();
@@ -252,12 +275,12 @@
       $(name+"-status").textContent=message;
     }
     if(!intakeBusy){
-      intakeVersion=null;$("intake-form").hidden=true;$("intake-save").disabled=true;
+      intakeVersion=null;$("intake-form").hidden=!intakeDraft;syncIntakeDraft();
       $("intake-status").textContent="Current intake state not verified. Refresh readiness.";
     }
   }
   async function overview() {
-    const generation=++overviewGeneration;
+    const generation=++overviewGeneration,intakeAtStart=intakeEpoch;
     resetOverviewReadiness("Refreshing current configuration…");
     for(const card of document.querySelectorAll(".overview-group .stats article")){
       card.dataset.count="unknown";card.querySelector("strong").textContent="—";
@@ -274,7 +297,7 @@
       $("overview-counter-status").textContent="Live counts unavailable. Refresh readiness to retry.";
       return showError("Unable to load live studio counts.");
     }
-    if(!intakeBusy)renderIntake(data.intake);
+    if(!intakeBusy&&intakeEpoch===intakeAtStart)renderIntake(data.intake);
     renderLaunchEvidence(data.launch_evidence);renderConfigurationReview(data.configuration_review);
     const counters = {
       "stat-requests": data.counts?.requests_for_review,
@@ -2998,6 +3021,7 @@
     ++overviewGeneration;
     ++artworkGeneration;
     artworkRecords=[];artworkDrafts.clear();artworkPendingFiles=[];artworkUploadTotals=null;$("artwork-upload-results").replaceChildren();artworkWriteEnabled=false;$("artwork-list").replaceChildren();
+    intakeDraft=null;intakeSaved=null;intakeVersion=null;syncIntakeDraft();
     renderLaunchEvidence(null);renderConfigurationReview(null);clearAdminSecurity();
     closeRequestDetail(true);++messageGeneration;messagePage=1;messageQuery="";$("message-list-query").value="";$("message-list").replaceChildren();privacyDrafts.clear();syncPrivacyDrafts();clearPrivacyQueue();clearFinance();clearCustomers();setRequestCustomer();$("customer-query").value="";
     $("workspace").hidden = true;
