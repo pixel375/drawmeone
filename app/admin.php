@@ -67,6 +67,7 @@ function dmo_admin_issue_session(PDO $db, int $adminId, bool $setCookie=true): s
 
 function dmo_admin_current_session(PDO $db): ?array
 {
+    if(!dmo_auth_https())return null;
     $token = $_COOKIE[DMO_ADMIN_COOKIE] ?? null;
     if (!is_string($token) || !preg_match('/^[a-f0-9]{64}$/D', $token)) {
         return null;

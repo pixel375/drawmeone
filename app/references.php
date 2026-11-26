@@ -86,8 +86,7 @@ function dmo_refs_variant_valid(array $row,string $variant): bool
     try{
         $path=dmo_refs_storage_file((string)$row['storage_key'],$variant);
         clearstatcache(true,$path);
-        if(!is_file($path)||!is_readable($path)||is_link($path)||
-            $row['mime_type']!=='image/webp')return false;
+        if(!dmo_private_image_path_ok($path,true)||$row['mime_type']!=='image/webp')return false;
         $bytes=@filesize($path);$info=@getimagesize($path);
         if(!is_int($bytes)||$bytes<1||!is_array($info)||($info['mime']??null)!=='image/webp'||
             $info[0]<1||$info[1]<1)return false;

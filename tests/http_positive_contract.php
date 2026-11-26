@@ -1249,6 +1249,22 @@ try {
     $db->prepare('UPDATE dmo_users SET password_hash=:hash WHERE id=:id')->execute(['hash'=>password_hash('Synthetic replacement password!',PASSWORD_DEFAULT),'id'=>$admin]);
     qa_positive(!dmo_admin_login_lock($db,$admin,$hash),'admin_login_lock_rejects_replaced_password_hash');
     $db->rollBack();
+    // Session cookies cannot be swapped between roles or read over HTTP.
+    $_COOKIE[DMO_ADMIN_COOKIE]=$tokenAdmin;$_COOKIE[DMO_SESSION_COOKIE]=$tokenA;
+    $savedHttps=$_SERVER['HTTPS']??null;$savedPort=$_SERVER['SERVER_PORT']??null;
+    $_SERVER['HTTPS']='off';$_SERVER['SERVER_PORT']='80';
+    qa_positive(dmo_admin_current_session($db)===null&&dmo_auth_current_session($db)===null,'session_requires_https');
+    $_SERVER['HTTPS']='on';$_SERVER['SERVER_PORT']='443';
+    $_COOKIE[DMO_ADMIN_COOKIE]=$tokenA;$_COOKIE[DMO_SESSION_COOKIE]=$tokenAdmin;
+    qa_positive(dmo_admin_current_session($db)===null&&dmo_auth_current_session($db)===null,'session_cookie_role_isolation');
+    unset($_COOKIE[DMO_ADMIN_COOKIE],$_COOKIE[DMO_SESSION_COOKIE]);
+    if($savedHttps===null)unset($_SERVER['HTTPS']);else $_SERVER['HTTPS']=$savedHttps;
+    if($savedPort===null)unset($_SERVER['SERVER_PORT']);else $_SERVER['SERVER_PORT']=$savedPort;
+    $idleToken=bin2hex(random_bytes(32));
+    qa_seed($db,"INSERT INTO dmo_sessions (user_id,session_hash,expires_at,last_seen_at) VALUES (:user,:hash,DATE_ADD(UTC_TIMESTAMP(),INTERVAL 1 HOUR),DATE_SUB(UTC_TIMESTAMP(),INTERVAL 31 MINUTE))",['user'=>$admin,'hash'=>hash('sha256',$idleToken)]);
+    [$code,$me]=qa_http('/api/admin/me.php',$idleToken,'__Host-dmo_admin');
+    qa_positive($code===200&&$me['authenticated']===false,'admin_idle_session_expired');
+    $db->prepare('DELETE FROM dmo_sessions WHERE session_hash=:hash')->execute(['hash'=>hash('sha256',$idleToken)]);
     $secondAdminToken=bin2hex(random_bytes(32));
     qa_seed($db,'INSERT INTO dmo_sessions (user_id,session_hash,expires_at,last_seen_at) VALUES (:user,:hash,DATE_ADD(UTC_TIMESTAMP(),INTERVAL 1 HOUR),UTC_TIMESTAMP())',['user'=>$admin,'hash'=>hash('sha256',$secondAdminToken)]);
     [$code,$security]=qa_http('/api/admin/security.php',$tokenAdmin,'__Host-dmo_admin');
@@ -1273,6 +1289,22 @@ try {
     qa_positive($code===200&&$me['authenticated']===false,'admin_changed_password_session_invalid');
     $q=$db->prepare('SELECT password_hash FROM dmo_users WHERE id=:id');$q->execute(['id'=>$admin]);
     qa_positive(password_verify($newPassword,$q->fetchColumn()),'admin_password_replacement_persisted');
+    // Real CLI recovery only against this explicitly disposable database.
+    $recoveryToken=bin2hex(random_bytes(32));
+    qa_seed($db,'INSERT INTO dmo_sessions (user_id,session_hash,expires_at,last_seen_at) VALUES (:user,:hash,DATE_ADD(UTC_TIMESTAMP(),INTERVAL 1 HOUR),UTC_TIMESTAMP())',['user'=>$admin,'hash'=>hash('sha256',$recoveryToken)]);
+    $recoveryPassword='CI-emergency-admin-recovery-123!';
+    $priorEnv=getenv('DMO_ADMIN_PASSWORD');putenv('DMO_ADMIN_PASSWORD='.$recoveryPassword);
+    try{
+        $proc=proc_open([PHP_BINARY,dirname(__DIR__).'/app/cli-admin.php','reset','positive-admin@example.invalid'],[0=>['pipe','r'],1=>['pipe','w'],2=>['pipe','w']],$pipes);
+        if(!is_resource($proc))throw new RuntimeException('CLI recovery process unavailable');
+        fclose($pipes[0]);$out=stream_get_contents($pipes[1]);$err=stream_get_contents($pipes[2]);fclose($pipes[1]);fclose($pipes[2]);
+        qa_positive(proc_close($proc)===0&&str_contains($out,'all admin sessions revoked')&&!str_contains($out.$err,$recoveryPassword),'cli_admin_recovery_succeeds_without_secret_output');
+    }finally{putenv($priorEnv===false?'DMO_ADMIN_PASSWORD':'DMO_ADMIN_PASSWORD='.$priorEnv);}
+    $q->execute(['id'=>$admin]);qa_positive(password_verify($recoveryPassword,$q->fetchColumn()),'cli_recovery_password_persisted');
+    [$code,$me]=qa_http('/api/admin/me.php',$recoveryToken,'__Host-dmo_admin');
+    qa_positive($code===200&&$me['authenticated']===false,'cli_recovery_revokes_admin_sessions');
+    [$code,$me]=qa_http('/api/auth/me.php',$tokenA);
+    qa_positive($code===200&&$me['authenticated']===true,'cli_recovery_preserves_customer_session');
     echo "DISPOSABLE_POSITIVE_HTTP=PASS\n";
 } catch(Throwable $error) {
     fwrite(STDERR,'DISPOSABLE_POSITIVE_HTTP=FAIL ('.get_class($error).

@@ -238,6 +238,13 @@ try {
     art_assert($status===403,'publishing_wrong_origin_denied');
 
     $path=dmo_artwork_storage_file($variants[0]['storage_key']);$saved=file_get_contents($path);
+    chmod(dirname($path),0755);
+    try{
+        [$status]=art_http('/api/admin/artwork-preview.php?id='.$id.'&v=display',$token);
+        art_assert($status===404,'exposed_artwork_directory_denies_preview');
+        [$status]=art_http('/api/admin/artworks.php',$token,$csrf,['id'=>$id,'action'=>'set_visibility','visibility'=>'published']);
+        art_assert($status===422,'exposed_artwork_directory_denies_publication');
+    }finally{chmod(dirname($path),0700);}
     file_put_contents($path,'broken synthetic variant');
     [$status]=art_http('/api/admin/artworks.php',$token,$csrf,['id'=>$id,'action'=>'set_visibility','visibility'=>'published']);
     art_assert($status===422,'damaged_variant_blocks_publication');

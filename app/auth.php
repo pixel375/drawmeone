@@ -244,6 +244,7 @@ function dmo_auth_issue_session(PDO $db, int $userId, bool $setCookie=true): str
 
 function dmo_auth_current_session(PDO $db): ?array
 {
+    if(!dmo_auth_https())return null;
     $token = $_COOKIE[DMO_SESSION_COOKIE] ?? null;
     if (!is_string($token) || !preg_match('/^[a-f0-9]{64}$/D', $token)) {
         return null;
@@ -253,7 +254,7 @@ function dmo_auth_current_session(PDO $db): ?array
         'u.display_name, u.email, u.role FROM dmo_sessions s ' .
         'JOIN dmo_users u ON u.id = s.user_id ' .
         'WHERE s.session_hash = :hash AND s.expires_at > UTC_TIMESTAMP() ' .
-        "AND u.account_status = 'active' AND u.email_verified_at IS NOT NULL LIMIT 1"
+        "AND u.role = 'customer' AND u.account_status = 'active' AND u.email_verified_at IS NOT NULL LIMIT 1"
     );
     $stmt->execute(['hash' => hash('sha256', $token)]);
     $session = $stmt->fetch();

@@ -223,6 +223,12 @@ try {
     ref_assert(dmo_integrity_media($db)['references']['invalid']===0,'reference_media_metadata_consistent');
     $displayPath=dmo_refs_storage_file($record['storage_key'],'display');
     $originalBytes=file_get_contents($displayPath);
+    chmod($displayPath,0644);
+    try{
+        [$code]=ref_http('/api/reference.php?id='.$id.'&variant=display',$cookieA);
+        ref_assert($code===404,'exposed_private_reference_denied');
+        ref_assert(dmo_integrity_media($db)['references']['invalid']===1,'reference_permissions_detected');
+    }finally{chmod($displayPath,0600);}
     file_put_contents($displayPath,$originalBytes.'unexpected bytes');clearstatcache(true,$displayPath);
     ref_assert(dmo_integrity_media($db)['references']['invalid']===1,'reference_size_mismatch_detected');
     [$code]=ref_http('/api/reference.php?id='.$id.'&variant=display',$cookieA);

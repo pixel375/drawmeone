@@ -45,10 +45,6 @@ if ($action === 'create' && (strlen($name) < 2 || strlen($name) > 120)) {
 try {
     $db = dmo_database();
     $algo = defined('PASSWORD_ARGON2ID') ? PASSWORD_ARGON2ID : PASSWORD_DEFAULT;
-    $hash = password_hash($password, $algo);
-    if (!is_string($hash)) {
-        dmo_cli_fail('Password hashing unavailable.');
-    }
     if ($action === 'check') {
         // On-server, read-only password check for a CLI-created admin.
         // No passwords, password hashes, account email, or tokens are printed.
@@ -70,6 +66,10 @@ try {
         }
         dmo_cli_fail('Admin credentials or account status: NOT VERIFIED. Check the exact admin email/password or use the reset command.');
     }
+    // Never create a new bcrypt password whose suffix would be silently ignored.
+    if($algo===PASSWORD_BCRYPT&&strlen($password)>72)dmo_cli_fail('This runtime requires a password of at most 72 bytes.');
+    $hash=password_hash($password,$algo);
+    if(!is_string($hash))dmo_cli_fail('Password hashing unavailable.');
     $db->beginTransaction();
     if ($action === 'create') {
         // Never auto-create another admin or infer admin rights from customer accounts.
@@ -103,6 +103,7 @@ try {
             ->execute(['hash' => $hash, 'id' => $id]);
         $db->prepare('DELETE FROM dmo_sessions WHERE user_id = :id')
             ->execute(['id' => $id]);
+        $db->prepare("UPDATE dmo_auth_tokens SET consumed_at=UTC_TIMESTAMP() WHERE user_id=:id AND consumed_at IS NULL")->execute(['id'=>$id]);
         $label = 'admin.password_reset_cli';
     }
     $audit = $db->prepare(

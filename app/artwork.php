@@ -258,6 +258,20 @@ function dmo_artwork_send_file(PDO $db, int $id, string $variant, bool $admin): 
     exit;
 }
 
+/** All image stores must remain private at the directory boundary.
+ * Legacy owner-readable files may have read bits outside the owner for
+ * portfolio only; no group/world write, symlinks or exposed directories. */
+function dmo_private_image_path_ok(string $path,bool $strictFile=false): bool
+{
+    clearstatcache(true);
+    foreach([$path,dirname($path),dirname(dirname($path))] as $part){
+        if(is_link($part))return false;
+        $mode=@fileperms($part);
+        if(!is_int($mode)||($mode&($part===$path&&!$strictFile?0022:0077))!==0)return false;
+    }
+    return is_file($path)&&is_readable($path)&&is_dir(dirname($path))&&is_dir(dirname(dirname($path)));
+}
+
 /** Validate an optimized file against recorded metadata before publication. */
 function dmo_artwork_variant_valid(array $row): bool
 {
@@ -265,8 +279,7 @@ function dmo_artwork_variant_valid(array $row): bool
         $path=dmo_artwork_storage_file((string)$row['storage_key']);
         clearstatcache(true,$path);
         if(isset($row['variant'])&&(!in_array($row['variant'],['thumb','display'],true)||!str_ends_with($path,'/'.$row['variant'].'.webp')))return false;
-        if(is_link($path)||is_link(dirname($path))||is_link(dirname(dirname($path)))||
-            !is_file($path)||!is_readable($path)||$row['mime_type']!=='image/webp'||
+        if(!dmo_private_image_path_ok($path)||$row['mime_type']!=='image/webp'||
             filesize($path)!==(int)$row['byte_size'])return false;
         $size=@getimagesize($path);
         return is_array($size)&&($size['mime']??null)==='image/webp'&&
