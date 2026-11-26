@@ -1043,6 +1043,11 @@ async function verifyPrivacyQueue(browser){
     await page.locator("#privacy-queue-refresh").click();
     await page.locator("#privacy-queue form").waitFor();
     const form=page.locator("#privacy-queue form");
+    const agedRequest=page.waitForRequest(req=>req.url().includes("view=open_30d"));
+    await page.locator("#privacy-queue-view").selectOption("open_30d");
+    await agedRequest;await form.waitFor();
+    assert.match(await page.locator("#privacy-queue-status").innerText(),/30\+ days/);
+    await page.locator("#privacy-queue-view").selectOption("open");await form.waitFor();
     await form.locator("textarea").fill("Unsent synthetic reply");
     await form.locator("input[type=checkbox]").check();
     await page.locator("#privacy-queue-refresh").click();

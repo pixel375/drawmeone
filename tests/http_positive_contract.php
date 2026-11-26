@@ -923,6 +923,12 @@ try {
     qa_positive($code===200&&$progress['case']['status']==='in_review','retention_recent_review_update');
     [$code,$dashboard]=qa_http('/api/admin/overview.php',$tokenAdmin,'__Host-dmo_admin');
     qa_positive($code===200&&$dashboard['retention']['mode']==='review_only'&&$dashboard['retention']['counts']['privacy_open_7d']===1&&$dashboard['retention']['counts']['privacy_open_30d']===1,'privacy_age_uses_original_submission');
+    [$code,$aged]=qa_http('/api/admin/privacy.php?view=open_30d',$tokenAdmin,'__Host-dmo_admin');
+    qa_positive($code===200&&$aged['matching_count']===1&&$aged['cases'][0]['customer_id']===$b&&$aged['cases'][0]['age_days']>=31&&$aged['cases'][0]['submitted_at']<$aged['cases'][0]['updated_at'],'privacy_aged_queue_original_submission');
+    [$code,$aged]=qa_http('/api/admin/privacy.php?view=open_7d',$tokenAdmin,'__Host-dmo_admin');
+    qa_positive($code===200&&$aged['matching_count']===1,'privacy_seven_day_queue_matches_retention');
+    [$code]=qa_http('/api/admin/privacy.php?view=invalid',$tokenAdmin,'__Host-dmo_admin');
+    qa_positive($code===422,'invalid_privacy_age_view_rejected');
     qa_positive($dashboard['retention']['counts']['closed_no_order_365d']===1,'retention_identifies_old_closed_request_without_order');
     qa_positive(!str_contains(json_encode($dashboard['retention'],JSON_THROW_ON_ERROR),'positive-b@example.invalid'),'retention_report_contains_no_customer_identity');
     // Newly submitted request from the intake test: confirm an unpaid order.

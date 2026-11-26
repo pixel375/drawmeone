@@ -120,6 +120,7 @@
     card.append(textNode("strong","Case #"+item.case_id+" · "+item.kind+" · "+item.status.replaceAll("_"," ")),
       textNode("p",item.display_name+" · "+item.email,"small"),textNode("p",item.note||"No additional details.","small"));
     if(item.reply)card.append(textNode("p","Last reply: "+item.reply,"small"));
+    if(item.submitted_at)card.append(textNode("p","Submitted: "+item.submitted_at+" UTC"+(Number.isSafeInteger(item.age_days)?" · "+item.age_days+" full day(s) open":""),"small"));
     if(item.updated_at)card.append(textNode("p","Updated: "+item.updated_at,"small"));
     if(!["submitted","in_review"].includes(item.status))return card;
     const form=document.createElement("form");form.className="intake-form";
@@ -181,7 +182,7 @@
       const previous=privacyCursor;
       privacyCursor=Number.isSafeInteger(data.next_before)&&data.next_before>0&&(!older||data.next_before<previous)?data.next_before:null;
       $("privacy-queue-next").hidden=privacyCursor===null;
-      $("privacy-queue-status").textContent=$("privacy-queue").children.length+" "+view+" request(s) loaded.";
+      $("privacy-queue-status").textContent=$("privacy-queue").children.length+" "+({open:"open",open_7d:"open (7+ days)",open_30d:"open (30+ days)",closed:"closed"}[view]||"")+" request(s) loaded."+(Number.isSafeInteger(data.matching_count)?" "+data.matching_count+" matching overall.":"");
     }catch(_){if(gen===privacyQueueGeneration){
       if(!older)clearPrivacyQueue();
       $("privacy-queue-status").textContent=older?"Older cases unavailable. Loaded cases and unsent drafts retained; retry.":"Privacy queue unavailable. Unsent drafts retained; refresh to retry.";

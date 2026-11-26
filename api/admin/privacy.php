@@ -6,16 +6,26 @@ try{
     if(($_SERVER['REQUEST_METHOD']??'')==='GET'){
         $before=dmo_privacy_cursor($_GET['before']??null);
         $view=$_GET['view']??'open';
-        if(!in_array($view,['open','closed'],true))dmo_json(422,['ok'=>false,'error'=>'invalid_privacy_view']);
+        if(!in_array($view,['open','open_7d','open_30d','closed'],true))dmo_json(422,['ok'=>false,'error'=>'invalid_privacy_view']);
         if($view==='closed')dmo_json(200,['ok'=>true]+dmo_privacy_history($db,null,$before,true));
-        $q=$db->prepare("SELECT a.id,a.details_json,a.created_at,u.id AS customer_id,u.display_name,u.email FROM dmo_audit_log a JOIN dmo_users u ON u.id=a.entity_id
+        $age=match($view){'open_7d'=>7,'open_30d'=>30,default=>null};
+        $ageCondition=$age===null?'':' AND first_event.created_at<=DATE_SUB(UTC_TIMESTAMP(),INTERVAL '.$age.' DAY)';
+        $source=" FROM dmo_audit_log a JOIN dmo_users u ON u.id=a.entity_id
+          LEFT JOIN dmo_audit_log first_event ON first_event.id=COALESCE(CAST(JSON_UNQUOTE(JSON_EXTRACT(a.details_json,'$.case_id')) AS UNSIGNED),a.id)
+          AND first_event.entity_type='user' AND first_event.entity_id=u.id AND first_event.action='privacy.case'
           WHERE a.entity_type='user' AND a.action='privacy.case' AND u.role='customer'
           AND a.id=(SELECT MAX(x.id) FROM dmo_audit_log x WHERE x.entity_type='user' AND x.entity_id=u.id AND x.action='privacy.case')
-          AND JSON_UNQUOTE(JSON_EXTRACT(a.details_json,'$.status')) IN ('submitted','in_review')".($before===null?'':' AND a.id<:before').' ORDER BY a.id DESC LIMIT 26');
+          AND JSON_UNQUOTE(JSON_EXTRACT(a.details_json,'$.status')) IN ('submitted','in_review')".$ageCondition;
+        $db->beginTransaction();
+        $total=(int)$db->query('SELECT COUNT(*)'.$source)->fetchColumn();
+        $q=$db->prepare("SELECT a.id,a.details_json,a.created_at,u.id AS customer_id,u.display_name,u.email,first_event.created_at AS submitted_at,
+          CASE WHEN first_event.created_at<=UTC_TIMESTAMP() THEN TIMESTAMPDIFF(DAY,first_event.created_at,UTC_TIMESTAMP()) ELSE NULL END AS age_days".$source.($before===null?'':' AND a.id<:before').' ORDER BY a.id DESC LIMIT 26');
         $q->execute($before===null?[]:['before'=>$before]);$rows=$q->fetchAll(PDO::FETCH_ASSOC);
         $more=count($rows)>25;if($more)array_pop($rows);
-        $cases=array_map(static fn($r)=>dmo_privacy_case($r)+['customer_id'=>(int)$r['customer_id'],'display_name'=>$r['display_name'],'email'=>$r['email']],$rows);
-        dmo_json(200,['ok'=>true,'cases'=>$cases,'next_before'=>$more?$cases[count($cases)-1]['version']:null]);
+        $cases=array_map(static fn($r)=>dmo_privacy_case($r)+['customer_id'=>(int)$r['customer_id'],'display_name'=>$r['display_name'],'email'=>$r['email'],
+            'submitted_at'=>$r['submitted_at'],'age_days'=>$r['age_days']===null?null:(int)$r['age_days']],$rows);
+        $db->commit();
+        dmo_json(200,['ok'=>true,'cases'=>$cases,'matching_count'=>$total,'next_before'=>$more?$cases[count($cases)-1]['version']:null]);
     }
     $input=dmo_auth_json_request();dmo_auth_verify_csrf($admin);
     if(count($input)!==5||array_diff(array_keys($input),['customer_id','expected_version','status','reply','confirm_record'])!==[]||

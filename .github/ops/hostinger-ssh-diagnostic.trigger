@@ -1,1 +1,1 @@
-Session XXII final: verify private inbox search, owned history totals, package clarity and public navigation; read-only.
+Session XXIII final: verify stable exact release, quote expiry, unpaid arrangements, privacy age follow-up; read-only.
