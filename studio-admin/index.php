@@ -20,7 +20,7 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
 <meta name="theme-color" content="#151317">
 <title>Artist's Desk · Draw Me One</title>
 <link rel="stylesheet" href="./panel.css?v=51">
-<script defer src="./panel.js?v=85"></script>
+<script defer src="./panel.js?v=86"></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to dashboard</a>
@@ -179,7 +179,7 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
             <span class="overline" id="request-detail-ref">SELECTED REQUEST</span>
             <h3 id="request-detail-title">Commission request</h3>
           </div>
-          <button type="button" class="quiet" id="request-detail-close">Close details</button>
+          <div class="request-detail-actions"><button type="button" class="quiet" id="request-detail-refresh">Refresh details</button> <button type="button" class="quiet" id="request-detail-close">Close details</button></div>
         </div>
         <p id="request-detail-status" class="small" role="status" aria-live="polite"></p>
         <p id="request-drafts-warning" class="small" role="status" hidden></p>
@@ -237,6 +237,8 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
           <section class="request-workpanel">
             <h4>Conversation & internal notes</h4>
             <p class="small">Internal notes stay artist-only. Customer replies become available only after the separate messaging service is enabled.</p>
+            <p id="request-thread-count" class="small" role="status"></p>
+            <p id="request-conversation-full" class="small" role="status" hidden>Conversation capacity reached. No new notes or replies can be saved. Unchanged interrupted operations can still be retried; the existing thread remains readable.</p>
             <button type="button" id="request-thread-full" class="quiet" hidden>Show earlier notes and messages</button>
             <div id="request-thread" class="request-thread"></div>
             <form id="request-note-form" class="request-compose">

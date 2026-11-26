@@ -128,7 +128,7 @@ function dmo_workflow_load(PDO $db, int $id, bool $fullThread = false): ?array
         'u.display_name AS sender_name, u.role AS sender_role ' .
         'FROM dmo_conversations c JOIN dmo_messages m ON m.conversation_id = c.id ' .
         'JOIN dmo_users u ON u.id = m.sender_id ' .
-        'WHERE c.request_id = :id ORDER BY m.id DESC LIMIT ' . ($fullThread ? '500' : '101')
+        'WHERE c.request_id = :id ORDER BY m.id DESC LIMIT ' . ($fullThread ? (string)DMO_CONVERSATION_MAX_MESSAGES : '101')
     );
     $messages->execute(['id' => $id]);
     $thread = $messages->fetchAll();
@@ -171,6 +171,8 @@ function dmo_workflow_load(PDO $db, int $id, bool $fullThread = false): ?array
     return [
         'review_choices' => dmo_workflow_review_choices((string)$request['status'], $quotes, $orders),
         'messages_have_older' => $hasOlder,
+        'conversation_message_count'=>dmo_conversation_message_count($db,$id),
+        'conversation_message_limit'=>DMO_CONVERSATION_MAX_MESSAGES,
         'activity'=>dmo_workflow_activity($db,$id),
         'request' => $request,
         'addons' => $extra,

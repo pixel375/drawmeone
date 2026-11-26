@@ -1,0 +1,3 @@
+# Conversation capacity and refresh safeguards
+
+The existing 500-record conversation limit is unchanged and centralized. Artist detail shows aggregate stored notes/messages and capacity; customer detail shows only visible-message count and a capacity flag, never internal-note totals or contents. Both workspaces explain that the original unchanged operation can still be recovered at capacity because the locked write paths check replay before new insertion. New notes/messages remain blocked at the limit. Artist detail refresh preserves same-request draft fields and uses existing generation guards. Browser and disposable HTTP contracts cover warnings, refresh and idempotent recovery at capacity. No retention/deletion policy changes or schema migrations.

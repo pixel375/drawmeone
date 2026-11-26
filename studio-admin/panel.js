@@ -1264,6 +1264,7 @@
   }
   function updateRequestButtons() {
     $("request-detail-close").disabled = requestBusy;
+    $("request-detail-refresh").disabled = requestBusy;
     $("request-thread-full").disabled = requestBusy;
     $("request-review-save").disabled = requestBusy || !reviewStatus;
     $("request-review-status").disabled = requestBusy || !reviewStatus;
@@ -1333,6 +1334,8 @@
     reviewStatus = null;
     $("request-review-actions").hidden = true;
     $("request-thread-full").hidden = true;
+    $("request-thread-count").textContent="";
+    $("request-conversation-full").hidden=true;
     if (switching) { requestFullThread=false; resetRequestDrafts(); }
     clearRequestContent();
     requestText("request-policy-status","");
@@ -1391,6 +1394,11 @@
     requestText("request-deadline", info.preferred_deadline || "Not specified");
     requestText("request-brief-text", info.brief || "");
     renderThread(item.messages);
+    const messageCount=item.conversation_message_count, messageLimit=item.conversation_message_limit;
+    if(Number.isSafeInteger(messageCount)&&messageCount>=0&&Number.isSafeInteger(messageLimit)&&messageLimit>0){
+      $("request-thread-count").textContent=(Array.isArray(item.messages)?item.messages.length:0)+" shown · "+messageCount+" of "+messageLimit+" notes/messages stored.";
+      $("request-conversation-full").hidden=messageCount<messageLimit;
+    }
     renderQuotes(item.quotes);
     renderRequestActivity(item.activity);
     renderRequestReferences(item.references);
@@ -1404,6 +1412,9 @@
     updateRequestButtons();
   }
 
+  $("request-detail-refresh").addEventListener("click",()=>{
+    if(selectedRequestId!==null&&!requestBusy)openRequest(selectedRequestId);
+  });
   $("request-thread-full").addEventListener("click",()=>{
     if(selectedRequestId===null||requestBusy)return;
     requestFullThread=true;
@@ -1538,7 +1549,7 @@
       if (response.status === 401) return sessionExpired();
       if (!response.ok || !data.ok) {
         requestText("request-detail-status",
-          "Note not saved (" + (data.error || response.status) + ").");
+          data.error==="conversation_limit"?"Conversation capacity reached. New notes cannot be saved; existing notes are retained.":"Note not saved (" + (data.error || response.status) + ").");
         return;
       }
       pendingAdminMessages.delete("add_private_note");
@@ -1573,8 +1584,7 @@
       },csrf);
       if (response.status === 401) return sessionExpired();
       if (!response.ok || !data.ok) {
-        requestText("request-detail-status", "Message not sent (" +
-          (data.error || response.status) + ").");
+        requestText("request-detail-status", data.error==="conversation_limit"?"Conversation capacity reached. New replies cannot be saved; contact the customer separately if appropriate.":"Message not sent (" + (data.error || response.status) + ").");
         return;
       }
       pendingAdminMessages.delete("send_customer_message");

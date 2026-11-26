@@ -445,7 +445,7 @@ async function verifyRequestIsolation(browser) {
     customer_name:"Synthetic customer "+id,brief:"Synthetic brief "+id});
   const response=id=>({ok:true,admin_writes_enabled:true,customer_messaging_enabled:true,
     quote_sending_enabled:false,order_creation_enabled:false,
-    detail:{request:fixture(id),addons:[],messages:[],quotes:[],references:[],orders:[]}});
+    detail:{request:fixture(id),addons:[],messages:[],quotes:[],references:[],orders:[],conversation_message_count:id===42?500:0,conversation_message_limit:500}});
   const reply=(route,data,status=200)=>route.fulfill({status,contentType:"application/json",
     body:JSON.stringify(data)});
   let slow=null;
@@ -507,6 +507,12 @@ async function verifyRequestIsolation(browser) {
     await buttons.nth(1).click();
     await page.waitForFunction(()=>document.querySelector("#request-note-save")?.disabled===false);
     assert.equal(await page.locator("#request-note-body").inputValue(),"");
+    assert.equal(await page.locator("#request-conversation-full").isVisible(),true);
+    assert.match(await page.locator("#request-thread-count").innerText(),/500 of 500/);
+    await page.locator("#request-note-body").fill("Keep through refresh");
+    await page.locator("#request-detail-refresh").click();
+    await page.waitForFunction(()=>document.querySelector("#request-note-save")?.disabled===false);
+    assert.equal(await page.locator("#request-note-body").inputValue(),"Keep through refresh");
     assert.deepEqual(posts,[]);
     let saved=0;const quoteKeys=[];
     await page.route("**/api/admin/request-actions.php*",route=>{

@@ -54,7 +54,7 @@ try {
         'JOIN dmo_messages m ON m.conversation_id = c.id ' .
         'JOIN dmo_users u ON u.id = m.sender_id ' .
         'WHERE c.request_id = :id AND m.is_internal = 0 ' .
-        'ORDER BY m.id DESC LIMIT ' . ($full === 'full' ? '500' : '41')
+        'ORDER BY m.id DESC LIMIT ' . ($full === 'full' ? (string)DMO_CONVERSATION_MAX_MESSAGES : '41')
     );
     $messages->execute(['id' => $request['id']]);
     $thread = $messages->fetchAll();
@@ -99,6 +99,7 @@ try {
     $request['policy_sha256']=dmo_policy_receipt($db,(int)$request['id']);
     $checkout=dmo_checkout_rows($db,(int)$request['id']);
     $canWithdraw=dmo_withdrawal_enabled()&&dmo_withdrawal_eligible($db,(int)$request['id'],$request['status']);
+    $conversationFull=dmo_conversation_message_count($db,(int)$request['id'])>=DMO_CONVERSATION_MAX_MESSAGES;
     unset($request['id']);
     dmo_json(200, [
         'ok' => true,
@@ -109,6 +110,7 @@ try {
         'can_manage_references' => $canManageReferences,
         'messages' => array_reverse($thread),
         'messages_have_older' => $hasOlder,
+        'conversation_full' => $conversationFull,
         'can_reply' => dmo_messages_enabled() &&
             dmo_messages_request_open((string) $request['status']),
         'quotes' => $quotes,

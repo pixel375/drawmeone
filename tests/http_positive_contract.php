@@ -677,6 +677,24 @@ try {
     qa_positive($code===200 && count($recent['detail']['messages'])===100 && $recent['detail']['messages_have_older']===true,'artist_recent_thread_bounded');
     [$code,$full]=qa_http('/api/admin/request.php?id='.$requestA.'&thread=full',$tokenAdmin,'__Host-dmo_admin');
     qa_positive($code===200 && count($full['detail']['messages'])===113,'artist_full_thread_includes_internal');
+    qa_positive($full['detail']['conversation_message_count']===113&&$full['detail']['conversation_message_limit']===500,'artist_conversation_capacity_metadata');
+    for($i=0;$i<387;$i++)$seed->execute(['c'=>$cid,'u'=>$admin,'body'=>'CI capacity fixture '.$i,'internal'=>1]);
+    try {
+        [$code,$capacity]=qa_http('/api/request.php?ref='.urlencode($referenceA).'&thread=full',$tokenA);
+        qa_positive($code===200&&$capacity['conversation_full']===true&&count($capacity['messages'])===57&&!isset($capacity['conversation_message_count']),'customer_capacity_without_private_count');
+        [$code,$capacity]=qa_http('/api/admin/request.php?id='.$requestA.'&thread=full',$tokenAdmin,'__Host-dmo_admin');
+        qa_positive($code===200&&count($capacity['detail']['messages'])===500&&$capacity['detail']['conversation_message_count']===500,'artist_full_conversation_capacity');
+        [$code,$blocked]=qa_http('/api/request-message.php',$tokenA,'__Host-dmo_session',['ref'=>$referenceA,'body'=>'New message at capacity.','operation_key'=>'10000000-0000-4000-8000-000000000011'],$csrfA);
+        qa_positive($code===409&&$blocked['error']==='conversation_limit','customer_new_message_blocked_at_capacity');
+        [$code,$replay]=qa_http('/api/request-message.php',$tokenA,'__Host-dmo_session',['ref'=>$referenceA,'body'=>'Please use soft shading.','operation_key'=>'10000000-0000-4000-8000-000000000001'],$csrfA);
+        qa_positive($code===200&&$replay['message_id']===$sentMessage['message_id'],'customer_original_retry_at_capacity');
+        [$code,$blocked]=qa_http('/api/admin/request-actions.php',$tokenAdmin,'__Host-dmo_admin',['action'=>'add_private_note','request_id'=>$requestA,'body'=>'New note at capacity','operation_key'=>'10000000-0000-4000-8000-000000000012'],$csrfAdmin);
+        qa_positive($code===409&&$blocked['error']==='conversation_limit','artist_new_note_blocked_at_capacity');
+        [$code,$replay]=qa_http('/api/admin/request-actions.php',$tokenAdmin,'__Host-dmo_admin',['action'=>'add_private_note','request_id'=>$requestA,'body'=>'CI ARTIST-ONLY PRIVATE NOTE','operation_key'=>'10000000-0000-4000-8000-000000000002'],$csrfAdmin);
+        qa_positive($code===200&&$replay['message_id']===$privateNote['message_id'],'artist_original_retry_at_capacity');
+    } finally {
+        $db->prepare("DELETE FROM dmo_messages WHERE conversation_id=:id AND body LIKE 'CI capacity fixture %'")->execute(['id'=>$cid]);
+    }
     $activity=$full['detail']['activity'];
     qa_positive(count($activity['events'])<=50&&in_array('Quote released to customer',array_column($activity['events'],'label'),true),'artist_activity_includes_quote_release');
     foreach($activity['events'] as $event)qa_positive(array_keys($event)===['label','created_at'],'activity_event_minimal_fields');

@@ -617,7 +617,7 @@ async function verifyFullCustomerThread(browser) {
   const test=await installMocks(page,{signedIn:true,open:false});
   await page.route("**/api/request.php?*",route=>{
     const url=new URL(route.request().url()),ref=url.searchParams.get("ref"),full=url.searchParams.get("thread")==="full";
-    return answer(route,{...detail(ref),messages_have_older:!full,messages:[{sender_name:"Synthetic artist",body:full?"Earlier visible message":"Recent visible message"}]});
+    return answer(route,{...detail(ref),messages_have_older:!full,conversation_full:true,messages:[{sender_name:"Synthetic artist",body:full?"Earlier visible message":"Recent visible message"}]});
   });
   try{
     await page.goto(base+"/commission.html",{waitUntil:"domcontentloaded"});
@@ -625,6 +625,8 @@ async function verifyFullCustomerThread(browser) {
     await page.locator("#detail-thread-full").click();
     await page.waitForFunction(()=>document.querySelector("#detail-messages")?.textContent.includes("Earlier visible message"));
     assert.equal(await page.locator("#detail-thread-full").isVisible(),false);
+    assert.equal(await page.locator("#detail-conversation-full").isVisible(),true);
+    assert.match(await page.locator("#detail-thread-count").innerText(),/Showing 1 customer-visible/);
     await checkOverflow(page,"full customer thread");
     assert.deepEqual(test.posts,[]);
     console.log("PASS: customer full conversation history at 320px");

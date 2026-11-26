@@ -10,7 +10,7 @@
 <title>Commission a drawing · Draw Me One</title>
 <link rel="icon" href="./favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="./commission.css?v=33">
-<script defer src="./commission.js?v=60"></script>
+<script defer src="./commission.js?v=61"></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
@@ -207,7 +207,9 @@
           <p class="small">Order and payment status are displayed separately. The site does not automatically collect payment.</p>
           <div id="detail-orders"></div>
         </section>
+        <p id="detail-thread-count" class="small" role="status"></p>
         <button type="button" id="detail-thread-full" class="text-button" hidden>Show earlier messages</button>
+        <p id="detail-conversation-full" class="small" role="status" hidden>This conversation has reached its storage limit. Existing messages remain readable. If a send was interrupted, retry the unchanged message; otherwise contact the artist separately.</p>
         <div id="detail-messages" class="detail-messages"></div>
         <form id="detail-reply-form" class="detail-reply-form" hidden>
           <label for="detail-reply-body">Private message to the artist</label>

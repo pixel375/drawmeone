@@ -154,6 +154,16 @@ function dmo_requests_public_ref(int $customerId, string $key): string
     );
 }
 
+const DMO_CONVERSATION_MAX_MESSAGES = 500;
+
+/** Artist-only exact count; customer detail exposes only a capacity boolean. */
+function dmo_conversation_message_count(PDO $db,int $request): int
+{
+    $q=$db->prepare('SELECT COUNT(*) FROM dmo_messages m JOIN dmo_conversations c ON c.id=m.conversation_id WHERE c.request_id=:request');
+    $q->execute(['request'=>$request]);
+    return (int)$q->fetchColumn();
+}
+
 /** Optional operation key for compatible message retry; no new schema needed. */
 function dmo_message_operation_key(array $input): ?string
 {

@@ -209,7 +209,7 @@ try {
                 'SELECT COUNT(*) FROM dmo_messages WHERE conversation_id = :id'
             );
             $messageCount->execute(['id' => $conversationId]);
-            if ((int) $messageCount->fetchColumn() >= 500) {
+            if ((int) $messageCount->fetchColumn() >= DMO_CONVERSATION_MAX_MESSAGES) {
                 $db->rollBack();
                 dmo_json(409, ['ok' => false, 'error' => 'conversation_limit']);
             }

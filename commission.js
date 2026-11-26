@@ -762,6 +762,8 @@
     const switching=state.selectedRef!==ref;
     if (switching) { clearDetailDrafts(); detailFullThread=false; }
     $("detail-thread-full").hidden = true;
+    $("detail-thread-count").textContent="";
+    $("detail-conversation-full").hidden=true;
     state.selectedRef = ref;
     const panel = $("my-request-detail");
     panel.hidden = false;
@@ -857,6 +859,9 @@
       }else policy.textContent=r.policy_version?"Version "+r.policy_version+" (document receipt unavailable)":"Unavailable";
       showFact("detail-brief",r.brief);
       $("detail-thread-full").hidden = body.messages_have_older !== true;
+      const visibleMessages=Array.isArray(body.messages)?body.messages.length:0;
+      $("detail-thread-count").textContent=visibleMessages?(body.messages_have_older===true?"Showing latest ":"Showing ")+visibleMessages+" customer-visible message(s).":"No private messages yet.";
+      $("detail-conversation-full").hidden=body.conversation_full!==true;
       const root = $("detail-messages");
       root.replaceChildren();
       if (Array.isArray(body.messages) && body.messages.length) {
