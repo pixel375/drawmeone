@@ -196,6 +196,13 @@ async function verifyArtistDesk(browser, width) {
       if(name==="requests"){
         await page.locator("#request-list .empty-state").waitFor();
         assert.equal(await page.locator("#request-detail").isVisible(),false);
+        await page.locator("#request-list-query").fill("synthetic");
+        assert.equal(await page.locator("#request-list .empty-state").count(),0);
+        assert.equal(await page.locator("#request-list-next").isDisabled(),true);
+        assert.match(await page.locator("#request-list-status").innerText(),/Filters changed/);
+        await page.locator("#request-list-query").fill("");
+        await page.locator("#request-list-refresh").click();
+        await page.locator("#request-list .empty-state").waitFor();
       } else if(name==="messages"){
         await page.locator("#message-list .empty-state").waitFor();
       } else if(name==="customers"){

@@ -75,6 +75,9 @@ try {
     }
     // Limit and offset derive only from validated bounded integers.
     $offset = ($page - 1) * $size;
+    $db->beginTransaction();
+    $count=$db->prepare('SELECT COUNT(*)'.$from.$conditions);
+    $count->execute($params);$total=(int)$count->fetchColumn();
     $stmt = $db->prepare(
         'SELECT r.id, r.public_ref, r.subject_type, r.status, ' .
         'r.preferred_contact, r.preferred_deadline, r.submitted_at, LEFT(r.brief, 500) AS brief_excerpt, ' .
@@ -86,11 +89,13 @@ try {
     $rows = $stmt->fetchAll();
     $hasMore = count($rows) > $size;
     if ($hasMore) array_pop($rows);
+    $db->commit();
     dmo_json(200, [
         'ok'=>true, 'requests'=>array_map('dmo_requests_list_summary', $rows), 'readonly'=>true,
-        'page'=>$page, 'page_size'=>$size, 'has_more'=>$hasMore && $page < 9999,
+        'page'=>$page, 'page_size'=>$size, 'matching_count'=>$total,'has_more'=>$hasMore && $page < 9999,
     ]);
 } catch (Throwable $error) {
+    if(isset($db)&&$db->inTransaction())$db->rollBack();
     dmo_log_problem($error, 'admin requests');
     dmo_json(503, ['ok'=>false,'error'=>'admin_service_unavailable']);
 }

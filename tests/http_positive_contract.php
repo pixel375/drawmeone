@@ -140,7 +140,9 @@ try {
     qa_positive($code===200&&count($directory['customers'])===1&&$directory['customers'][0]['id']===$a&&$directory['customers'][0]['request_count']===1,'customer_lookup_by_commission_reference');
     qa_positive(!str_contains(json_encode($directory,JSON_THROW_ON_ERROR),'password_hash')&&!str_contains(json_encode($directory,JSON_THROW_ON_ERROR),'session_hash'),'customer_directory_no_credentials');
     [$code,$history]=qa_http('/api/admin/requests.php?customer_id='.$a,$tokenAdmin,'__Host-dmo_admin');
-    qa_positive($code===200&&count($history['requests'])===1&&$history['requests'][0]['id']===$requestA,'customer_history_exact_id_scope');
+    qa_positive($code===200&&count($history['requests'])===1&&$history['requests'][0]['id']===$requestA&&$history['matching_count']===1,'customer_history_exact_id_scope');
+    [$code,$emptyPage]=qa_http('/api/admin/requests.php?customer_id='.$a.'&page=2',$tokenAdmin,'__Host-dmo_admin');
+    qa_positive($code===200&&$emptyPage['requests']===[]&&$emptyPage['matching_count']===1,'artist_request_total_independent_of_page');
     [$code,$history]=qa_http('/api/admin/requests.php?customer_id='.$admin,$tokenAdmin,'__Host-dmo_admin');
     qa_positive($code===200&&$history['requests']===[],'customer_history_excludes_admin');
     [$code,$matches]=qa_http('/api/admin/requests.php?scope=brief&q='.urlencode('A private test drawing').'&sort=oldest',$tokenAdmin,'__Host-dmo_admin');

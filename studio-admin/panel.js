@@ -369,8 +369,16 @@
     syncAgendaExport();
   }
   $("request-list-filter").addEventListener("change",()=>syncScheduleFilter());
-  $("request-list-filters").addEventListener("input",syncAgendaExport);
-  $("request-list-filters").addEventListener("change",syncAgendaExport);
+  function pendingRequestFilters(){
+    syncAgendaExport();
+    if(!requestOptionsApplied()){
+      ++requestListGeneration;$("request-list").replaceChildren();
+      $("request-list-previous").disabled=$("request-list-next").disabled=true;
+      $("request-list-status").textContent="Filters changed. Apply filters to load matching requests.";
+    }
+  }
+  $("request-list-filters").addEventListener("input",pendingRequestFilters);
+  $("request-list-filters").addEventListener("change",pendingRequestFilters);
 
   function workflowLabel(stage) {
     const labels={submitted:"Awaiting review",clarification_needed:"Clarification needed",
@@ -383,6 +391,7 @@
   }
 
   async function requests() {
+    if(!requestOptionsApplied()){pendingRequestFilters();return;}
     const generation = ++requestListGeneration;
     const list = $("request-list");
     const status = $("request-list-status");
@@ -405,7 +414,7 @@
       }
       ({response,data} = await get("requests.php?" + query));
     } catch (_) {
-      if (generation === requestListGeneration) status.textContent = "Unable to load requests. Try Refresh.";
+      if (generation === requestListGeneration){status.textContent = "Unable to load requests. Try Refresh.";previous.disabled=requestListPage===1;}
       return;
     }
     if (generation !== requestListGeneration) return;
@@ -417,7 +426,8 @@
     }
     previous.disabled = requestListPage === 1;
     next.disabled = data.has_more !== true;
-    status.textContent = "Page " + requestListPage + " · " + data.requests.length + " request(s)";
+    status.textContent = "Page " + requestListPage + " · " + data.requests.length + " request(s)"+(Number.isSafeInteger(data.matching_count)?" · "+data.matching_count+" matching overall":"");
+    if(data.requests.length===0&&requestListPage>1)status.textContent+=" · Return to an earlier page.";
     if (data.requests.length === 0) {
       empty(list, requestListQuery || requestListFilter !== "all"
         ? "No requests match your search." : "No commission requests on this page.");
@@ -461,7 +471,7 @@
     event.preventDefault();
     const nextFilter=$("request-list-filter").value;
     const from=isScheduleFilter(nextFilter)?$("request-schedule-from").value:"",to=isScheduleFilter(nextFilter)?$("request-schedule-to").value:"";
-    if(from&&to&&from>to){$("request-list-status").textContent="From date must not be after through date.";return;}
+    if(from&&to&&from>to){pendingRequestFilters();$("request-list-status").textContent="From date must not be after through date.";return;}
     requestListPage=1;requestListQuery=$("request-list-query").value.trim();requestListScope=$("request-list-scope").value;requestListSort=$("request-list-sort").value;
     requestListFilter=nextFilter;requestScheduleFrom=from;requestScheduleTo=to;
     requests();
@@ -470,6 +480,7 @@
     if (requestListPage > 1) { requestListPage--; requests(); }
   });
   $("request-list-next").addEventListener("click", () => {
+    if($("request-list-next").disabled||!requestOptionsApplied())return;
     requestListPage++; requests();
   });
   $("request-list-refresh").addEventListener("click", () => requests());
