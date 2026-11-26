@@ -1,5 +1,7 @@
 # Draw Me One — Current development status (November 24, 2026)
 
+**Future development sessions: start with [the canonical launch TODO and pass log](docs/LAUNCH_TODO.md).** Follow its AUTO/OWNER/AFTER labels, defer manual owner dependencies, and update checklist evidence and pass notes after every development pass. This supersedes historical roadmap checkboxes.
+
 The live [DrawMeOne website](https://drawmeone.com) includes a protected Artist's Desk, four responsive portfolio layouts, themes, optimized private/public artwork handling and general inquiries through `support@drawmeone.com`. SMTP is configured. Public customer registration, new commission submissions, quote/order release and payments remain separately gated until launch approvals are complete.
 
 **Latest areas:** [Gallery artwork publishing](docs/ARTWORK_PUBLISH_QA_PHASE22.md), [full encrypted backup recovery](docs/FULL_RECOVERY_QA_PHASE23.md), [backup monitoring and independent-copy preparation](docs/BACKUP_MONITORING_PHASE24.md), [customer commission history](docs/COMMISSION_HISTORY_QA_PHASE25.md), [quote and request-detail reliability](docs/QUOTE_DETAIL_QA_PHASE26.md), [customer verification and recovery](docs/ONBOARDING_QA_PHASE27.md), and [public accessibility and keyboard QA](docs/ACCESSIBILITY_QA_PHASE28.md), and [authenticated accessibility and reflow](docs/ACCESSIBILITY_AUTHENTICATED_QA_PHASE29.md). Earlier backend, policy, authentication and messaging milestones are in the [roadmap](docs/ROADMAP.md).
