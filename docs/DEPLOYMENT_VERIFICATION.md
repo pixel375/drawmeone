@@ -1,3 +1,5 @@
 # Exact release verification
 
 Session XXIII: Hostinger diagnostics previously checked syntax and existence before later executing PHP, allowing an in-place deployment to remove a previously checked file. Require two consecutive matching SHA-256 checks of the tracked release manifest before diagnostics; repeat the manifest at completion. A mismatched or interrupted release remains a failure, not a skipped success. The existing HTTP asset digest checks remain. No production writes, deploy commands, secrets or private data in the manifest. Rapid pushes may still supersede the expected commit; only a matching final commit is evidence. The verification is bounded, not an atomic deployment mechanism.
+
+Session XXV: expand exact-release manifest to account JavaScript, privacy and catalog backend, request helpers and Artist Desk stylesheet. Verify new package search and UTF-8 limit controls via live unauthenticated HTML, plus private package and privacy endpoint guards. This is deployment evidence only; no authenticated production actions.

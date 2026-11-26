@@ -347,7 +347,7 @@ jobs:
             [[ "$attempt" != "6" ]] || exit 1
             sleep 4
           done
-          for endpoint in finance customers privacy overview security messages requests; do
+          for endpoint in finance customers privacy overview security messages requests packages; do
             status=$(curl -sS --max-time 12 -o /dev/null -w '%{http_code}' "https://drawmeone.com/api/admin/$endpoint.php")
             [[ "$status" == "401" || "$status" == "503" ]] || { echo "admin_route_${endpoint}=unexpected_$status"; exit 1; }
             echo "admin_route_${endpoint}=guarded"
@@ -634,6 +634,11 @@ jobs:
           [[ "$integrity_output" == *"integrity_portfolio_missing_variants=0"* && "$integrity_output" == *"integrity_portfolio_invalid_metadata=0"* ]] || { echo "portfolio_integrity_scan=missing_or_failed"; exit 1; }
           [[ "$integrity_output" == *"integrity_checkout_crypto_complete=yes"* ]] && [[ "$integrity_output" == *"integrity_checkout_crypto_invalid=0"* ]] || { echo "invoice_integrity_scan=missing_or_failed"; exit 1; }
           release_matches || { echo "deployment_release=changed_during_diagnostic"; exit 1; }
+          # Verify newly introduced markup without authenticating or mutating.
+          [[ "$desk_page" == *'id="package-search"'* && "$desk_page" == *'id="package-text-count"'* && "$customer_page" == *'id="privacy-note-count"'* ]] || { echo "catalog_privacy_controls=stale_markup"; exit 1; }
+          code=$(curl -sSL --max-time 15 -o /dev/null -w '%{http_code}' https://drawmeone.com/api/auth/privacy.php)
+          [[ "$code" == "401" || "$code" == "503" ]] || { echo "customer_privacy_guard=unexpected_$code"; exit 1; }
+          echo "catalog_privacy_controls=deployed_and_guarded"
           echo "deployment_release=unchanged_at_completion"
           echo "READ_ONLY_DIAGNOSTIC_COMPLETED"
           REMOTE
