@@ -566,12 +566,21 @@ try {
     $db->prepare('UPDATE dmo_checkout_links SET url_fingerprint=:hash WHERE id=:id')->execute(['hash'=>str_repeat('0',64),'id'=>$linkId]);
     [$code]=qa_http('/api/checkout.php?id='.$linkId,$tokenA);
     qa_positive($code===404,'checkout_redirect_denies_fingerprint_mismatch');
+    [$code,$detail]=qa_http('/api/request.php?ref='.$referenceA,$tokenA);
+    qa_positive($code===200&&$detail['checkout_links']===[],'invalid_invoice_hidden_from_customer_detail');
+    [$code,$history]=qa_http('/api/requests.php',$tokenA);
+    qa_positive($code===200&&!in_array($referenceA,$history['attention']['invoices'],true),'invalid_invoice_hidden_from_attention');
     $db->prepare('UPDATE dmo_checkout_links SET url_fingerprint=:hash,url_ciphertext=:cipher WHERE id=:id')->execute(['hash'=>$originalInvoice['url_fingerprint'],'cipher'=>$originalInvoice['url_ciphertext']."\n",'id'=>$linkId]);
     [$code]=qa_http('/api/checkout.php?id='.$linkId,$tokenA);
     qa_positive($code===404,'checkout_redirect_denies_noncanonical_ciphertext');
     $db->prepare('UPDATE dmo_checkout_links SET url_ciphertext=:cipher WHERE id=:id')->execute(['cipher'=>$originalInvoice['url_ciphertext'],'id'=>$linkId]);
     [$code]=qa_http('/api/checkout.php?id='.$linkId,$tokenA);
     qa_positive($code===303,'checkout_redirect_restored_after_fixture_repair');
+    $db->prepare('UPDATE dmo_quote_lines SET amount_minor=amount_minor+1 WHERE quote_id=:id AND sort_order=0')->execute(['id'=>$quoteId]);
+    try{
+        [$code]=qa_http('/api/checkout.php?id='.$linkId,$tokenA);
+        qa_positive($code===404,'checkout_denies_inconsistent_quote_itemization');
+    }finally{$db->prepare('UPDATE dmo_quote_lines SET amount_minor=amount_minor-1 WHERE quote_id=:id AND sort_order=0')->execute(['id'=>$quoteId]);}
     [$code]=qa_http('/api/admin/request-actions.php',$tokenAdmin,'__Host-dmo_admin',array_replace($link,['expected_link_id'=>$linkId,'url'=>'https://checkout.example.invalid/invoice/ci-next']),$csrfAdmin);
     qa_positive($code===409,'existing_invoice_must_be_closed_before_replacement');
     $revoke=['action'=>'revoke_checkout_link','request_id'=>$requestA,'order_id'=>$orderId,'expected_link_id'=>$linkId,'confirm_external_closed'=>true];
@@ -778,6 +787,11 @@ try {
     qa_positive(in_array($code,[401,403],true),'customer_cannot_record_payment');
     [$code]=qa_http('/api/admin/request-actions.php',$tokenAdmin,'__Host-dmo_admin',array_replace($evidence,['amount_minor'=>2999]),$csrfAdmin);
     qa_positive($code===409,'partial_payment_not_accepted');
+    $db->prepare('UPDATE dmo_quotes SET total_minor=total_minor+1 WHERE id=:id')->execute(['id'=>$quoteId]);
+    try{
+        [$code,$blocked]=qa_http('/api/admin/request-actions.php',$tokenAdmin,'__Host-dmo_admin',$evidence,$csrfAdmin);
+        qa_positive($code===409&&$blocked['error']==='quote_total_inconsistent','payment_record_denies_inconsistent_quote');
+    }finally{$db->prepare('UPDATE dmo_quotes SET total_minor=total_minor-1 WHERE id=:id')->execute(['id'=>$quoteId]);}
     [$code,$pending]=qa_http('/api/admin/request-actions.php',$tokenAdmin,'__Host-dmo_admin',$evidence,$csrfAdmin);
     qa_positive($code===201 && $pending['status']==='pending_verification' && $pending['payment_status']==='unverified','payment_evidence_not_payment_confirmation');
     [$code]=qa_http('/api/admin/finance.php',$tokenA,'__Host-dmo_admin');
@@ -800,6 +814,11 @@ try {
     qa_positive($code===409,'mismatched_reference_denied');
     [$code]=qa_http('/api/admin/request-actions.php',$tokenAdmin,'__Host-dmo_admin',array_replace($confirm,['confirm_received'=>false]),$csrfAdmin);
     qa_positive($code===422,'receiving_account_confirmation_required');
+    $db->prepare('UPDATE dmo_quotes SET total_minor=total_minor+1 WHERE id=:id')->execute(['id'=>$quoteId]);
+    try{
+        [$code,$blocked]=qa_http('/api/admin/request-actions.php',$tokenAdmin,'__Host-dmo_admin',$confirm,$csrfAdmin);
+        qa_positive($code===409&&$blocked['error']==='quote_total_inconsistent','payment_verification_denies_inconsistent_quote');
+    }finally{$db->prepare('UPDATE dmo_quotes SET total_minor=total_minor-1 WHERE id=:id')->execute(['id'=>$quoteId]);}
     [$code,$paid]=qa_http('/api/admin/request-actions.php',$tokenAdmin,'__Host-dmo_admin',$confirm,$csrfAdmin);
     qa_positive($code===200 && $paid['payment_status']==='paid' && $paid['provider_verified']===false && $paid['money_moved']===false,'manual_full_payment_reconciled_without_charge');
     [$code]=qa_http('/api/checkout.php?id='.$checkoutId,$tokenA);

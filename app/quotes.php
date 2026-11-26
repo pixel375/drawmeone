@@ -48,6 +48,12 @@ function dmo_quote_total_matches(PDO $db,int $quoteId,int $total): bool
     return is_array($row)&&(int)$row['line_count']>=1&&(int)$row['line_count']<=12&&(int)$row['line_total']===$total;
 }
 
+/** Fixed q alias for SQL eligibility checks in payment/fulfillment/reporting. */
+function dmo_quote_itemization_sql(): string
+{
+    return "(q.total_minor>0 AND q.currency IN ('CAD','USD') AND (SELECT COUNT(*) FROM dmo_quote_lines li WHERE li.quote_id=q.id) BETWEEN 1 AND 12 AND (SELECT COALESCE(SUM(li.amount_minor),0) FROM dmo_quote_lines li WHERE li.quote_id=q.id)=q.total_minor)";
+}
+
 function dmo_quote_customer_rows(PDO $db, int $requestId, string $requestPolicy): array
 {
     // Only quotes that have *actually been delivered* to this request owner.

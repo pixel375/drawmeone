@@ -69,12 +69,13 @@ function dmo_payment_reconcile(PDO $db,array $admin,int $requestId,array $input)
         if(!is_array($request)||!dmo_messages_request_open($request['status'])||
             !dmo_policy_request_eligible($db,$requestId,$request['policy_version']))
             throw new DmoPaymentConflict('request_not_eligible');
-        $q=$db->prepare("SELECT o.status,o.payment_status,q.currency,q.total_minor," . dmo_order_exception_sql() . " AS exception_action FROM dmo_orders o " .
+        $q=$db->prepare("SELECT o.status,o.payment_status,q.id AS quote_id,q.currency,q.total_minor," . dmo_order_exception_sql() . " AS exception_action FROM dmo_orders o " .
             "JOIN dmo_quotes q ON q.id=o.accepted_quote_id AND q.request_id=o.request_id AND q.status='accepted' " .
             "WHERE o.id=:order AND o.request_id=:request FOR UPDATE");
         $q->execute(['order'=>$orderId,'request'=>$requestId]);$order=$q->fetch(PDO::FETCH_ASSOC);
         if(!is_array($order)||$order['status']!=='awaiting_arrangement'||$order['payment_status']!=='unverified'||dmo_order_exception_status($order['exception_action'])!==null)
             throw new DmoPaymentConflict('order_not_eligible');
+        if(!$reject&&!dmo_quote_total_matches($db,(int)$order['quote_id'],(int)$order['total_minor']))throw new DmoPaymentConflict('quote_total_inconsistent');
         if(!$reject&&($input['currency']!==$order['currency']||$input['amount_minor']!==(int)$order['total_minor']))
             throw new DmoPaymentConflict('full_quote_amount_required');
         if($record){
@@ -98,6 +99,10 @@ function dmo_payment_reconcile(PDO $db,array $admin,int $requestId,array $input)
             if(!$reject&&($payment['method']!==$input['method']||$payment['currency']!==$order['currency']||
                 (int)$payment['amount_minor']!==(int)$order['total_minor']||!hash_equals($payment['provider_reference'],$fingerprint)))
                 throw new DmoPaymentConflict('payment_evidence_mismatch');
+            if(!$reject){
+                $count=$db->prepare("SELECT COUNT(*) FROM dmo_payments WHERE order_id=:id AND status IN ('pending_verification','verified')");$count->execute(['id'=>$orderId]);
+                if((int)$count->fetchColumn()!==1)throw new DmoPaymentConflict('payment_evidence_duplicate');
+            }
             $status=$reject?'rejected':'verified';
             $db->prepare("UPDATE dmo_payments SET status=:status,verified_by=:actor,verified_at=UTC_TIMESTAMP() WHERE id=:id")
                 ->execute(['status'=>$status,'actor'=>(int)$admin['user_id'],'id'=>$paymentId]);

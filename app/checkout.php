@@ -63,7 +63,7 @@ function dmo_checkout_eligible(PDO $db,int $request,int $order): ?array {
     $q=$db->prepare("SELECT o.id,q.currency,q.total_minor,r.policy_version,r.status AS request_status FROM dmo_orders o
         JOIN dmo_quotes q ON q.id=o.accepted_quote_id AND q.request_id=o.request_id
         JOIN dmo_commission_requests r ON r.id=o.request_id JOIN dmo_users u ON u.id=r.customer_id
-        WHERE o.id=:order AND r.id=:request AND q.status='accepted' AND q.total_minor>0
+        WHERE o.id=:order AND r.id=:request AND q.status='accepted' AND ".dmo_quote_itemization_sql()."
         AND o.status='awaiting_arrangement' AND o.payment_status='unverified'
         AND u.role='customer' AND u.account_status='active' AND u.email_verified_at IS NOT NULL
         AND COALESCE(".dmo_order_exception_sql().",'') NOT IN ('payment.access_held','payment.full_refund_recorded')
@@ -78,6 +78,15 @@ function dmo_checkout_latest(PDO $db,int $order): ?array {
     foreach(['id','order_id','amount_minor'] as $k)$r[$k]=(int)$r[$k];
     $r['fresh']=(bool)$r['fresh'];return $r;
 }
+/** An active link must be the only unclosed invoice, with authenticated
+ * bytes matching current provider settings. Never return its URL in metadata. */
+function dmo_checkout_active_url(PDO $db,array $row): ?string {
+    $q=$db->prepare("SELECT COUNT(*) FROM dmo_checkout_links WHERE order_id=:id AND status IN ('active','suspended')");
+    $q->execute(['id'=>$row['order_id']]);
+    if((int)$q->fetchColumn()!==1)return null;
+    $url=dmo_checkout_authenticated_url($row);
+    return $url!==null&&dmo_checkout_url($url)?$url:null;
+}
 function dmo_checkout_rows(PDO $db,int $request,bool $admin=false): array {
     if(!dmo_checkout_schema_ready($db)||(!$admin&&!dmo_checkout_enabled($db)))return [];
     $q=$db->prepare('SELECT id FROM dmo_orders WHERE request_id=:id ORDER BY id LIMIT 3');$q->execute(['id'=>$request]);$result=[];
@@ -89,7 +98,9 @@ function dmo_checkout_rows(PDO $db,int $request,bool $admin=false): array {
                 'can_revoke'=>$latest!==null&&in_array($latest['status'],['active','suspended'],true),'provider_host'=>dmo_checkout_config()['host']??null];
         }elseif($eligible!==null&&$latest!==null&&$latest['status']==='active'&&$latest['fresh']&&
             $latest['provider_host']===(dmo_checkout_config()['host']??null)&&$latest['currency']===$eligible['currency']&&$latest['amount_minor']===(int)$eligible['total_minor']){
-            $result[]=['id'=>$latest['id'],'order_id'=>$id,'provider_host'=>$latest['provider_host'],'expires_at'=>$latest['expires_at']];
+            $cipher=$db->prepare('SELECT order_id,url_ciphertext,url_fingerprint,provider_host FROM dmo_checkout_links WHERE id=:id');
+            $cipher->execute(['id'=>$latest['id']]);$row=$cipher->fetch(PDO::FETCH_ASSOC);
+            if(is_array($row)&&dmo_checkout_active_url($db,$row)!==null)$result[]=['id'=>$latest['id'],'order_id'=>$id,'provider_host'=>$latest['provider_host'],'expires_at'=>$latest['expires_at']];
         }
     }
     return $result;
@@ -122,7 +133,8 @@ function dmo_checkout_apply(PDO $db,array $admin,int $request,array $input): nev
             $r=dmo_checkout_eligible($db,$request,$order);
             if($r===null||$r['currency']!==$input['currency']||(int)$r['total_minor']!==$input['amount_minor'])
                 throw new DmoPaymentConflict('full_quote_amount_required');
-            if($latest!==null&&$latest['status']!=='revoked')throw new DmoPaymentConflict('close_previous_invoice_first');
+            $unclosed=$db->prepare("SELECT COUNT(*) FROM dmo_checkout_links WHERE order_id=:id AND status IN ('active','suspended')");$unclosed->execute(['id'=>$order]);
+            if((int)$unclosed->fetchColumn()!==0||($latest!==null&&$latest['status']!=='revoked'))throw new DmoPaymentConflict('close_previous_invoice_first');
             $fingerprint=hash_hmac('sha256',$input['url'],dmo_checkout_key());
             $q=$db->prepare('SELECT id FROM dmo_checkout_links WHERE url_fingerprint=:hash LIMIT 1');$q->execute(['hash'=>$fingerprint]);
             if($q->fetchColumn()!==false)throw new DmoPaymentConflict('invoice_already_used');

@@ -14,7 +14,7 @@ try{
     $eligible=is_array($row)?dmo_checkout_eligible($db,(int)$row['request_id'],(int)$row['order_id']):null;
     if($eligible===null||$row['currency']!==$eligible['currency']||(int)$row['amount_minor']!==(int)$eligible['total_minor']||
         $row['provider_host']!==(dmo_checkout_config()['host']??null))dmo_json(404,['ok'=>false,'error'=>'checkout_not_available']);
-    $url=dmo_checkout_authenticated_url($row);
-    if($url===null||!dmo_checkout_url($url))dmo_json(404,['ok'=>false,'error'=>'checkout_not_available']);
+    $url=dmo_checkout_active_url($db,$row);
+    if($url===null)dmo_json(404,['ok'=>false,'error'=>'checkout_not_available']);
     dmo_api_headers();header('Location: '.$url,true,303);exit;
 }catch(Throwable $e){dmo_log_problem($e,'customer checkout');dmo_json(503,['ok'=>false,'error'=>'checkout_unavailable']);}

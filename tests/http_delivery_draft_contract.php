@@ -155,6 +155,7 @@ try {
     [$artistCookie,$artistCsrf]=ref_session($db,$artist);
     $artistCookie='admin:'.$artistCookie;
     $quote=ref_insert($db,"INSERT INTO dmo_quotes (request_id,version_number,currency,total_minor,scope_description,revision_allowance,status,sent_at,accepted_at) VALUES (:request,1,'CAD',3000,'Synthetic artwork',1,'accepted',UTC_TIMESTAMP(),UTC_TIMESTAMP())",['request'=>$requestA]);
+    $db->prepare("INSERT INTO dmo_quote_lines (quote_id,description,amount_minor,sort_order) VALUES (:quote,'Synthetic artwork',3000,0)")->execute(['quote'=>$quote]);
     $order=ref_insert($db,"INSERT INTO dmo_orders (request_id,accepted_quote_id,status,payment_status) VALUES (:request,:quote,'awaiting_arrangement','unverified')",['request'=>$requestA,'quote'=>$quote]);
     $png = $private . '/test-original.png';
     $image = imagecreatetruecolor(320, 240);
@@ -364,6 +365,13 @@ try {
     ref_assert($code===200,'settled_payment_restores_access');
     [$code]=ref_http('/api/delivery.php?id='.$delivery,$cookieA);
     ref_assert($code===200,'restored_customer_download');
+    $db->prepare('UPDATE dmo_quotes SET total_minor=total_minor+1 WHERE id=:id')->execute(['id'=>$quote]);
+    try{
+        [$code]=ref_http('/api/delivery.php?id='.$delivery,$cookieA);
+        ref_assert($code===404,'inconsistent_quote_blocks_download');
+        [$code,$finance]=ref_http('/api/admin/finance.php?state=review',$artistCookie);
+        ref_assert($code===200&&count($finance['records'])===1,'inconsistent_quote_finance_requires_review');
+    }finally{$db->prepare('UPDATE dmo_quotes SET total_minor=total_minor-1 WHERE id=:id')->execute(['id'=>$quote]);}
     $refund=array_replace($hold,['decision'=>'refund','reason'=>'full_external_refund']);
     [$code]=ref_http('/api/admin/request-actions.php',$artistCookie,$refund,$artistCsrf);
     ref_assert($code===200,'external_full_refund_recorded');

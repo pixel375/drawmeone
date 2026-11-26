@@ -116,10 +116,157 @@ function dmo_fulfillment_enabled(PDO $db): bool
 }
 function dmo_fulfillment_payment_sql(): string
 {
-    return "o.payment_status='paid' AND EXISTS (SELECT 1 FROM dmo_payments p
+    return "o.payment_status='paid' AND ".dmo_quote_itemization_sql()." AND (SELECT COUNT(*) FROM dmo_payments z WHERE z.order_id=o.id AND z.status IN ('pending_verification','verified'))=1 AND EXISTS (SELECT 1 FROM dmo_payments p
         WHERE p.order_id=o.id AND p.status='verified' AND p.verified_at IS NOT NULL
         AND p.verified_by IS NOT NULL AND p.currency=q.currency AND p.amount_minor=q.total_minor
-        AND p.provider_reference LIKE 'manual-hmac-v1:%') AND COALESCE(".dmo_order_exception_sql().",'') NOT IN ('payment.access_held','payment.full_refund_recorded')";
+        AND p.provider_reference REGEXP '^manual-hmac-v1:[0-9a-f]{64}) AND COALESCE(".dmo_order_exception_sql().",'') NOT IN ('payment.access_held','payment.full_refund_recorded')";
+}
+function dmo_fulfillment_options(PDO $db,int $requestId): array
+{
+    if(!dmo_fulfillment_enabled($db))return [];
+    $q=$db->prepare("SELECT o.id,o.status,r.policy_version FROM dmo_orders o JOIN dmo_quotes q ON q.id=o.accepted_quote_id AND q.request_id=o.request_id
+        JOIN dmo_commission_requests r ON r.id=o.request_id JOIN dmo_users u ON u.id=r.customer_id
+        WHERE r.id=:id AND r.status IN ('submitted','clarification_needed')
+        AND u.role='customer' AND u.account_status='active' AND u.email_verified_at IS NOT NULL
+        AND q.status='accepted' AND ".dmo_fulfillment_payment_sql());
+    $q->execute(['id'=>$requestId]);
+    $options=[];
+    foreach($q->fetchAll(PDO::FETCH_ASSOC) as $row){
+        if(!dmo_policy_request_eligible($db,$requestId,$row['policy_version']))continue;
+        $next=match($row['status']){
+            'awaiting_arrangement'=>['in_progress'],
+            'in_progress'=>['ready_for_delivery'],
+            'ready_for_delivery'=>['in_progress'],
+            default=>[],
+        };
+        $review=dmo_review_latest($db,(int)$row['id']);
+        if($review!==null&&$review['status']!=='approved')$next=array_values(array_diff($next,['ready_for_delivery']));
+        $options[]=['order_id'=>(int)$row['id'],'status'=>$row['status'],'next'=>$next,
+            'can_release'=>$row['status']==='ready_for_delivery'];
+    }
+    return $options;
+}
+final class DmoFulfillmentConflict extends RuntimeException {}
+function dmo_fulfillment_apply(PDO $db,array $admin,int $requestId,array $input): never
+{
+    if(!dmo_fulfillment_enabled($db))dmo_json(503,['ok'=>false,'error'=>'fulfillment_disabled']);
+    $release=$input['action']==='release_delivery';
+    $fields=$release?['action','request_id','order_id','draft_id','confirm_final']:
+        ['action','request_id','order_id','expected_status','status'];
+    if(count($input)!==count($fields)||array_diff(array_keys($input),$fields)!==[]||
+        ($release&&($input['confirm_final']??null)!==true))
+        dmo_json(422,['ok'=>false,'error'=>'invalid_fulfillment_fields']);
+    $orderId=dmo_workflow_id($input['order_id']??null);
+    $draftId=$release?dmo_workflow_id($input['draft_id']??null):null;
+    if(!$release&&(!in_array($input['expected_status']??null,['awaiting_arrangement','in_progress','ready_for_delivery'],true)||
+        !in_array($input['status']??null,['in_progress','ready_for_delivery'],true)))
+        dmo_json(422,['ok'=>false,'error'=>'invalid_production_transition']);
+    if(!dmo_auth_rate_limit($db,'fulfillment',(string)$admin['user_id'],20,60))
+        dmo_json(429,['ok'=>false,'error'=>'too_many_attempts']);
+    $db->beginTransaction();
+    try{
+        $lock=$db->prepare('SELECT id FROM dmo_commission_requests WHERE id=:id FOR UPDATE');
+        $lock->execute(['id'=>$requestId]);
+        if($lock->fetchColumn()===false)throw new DmoFulfillmentConflict('request_not_found');
+        $order=$db->prepare('SELECT id FROM dmo_orders WHERE id=:order AND request_id=:request FOR UPDATE');
+        $order->execute(['order'=>$orderId,'request'=>$requestId]);
+        if($order->fetchColumn()===false)throw new DmoFulfillmentConflict('order_not_eligible');
+        $option=null;
+        foreach(dmo_fulfillment_options($db,$requestId) as $candidate)
+            if($candidate['order_id']===$orderId)$option=$candidate;
+        if($option===null)throw new DmoFulfillmentConflict('verified_payment_and_policy_required');
+        if($release){
+            if(!$option['can_release'])throw new DmoFulfillmentConflict('order_not_ready');
+            $review=dmo_review_latest($db,$orderId);
+            if($review!==null&&($review['status']!=='approved'||(int)$review['draft_id']!==$draftId))throw new DmoFulfillmentConflict('approved_draft_required');
+            $q=$db->prepare('SELECT storage_key,sha256,byte_size FROM dmo_delivery_drafts WHERE id=:id AND request_id=:request AND order_id=:order FOR UPDATE');
+            $q->execute(['id'=>$draftId,'request'=>$requestId,'order'=>$orderId]);
+            $draft=$q->fetch(PDO::FETCH_ASSOC);
+            if(!is_array($draft))throw new DmoFulfillmentConflict('draft_not_found');
+            $file=dmo_delivery_file($draft['storage_key']);
+            if(!is_file($file)||!is_readable($file)||filesize($file)!==(int)$draft['byte_size']||
+                !hash_equals($draft['sha256'],(string)hash_file('sha256',$file)))
+                throw new DmoFulfillmentConflict('draft_integrity_failed');
+            $existing=$db->prepare('SELECT id FROM dmo_deliverables WHERE order_id=:id LIMIT 1');
+            $existing->execute(['id'=>$orderId]);
+            if($existing->fetchColumn()!==false)throw new DmoFulfillmentConflict('delivery_already_exists');
+            $db->prepare("INSERT INTO dmo_deliverables (order_id,storage_key,download_name,mime_type,byte_size,revision_number)
+                VALUES (:order,:key,:name,'image/webp',:bytes,1)")->execute([
+                'order'=>$orderId,'key'=>$draft['storage_key'],'name'=>'commission-'.$orderId.'.webp','bytes'=>$draft['byte_size']]);
+            $deliveryId=(int)$db->lastInsertId();
+            $db->prepare("UPDATE dmo_orders SET status='completed' WHERE id=:id")->execute(['id'=>$orderId]);
+            $db->prepare("UPDATE dmo_commission_requests SET status='completed' WHERE id=:id")->execute(['id'=>$requestId]);
+            dmo_workflow_audit($db,(int)$admin['user_id'],$requestId,'delivery.released',
+                ['order_id'=>$orderId,'draft_id'=>$draftId,'delivery_id'=>$deliveryId]);
+            $result=['delivery_id'=>$deliveryId,'status'=>'completed','customer_visible'=>true];
+        }else{
+            if($input['expected_status']!==$option['status']||!in_array($input['status'],$option['next'],true))
+                throw new DmoFulfillmentConflict('production_status_conflict');
+            if($input['status']==='ready_for_delivery'){
+                $review=dmo_review_latest($db,$orderId);
+                if($review!==null&&$review['status']!=='approved')throw new DmoFulfillmentConflict('customer_review_pending');
+                $q=$db->prepare('SELECT id FROM dmo_delivery_drafts WHERE order_id=:order AND request_id=:request LIMIT 1');
+                $q->execute(['order'=>$orderId,'request'=>$requestId]);
+                if($q->fetchColumn()===false)throw new DmoFulfillmentConflict('stage_artwork_first');
+            }
+            $db->prepare('UPDATE dmo_orders SET status=:status WHERE id=:id')->execute(['status'=>$input['status'],'id'=>$orderId]);
+            dmo_workflow_audit($db,(int)$admin['user_id'],$requestId,'order.production_changed',
+                ['order_id'=>$orderId,'from'=>$option['status'],'to'=>$input['status']]);
+            $result=['status'=>$input['status'],'customer_visible'=>false];
+        }
+        $db->commit();
+    }catch(DmoFulfillmentConflict $error){
+        if($db->inTransaction())$db->rollBack();
+        dmo_json(409,['ok'=>false,'error'=>$error->getMessage()]);
+    }catch(Throwable $error){
+        if($db->inTransaction())$db->rollBack();throw $error;
+    }
+    dmo_json($release?201:200,['ok'=>true,'payment_status'=>'paid','money_moved'=>false]+$result);
+}
+function dmo_delivery_customer_query(): string
+{
+    return " FROM dmo_deliverables f JOIN dmo_orders o ON o.id=f.order_id
+        JOIN dmo_quotes q ON q.id=o.accepted_quote_id AND q.request_id=o.request_id
+        JOIN dmo_commission_requests r ON r.id=o.request_id
+        JOIN dmo_delivery_drafts d ON d.order_id=o.id AND d.request_id=r.id AND d.storage_key=f.storage_key
+        WHERE r.customer_id=:customer AND o.status='completed' AND r.status='completed'
+        AND q.status='accepted' AND f.mime_type='image/webp' AND ".dmo_fulfillment_payment_sql();
+}
+function dmo_delivery_customer_rows(PDO $db,int $customerId,int $requestId): array
+{
+    if(!dmo_delivery_release_ready($db))return [];
+    $q=$db->prepare('SELECT f.id,f.order_id,f.byte_size,f.created_at,d.pixel_width,d.pixel_height'.
+        dmo_delivery_customer_query().' AND r.id=:request ORDER BY f.id DESC LIMIT 4');
+    $q->execute(['customer'=>$customerId,'request'=>$requestId]);
+    return array_map(static fn($r)=>['id'=>(int)$r['id'],'order_id'=>(int)$r['order_id'],
+        'bytes'=>(int)$r['byte_size'],'width'=>(int)$r['pixel_width'],'height'=>(int)$r['pixel_height'],
+        'created_at'=>$r['created_at']],$q->fetchAll(PDO::FETCH_ASSOC));
+}
+
+require_once __DIR__.'/artwork-reviews.php';
+
+/** Caller holds the parent request lock; receipts are scoped to artist, request and order. */
+function dmo_delivery_draft_replay(PDO $db,int $request,int $order,int $actor,?string $operation,?string $digest): ?array
+{
+    if($operation===null)return null;
+    $q=$db->prepare("SELECT details_json FROM dmo_audit_log WHERE entity_type='commission_request'
+        AND entity_id=:request AND actor_id=:actor AND action='delivery.draft_staged'
+        AND JSON_UNQUOTE(JSON_EXTRACT(details_json,'$.operation_key'))=:operation ORDER BY id DESC LIMIT 1");
+    $q->execute(['request'=>$request,'actor'=>$actor,'operation'=>$operation]);$json=$q->fetchColumn();
+    if($json===false)return null;
+    $detail=json_decode((string)$json,true);
+    if((int)($detail['order_id']??0)!==$order||!is_string($detail['payload_digest']??null)||!hash_equals($detail['payload_digest'],(string)$digest)){
+        $db->rollBack();dmo_json(409,['ok'=>false,'error'=>'operation_key_conflict']);
+    }
+    $q=$db->prepare('SELECT d.id, EXISTS(SELECT 1 FROM dmo_deliverables f WHERE f.order_id=d.order_id AND f.storage_key=d.storage_key) AS released
+        FROM dmo_delivery_drafts d WHERE d.id=:id AND d.request_id=:request AND d.order_id=:order AND d.uploaded_by=:actor');
+    $q->execute(['id'=>$detail['draft_id'],'request'=>$request,'order'=>$order,'actor'=>$actor]);$row=$q->fetch();
+    if(!is_array($row)){
+        $db->rollBack();dmo_json(409,['ok'=>false,'error'=>'draft_receipt_removed']);
+    }
+    return ['ok'=>true,'draft_id'=>(int)$row['id'],'released'=>(bool)$row['released'],'already_saved'=>true];
+}
+) AND COALESCE(".dmo_order_exception_sql().",'') NOT IN ('payment.access_held','payment.full_refund_recorded')";
 }
 function dmo_fulfillment_options(PDO $db,int $requestId): array
 {
