@@ -571,6 +571,41 @@
     return node;
   }
 
+  function renderArtistRequestSummary(data){
+    const item=data.detail||{},info=item.request||{};
+    const quotes=Array.isArray(item.quotes)?item.quotes:[],orders=Array.isArray(item.orders)?item.orders:[],order=orders[0];
+    const accepted=quotes.find(q=>q.status==="accepted"),sent=quotes.find(q=>q.status==="sent"&&!q.is_expired),draft=quotes.find(q=>q.status==="draft");
+    const review=(Array.isArray(data.artwork_reviews)?data.artwork_reviews:[]).find(r=>r.order_id===order?.id)?.latest;
+    const closed=["cancelled","canceled","rejected","declined","completed","closed","archived","refunded"].includes(info.status)||["completed","cancelled"].includes(order?.status);
+    const held=order?.payment_status==="on_hold",refunded=order?.payment_status==="refunded";
+    const payment=({paid:"Verified",unverified:"Not verified",on_hold:"Under review",refunded:"External refund recorded"})[order?.payment_status]||"Not verified";
+    const milestones=$("request-milestones"),links=$("request-section-links");
+    milestones.replaceChildren();links.replaceChildren();
+    const entries=[["Request",workflowLabel(info.status)],["Quote",accepted?"Accepted":sent?"Awaiting decision":draft?"Private draft":quotes.length?"Historical":"Not created"],
+      ["Order",order?workflowLabel(order.status):"Not confirmed"],["Payment",order?payment:"No order"],
+      ["Proof",held||refunded?"Access paused":review?({pending:"Awaiting customer",revision_requested:"Revision requested",approved:"Approved"}[review.status]||"Recorded"):"Not offered"],
+      ["Agreed date",order?.agreed_deadline||"Not agreed"]];
+    for(const [label,value] of entries){const group=document.createElement("div");group.append(textNode("dt",label),textNode("dd",value));milestones.append(group);}
+    let next="Review the brief and conversation before preparing a quote.",first="request-brief-section";
+    if(refunded||held){next=refunded?"An external refund is recorded. Review the financial history.":"Payment is held; artwork access must remain paused until resolved.";first="request-payment-section";}
+    else if(closed){next="This commission is closed or completed. Review its recorded history.";first="request-activity-panel";}
+    else if(order&&order.payment_status!=="paid"){next="Review payment arrangements and verification. Do not start production on an unverified payment.";first="request-payment-section";}
+    else if(order&&review?.status==="pending"){next="Awaiting the customer's proof decision.";first="request-artwork-section";}
+    else if(order&&review?.status==="revision_requested"){next="Review the requested changes before staging a revised proof.";first="request-artwork-section";}
+    else if(order){next=order.status==="ready_for_delivery"?"Review final release eligibility and the exact approved artwork.":"Review current production and private artwork staging.";first="request-artwork-section";}
+    else if(accepted){next="The customer accepted a quote. Review the separate order confirmation.";first="request-order-section";}
+    else if(sent){next="A quote is awaiting the customer's decision.";first="request-quote-section";}
+    else if(draft){next="Review the private quote draft before any separate release.";first="request-quote-section";}
+    else if(info.status==="clarification_needed"){next="Review correspondence for outstanding clarification.";first="request-conversation-section";}
+    $("request-next-step").textContent=next;
+    const sections=[["Brief","request-brief-section"],["References","request-reference-section"],["Review decision","request-review-actions"],["Conversation","request-conversation-section"],["Quotes","request-quote-section"],["Order","request-order-section"],["Payments","request-payment-section"],["Artwork / proofs","request-artwork-section"],["Email notices","request-notice-section"],["Activity","request-activity-panel"]];
+    const jump=(label,id)=>{const target=$(id);if(!target||target.hidden)return;const button=textNode("button",label,"quiet");button.type="button";button.addEventListener("click",()=>{if(target.tagName==="DETAILS")target.open=true;target.focus({preventScroll:true});target.scrollIntoView({behavior:"instant",block:"start"});});links.append(button);};
+    const primary=sections.find(([,id])=>id===first);
+    if(primary)jump("Go to "+primary[0].toLowerCase(),primary[1]);
+    for(const [label,id] of sections)if(id!==first)jump(label,id);
+    $("request-at-a-glance").hidden=false;
+  }
+
   function renderThread(records) {
     const root = $("request-thread");
     root.replaceChildren();
@@ -1307,6 +1342,8 @@
   }
 
   function clearRequestContent() {
+    $("request-at-a-glance").hidden=true;
+    $("request-milestones").replaceChildren();$("request-section-links").replaceChildren();$("request-next-step").textContent="";
     for (const id of ["request-detail-ref","request-detail-title","request-customer",
       "request-tier","request-contact","request-deadline","request-brief-text","request-policy-status"]) {
       requestText(id, "—");
@@ -1406,6 +1443,7 @@
     renderNotifications(data.notification_options,data.notifications_enabled===true);
     renderDeliveryDrafts(item.orders,data.delivery_drafts,data.delivery_staging_enabled===true,data.fulfillment_options||[],data.artwork_reviews||[]);
     renderPaymentRecords(item.orders,data.payment_records,data.manual_payments_enabled===true,data.payment_exceptions_enabled===true,Array.isArray(data.checkout_links)?data.checkout_links:[]);
+    renderArtistRequestSummary(data);
     requestText("request-detail-status", requestWriteEnabled
       ? "Admin draft editing available. Nothing is sent to the customer."
       : "Viewing only. Private note and quote creation are disabled on the server.");

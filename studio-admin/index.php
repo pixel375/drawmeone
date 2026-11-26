@@ -19,8 +19,8 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
 <meta name="robots" content="noindex,nofollow">
 <meta name="theme-color" content="#151317">
 <title>Artist's Desk · Draw Me One</title>
-<link rel="stylesheet" href="./panel.css?v=51">
-<script defer src="./panel.js?v=86"></script>
+<link rel="stylesheet" href="./panel.css?v=52">
+<script defer src="./panel.js?v=87"></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to dashboard</a>
@@ -184,57 +184,63 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
         <p id="request-detail-status" class="small" role="status" aria-live="polite"></p>
         <p id="request-drafts-warning" class="small" role="status" hidden></p>
         <p id="request-policy-status" class="small"></p>
+        <section id="request-at-a-glance" class="request-at-a-glance" aria-labelledby="request-at-a-glance-title" hidden>
+          <h4 id="request-at-a-glance-title">Commission at a glance</h4>
+          <dl id="request-milestones" class="request-milestones"></dl>
+          <p id="request-next-step" class="small"></p>
+          <nav id="request-section-links" class="request-section-links" aria-label="Commission detail sections"></nav>
+        </section>
         <div class="request-summary">
           <div><strong>Customer</strong><span id="request-customer"></span></div>
           <div><strong>Type / tier</strong><span id="request-tier"></span></div>
           <div><strong>Contact preference</strong><span id="request-contact"></span></div>
           <div><strong>Requested deadline</strong><span id="request-deadline"></span></div>
         </div>
-        <section class="request-brief" id="request-review-actions" hidden aria-label="Request review status">
+        <section class="request-brief" id="request-review-actions" tabindex="-1" hidden aria-label="Request review status">
           <h4>Review decision</h4>
           <p class="small">Update the customer's review status. This does not send a message, create an order or collect payment.</p>
           <label for="request-review-status">New status</label>
           <select id="request-review-status"></select>
           <button type="button" id="request-review-save" class="quiet" disabled>Update status</button>
         </section>
-        <div class="request-brief">
+        <div class="request-brief" id="request-brief-section" tabindex="-1">
           <strong>Customer's artwork brief</strong>
           <p id="request-brief-text"></p>
         </div>
-        <section class="request-brief" aria-label="Private customer reference images">
+        <section class="request-brief" id="request-reference-section" tabindex="-1" aria-label="Private customer reference images">
           <strong>Customer reference images (private)</strong>
           <div id="request-references" class="admin-reference-grid">
             <p class="small">No reference images.</p>
           </div>
         </section>
-        <section class="request-brief" aria-label="Accepted quote order confirmation">
+        <section class="request-brief" id="request-order-section" tabindex="-1" aria-label="Accepted quote order confirmation">
           <h4>Order progress</h4>
           <p class="small">An accepted quote requires separate artist confirmation. Confirming an order does not verify or collect payment.</p>
           <div id="request-orders"><p class="small">No confirmed order.</p></div>
         </section>
-        <section class="request-brief" aria-label="Manual payment reconciliation">
+        <section class="request-brief" id="request-payment-section" tabindex="-1" aria-label="Manual payment reconciliation">
           <h4>Payment reconciliation</h4>
           <p class="small">Record an external transaction, then verify it against the receiving account. No money is moved through this website.</p>
           <div id="request-payment-records"></div>
         </section>
-        <section class="request-brief" aria-label="Private staged artwork">
+        <section class="request-brief" id="request-artwork-section" tabindex="-1" aria-label="Private staged artwork">
           <h4>Private artwork staging</h4>
           <p class="small">Stage artwork privately, track production after payment reconciliation, then explicitly release the final drawing when eligible.</p>
           <div id="request-delivery-drafts"></div>
         </section>
-        <section class="request-brief" aria-label="Optional customer email notices">
+        <section class="request-brief" id="request-notice-section" tabindex="-1" aria-label="Optional customer email notices">
           <h4>Customer email notices</h4>
           <p class="small">Optional account-update notices for verified customers who prefer email. No brief, quote price, attachment or payment link is included.</p>
           <div id="request-notifications"><p class="small">No available notices.</p></div>
         </section>
-        <details class="request-brief request-activity" id="request-activity-panel">
+        <details class="request-brief request-activity" id="request-activity-panel" tabindex="-1">
           <summary>Commission activity history</summary>
           <p class="small">Most recent recorded workflow events. Artist-only; no message text or payment details.</p>
           <ol id="request-activity-list" class="request-activity-list"></ol>
           <p id="request-activity-limit" class="small" hidden>Older recorded events are available.</p><button id="request-activity-older" type="button" class="quiet" hidden>Load older activity</button><p id="request-activity-feedback" class="small" role="status"></p>
         </details>
         <div class="request-columns">
-          <section class="request-workpanel">
+          <section class="request-workpanel" id="request-conversation-section" tabindex="-1" aria-label="Conversation and internal notes">
             <h4>Conversation & internal notes</h4>
             <p class="small">Internal notes stay artist-only. Customer replies become available only after the separate messaging service is enabled.</p>
             <p id="request-thread-count" class="small" role="status"></p>
@@ -253,7 +259,7 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
               <button type="submit" class="quiet" id="request-message-send" disabled>Send private reply</button>
             </form>
           </section>
-          <section class="request-workpanel">
+          <section class="request-workpanel" id="request-quote-section" tabindex="-1" aria-label="Versioned quote drafts">
             <h4>Versioned quote drafts</h4>
             <p class="small">Draft quotes stay internal. Releasing a reviewed quote to the customer's private account is separately gated. No automatic payment.</p>
             <div id="request-quotes" class="request-quote-history"></div>

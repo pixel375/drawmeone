@@ -1,0 +1,3 @@
+# Artist commission navigation
+
+The selected commission now has a compact read-only milestone panel and keyboard-focusable shortcuts to its existing sections. Payment, order and proof states are kept separate; suggested next steps are advisory and do not perform mutations or bypass existing controls. The panel is cleared before request fetches and remains hidden on failed or stale responses. Activity opens its disclosure before focus. Responsive layout and browser assertions cover the shortcuts, focus and stale-data clearing. Same-request refresh preserves private notes, messages and quote drafts; unsaved transient fields in dynamically rendered order/payment sections are not automatically restored. No production approval gates or schema changes.

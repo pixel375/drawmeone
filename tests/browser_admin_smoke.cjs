@@ -470,6 +470,14 @@ async function verifyRequestIsolation(browser) {
     const buttons=page.locator("#request-list .request-open");
     await buttons.nth(0).click();
     await page.waitForFunction(()=>document.querySelector("#request-note-save")?.disabled===false);
+    assert.equal(await page.locator("#request-at-a-glance").isVisible(),true);
+    assert.equal(await page.locator("#request-milestones dt").count(),6);
+    assert.match(await page.locator("#request-next-step").innerText(),/Review the brief/);
+    await page.locator("#request-section-links").getByRole("button",{name:"Conversation",exact:true}).click();
+    assert.equal(await page.evaluate(()=>document.activeElement.id),"request-conversation-section");
+    await page.locator("#request-section-links").getByRole("button",{name:"Activity",exact:true}).click();
+    assert.equal(await page.locator("#request-activity-panel").getAttribute("open"),"");
+    assert.equal(await page.evaluate(()=>document.activeElement.id),"request-activity-panel");
     await page.locator("#request-note-body").fill("Do not leak private note A");
     await page.locator("#request-message-body").fill("Do not leak customer message A");
     await page.locator("#quote-scope").fill("Do not leak quote A");
@@ -487,6 +495,8 @@ async function verifyRequestIsolation(browser) {
     await buttons.nth(2).click();
     await page.waitForFunction(()=>document.querySelector("#request-detail-status")?.textContent.includes("HTTP 503"));
     assert.equal(await page.locator("#request-customer").innerText(),"—");
+    assert.equal(await page.locator("#request-at-a-glance").isVisible(),false);
+    assert.equal(await page.locator("#request-milestones dt").count(),0);
     assert.equal(await page.locator("#request-note-save").isEnabled(),false);
     let release;slow={promise:new Promise(resolve=>{release=resolve}),finished:false};
     await buttons.nth(0).click();
