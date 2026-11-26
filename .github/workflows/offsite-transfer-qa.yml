@@ -5,11 +5,13 @@ on:
   push:
     branches: [main]
     paths:
+      - 'app/backup-archive.php'
       - 'ops/offsite-upload.sh'
       - 'tests/offsite_upload_smoke.sh'
       - '.github/workflows/offsite-transfer-qa.yml'
   pull_request:
     paths:
+      - 'app/backup-archive.php'
       - 'ops/offsite-upload.sh'
       - 'tests/offsite_upload_smoke.sh'
       - '.github/workflows/offsite-transfer-qa.yml'
@@ -32,4 +34,6 @@ jobs:
           sudo apt-get update -qq
           sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq rclone >/dev/null
       - name: Simulate remote encrypted transport, readback and rejection
-        run: bash tests/offsite_upload_smoke.sh
+        run: |
+          php -r 'if(!extension_loaded("sodium"))exit(1);'
+          bash tests/offsite_upload_smoke.sh

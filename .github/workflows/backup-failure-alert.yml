@@ -35,7 +35,7 @@ jobs:
           [[ "$RUN_CONCLUSION" =~ ^[a-z_]+$ ]] || exit 1
           # Do not resolve a newer failure using an older, delayed success
           # event; only the latest *completed* backup run may change the issue.
-          latest=$(gh api "repos/$REPO/actions/workflows/hostinger-private-backup.yml/runs?status=completed&per_page=1" --jq '.workflow_runs[0].id // empty')
+          latest=$(gh api "repos/$REPO/actions/workflows/hostinger-private-backup.yml/runs?branch=main&status=completed&per_page=1" --jq '.workflow_runs[0].id // empty')
           if [[ "$latest" != "$RUN_ID" ]]; then
             echo "backup_alert=older_completed_run_ignored"
             exit 0

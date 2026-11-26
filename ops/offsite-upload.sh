@@ -16,7 +16,11 @@ command -v sha256sum >/dev/null || exit 1
   { echo "offsite_destination_invalid"; exit 1; }
 [[ "$OFFSITE_RCLONE_DEST" != *".."* &&
    "$OFFSITE_RCLONE_DEST" != *"//"* &&
-   "$OFFSITE_RCLONE_DEST" != *":/"* ]] ||
+   "$OFFSITE_RCLONE_DEST" != *":/"* &&
+   "$OFFSITE_RCLONE_DEST" != *":." &&
+   "$OFFSITE_RCLONE_DEST" != *":./"* &&
+   "$OFFSITE_RCLONE_DEST" != *"/./"* &&
+   "$OFFSITE_RCLONE_DEST" != *"/." ]] ||
   { echo "offsite_destination_unsafe"; exit 1; }
 [[ "$OFFSITE_OBJECT_NAME" =~ ^dmo-[0-9]{8}T[0-9]{6}Z-[0-9]+\.bak$ ]] ||
   { echo "offsite_object_name_invalid"; exit 1; }
@@ -25,6 +29,14 @@ command -v sha256sum >/dev/null || exit 1
    -f "$OFFSITE_RCLONE_CONFIG_PATH" &&
    ! -L "$OFFSITE_RCLONE_CONFIG_PATH" ]] ||
   { echo "offsite_local_inputs_invalid"; exit 1; }
+
+# The runner must keep ciphertext and credentials private and distinct.
+for file in "$LOCAL_ENCRYPTED_SNAPSHOT" "$OFFSITE_RCLONE_CONFIG_PATH"; do
+  mode=$(stat -c '%a' "$file")
+  [[ "$mode" == 600 || "$mode" == 400 ]] || { echo "offsite_local_permissions_unsafe"; exit 1; }
+done
+[[ ! "$LOCAL_ENCRYPTED_SNAPSHOT" -ef "$OFFSITE_RCLONE_CONFIG_PATH" ]] ||
+  { echo "offsite_local_inputs_not_distinct"; exit 1; }
 
 # The first six bytes identify the authenticated-encryption frame format,
 # not a plaintext SQL dump. The source CLI already fully authenticates it.
@@ -38,10 +50,12 @@ localBytes=$(stat -c '%s' "$LOCAL_ENCRYPTED_SNAPSHOT")
 destination="${OFFSITE_RCLONE_DEST%/}/${OFFSITE_OBJECT_NAME}"
 rclone --config "$OFFSITE_RCLONE_CONFIG_PATH" --quiet copyto \
   --immutable --retries 3 --low-level-retries 3 \
-  "$LOCAL_ENCRYPTED_SNAPSHOT" "$destination"
+  "$LOCAL_ENCRYPTED_SNAPSHOT" "$destination" 2>/dev/null ||
+  { echo "offsite_immutable_upload_failed"; exit 1; }
 localDigest=$(sha256sum "$LOCAL_ENCRYPTED_SNAPSHOT" | cut -d ' ' -f 1)
 remoteDigest=$(rclone --config "$OFFSITE_RCLONE_CONFIG_PATH" --quiet \
-  cat --retries 3 "$destination" | sha256sum | cut -d ' ' -f 1)
+  cat --retries 3 "$destination" 2>/dev/null | sha256sum | cut -d ' ' -f 1) ||
+  { echo "offsite_remote_readback_failed"; exit 1; }
 [[ "$localDigest" == "$remoteDigest" ]] ||
   { echo "offsite_verification_failed"; exit 1; }
 echo "offsite_encrypted_snapshot_upload=verified"

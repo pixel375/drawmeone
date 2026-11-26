@@ -5,16 +5,26 @@ import json
 import sys
 
 def classify(payload, now):
+    if not isinstance(payload, dict) or now.tzinfo is None:
+        raise ValueError("Invalid metadata or clock")
     runs = payload.get("workflow_runs")
     if not isinstance(runs, list):
         raise ValueError("Invalid run list")
     completed = []
     for run in runs:
+        if not isinstance(run, dict):
+            raise ValueError("Invalid run record")
         if run.get("status") != "completed" or run.get("head_branch") != "main":
             continue
-        stamp = dt.datetime.fromisoformat(run["updated_at"].replace("Z", "+00:00"))
-        if stamp > now + dt.timedelta(minutes=5):
-            raise ValueError("Future run timestamp")
+        if run.get("conclusion") != "success":
+            continue
+        # updated_at may change after execution; use actual attempt start when
+        # supplied by GitHub, so metadata edits cannot make old backups fresh.
+        stamp = dt.datetime.fromisoformat(run.get("run_started_at", run["updated_at"]).replace("Z", "+00:00"))
+        if stamp.tzinfo is None or stamp > now + dt.timedelta(minutes=5):
+            raise ValueError("Invalid run timestamp")
+        if type(run.get("id")) is not int or run["id"] <= 0:
+            raise ValueError("Invalid run id")
         completed.append((stamp, run))
     successes = [(stamp, run) for stamp, run in completed if run.get("conclusion") == "success"]
     if not successes:

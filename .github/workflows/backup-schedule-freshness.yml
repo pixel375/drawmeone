@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths: ['.github/workflows/backup-schedule-freshness.yml']
+    paths: ['.github/workflows/backup-schedule-freshness.yml', 'ops/backup_freshness.py']
 
 permissions:
   actions: read
@@ -37,7 +37,7 @@ jobs:
           title='[DrawMeOne Ops] Successful backup schedule overdue'
           [[ "$state" == recent_success || "$state" == stale_success || "$state" == no_success ]]
           [[ -z "$run_id" || "$run_id" =~ ^[0-9]+$ ]]
-          current=$(gh api --paginate "repos/$REPO/issues?state=open&per_page=100" --jq '.[] | select(.pull_request == null and .title == "[DrawMeOne Ops] Successful backup schedule overdue") | .number' | head -n 1)
+          current=$(gh api --paginate "repos/$REPO/issues?state=open&per_page=100" --jq '.[] | select(.pull_request == null and .title == "[DrawMeOne Ops] Successful backup schedule overdue") | .number' | sed -n '1p')
           if [[ "$state" == recent_success ]]; then
             if [[ -n "$current" ]]; then
               gh api --method POST "repos/$REPO/issues/$current/comments" -f body="Recent successful backup workflow confirmed: https://github.com/$REPO/actions/runs/$run_id. This is workflow freshness evidence only, not offsite recovery." --silent

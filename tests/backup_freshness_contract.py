@@ -27,6 +27,13 @@ class FreshnessTests(unittest.TestCase):
         self.assertEqual(classify({"workflow_runs":[run(32),run(3,2)]}, NOW)["run_id"],2)
     def test_boundary(self):
         self.assertEqual(classify({"workflow_runs":[run(36)]}, NOW)["state"],"recent_success")
+    def test_recent_metadata_cannot_refresh_old_attempt(self):
+        old = run(1)
+        old["run_started_at"] = (NOW - dt.timedelta(hours=40)).isoformat()
+        self.assertEqual(classify({"workflow_runs":[old]}, NOW)["state"], "stale_success")
+    def test_malformed_success_id_and_timestamp(self):
+        for invalid in [dict(run(2), id=True), dict(run(2), updated_at="2026-11-25T10:00:00")]:
+            with self.assertRaises(ValueError): classify({"workflow_runs":[invalid]}, NOW)
     def test_malformed(self):
         with self.assertRaises(ValueError): classify({}, NOW)
         with self.assertRaises(ValueError): classify({"workflow_runs":[run(-1)]}, NOW)

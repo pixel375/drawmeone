@@ -168,10 +168,15 @@ try {
     $db->prepare(
         "INSERT INTO dmo_commission_requests
          (public_ref,customer_id,subject_type,brief,preferred_contact,policy_version,status)
-         VALUES (:ref,:user,'portrait',:brief,'onsite','ci-v1','submitted')"
+         VALUES (:ref,:user,'portrait',:brief,'onsite','qa-policy-v0','submitted')"
     )->execute(['ref'=>$reference,'user'=>$userId,
         'brief'=>str_repeat('Synthetic private recovery reference.',2)]);
     $requestId=(int)$db->lastInsertId();
+    // An agreement receipt survives SQL restore, but continuation still
+    // requires the separately retained immutable policy file and digest pin.
+    $oldPin=hash_file('sha256',__DIR__.'/fixtures/policies/qa-policy-v0.json');
+    $db->prepare("INSERT INTO dmo_audit_log (actor_id,action,entity_type,entity_id,details_json) VALUES (:actor,'request.submitted','commission_request',:request,:details)")->execute(['actor'=>$userId,'request'=>$requestId,'details'=>json_encode(['policy_version'=>'qa-policy-v0','policy_sha256'=>$oldPin],JSON_THROW_ON_ERROR)]);
+    drill_assert(dmo_policy_request_eligible($db,$requestId,'qa-policy-v0'),'source_historical_policy_receipt_valid');
     $db->prepare(
         "INSERT INTO dmo_request_attachments
          (request_id,uploaded_by,storage_key,mime_type,byte_size,pixel_width,pixel_height)
@@ -368,6 +373,13 @@ try {
     putenv('DMO_APP_KEY='.$appKey);
     drill_assert(dmo_checkout_authenticated_url(array_replace($invoice,['order_id'=>$orderId+1]))===null,'restored_invoice_rejects_wrong_order_binding');
     drill_assert(dmo_checkout_authenticated_url($invoice)===$invoiceUrl,'restored_invoice_original_key_revalidated');
+    $receipt=dmo_policy_receipt_record($restore,$requestId);
+    drill_assert($receipt===['state'=>'recorded','version'=>'qa-policy-v0','sha256'=>$oldPin]&&dmo_policy_request_eligible($restore,$requestId,'qa-policy-v0'),'restored_historical_receipt_and_separate_pin_match');
+    $originalPins=dmo_config('DMO_HISTORICAL_POLICY_PINS');
+    putenv('DMO_HISTORICAL_POLICY_PINS={"qa-policy-v0":"'.str_repeat('0',64).'"}');
+    drill_assert(!dmo_policy_request_eligible($restore,$requestId,'qa-policy-v0'),'restored_historical_agreement_rejects_wrong_pin');
+    putenv('DMO_HISTORICAL_POLICY_PINS='.$originalPins);
+    drill_assert(dmo_policy_request_eligible($restore,$requestId,'qa-policy-v0'),'restored_historical_agreement_revalidated');
     sodium_memzero($appKey);unset($invoiceUrl,$invoiceCipher,$invoice);
     drill_assert(true,'restored_database_media_references_match_files');
     $sourceUsers=(int)$db->query('SELECT COUNT(*) FROM dmo_users')->fetchColumn();
