@@ -1,3 +1,5 @@
 # Package request handoff
 
 Open intake allows visitors to select a published package from services and carry its slug through the account page. The commission form checks the current public catalog before selecting it, never preselects an unpublished package, and falls back to custom when unavailable. Features and compatible extras are displayed; same-currency estimates are summed locally and are not quotes, invoices or commitments. Mixed currencies require an individual quote. No price or activation changes.
+
+Session XXII: commission extras display their public descriptions where supplied. A custom request with extras explicitly requires an individual quote rather than implying a standalone package subtotal. Switching packages reports the names of incompatible extras automatically removed; no hidden checked incompatible items are submitted. Existing maximum extras, pricing approval, compatibility and request validation remain unchanged. Browser fixture exercises custom extras and package-switch warning.

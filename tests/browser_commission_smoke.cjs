@@ -361,7 +361,11 @@ async function openIntake(browser) {
     await page.locator("#request-submit").waitFor({state:"visible"});
     assert.equal(await page.locator("#request-create-panel").isVisible(),true);
     assert.equal(await page.locator("#request-submit").isEnabled(),true);
+    await page.locator('#addons-options input[value="32"]').check();
+    assert.match(await page.locator("#request-estimate-value").innerText(),/Custom drawing.*individual quote required/);
     await page.locator("#request-tier").selectOption("12");
+    assert.match(await page.locator("#request-addons-change").innerText(),/Detailed background/);
+    assert.equal(await page.locator('#addons-options input[value="32"]').isChecked(),false);
     await page.locator('#addons-options input[value="31"]').check();
     assert.match(await page.locator("#request-estimate-value").innerText(),/CAD.*70.*170/);
     assert.match(await page.locator("#request-tier-features").innerText(),/One portrait/);

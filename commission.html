@@ -10,7 +10,7 @@
 <title>Commission a drawing · Draw Me One</title>
 <link rel="icon" href="./favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="./commission.css?v=34">
-<script defer src="./commission.js?v=65"></script>
+<script defer src="./commission.js?v=66"></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
@@ -81,8 +81,9 @@
           <legend>Optional add-ons</legend>
           <p class="small" id="addons-empty">No add-ons are available for this selection.</p><p id="request-addons-count" class="small" role="status">0 of 8 extras selected</p>
           <div id="addons-options" class="addon-options"></div>
+          <p id="request-addons-change" class="small" role="status"></p>
         </fieldset>
-        <section id="request-estimate" class="request-estimate" hidden aria-label="Package estimate"><strong>Selected package and extras estimate</strong><p id="request-estimate-value" role="status"></p><small>Not a final price, invoice or payment request. The artist must review the scope and issue an individual quote.</small></section>
+        <section id="request-estimate" class="request-estimate" hidden aria-label="Package estimate"><strong>Selected drawing and extras estimate</strong><p id="request-estimate-value" role="status"></p><small>Not a final price, invoice or payment request. The artist must review the scope and issue an individual quote.</small></section>
         <div class="field">
           <label for="request-brief">Describe your drawing</label>
           <textarea id="request-brief" maxlength="6000" rows="8" required aria-describedby="request-brief-count request-brief-help" placeholder="Who or what should be in the artwork? What mood, pose, colours, details or setting are important?"></textarea>

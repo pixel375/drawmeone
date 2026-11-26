@@ -177,6 +177,7 @@
       const copy = document.createElement("span");
       copy.append(renderText("strong",addon.name),
         renderText("small",estimate(addon)));
+      if(typeof addon.description==="string"&&addon.description.trim())copy.append(renderText("small",addon.description));
       label.append(input,copy);
       addonWrap.append(label);
     }
@@ -185,7 +186,11 @@
       const chosen=addons.filter(x=>[...addonWrap.querySelectorAll("input:checked:not(:disabled)")].some(input=>input.value===String(x.id)));
       $("request-addons-count").textContent=chosen.length+" of 8 extras selected";
       const box=$("request-estimate"),output=$("request-estimate-value");
-      if(!tier){box.hidden=true;output.textContent="";return;}
+      if(!tier){
+        box.hidden=chosen.length===0;
+        output.textContent=chosen.length?"Custom drawing with "+chosen.length+" selected extra(s) — individual quote required.":"";
+        return;
+      }
       box.hidden=false;
       const selected=[tier,...chosen],same=selected.every(x=>x.currency===tier.currency&&Number.isSafeInteger(x.estimate_min_minor)&&Number.isSafeInteger(x.estimate_max_minor)&&x.estimate_min_minor>=0&&x.estimate_max_minor>=x.estimate_min_minor);
       if(!same){output.textContent="Individual quote required — selected prices use different currencies or are unavailable.";return;}
@@ -203,18 +208,24 @@
       // If tier/add-on compatibility is supplied, hide incompatible add-ons.
       const supported = Array.isArray(tier?.available_addon_ids)
         ? new Set(tier.available_addon_ids.map(String)) : null;
+      const removed=[];
       for (const checkbox of addonWrap.querySelectorAll('input[type="checkbox"]')) {
         const available = !supported || supported.has(checkbox.value);
         checkbox.disabled = !available;
-        if (!available) checkbox.checked = false;
+        if (!available&&checkbox.checked){
+          removed.push(addons.find(x=>String(x.id)===checkbox.value)?.name||"Extra");
+          checkbox.checked = false;
+        }
         checkbox.closest(".addon-entry").hidden = !available;
       }
+      $("request-addons-change").textContent=removed.length?"Package changed. Unavailable extras removed: "+removed.join(", ")+". Review your selection before submitting.":"";
       $("addons-empty").hidden=!!addonWrap.querySelector("input:not(:disabled)");
       updateEstimate();
     };
     tierSelect.onchange=describeTier;addonWrap.onchange=event=>{
       if(event.target.matches("input[type=checkbox]")&&event.target.checked&&addonWrap.querySelectorAll("input:checked").length>8){event.target.checked=false;updateEstimate();$("request-addons-count").textContent="8 of 8 extras selected · Deselect one before choosing another.";}
-      else updateEstimate();refreshRequestDraftState();
+      else updateEstimate();
+      $("request-addons-change").textContent="";refreshRequestDraftState();
     };
     if(!initialPackageUsed){
       initialPackageUsed=true;
