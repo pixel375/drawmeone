@@ -408,6 +408,10 @@ try {
         [$status,,$portraitDirectory]=art_http('/portfolio.php?view=portrait');
         art_assert($status===200&&str_contains($portraitDirectory,'href="/artwork.php?id='.$id2.'&amp;view=portrait"')&&!str_contains($portraitDirectory,'href="/artwork.php?id='.$id.'&amp;view=portrait"'),'portrait_filter_uses_oriented_dimensions');
     }
+    // Earlier coverage intentionally cleared this description. Restore the
+    // synthetic search fixture before exercising the public search.
+    [$status]=art_http('/api/admin/artworks.php',$token,$csrf,['id'=>$id,'action'=>'set_alt','alt'=>$label]);
+    art_assert($status===200,'search_description_fixture_restored');
     [$status,,$searched]=art_http('/portfolio.php?q='.urlencode('<script>'));
     art_assert($status===200&&str_contains($searched,'Showing 1–1 of 1 published drawing')&&str_contains($searched,'href="/artwork.php?id='.$id.'&amp;q=%3Cscript%3E"')&&!str_contains($searched,'<script>alert('),'portfolio_literal_description_search_escaped');
     [$status,,$none]=art_http('/portfolio.php?q=%25');
@@ -418,6 +422,8 @@ try {
     art_assert($status===200&&str_contains($searchDetail,'Drawing 1 of 1 matching your search')&&str_contains($searchDetail,'href="/portfolio.php?q=%3Cscript%3E"')&&!str_contains($searchDetail,'rel="next"'),'portfolio_search_detail_context');
     [$status,,$staleSearch]=art_http('/artwork.php?id='.$id2.'&q='.urlencode('<script>').'&from_page=99');
     art_assert($status===200&&str_contains($staleSearch,'href="/portfolio.php"')&&str_contains($staleSearch,'Drawing 2 of 2'),'stale_search_and_page_recover');
+    [$status]=art_http('/api/admin/artworks.php',$token,$csrf,['id'=>$id,'action'=>'set_alt','alt'=>'']);
+    art_assert($status===200,'search_fixture_description_cleared');
     [$status]=art_http('/portfolio.php?view=invalid');
     art_assert($status===404,'invalid_portfolio_filter_rejected');
     [$status,,$firstPage]=art_http('/artwork.php?id='.$id);

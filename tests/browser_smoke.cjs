@@ -394,7 +394,7 @@ async function checkPublishedPresentation(browser){
     await page.waitForFunction(()=>document.querySelector("#lightbox-image-status")?.textContent===""&&document.querySelector("#lightbox-image")?.naturalWidth===320);
     assert.equal(await page.locator("#lightbox-retry").isVisible(),false);
     await page.keyboard.press("Escape");
-    assert.equal(await page.evaluate(()=>document.activeElement.classList.contains("art-tile")),true);
+    await page.waitForFunction(()=>document.activeElement.classList.contains("art-tile"));
     assert.deepEqual(demoRequests,[]);
     console.log("PASS: published design, separate visitor mode, stale preview isolation and safe fallback/retry");
   }finally{await context.close();}

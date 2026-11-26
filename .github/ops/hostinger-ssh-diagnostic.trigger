@@ -1,1 +1,1 @@
-Session XIX: verify public portfolio search, metadata batch and full-image viewer retry; read-only deployment check.
+Session XIX: verify public search, atomic metadata saves and viewer retry after correcting disposable search fixture; read-only.
