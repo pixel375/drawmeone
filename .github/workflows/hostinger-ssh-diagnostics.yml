@@ -308,6 +308,14 @@ jobs:
           redirect=$(curl -sS --max-time 12 -o /dev/null -w '%{http_code} %{redirect_url}' http://drawmeone.com/account.html)
           [[ "$redirect" =~ ^30[1278]\ https://drawmeone\.com/ ]] || { echo "https_redirect=not_verified"; exit 1; }
           echo "https_redirect=passed"
+          # Fetch only public or unprivileged responses. Prelaunch noindex
+          # must be served by the actual web server, not merely exist in Git.
+          for path in "" favicon.svg sitemap.xml portfolio.php account.html studio-admin/index.php api/artwork.php?id=1; do
+            headers=$(curl -sS --max-time 12 -D - -o /dev/null "https://drawmeone.com/$path")
+            grep -Eiq '^X-Robots-Tag:.*noindex' <<< "$headers" || { echo "prelaunch_indexing_guard=FAIL"; exit 1; }
+          done
+          echo "prelaunch_indexing_guard=passed"
+
           for path in admin-preview.html backend-status.html backend-status.php commission-preview.html; do
             target=/studio-admin/index.php
             [[ "$path" != commission-preview.html ]] || target=/commission.html
