@@ -62,9 +62,10 @@ try {
     if ($hasOlder) array_pop($thread);
     $references = dmo_refs_metadata($db, (int) $request['id']);
     $canManageReferences = dmo_refs_management_enabled($db);
-    $canUpload = dmo_refs_enabled($db) &&
-        dmo_messages_request_open((string) $request['status']) &&
-        count($references) < DMO_REFERENCE_MAX_ITEMS;
+    $referenceAvailability = !dmo_refs_enabled($db) ? 'disabled' :
+        (!dmo_messages_request_open((string)$request['status']) ? 'closed' :
+        (count($references)>=DMO_REFERENCE_MAX_ITEMS ? 'capacity' : 'available'));
+    $canUpload = $referenceAvailability==='available';
     $quotes = dmo_quote_customer_rows(
         $db, (int) $request['id'], (string) $request['policy_version']
     );
@@ -107,6 +108,7 @@ try {
         'addons' => $names,
         'references' => $references,
         'can_upload_references' => $canUpload,
+        'reference_capacity'=>['used'=>count($references),'limit'=>DMO_REFERENCE_MAX_ITEMS,'availability'=>$referenceAvailability],
         'can_manage_references' => $canManageReferences,
         'messages' => array_reverse($thread),
         'messages_have_older' => $hasOlder,

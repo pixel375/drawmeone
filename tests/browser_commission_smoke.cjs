@@ -513,7 +513,8 @@ async function customerDraftAndSessionIsolation(browser) {
 async function verifyReferenceRecovery(browser){
   const page=await browser.newPage({viewport:{width:390,height:844}});
   await installMocks(page,{signedIn:true,open:false});
-  await page.route("**/api/request.php?*",route=>answer(route,{...detail(A),can_upload_references:true,can_reply:true}));
+  let atCapacity=false;
+  await page.route("**/api/request.php?*",route=>answer(route,{...detail(A),can_upload_references:!atCapacity,can_reply:true,reference_capacity:{used:atCapacity?8:0,limit:8,availability:atCapacity?"capacity":"available"}}));
   const uploaded=[],uploadKeys=[];
   await page.route("**/api/request-attachment.php",route=>{
     const body=route.request().postData()||"";
@@ -540,11 +541,14 @@ async function verifyReferenceRecovery(browser){
     assert.deepEqual(uploaded,["first","second","second","third"]);
     assert.match(uploadKeys[1]||"",/^[0-9a-f-]{36}$/);assert.equal(uploadKeys[1],uploadKeys[2]);
     assert.match(await page.locator("#detail-reference-feedback").innerText(),/3 saved/);
-    await page.route("**/api/request-attachment.php",route=>answer(route,{ok:false,error:"reference_limit_reached"},409));
+    await page.route("**/api/request-attachment.php",route=>{atCapacity=true;return answer(route,{ok:false,error:"reference_limit_reached"},409);});
     await page.locator("#detail-reference-files").setInputFiles(["pause.png","later.png"].map(name=>({name,mimeType:"image/png",buffer:Buffer.from("synthetic limit fixture")})));
     await page.locator("#detail-reference-upload").click();
     await page.waitForFunction(()=>document.querySelector("#detail-reference-feedback")?.textContent.includes("0 unconfirmed · 2 remaining"));
     assert.match(await page.locator("#detail-reference-feedback").innerText(),/current image is retained/);
+    assert.match(await page.locator("#detail-reference-capacity").innerText(),/8 of 8 reference images saved/);
+    assert.equal(await page.locator("#detail-reference-resume").isDisabled(),true);
+    assert.equal(await page.locator("#detail-reference-discard").isEnabled(),true);
     page.once("dialog",d=>d.dismiss());await page.locator("#detail-reference-discard").click();
     assert.equal(await page.locator("#detail-reference-resume").isVisible(),true);
     page.once("dialog",d=>d.accept());await page.locator("#detail-reference-discard").click();

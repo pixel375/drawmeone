@@ -514,6 +514,7 @@
       }
     } finally {
       state.quoteBusy = false;
+      syncReferenceResume();
       $("detail-refresh").disabled = $("my-request-detail").hidden;
       syncQuoteButtons();
     }
@@ -536,7 +537,7 @@
       proofDrafts.delete(id);updateDetailDraftWarning();
       await openDetail(ref);await loadMyRequests();
     }catch(_){status.textContent="Decision not confirmed. Refresh before retrying.";}
-    finally{state.quoteBusy=false;$("detail-refresh").disabled=$("my-request-detail").hidden;syncQuoteButtons();for(const field of box.querySelectorAll("button,textarea"))field.disabled=false;}
+    finally{state.quoteBusy=false;syncReferenceResume();$("detail-refresh").disabled=$("my-request-detail").hidden;syncQuoteButtons();for(const field of box.querySelectorAll("button,textarea"))field.disabled=false;}
   }
 
   function renderCustomerProgress(body){
@@ -756,7 +757,7 @@
       await openDetail(ref);await loadMyRequests();
       if(state.selectedRef===ref&&!leavingSession)$("detail-withdraw-status").textContent="Request withdrawn. No money moved.";
     }catch(_){$("detail-withdraw-status").textContent="Outcome uncertain. Refresh details before retrying.";}
-    finally{state.quoteBusy=false;$("detail-withdraw").disabled=false;$("detail-refresh").disabled=false;}
+    finally{state.quoteBusy=false;syncReferenceResume();$("detail-withdraw").disabled=false;$("detail-refresh").disabled=false;}
   }
 
   async function openDetail(ref) {
@@ -787,6 +788,7 @@
     $("detail-reply-send").disabled = true;
     $("detail-reference-form").hidden = true;
     $("detail-reference-list").replaceChildren();
+    $("detail-reference-capacity").textContent="";
     $("detail-quote-section").hidden = true;
     $("detail-quotes").replaceChildren();
     $("detail-order-section").hidden = true;
@@ -840,6 +842,11 @@
       if (!references.length) {
         referenceRoot.append(renderText("p","No reference images attached yet.","small"));
       }
+      const capacity=body.reference_capacity;
+      const explanations={available:"You can add more references.",capacity:"Reference limit reached. Remove an eligible image before adding another.",closed:"This request is no longer accepting new references.",disabled:"New uploads are currently unavailable."};
+      if(Number.isSafeInteger(capacity?.used)&&capacity.used>=0&&Number.isSafeInteger(capacity?.limit)&&capacity.limit>0&&capacity.used<=capacity.limit){
+        $("detail-reference-capacity").textContent=capacity.used+" of "+capacity.limit+" reference images saved. "+(explanations[capacity.availability]||"");
+      }else $("detail-reference-capacity").textContent=references.length+" private reference image(s).";
       $("detail-reference-form").hidden = body.can_upload_references !== true;
       $("detail-reference-upload").disabled = body.can_upload_references !== true ||
         state.uploadBusy;
@@ -946,6 +953,7 @@
         "Connection interrupted. Refresh your references before retrying.";
     } finally {
       state.deleteBusy = false;
+      syncReferenceResume();
     }
   }
 
@@ -1063,6 +1071,7 @@
         "Connection interrupted. Retry the unchanged message to safely recover the result.";
     } finally {
       state.messageBusy = false;
+      syncReferenceResume();
       $("detail-reply-body").disabled=false;
       updateDetailDraftWarning();
       $("detail-reply-send").disabled = $("detail-reply-form").hidden;

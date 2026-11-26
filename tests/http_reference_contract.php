@@ -191,6 +191,10 @@ try {
     ref_assert($code===201 && is_int($uploaded['attachment_id']??null),
         'owner_private_image_uploaded');
     $id = $uploaded['attachment_id'];
+    [$code,$detail]=ref_http('/api/request.php?ref='.$refA,$cookieA);
+    ref_assert($code===200&&($detail['reference_capacity']??null)===['used'=>1,'limit'=>8,'availability'=>'available'],'owner_reference_capacity_projection');
+    [$code]=ref_http('/api/request.php?ref='.$refA,$cookieB);
+    ref_assert($code===404,'reference_capacity_not_exposed_to_other_customer');
     [$code,$replay]=ref_http('/api/request-attachment.php',$cookieA,null,$csrfA,$upload);
     ref_assert($code===200&&($replay['attachment_id']??null)===$id&&($replay['already_saved']??false),'private_reference_receipt_replay');
     [$code]=ref_http('/api/request-attachment.php',$cookieB,null,$csrfB,$upload);

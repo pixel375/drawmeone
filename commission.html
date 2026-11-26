@@ -10,7 +10,7 @@
 <title>Commission a drawing · Draw Me One</title>
 <link rel="icon" href="./favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="./commission.css?v=33">
-<script defer src="./commission.js?v=62"></script>
+<script defer src="./commission.js?v=63"></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
@@ -185,14 +185,15 @@
         <section class="detail-references">
           <h4>Private reference images</h4>
           <p class="small">Reference drawings are private, not added to the artist's public gallery.</p>
+          <p id="detail-reference-capacity" class="small" role="status"></p>
           <div id="detail-reference-list" class="reference-grid"></div>
           <form id="detail-reference-form" hidden>
             <label for="detail-reference-files">Add reference images (JPEG, PNG or WebP, up to 4 MB each)</label>
             <input id="detail-reference-files" type="file" accept="image/jpeg,image/png,image/webp" multiple required>
             <button type="submit" id="detail-reference-upload" class="text-button">Upload private references</button>
-            <button type="button" id="detail-reference-stop" class="text-button" hidden>Stop after current image</button>
-            <progress id="detail-reference-progress" value="0" max="1" hidden></progress>
           </form>
+          <button type="button" id="detail-reference-stop" class="text-button" hidden>Stop after current image</button>
+          <progress id="detail-reference-progress" value="0" max="1" hidden aria-label="Private reference upload progress"></progress>
           <button type="button" id="detail-reference-resume" class="text-button" hidden>Upload remaining images</button>
           <button type="button" id="detail-reference-discard" class="text-button" hidden>Discard remaining images</button>
           <p id="detail-reference-feedback" class="small" role="status" aria-live="polite"></p>
