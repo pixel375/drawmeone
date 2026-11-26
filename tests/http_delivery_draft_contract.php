@@ -268,6 +268,19 @@ try {
     ref_assert(dmo_notification_target($db,$requestB,'proof',$reviewId)===null,'proof_notice_cross_request_denied');
     [$code,$noticeDetail]=ref_http('/api/admin/request.php?id='.$requestA,$artistCookie);
     ref_assert($code===200&&count(array_filter($noticeDetail['notification_options'],fn($n)=>$n['kind']==='proof'&&$n['event_id']===$reviewId))===1,'proof_notice_listed');
+    [$code,$proofDetail]=ref_http('/api/request.php?ref='.$refA,$cookieA);
+    ref_assert($code===200&&$proofDetail['artwork_reviews'][0]['can_respond']===true&&
+        !array_key_exists('draft_id',$proofDetail['artwork_reviews'][0]['latest']),'customer_proof_detail_eligible_no_private_draft_id');
+    $originalPolicy=$db->query('SELECT policy_version FROM dmo_commission_requests WHERE id='.(int)$requestA)->fetchColumn();
+    $db->prepare("UPDATE dmo_commission_requests SET policy_version='qa-unavailable-policy' WHERE id=:id")->execute(['id'=>$requestA]);
+    try {
+        [$code,$blockedProof]=ref_http('/api/request.php?ref='.$refA,$cookieA);
+        ref_assert($code===200&&$blockedProof['artwork_reviews'][0]['can_respond']===false,'invalid_policy_disables_proof_actions');
+        [$code]=ref_http('/api/artwork-review.php?id='.$reviewId,$cookieA);
+        ref_assert($code===404,'invalid_policy_denies_proof_bytes');
+    } finally {
+        $db->prepare('UPDATE dmo_commission_requests SET policy_version=:version WHERE id=:id')->execute(['version'=>$originalPolicy,'id'=>$requestA]);
+    }
     [$code,$json,$bytes,$headers]=ref_http('/api/artwork-review.php?id='.$reviewId,$cookieA);
     ref_assert($code===200 && substr($bytes,8,4)==='WEBP' && str_contains(strtolower($headers),'no-store'),'customer_sees_watermarked_proof');
     [$code]=ref_http('/api/artwork-review.php?id='.$reviewId,$cookieB);
@@ -281,6 +294,8 @@ try {
     ref_assert($code===403,'review_requires_csrf');
     [$code]=ref_http('/api/artwork-review.php',$cookieA,$decision,$csrfA);
     ref_assert($code===200,'customer_uses_included_revision');
+    [$code,$respondedProof]=ref_http('/api/request.php?ref='.$refA,$cookieA);
+    ref_assert($code===200&&$respondedProof['artwork_reviews'][0]['can_respond']===false,'responded_proof_is_read_only');
     ref_assert(dmo_notification_target($db,$requestA,'proof',$reviewId)===null,'responded_proof_notice_denied');
     [$code,$queue]=ref_http('/api/admin/requests.php?filter=revision_due',$artistCookie);
     ref_assert($code===200&&in_array($requestA,array_map('intval',array_column($queue['requests'],'id')),true),'revision_requested_work_queue');

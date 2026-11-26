@@ -655,7 +655,7 @@ async function verifyProgressMilestones(browser){
   const page=await browser.newPage({viewport:{width:320,height:844},reducedMotion:"reduce"});
   const mock=await installMocks(page,{signedIn:true,open:false});
   const order={id:91,status:"in_progress",payment_status:"paid",total_minor:3000,currency:"CAD"};
-  const proof={order_id:91,revisions_used:0,revision_allowance:1,latest:{id:92,round:1,status:"pending"}};
+  const proof={order_id:91,can_respond:true,revisions_used:0,revision_allowance:1,latest:{id:92,round:1,status:"pending"}};
   const delivery={id:93,order_id:91,width:800,height:600};
   const baseDetail={...detail(A),quotes:[],orders:[],artwork_reviews:[],deliveries:[],checkout_links:[]};
   let current=baseDetail;
@@ -671,6 +671,7 @@ async function verifyProgressMilestones(browser){
     [{orders:[{...order,status:"completed",payment_status:"refunded"}],deliveries:[delivery],artwork_reviews:[proof]},/refund has been recorded/,null],
     [{orders:[{...order,status:"cancelled",payment_status:"unverified"}],deliveries:[delivery],artwork_reviews:[proof]},/closed/,null],
     [{request:{...baseDetail.request,workflow_stage:"quote_declined"}},/no current offer/,null],
+    [{orders:[order],artwork_reviews:[{...proof,can_respond:false}]},/not currently available to review/,null],
   ];
   try{
     await page.goto(base+"/commission.html",{waitUntil:"domcontentloaded"});
@@ -684,11 +685,21 @@ async function verifyProgressMilestones(browser){
       const actions=page.locator("#detail-next-actions button");
       assert.equal(await actions.count(),action?1:0);
       if(action)assert.equal(await actions.first().innerText(),action);
-      if(i>=6&&i<=8){
+      if((i>=6&&i<=8)||i===10){
         assert.equal(await page.getByRole("link",{name:"Download finished artwork"}).count(),0);
         assert.equal(await page.getByRole("button",{name:"Approve proof"}).count(),0);
       }
     }
+    current={...baseDetail,orders:[order],artwork_reviews:[proof]};
+    await page.route("**/api/artwork-review.php?*",route=>route.fulfill({status:404,body:"unavailable"}));
+    await page.locator("#detail-refresh").click();
+    await page.getByRole("button",{name:"Approve proof"}).scrollIntoViewIfNeeded();
+    await page.getByText("The proof could not load. Refresh the request before deciding.").waitFor();
+    assert.equal(await page.getByRole("button",{name:"Approve proof"}).isDisabled(),true);
+    await page.route("**/api/artwork-review.php?*",route=>route.fulfill({contentType:"image/svg+xml",body:'<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100" height="100" fill="gray"/></svg>'}));
+    await page.locator("#detail-refresh").click();
+    await page.getByRole("button",{name:"Approve proof"}).scrollIntoViewIfNeeded();
+    await page.waitForFunction(()=>Array.from(document.querySelectorAll(".customer-proof button")).some(b=>b.textContent==="Approve proof"&&!b.disabled));
     await checkOverflow(page,"customer milestone states");
     assert.deepEqual(mock.posts,[]);
     console.log("PASS: customer milestone state matrix and stale proof/download suppression");

@@ -1,1 +1,1 @@
-Verify expanded artist search, portfolio metadata, older activity, grouped customer updates and dashboard refresh safeguards; read-only.
+Session XVII: verify customer milestone, proof eligibility and proof load safeguards; read-only deployment and integrity check.

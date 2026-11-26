@@ -540,10 +540,11 @@
     const accepted=quotes.find(q=>q.status==="accepted"),live=quotes.find(q=>q.status==="sent"&&!q.is_expired&&q.can_respond===true);
     const closed=closedRequestStatuses.has(stage),held=order?.payment_status==="on_hold"||stage==="payment_on_hold",refunded=order?.payment_status==="refunded"||stage==="payment_refunded";
     const paid=order?.payment_status==="paid"&&!held&&!refunded;
-    const review=paid&&(Array.isArray(body.artwork_reviews)?body.artwork_reviews:[]).find(r=>r.order_id===order.id)?.latest;
+    const reviewRecord=paid&&(Array.isArray(body.artwork_reviews)?body.artwork_reviews:[]).find(r=>r.order_id===order.id);
+    const review=reviewRecord?.latest;
     const delivery=paid&&order.status==="completed"&&(Array.isArray(body.deliveries)?body.deliveries:[]).some(d=>d.order_id===order.id&&Number.isSafeInteger(d.id)&&d.id>0);
     const invoice=!closed&&!held&&!refunded&&order?.status==="awaiting_arrangement"&&order.payment_status==="unverified"&&(Array.isArray(body.checkout_links)?body.checkout_links:[]).some(l=>l.order_id===order.id&&Number.isSafeInteger(l.id)&&l.id>0);
-    const proofPending=review?.status==="pending"&&order?.status==="in_progress"&&Number.isSafeInteger(review.id)&&review.id>0;
+    const proofPending=reviewRecord?.can_respond===true&&review?.status==="pending"&&order?.status==="in_progress"&&Number.isSafeInteger(review.id)&&review.id>0;
     const actions=$("detail-next-actions"),milestones=$("detail-milestones");actions.replaceChildren();milestones.replaceChildren();
     let next="Your request is with the artist for review.";
     const jump=(label,id)=>{const button=renderText("button",label,"text-button");button.type="button";button.addEventListener("click",()=>{const target=$(id);if(target&&!target.hidden){target.tabIndex=-1;target.focus({preventScroll:true});target.scrollIntoView({behavior:"instant",block:"start"});}});actions.append(button);};
@@ -554,6 +555,7 @@
     else if(order){
       if(order.payment_status!=="paid"){next=invoice?"An external invoice is available. Do not pay again if you have already paid; the artist verifies receipt separately.":"Payment arrangements or verification are still pending.";jump("View order and payment details","detail-order-section");}
       else if(proofPending){next="A watermarked artwork proof is awaiting your review.";jump("Review artwork proof","detail-order-section");}
+      else if(review?.status==="pending")next="A proof is recorded but not currently available to review. Contact the artist if this persists.";
       else if(review?.status==="revision_requested")next="Your revision feedback is with the artist.";
       else if(order.status==="ready_for_delivery")next="The artist has marked the artwork ready for delivery. A download will appear after release.";
       else next="The order is recorded as paid; the artist will update production progress here.";
@@ -610,10 +612,10 @@
         const box=document.createElement("section");box.className="customer-proof";
         box.append(renderText("strong","Artwork review · Proof "+latest.round),
           renderText("p","Included revisions used: "+review.revisions_used+" / "+review.revision_allowance,"small"),
-          renderText("p",latest.status==="pending"?"Please review the proof.":latest.status==="approved"?"You approved this proof.":"Revision requested.","small"));
+          renderText("p",latest.status==="pending"?(review.can_respond===true?"Please review the proof.":"This proof is not currently available to review. Refresh or contact the artist."):latest.status==="approved"?"You approved this proof.":"Revision requested.","small"));
         if(latest.feedback)box.append(renderText("p",latest.feedback,"small"));
-        if(latest.status==="pending"&&order.status==="in_progress"&&Number.isSafeInteger(latest.id)&&latest.id>0){
-          const img=document.createElement("img");img.src="./api/artwork-review.php?id="+latest.id;img.alt="Watermarked artwork proof";img.loading="lazy";
+        if(review.can_respond===true&&latest.status==="pending"&&order.status==="in_progress"&&Number.isSafeInteger(latest.id)&&latest.id>0){
+          const img=document.createElement("img");img.alt="Watermarked artwork proof";img.loading="lazy";
           box.append(img,renderText("p","This is a reduced watermarked proof, not your final download.","small"));
           const approve=renderText("button","Approve proof","text-button");approve.type="button";
           const status=renderText("p","","small");status.setAttribute("role","status");
@@ -627,6 +629,15 @@
             box.append(form);
           }else box.append(renderText("p","Included revisions are exhausted. Contact the artist separately about additional changes.","small"));
           box.append(status);
+          // A failed/unfinished image load must not leave an unseen proof
+          // actionable. Refresh requests fresh eligibility and media.
+          const fields=()=>box.querySelectorAll("button,textarea");
+          const setProofReady=ready=>{for(const field of fields())field.disabled=!ready;};
+          setProofReady(false);
+          status.textContent="Loading private proof…";
+          img.addEventListener("load",()=>{setProofReady(true);status.textContent="";},{once:true});
+          img.addEventListener("error",()=>{setProofReady(false);status.textContent="The proof could not load. Refresh the request before deciding."},{once:true});
+          img.src="./api/artwork-review.php?id="+latest.id;
         }
         card.append(box);
       }
