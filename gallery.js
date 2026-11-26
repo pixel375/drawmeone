@@ -129,9 +129,15 @@
       if(!img.dataset.defaultAlt) img.dataset.defaultAlt=img.getAttribute("alt") || "";
       const n=Math.max(0,Number.parseInt(img.dataset.showcaseImage||"0",10)||0);
       if(!isDemo && entries.length){
+        // Hidden alternate concepts must not fetch full-resolution artwork
+        // in the public Studio. Preview mode keeps all concepts available.
+        if(root.dataset.presentation==="public"&&img.getClientRects().length===0){
+          img.removeAttribute("src");img.alt="";return;
+        }
         const work=entries[n%entries.length];
         img.alt=imageAlt(work);
-        img.src=work.src;
+        img.decoding="async";
+        if(img.getAttribute("src")!==work.src)img.src=work.src;
       }else if(root.dataset.presentation==="preview"){
         if(img.dataset.defaultSrc)img.src=img.dataset.defaultSrc;
         else img.removeAttribute("src");
@@ -151,10 +157,12 @@
     button.type="button";button.className="art-tile";
     button.setAttribute("aria-label","View image "+(index+1)+" of "+entries.length+": "+imageAlt(item));
     const img=document.createElement("img");
-    safeguard(img);img.alt=imageAlt(item);img.src=item.thumb||item.src;
+    safeguard(img);img.alt=imageAlt(item);
+    // Set loading policy and intrinsic dimensions BEFORE assigning the URL.
     img.loading=index<4?"eager":"lazy";img.decoding="async";
     if(Number.isInteger(item.width)&&item.width>0)img.width=item.width;
     if(Number.isInteger(item.height)&&item.height>0)img.height=item.height;
+    img.src=item.thumb||item.src;
     button.appendChild(img);
     button.addEventListener("click",()=>openAt(index,button));
     return button;

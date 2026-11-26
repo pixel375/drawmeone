@@ -3,6 +3,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/app/artwork.php';
 require_once __DIR__ . '/app/gallery-navigation.php';
 header('Cache-Control: no-store');
+header('X-Robots-Tag: noindex, follow');
 
 // Search-engine-readable detail pages are created ONLY for art that the
 // artist has explicitly published. Drafts and demo art never get pages.
@@ -115,7 +116,7 @@ header('Referrer-Policy: strict-origin-when-cross-origin');
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="robots" content="index,follow,max-image-preview:large">
+<meta name="robots" content="noindex,follow">
 <meta name="description" content="<?= dmo_artwork_page_escape($description) ?>">
 <title><?= dmo_artwork_page_escape($title) ?></title>
 <link rel="canonical" href="<?= dmo_artwork_page_escape($canonical) ?>">

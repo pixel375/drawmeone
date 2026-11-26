@@ -29,6 +29,7 @@ try {
     exit;
 }
 header('Content-Type: application/xml; charset=utf-8');
+header('X-Robots-Tag: noindex');
 header('Cache-Control: public, no-cache, must-revalidate');
 header('X-Content-Type-Options: nosniff');
 echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n";

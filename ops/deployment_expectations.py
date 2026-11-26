@@ -79,7 +79,7 @@ DEPLOYMENT_FILES = [
     "app/artist-queues.php", "app/customer-attention.php",
     "api/admin/messages.php", "api/admin/customers.php", "api/admin/requests.php",
     "api/admin/finance.php", "api/admin/privacy.php", "api/requests.php",
-    "services.php", "policy.php", "portfolio.php", "artwork.php",
+    "services.php", "policy.php", "portfolio.php", "artwork.php", "sitemap.php", "robots.txt",
     "public-info.css", "studio-admin/index.php", "studio-admin/panel.js",
     "commission.html", "commission.js", "index.html", "account.html",
     "account.js", "app/privacy.php", "api/auth/privacy.php", "app/packages.php",

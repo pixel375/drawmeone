@@ -1,5 +1,8 @@
 # Keep HTML and JSON revalidated so old versions of the live preview do not linger.
 <IfModule mod_headers.c>
+  # Prelaunch indexing remains closed even for direct static assets and
+  # published artwork. Remove only in an explicitly approved SEO release.
+  Header always merge X-Robots-Tag "noindex"
   <FilesMatch "\.(html|json)$">
     Header set Cache-Control "no-cache, must-revalidate"
   </FilesMatch>

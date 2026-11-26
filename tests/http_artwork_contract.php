@@ -320,7 +320,7 @@ try {
     art_assert($status===200 && str_contains($html,'https://drawmeone.com/artwork.php?id='.$id) &&
         str_contains($html,'&lt;script&gt;') && !str_contains($html,'<script>alert(') &&
         str_contains($html,'"@type":"ImageObject"') &&
-        str_contains(strtolower($headers),'no-cache'),'published_detail_safe_html_and_schema');
+        str_contains(strtolower($headers),'no-cache')&&str_contains(strtolower($headers),'noindex')&&str_contains($html,'content="noindex,follow"'),'published_detail_safe_html_and_schema');
     [$status,,$directory,$headers]=art_http('/portfolio.php');
     art_assert($status===200&&str_contains($directory,'href="/artwork.php?id='.$id.'"')&&str_contains($directory,'&lt;script&gt;')&&!str_contains($directory,'<script>alert(')&&str_contains(strtolower($headers),'no-store'),'directory_public_image_and_escaped_alt');
     [$status]=art_http('/portfolio.php?page=-1');
@@ -331,7 +331,7 @@ try {
     art_assert($status===200 && str_contains($xml,'<loc>https://drawmeone.com/artwork.php?id='.$id.'</loc>') &&
         str_contains($xml,'id='.$id.'&amp;v=display') &&
         str_contains(strtolower($headers),'application/xml') &&
-        str_contains(strtolower($headers),'no-cache'),'published_image_sitemap_escaped_and_revalidated');
+        str_contains(strtolower($headers),'no-cache')&&str_contains(strtolower($headers),'noindex'),'published_image_sitemap_escaped_and_revalidated');
     [$status]=art_http('/api/artwork.php?id='.$id.'&v=original');
     art_assert($status===404,'unrecognized_public_variant_denied');
     [$status,$result]=art_http('/api/admin/artworks.php',$token,$csrf,

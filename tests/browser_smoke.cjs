@@ -433,14 +433,28 @@ async function checkPublishedPresentation(browser){
     payload={ok:true,presentation:"published",published:true,version:3,settings};http=200;
     const many=Array.from({length:65},(_,i)=>({src:"api/artwork.php?id="+(i+1)+"&v=display",thumb:"api/artwork.php?id="+(i+1)+"&v=thumb",width:320,height:240,alt:"Synthetic drawing "+(i+1)}));
     many.push({src:"assets/portfolio/legacy.webp",width:320,height:240});
+    const galleryRequests=[];
+    await page.route("**/api/artwork.php?*",route=>{
+      const u=new URL(route.request().url());galleryRequests.push({id:Number(u.searchParams.get("id")),variant:u.searchParams.get("v")});
+      return route.fulfill({status:200,contentType:"image/svg+xml",body:'<svg xmlns="http://www.w3.org/2000/svg" width="320" height="240"><rect width="320" height="240" fill="gray"/></svg>'});
+    });
     await page.route("**/api/portfolio.php*",route=>route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({ok:true,has_more:false,works:many})}));
     await page.reload({waitUntil:"domcontentloaded"});
     await page.locator("#portfolio-gallery .art-tile").first().waitFor({state:"visible"});
     assert.equal(await page.locator("#portfolio-gallery .art-tile").count(),24);
+    const initialTiles=await page.locator("#portfolio-gallery .art-tile img").evaluateAll(imgs=>imgs.map(img=>({loading:img.loading,src:img.getAttribute("src"),width:img.width,height:img.height})));
+    assert.equal(initialTiles.filter(x=>x.loading==="eager").length,4);
+    assert.equal(initialTiles.filter(x=>x.loading==="lazy").length,20);
+    assert(initialTiles.every(x=>x.src.endsWith("&v=thumb")));
+    assert.equal(await page.locator("[data-showcase-image]").evaluateAll(imgs=>imgs.filter(img=>img.getClientRects().length===0&&img.hasAttribute("src")).length),0,"hidden concepts do not request full-size art");
+    await page.locator("#portfolio-gallery .art-tile").first().evaluate(el=>el.dataset.ciRetained="yes");
     await page.locator("#gallery-more-button").click();
     assert.equal(await page.locator("#portfolio-gallery .art-tile").count(),48);
     await page.locator("#gallery-more-button").click();
     assert.equal(await page.locator("#portfolio-gallery .art-tile").count(),65);
+    assert.equal(await page.locator("#portfolio-gallery .art-tile").first().getAttribute("data-ci-retained"),"yes","load-more preserves existing tile nodes");
+    assert(galleryRequests.every(x=>x.variant==="thumb"||x.id<=2),"no hidden concept display requests");
+    console.log("GALLERY_SYNTHETIC_LOAD="+JSON.stringify({manifestWorks:65,initialTiles:24,eager:4,lazy:20,expandedTiles:65,thumbRequests:galleryRequests.filter(x=>x.variant==="thumb").length,displayRequests:galleryRequests.filter(x=>x.variant==="display").length}));
     assert.equal(await page.locator("#gallery-more-button").isVisible(),false);
     assert.equal(await page.locator("#gallery-progress").isVisible(),true);
     assert.match(await page.locator("#gallery-progress").innerText(),/Showing 65 of 65/);
