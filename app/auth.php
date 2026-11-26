@@ -112,8 +112,12 @@ function dmo_auth_password(string $password): bool
 function dmo_auth_rate_limit(PDO $db, string $action, string $subject, int $max, int $windowMinutes): bool
 {
     $ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
-    // No plaintext IP or email is ever saved in the rate-limiter table.
-    $hash = hash_hmac('sha256', $action . '|' . $ip . '|' . $subject, dmo_config('DMO_APP_KEY'));
+    // IP and subject limits are separate. Including the IP in an email/user
+    // counter lets a distributed client reset that counter by changing IPs.
+    // Keep IP-only keys compatible; subject-only keys have a distinct namespace.
+    // No plaintext IP, email or user ID is persisted.
+    $scope=$subject===''?$action.'|'.$ip.'|':$action.'|subject-v2|'.$subject;
+    $hash = hash_hmac('sha256', $scope, dmo_config('DMO_APP_KEY'));
     $sql = 'INSERT INTO dmo_rate_limits (key_hash, hits, window_started_at, expires_at) ' .
         'VALUES (:key_hash, 1, UTC_TIMESTAMP(), DATE_ADD(UTC_TIMESTAMP(), INTERVAL ' .
         (int) $windowMinutes . ' MINUTE)) ' .

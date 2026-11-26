@@ -134,6 +134,27 @@ try {
         usleep(100000);
     }
     auth_check($ready,'localhost_auth_server_ready');
+    // Short challenge strings are rejected locally before any external call.
+    $creds=['email'=>'pending-ci@example.invalid','password'=>$initialPassword,'turnstile_token'=>'short'];
+    [$code]=auth_request('/api/auth/signup.php',$creds);
+    auth_check($code===503,'closed_registration_rejects_actual_signup_endpoint');
+    [$code]=auth_request('/api/auth/login.php',$creds,null,'https://not-the-studio.invalid');
+    auth_check($code===403,'actual_login_rejects_wrong_origin');
+    foreach(['/api/auth/login.php','/api/auth/resend-verification.php','/api/auth/reset-request.php'] as $path){
+        [$code,$result]=auth_request($path,$creds);
+        auth_check($code===422&&$result['error']==='verification_failed','actual_auth_endpoint_rejects_invalid_challenge_without_network');
+    }
+    // Direct disposable rate-counter checks simulate distinct remote IPs.
+    $previousIp=$_SERVER['REMOTE_ADDR']??null;
+    $_SERVER['REMOTE_ADDR']='192.0.2.10';
+    auth_check(dmo_auth_rate_limit($db,'ci-subject-scope','synthetic@example.invalid',1,15),'subject_counter_first_ip_allowed');
+    auth_check(dmo_auth_rate_limit($db,'ci-ip-scope','',1,15),'ip_counter_first_ip_allowed');
+    auth_check(!dmo_auth_rate_limit($db,'ci-ip-scope','',1,15),'ip_counter_same_ip_blocked');
+    $_SERVER['REMOTE_ADDR']='192.0.2.11';
+    auth_check(!dmo_auth_rate_limit($db,'ci-subject-scope','synthetic@example.invalid',1,15),'subject_counter_blocks_rotating_ip');
+    auth_check(dmo_auth_rate_limit($db,'ci-subject-scope','different@example.invalid',1,15),'different_subject_has_own_counter');
+    auth_check(dmo_auth_rate_limit($db,'ci-ip-scope','',1,15),'different_ip_has_own_counter');
+    if($previousIp===null)unset($_SERVER['REMOTE_ADDR']);else $_SERVER['REMOTE_ADDR']=$previousIp;
     [$code,$me]=auth_request('/api/auth/me.php',null,$session1);
     auth_check($code===200 && ($me['authenticated']??true)===false,
         'pending_email_cannot_authenticate');
