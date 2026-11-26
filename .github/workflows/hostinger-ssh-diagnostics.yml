@@ -68,6 +68,30 @@ jobs:
           [[ -d "$site" && -f "$site/app/cli-admin.php" && -f "$site/app/bootstrap.php" ]] || {
             echo "Expected DrawMeOne PHP deployment is missing"; exit 1;
           }
+          # Wait for the actual release, not merely a file that appeared during
+          # an in-place Hostinger sync. No contents or private paths are printed.
+          release_matches() {
+            local entry expected file actual
+            for entry in "${expected_files[@]}"; do
+              expected="${entry%%  *}"
+              file="${entry#*  }"
+              [[ -f "$site/$file" ]] || return 1
+              actual=$(sha256sum "$site/$file" 2>/dev/null | cut -d' ' -f1) || return 1
+              [[ "$actual" == "$expected" ]] || return 1
+            done
+          }
+          stable=0
+          for attempt in {1..25}; do
+            if release_matches; then
+              stable=$((stable+1))
+              if [[ "$stable" == "2" ]]; then break; fi
+            else
+              stable=0
+            fi
+            sleep 4
+          done
+          [[ "$stable" == "2" ]] || { echo "deployment_release=expected_files_not_stable"; exit 1; }
+          echo "deployment_release=expected_files_stable"
           for file in commission-summary.php app/finance-report.php api/admin/finance.php api/admin/customers.php artwork.php portfolio.php sitemap.php services.php policy.php app/public-info.php app/policies.php api/policy.php app/bootstrap.php app/config-review.php app/cli-config-review.php app/customer-attention.php app/artist-queues.php app/launch-readiness.php app/cli-launch-readiness.php app/catalog.php app/packages.php api/catalog.php api/admin/packages.php app/backup-health.php app/auth.php app/mailer.php app/admin.php app/cli-admin.php app/cli-backup.php app/backup-archive.php app/cli-recovery-check.php app/integrity.php app/cli-integrity.php app/cli-mail-config.php app/cli-smtp-probe.php app/commission-workflow.php app/quotes.php app/orders.php app/artwork.php app/requests.php app/references.php app/cli-migrate-references.php app/deliveries.php app/artwork-reviews.php app/cli-migrate-reviews.php app/cli-migrate-deliveries.php app/notifications.php app/payments.php app/checkout.php app/cli-migrate-checkout.php api/checkout.php api/admin/delivery-draft.php api/delivery.php api/artwork-review.php api/request-status.php api/requests.php api/request.php api/request-message.php api/quote-response.php api/request-attachment.php api/reference.php api/reference-delete.php api/auth/signup.php api/auth/login.php api/auth/logout.php api/auth/me.php api/auth/status.php api/auth/verify.php api/auth/resend-verification.php api/auth/reset-request.php api/auth/reset-confirm.php api/admin/login.php api/admin/email.php api/admin/request.php api/admin/request-actions.php api/admin/quote-send.php api/admin/order-create.php api/portfolio.php api/artwork.php api/admin/artworks.php api/admin/artwork-preview.php api/admin/artwork-upload.php; do
             valid=no
             for attempt in 1 2 3 4 5 6 7 8 9 10; do
@@ -323,7 +347,7 @@ jobs:
             [[ "$attempt" != "6" ]] || exit 1
             sleep 4
           done
-          for endpoint in finance customers privacy overview security; do
+          for endpoint in finance customers privacy overview security messages requests; do
             status=$(curl -sS --max-time 12 -o /dev/null -w '%{http_code}' "https://drawmeone.com/api/admin/$endpoint.php")
             [[ "$status" == "401" || "$status" == "503" ]] || { echo "admin_route_${endpoint}=unexpected_$status"; exit 1; }
             echo "admin_route_${endpoint}=guarded"
@@ -609,6 +633,8 @@ jobs:
           printf '%s\n' "$integrity_output"
           [[ "$integrity_output" == *"integrity_portfolio_missing_variants=0"* && "$integrity_output" == *"integrity_portfolio_invalid_metadata=0"* ]] || { echo "portfolio_integrity_scan=missing_or_failed"; exit 1; }
           [[ "$integrity_output" == *"integrity_checkout_crypto_complete=yes"* ]] && [[ "$integrity_output" == *"integrity_checkout_crypto_invalid=0"* ]] || { echo "invoice_integrity_scan=missing_or_failed"; exit 1; }
+          release_matches || { echo "deployment_release=changed_during_diagnostic"; exit 1; }
+          echo "deployment_release=unchanged_at_completion"
           echo "READ_ONLY_DIAGNOSTIC_COMPLETED"
           REMOTE
           } | ssh -T -o BatchMode=yes -o ConnectTimeout=15 -o ConnectionAttempts=3 \

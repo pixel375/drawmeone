@@ -70,11 +70,35 @@ def expectations(root):
         digest = hashlib.sha256((root / path).read_bytes()).hexdigest()
         yield name, ref, digest
 
+# Files whose exact bytes are essential to the current release. Include
+# server-side PHP and its public pages, not just browser assets.
+DEPLOYMENT_FILES = [
+    "app/bootstrap.php", "app/cli-config-review.php", "app/config-review.php",
+    "app/cli-launch-readiness.php", "app/launch-readiness.php",
+    "app/public-info.php", "app/catalog.php", "app/finance-report.php",
+    "app/artist-queues.php", "app/customer-attention.php",
+    "api/admin/messages.php", "api/admin/customers.php", "api/admin/requests.php",
+    "api/admin/finance.php", "api/admin/privacy.php", "api/requests.php",
+    "services.php", "policy.php", "portfolio.php", "artwork.php",
+    "public-info.css", "studio-admin/index.php", "studio-admin/panel.js",
+    "commission.html", "commission.js", "index.html", "account.html",
+]
+
+def deployment_files(root):
+    for name in DEPLOYMENT_FILES:
+        if not re.fullmatch(r"[a-zA-Z0-9_./-]+", name) or ".." in pathlib.PurePosixPath(name).parts:
+            raise ValueError("Unsafe deployment manifest path")
+        yield name, hashlib.sha256((root / name).read_bytes()).hexdigest()
+
 def main():
     root = pathlib.Path(__file__).resolve().parents[1]
     for name, ref, digest in expectations(root):
         print(f"expected_{name}='{ref}'")
         print(f"digest_{name}='{digest}'")
+    print("expected_files=(")
+    for path, digest in deployment_files(root):
+        print(f"  '{digest}  {path}'")
+    print(")")
 
 if __name__ == "__main__":
     main()
