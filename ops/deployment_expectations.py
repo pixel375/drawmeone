@@ -88,7 +88,7 @@ DEPLOYMENT_FILES = [
     ".htaccess", "polish.css", "branding.css", "favicon.svg", "api/health.php",
     "backend-status.php", "backend-status.html", "admin-preview.html", "commission-preview.html", "app/design.php", "api/admin/design.php", "api/site-settings.php",
     "customer-theme.css", "public-theme.js", "password-reset.html", "app/policies.php", "api/policy.php", "app/auth.php", "api/auth/login.php", "api/auth/signup.php", "api/auth/resend-verification.php", "api/auth/reset-request.php",
-    "api/request.php", "api/admin/request.php", "app/quotes.php", "api/admin/quote-send.php", "api/quote-response.php", "api/admin/order-create.php", "app/notifications.php", "app/checkout.php", "api/checkout.php", "app/payments.php", "app/deliveries.php", "app/artwork-reviews.php", "api/artwork-review.php", "api/delivery.php", "app/retention.php", "app/cli-retention.php", "app/admin.php", "app/cli-admin.php", "app/references.php", "app/integrity.php",
+    "api/request.php", "api/admin/request.php", "app/quotes.php", "api/admin/quote-send.php", "api/quote-response.php", "api/admin/order-create.php", "app/notifications.php", "app/checkout.php", "api/checkout.php", "app/payments.php", "app/deliveries.php", "app/artwork-reviews.php", "api/artwork-review.php", "api/delivery.php", "app/retention.php", "app/cli-retention.php", "app/admin.php", "app/cli-admin.php", "app/references.php", "app/integrity.php", "api/admin/artwork-upload.php", "api/request-attachment.php", "api/admin/delivery-draft.php",
     # Retention and private configuration review must match the current deployment.
     # Verify payment and protected download guards together.
 ]

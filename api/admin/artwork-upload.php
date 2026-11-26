@@ -60,8 +60,8 @@ try {
     if (!is_dir($root) && !mkdir($root, 0700, true) && !is_dir($root)) {
         throw new RuntimeException('Unable to initialize private artwork storage.');
     }
-    if (is_link($root)) {
-        throw new RuntimeException('Artwork storage cannot be a symlink.');
+    if (!dmo_private_image_directory_ok($root)) {
+        throw new RuntimeException('Unsafe artwork storage permissions.');
     }
     $folder = $root . '/' . $key;
     if (!mkdir($folder, 0700)) {

@@ -66,6 +66,7 @@ try {
     try{
         $root=dmo_delivery_storage_root();
         if(!is_dir($root)&&!mkdir($root,0700,true)&&!is_dir($root))throw new RuntimeException('Private delivery root unavailable');
+        if(!dmo_private_image_directory_ok($root))throw new RuntimeException('Unsafe delivery storage permissions');
         $key=bin2hex(random_bytes(16));$folder=$root.'/'.$key;
         if(!mkdir($folder,0700))throw new RuntimeException('Private delivery folder unavailable');
         $path=$folder.'/display.webp';

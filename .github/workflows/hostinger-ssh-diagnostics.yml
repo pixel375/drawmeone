@@ -300,6 +300,14 @@ jobs:
             [[ "$code" == "403" || "$code" == "404" ]] || { echo "private_internal_http_access=FAIL"; exit 1; }
           done
           echo "private_internal_http_access=denied"
+          for path in api/unreviewed.php api/admin/unreviewed.php api/auth/unreviewed.php api/admin/finance.php/extra api/admin/finance.php.bak app/cli-admin.php app/cli-retention.php; do
+            code=$(curl -sS --max-time 12 -o /dev/null -w '%{http_code}' "https://drawmeone.com/$path")
+            [[ "$code" == "403" || "$code" == "404" ]] || { echo "unreviewed_route_guard=FAIL"; exit 1; }
+          done
+          echo "unreviewed_route_guard=passed"
+          redirect=$(curl -sS --max-time 12 -o /dev/null -w '%{http_code} %{redirect_url}' http://drawmeone.com/account.html)
+          [[ "$redirect" =~ ^30[1278]\ https://drawmeone\.com/ ]] || { echo "https_redirect=not_verified"; exit 1; }
+          echo "https_redirect=passed"
           for path in admin-preview.html backend-status.html backend-status.php commission-preview.html; do
             target=/studio-admin/index.php
             [[ "$path" != commission-preview.html ]] || target=/commission.html

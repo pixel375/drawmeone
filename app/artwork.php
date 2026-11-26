@@ -76,6 +76,17 @@ function dmo_artwork_orient(GdImage $source,int $orientation): GdImage
     if(!$rotated instanceof GdImage)throw new RuntimeException('Image orientation rotation failed.');
     return $rotated;
 }
+/** Conservative pre-decode budget, not a guarantee of GD native memory use. */
+function dmo_artwork_memory_available(int $width,int $height,string $limit,int $used): bool
+{
+    if($width<1||$height<1||$width>6500||$height>6500||$width*$height>DMO_ARTWORK_MAX_PIXELS||$used<0)return false;
+    if(trim($limit)==='-1')return true;
+    if(!preg_match('/^([0-9]{1,12})([KMG]?)$/iD',trim($limit),$m))return false;
+    $factor=match(strtoupper($m[2])){'K'=>1024,'M'=>1048576,'G'=>1073741824,default=>1};
+    $available=(float)$m[1]*$factor-$used;
+    // Source, possible rotated copy, resampling/encoding overhead and reserve.
+    return $available >= $width*$height*16+32*1048576;
+}
 function dmo_artwork_open_image(string $tmp): array
 {
     if (!is_uploaded_file($tmp) || !extension_loaded('gd') ||
@@ -99,6 +110,8 @@ function dmo_artwork_open_image(string $tmp): array
         $width * $height > DMO_ARTWORK_MAX_PIXELS) {
         dmo_json(422, ['ok' => false, 'error' => 'image_dimensions_out_of_range']);
     }
+    if(!dmo_artwork_memory_available($width,$height,(string)ini_get('memory_limit'),memory_get_usage(true)))
+        dmo_json(422,['ok'=>false,'error'=>'image_memory_budget_exceeded']);
     $source = match ($mime) {
         'image/jpeg' => @imagecreatefromjpeg($tmp),
         'image/png' => @imagecreatefrompng($tmp),
@@ -261,6 +274,12 @@ function dmo_artwork_send_file(PDO $db, int $id, string $variant, bool $admin): 
 /** All image stores must remain private at the directory boundary.
  * Legacy owner-readable files may have read bits outside the owner for
  * portfolio only; no group/world write, symlinks or exposed directories. */
+function dmo_private_image_directory_ok(string $path): bool
+{
+    clearstatcache(true);
+    $mode=@fileperms($path);
+    return is_dir($path)&&!is_link($path)&&is_int($mode)&&($mode&0077)===0;
+}
 function dmo_private_image_path_ok(string $path,bool $strictFile=false): bool
 {
     clearstatcache(true);

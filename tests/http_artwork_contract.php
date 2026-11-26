@@ -70,6 +70,10 @@ $server = null;
 $log = tempnam(sys_get_temp_dir(), 'dmo-artwork-http-');
 $private = sys_get_temp_dir() . '/dmo-artwork-ci-' . bin2hex(random_bytes(8));
 try {
+    art_assert(dmo_artwork_memory_available(620,420,'128M',4*1048576),'small_image_memory_budget');
+    art_assert(!dmo_artwork_memory_available(4000,4000,'128M',4*1048576),'large_image_memory_budget_denied');
+    art_assert(dmo_artwork_memory_available(4000,4000,'512M',4*1048576),'large_image_adequate_memory_budget');
+    art_assert(!dmo_artwork_memory_available(6500,6500,'-1',0),'unlimited_memory_still_has_pixel_cap');
     art_assert(extension_loaded('gd') && function_exists('imagewebp'),
         'webp_processor_available');
     if (!mkdir($private, 0700)) throw new RuntimeException('No private CI directory');
@@ -159,6 +163,17 @@ try {
     art_assert($status===403,'upload_wrong_origin_denied');
     [$status,$badUpload] = art_http('/api/admin/artwork-upload.php',$token,$csrf,null,$bad);
     art_assert($status===422,'invalid_image_rejected');
+    $tooSmall=$private.'/tiny.png';$tiny=imagecreatetruecolor(99,120);imagepng($tiny,$tooSmall);imagedestroy($tiny);
+    [$status,$badSize]=art_http('/api/admin/artwork-upload.php',$token,$csrf,null,$tooSmall);
+    art_assert($status===422&&($badSize['error']??null)==='image_dimensions_out_of_range','undersized_image_denied');
+    // A valid PNG header with excessive declared dimensions; rejected before GD decode.
+    $largeHeader=$private.'/oversized-header.png';
+    $headerData=pack('NNCCCCC',6500,6500,8,2,0,0,0);
+    $chunk='IHDR'.$headerData;
+    file_put_contents($largeHeader,"\x89PNG\r\n\x1a\n".pack('N',strlen($headerData)).$chunk.pack('N',crc32($chunk)));
+    [$status,$badSize]=art_http('/api/admin/artwork-upload.php',$token,$csrf,null,$largeHeader);
+    art_assert($status===422,'oversized_declared_image_denied_before_storage');
+    art_assert((int)$db->query('SELECT COUNT(*) FROM dmo_portfolio_artworks')->fetchColumn()===0,'hostile_uploads_create_no_records');
 
     $lock=$db->prepare('SELECT GET_LOCK(:name,0)');$lock->execute(['name'=>dmo_artwork_upload_lock_name($db)]);
     art_assert((int)$lock->fetchColumn()===1,'disposable_upload_lock_acquired');

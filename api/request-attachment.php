@@ -78,8 +78,8 @@ try {
         if (!is_dir($root) && !mkdir($root, 0700, true) && !is_dir($root)) {
             throw new RuntimeException('Private reference root unavailable.');
         }
-        if (is_link($root)) {
-            throw new RuntimeException('Private reference root may not be a symlink.');
+        if (!dmo_private_image_directory_ok($root)) {
+            throw new RuntimeException('Unsafe private reference storage permissions.');
         }
         $key = bin2hex(random_bytes(16));
         $folder = $root . '/' . $key;
