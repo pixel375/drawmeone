@@ -80,15 +80,9 @@ try {
             $db->rollBack();
             dmo_json(409, ['ok' => false, 'error' => 'quote_not_latest_draft']);
         }
-        $lineCheck = $db->prepare(
-            'SELECT COUNT(*) AS count_lines, COALESCE(SUM(amount_minor),0) AS total ' .
-            'FROM dmo_quote_lines WHERE quote_id = :id'
-        );
-        $lineCheck->execute(['id' => $quoteId]);
-        $values = $lineCheck->fetch(PDO::FETCH_ASSOC);
-        if ((int) ($values['count_lines'] ?? 0) < 1 ||
-            (int) ($values['total'] ?? 0) !== (int) $row['total_minor']) {
-            throw new RuntimeException('Quote total integrity check failed.');
+        if(!dmo_quote_total_matches($db,$quoteId,(int)$row['total_minor'])){
+            $db->rollBack();
+            dmo_json(409,['ok'=>false,'error'=>'quote_total_inconsistent']);
         }
         // A new release supersedes previously sent (unaccepted) versions.
         $db->prepare(

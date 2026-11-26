@@ -346,6 +346,11 @@ try {
     qa_positive($code===200 && ($unreleased['quotes']??[])===[],
         'new_draft_still_hidden');
 
+    // Synthetic corruption only: release must fail closed without changing draft state.
+    $db->prepare('UPDATE dmo_quotes SET total_minor=total_minor+1 WHERE id=:id')->execute(['id'=>$quoteId]);
+    [$code,$invalid]=qa_http('/api/admin/quote-send.php',$tokenAdmin,'__Host-dmo_admin',['request_id'=>$requestA,'quote_id'=>$quoteId,'validity_days'=>7],$csrfAdmin);
+    qa_positive($code===409&&$invalid['error']==='quote_total_inconsistent','quote_release_rejects_inconsistent_itemization');
+    $db->prepare('UPDATE dmo_quotes SET total_minor=total_minor-1 WHERE id=:id')->execute(['id'=>$quoteId]);
     [$code,$release]=qa_http('/api/admin/quote-send.php',$tokenAdmin,
         '__Host-dmo_admin',[
             'request_id'=>$requestA,'quote_id'=>$quoteId,'validity_days'=>7,
@@ -486,6 +491,12 @@ try {
         'ref'=>$referenceA,'quote_id'=>$quoteId,'decision'=>'accept','policy_version'=>'qa-policy-v1','acknowledge_quote'=>true
     ],$csrfA);
     qa_positive($code===409,'cannot_substitute_current_policy_for_historical_agreement');
+    $db->prepare('UPDATE dmo_quotes SET total_minor=total_minor+1 WHERE id=:id')->execute(['id'=>$quoteId]);
+    [$code,$invalidOffer]=qa_http('/api/request.php?ref='.$referenceA,$tokenA);
+    qa_positive($code===200&&$invalidOffer['quotes'][0]['can_respond']===false,'inconsistent_quote_not_actionable_in_customer_detail');
+    [$code,$invalid]=qa_http('/api/quote-response.php',$tokenA,'__Host-dmo_session',['ref'=>$referenceA,'quote_id'=>$quoteId,'decision'=>'accept','policy_version'=>'qa-policy-v0','acknowledge_quote'=>true],$csrfA);
+    qa_positive($code===409&&$invalid['error']==='quote_total_inconsistent','quote_acceptance_rejects_inconsistent_itemization');
+    $db->prepare('UPDATE dmo_quotes SET total_minor=total_minor-1 WHERE id=:id')->execute(['id'=>$quoteId]);
     [$code,$accept]=qa_http('/api/quote-response.php',$tokenA,
         '__Host-dmo_session',[
             'ref'=>$referenceA,'quote_id'=>$quoteId,'decision'=>'accept',
@@ -503,6 +514,10 @@ try {
 
     [$code]=qa_http('/api/admin/request-actions.php',$tokenAdmin,'__Host-dmo_admin',array_replace($withdraw,['quote_id'=>$quoteId]),$csrfAdmin);
     qa_positive($code===409,'accepted_quote_cannot_be_withdrawn');
+    $db->prepare('UPDATE dmo_quotes SET total_minor=total_minor+1 WHERE id=:id')->execute(['id'=>$quoteId]);
+    [$code,$invalid]=qa_http('/api/admin/order-create.php',$tokenAdmin,'__Host-dmo_admin',['request_id'=>$requestA,'accepted_quote_id'=>$quoteId,'confirm_unpaid'=>true],$csrfAdmin);
+    qa_positive($code===409&&$invalid['error']==='quote_total_inconsistent','order_confirmation_rejects_inconsistent_accepted_quote');
+    $db->prepare('UPDATE dmo_quotes SET total_minor=total_minor-1 WHERE id=:id')->execute(['id'=>$quoteId]);
     [$code,$order]=qa_http('/api/admin/order-create.php',$tokenAdmin,
         '__Host-dmo_admin',[
             'request_id'=>$requestA,'accepted_quote_id'=>$quoteId,
@@ -980,10 +995,18 @@ try {
     qa_positive($code===201,'withdrawal_fixture_quote_created');
     [$code]=qa_http('/api/admin/quote-send.php',$tokenAdmin,'__Host-dmo_admin',['request_id'=>$requestB,'quote_id'=>$draftB['quote_id'],'validity_days'=>7],$csrfAdmin);
     qa_positive($code===200,'withdrawal_fixture_quote_sent');
+    [$code,$declined]=qa_http('/api/quote-response.php',$tokenB,'__Host-dmo_session',['ref'=>$referenceB,'quote_id'=>$draftB['quote_id'],'decision'=>'decline','policy_version'=>'qa-policy-v1','acknowledge_quote'=>false],$csrfB);
+    qa_positive($code===200&&$declined['status']==='declined'&&$declined['order_created']===false&&$declined['payment_collected']===false,'customer_declines_without_order_or_payment');
+    [$code,$detail]=qa_http('/api/request.php?ref='.$referenceB,$tokenB);
+    qa_positive($code===200&&$detail['quotes'][0]['status']==='declined'&&$detail['quotes'][0]['can_respond']===false&&$detail['orders']===[],'declined_quote_readable_not_actionable');
+    [$code,$renewedB]=qa_http('/api/admin/request-actions.php',$tokenAdmin,'__Host-dmo_admin',['action'=>'create_quote_draft','request_id'=>$requestB,'currency'=>'CAD','scope'=>'Revised withdrawal fixture','revision_allowance'=>0,'lines'=>[['description'=>'Artwork','amount_minor'=>1200]]],$csrfAdmin);
+    qa_positive($code===201&&$renewedB['version']===2,'artist_revises_declined_offer');
+    [$code]=qa_http('/api/admin/quote-send.php',$tokenAdmin,'__Host-dmo_admin',['request_id'=>$requestB,'quote_id'=>$renewedB['quote_id'],'validity_days'=>7],$csrfAdmin);
+    qa_positive($code===200,'revised_offer_released');
     [$code,$closed]=qa_http('/api/request-withdraw.php',$tokenB,'__Host-dmo_session',['ref'=>$referenceB,'expected_status'=>'submitted','confirm_withdrawal'=>true],$csrfB);
     qa_positive($code===200&&$closed['status']==='cancelled','customer_withdraws_unaccepted_request');
     [$code,$detail]=qa_http('/api/request.php?ref='.$referenceB,$tokenB);
-    qa_positive($code===200&&$detail['quotes'][0]['status']==='superseded'&&$detail['can_withdraw']===false&&$detail['can_reply']===false,'withdrawal_invalidates_offer_but_preserves_history');
+    qa_positive($code===200&&$detail['quotes'][0]['status']==='superseded'&&$detail['quotes'][1]['status']==='declined'&&$detail['can_withdraw']===false&&$detail['can_reply']===false,'withdrawal_invalidates_offer_but_preserves_history');
     // Read-only monitoring must detect corrupted states without repairing them.
     $baseline=dmo_integrity_records($db);
     $newChecks=['schema_reference_missing','schema_delivery_missing','schema_review_missing','schema_checkout_missing',

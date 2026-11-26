@@ -38,6 +38,16 @@ function dmo_quote_can_respond(array $quote, bool $serviceReady, string $request
         && (int) ($quote['is_expired'] ?? 1) === 0;
 }
 
+/** Reject inconsistent itemization at each agreement boundary. Amounts are
+ * stored in integer minor units; never trust a total sent by the browser. */
+function dmo_quote_total_matches(PDO $db,int $quoteId,int $total): bool
+{
+    if($total<1)return false;
+    $q=$db->prepare('SELECT COUNT(*) AS line_count, COALESCE(SUM(amount_minor),0) AS line_total FROM dmo_quote_lines WHERE quote_id=:id');
+    $q->execute(['id'=>$quoteId]);$row=$q->fetch(PDO::FETCH_ASSOC);
+    return is_array($row)&&(int)$row['line_count']>=1&&(int)$row['line_count']<=12&&(int)$row['line_total']===$total;
+}
+
 function dmo_quote_customer_rows(PDO $db, int $requestId, string $requestPolicy): array
 {
     // Only quotes that have *actually been delivered* to this request owner.
@@ -76,6 +86,7 @@ function dmo_quote_customer_rows(PDO $db, int $requestId, string $requestPolicy)
              'is_expired' => $q['is_expired'] ? 1 : 0],
             dmo_quote_response_enabled(), $requestPolicy,$policyEligible
         );
+        if($q['can_respond']&&!dmo_quote_total_matches($db,$q['id'],$q['total_minor']))$q['can_respond']=false;
         $lines->execute(['id' => $q['id']]);
         $q['lines'] = [];
         foreach ($lines->fetchAll(PDO::FETCH_ASSOC) as $line) {

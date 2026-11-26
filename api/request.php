@@ -15,6 +15,10 @@ try {
     if (!is_string($ref) || !preg_match('/^DMO-[0-9a-f]{20}$/D', $ref)) {
         dmo_json(422, ['ok' => false, 'error' => 'invalid_request_reference']);
     }
+    // Keep details, history and action eligibility in one consistent read
+    // snapshot. Mutations still independently revalidate authoritative state.
+    $db->exec('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ');
+    $db->beginTransaction();
     $stmt = $db->prepare(
         'SELECT r.id, r.public_ref, r.subject_type, r.brief, ' .
         'r.preferred_contact, r.preferred_deadline, r.status, ' .
@@ -27,6 +31,7 @@ try {
     $request = $stmt->fetch();
     // Even if a reference exists for someone else, return an identical 404.
     if (!is_array($request)) {
+        $db->rollBack();
         dmo_json(404, ['ok' => false, 'error' => 'request_not_found']);
     }
     $addons = $db->prepare(
@@ -44,6 +49,7 @@ try {
 
     $full = $_GET['thread'] ?? 'recent';
     if (!is_string($full) || !in_array($full,['recent','full'],true)) {
+        $db->rollBack();
         dmo_json(422,['ok'=>false,'error'=>'invalid_thread_view']);
     }
     // Internal artist notes are NEVER returned. Draft quotes are also private
@@ -102,7 +108,7 @@ try {
     $canWithdraw=dmo_withdrawal_enabled()&&dmo_withdrawal_eligible($db,(int)$request['id'],$request['status']);
     $conversationFull=dmo_conversation_message_count($db,(int)$request['id'])>=DMO_CONVERSATION_MAX_MESSAGES;
     unset($request['id']);
-    dmo_json(200, [
+    $result = [
         'ok' => true,
         'request' => $request,
         'addons' => $names,
@@ -123,8 +129,11 @@ try {
         'checkout_links'=>$checkout,
         'can_withdraw'=>$canWithdraw,
         'payments_enabled' => false,
-    ]);
+    ];
+    $db->commit();
+    dmo_json(200, $result);
 } catch (Throwable $error) {
+    if(isset($db)&&$db->inTransaction())$db->rollBack();
     dmo_log_problem($error, 'customer request detail');
     dmo_json(503, ['ok' => false, 'error' => 'request_service_unavailable']);
 }

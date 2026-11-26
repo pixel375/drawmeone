@@ -22,8 +22,11 @@ try {
     if (!is_string($full) || !in_array($full,['recent','full'],true)) {
         dmo_json(422,['ok'=>false,'error'=>'invalid_thread_view']);
     }
+    $db->exec('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ');
+    $db->beginTransaction();
     $detail = dmo_workflow_load($db, $id, $full === 'full');
     if ($detail === null) {
+        $db->rollBack();
         dmo_json(404, ['ok' => false, 'error' => 'request_not_found']);
     }
     $version=(string)$detail['request']['policy_version'];
@@ -35,7 +38,7 @@ try {
             dmo_orders_deadline_editable($order);
     }
     unset($order);
-    dmo_json(200, [
+    $result = [
         'ok' => true,
         'detail' => $detail,
         'policy_eligible'=>$eligible,
@@ -56,8 +59,11 @@ try {
             dmo_messages_request_open((string) $detail['request']['status']),
         'customer_messaging_enabled' => dmo_workflow_messaging_enabled() &&
             dmo_messages_request_open((string) $detail['request']['status']),
-    ]);
+    ];
+    $db->commit();
+    dmo_json(200, $result);
 } catch (Throwable $error) {
+    if(isset($db)&&$db->inTransaction())$db->rollBack();
     dmo_log_problem($error, 'admin commission detail');
     dmo_json(503, ['ok' => false, 'error' => 'admin_service_unavailable']);
 }

@@ -73,6 +73,9 @@ try {
             $db->rollBack();
             dmo_json(409, ['ok' => false, 'error' => 'accepted_quote_required']);
         }
+        if(!dmo_quote_total_matches($db,$quoteId,(int)$quote['total_minor'])){
+            $db->rollBack();dmo_json(409,['ok'=>false,'error'=>'quote_total_inconsistent']);
+        }
         $insert = $db->prepare(
             'INSERT INTO dmo_orders ' .
             '(request_id, accepted_quote_id, status, payment_status) ' .

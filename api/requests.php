@@ -131,7 +131,10 @@ try {
     $payloadDigest=dmo_request_payload_digest($request);
     $db->beginTransaction();
     try {
-        if(dmo_intake_control_enabled())dmo_intake_lock($db);
+        // Catalog mutations serialize on the same admin row. Acquire it before
+        // the customer lock even if intake capacity control is disabled, so a
+        // request never captures a partially changed package/extra mapping.
+        if(dmo_intake_control_enabled()||$request['tier_id']!==null||$request['addon_ids'])dmo_intake_lock($db);
         // Serialize request insertion for each customer, preventing concurrent
         // duplicate retries and limiting request floods.
         $lock = $db->prepare(

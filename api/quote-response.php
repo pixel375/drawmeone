@@ -58,7 +58,7 @@ try {
             dmo_json(409, ['ok' => false, 'error' => 'request_policy_or_status_changed']);
         }
         $quoteLookup = $db->prepare(
-            'SELECT id, status, sent_at, validity_ends_at, ' .
+            'SELECT id, status, total_minor, sent_at, validity_ends_at, ' .
             'CASE WHEN validity_ends_at IS NOT NULL AND ' .
             'validity_ends_at <= UTC_TIMESTAMP() THEN 1 ELSE 0 END AS is_expired ' .
             'FROM dmo_quotes WHERE id = :id AND request_id = :request LIMIT 1 FOR UPDATE'
@@ -72,6 +72,9 @@ try {
         if (!dmo_quote_can_respond($quote, true, (string) $request['policy_version'],true)) {
             $db->rollBack();
             dmo_json(409, ['ok' => false, 'error' => 'quote_expired_or_not_open']);
+        }
+        if($decision==='accept'&&!dmo_quote_total_matches($db,$quoteId,(int)$quote['total_minor'])){
+            $db->rollBack();dmo_json(409,['ok'=>false,'error'=>'quote_total_inconsistent']);
         }
         $accepted = $db->prepare(
             "SELECT id FROM dmo_quotes WHERE request_id = :request AND status = 'accepted' LIMIT 1"
