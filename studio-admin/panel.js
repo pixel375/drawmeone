@@ -2836,11 +2836,19 @@
       if(generation!==financeGeneration||leavingSession)return;
       if(response.status===401)return sessionExpired();
       if(!response.ok||!data.ok||data.scope!=="local_records_only"||!Array.isArray(data.summary)||!Array.isArray(data.records))throw Error("finance_unavailable");
+      if(data.next_before!==null&&data.next_before!==undefined&&(!Number.isSafeInteger(data.next_before)||data.next_before<1||(older&&data.next_before>=financeCursor)))throw Error("Invalid finance cursor");
       $("finance-summary").replaceChildren();
       for(const group of data.summary){
         if(!financeLabels[group.record_state])continue;
         const card=document.createElement("article");card.className="launch-check";
-        card.append(textNode("strong",String(group.currency)+" · "+financeLabels[group.record_state]),textNode("p",financeAmount(group.amount_minor,group.currency)+" · "+group.record_count+" record(s)","small"));$("finance-summary").append(card);
+        card.append(textNode("strong",String(group.currency)+" · "+financeLabels[group.record_state]),textNode("p",financeAmount(group.amount_minor,group.currency)+" · "+group.record_count+" record(s)","small"));
+        if(["CAD","USD"].includes(group.currency)){
+          const view=textNode("button","View these records","quiet");view.type="button";
+          view.setAttribute("aria-label","View "+group.currency+" "+financeLabels[group.record_state].toLowerCase()+" records");
+          view.addEventListener("click",()=>{$("finance-state").value=group.record_state;$("finance-currency").value=group.currency;loadFinance();});
+          card.append(view);
+        }
+        $("finance-summary").append(card);
       }
       for(const item of data.records){
         if(!Number.isSafeInteger(item.id)||!Number.isSafeInteger(item.request_id)||!financeLabels[item.record_state]||financeRecords.some(row=>row.id===item.id))continue;
@@ -2853,9 +2861,12 @@
         const button=textNode("button","Open commission","quiet");button.type="button";button.addEventListener("click",()=>{if(!setRequestCustomer())return;requestListPage=1;requestListQuery="";requestListFilter="all";$("request-list-query").value="";$("request-list-filter").value="all";resetRequestSearchOptions();syncScheduleFilter(true);selectPanel("requests");openRequest(item.request_id,true);});card.append(button);$("finance-records").append(card);
       }
       financeCursor=Number.isSafeInteger(data.next_before)?data.next_before:null;
-      financeReport={scope:"local_records_only",as_of:data.as_of,filter,currency,date_basis:"record_created_utc",date_from:from||null,date_to:to||null,complete:financeCursor===null};
+      financeReport={scope:"local_records_only",first_page_as_of:older?financeReport?.first_page_as_of:data.as_of,last_page_as_of:data.as_of,
+        filter,currency,date_basis:"record_created_utc",date_from:from||null,date_to:to||null,
+        matching_count_at_last_page:Number.isSafeInteger(data.matching_count)?data.matching_count:null,
+        pagination_exhausted:financeCursor===null,consistent_snapshot:false};
       $("finance-next").hidden=financeCursor===null;
-      $("finance-status").textContent=financeRecords.length+" payment record(s) loaded · local evidence only.";
+      $("finance-status").textContent=financeRecords.length+" payment record(s) loaded"+(Number.isSafeInteger(data.matching_count)?" of "+data.matching_count+" currently matching":"")+" · local evidence only."+(older?" Pages read at separate times; refresh for current classifications.":"");
       $("finance-export").disabled=financeRecords.length===0;
     }catch(_){if(generation===financeGeneration){
       if(older){$("finance-status").textContent="Older payment records unavailable. Existing loaded records retained; retry or refresh. Export disabled until refreshed or retry succeeds.";}

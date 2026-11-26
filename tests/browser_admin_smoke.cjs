@@ -235,6 +235,10 @@ async function verifyArtistDesk(browser, width) {
         await page.locator("#finance-export").click();
         const ledger=JSON.parse(fs.readFileSync(await (await paymentDownload).path(),"utf8"));
         assert.equal(ledger.date_from,"2026-11-01");assert.equal(ledger.date_basis,"record_created_utc");assert.equal(ledger.loaded_records_only,true);
+        assert.equal(ledger.consistent_snapshot,false);assert.equal(ledger.pagination_exhausted,true);
+        const clickedGroup=page.waitForRequest(req=>req.url().includes("state=reconciled")&&req.url().includes("currency=CAD"));
+        await page.getByRole("button",{name:"View CAD reconciled records",exact:true}).click();
+        await clickedGroup;await page.locator("#finance-records article").first().waitFor();
         await page.locator("#finance-clear-dates").click();
         await page.locator("#finance-records article").first().waitFor();
       } else if(name==="artwork"){

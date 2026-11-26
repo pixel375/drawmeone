@@ -48,6 +48,10 @@ function dmo_finance_report(PDO $db,string $state,string $currency,?int $before,
     $summary=$db->prepare("SELECT currency,record_state,COUNT(*) AS record_count,SUM(amount_minor) AS amount_minor FROM ($ledger) ledger".$dateWhere." GROUP BY currency,record_state ORDER BY currency,record_state");
     $summary->execute($dateParams);$groups=$summary->fetchAll(PDO::FETCH_ASSOC);
     foreach($groups as &$g){$g['record_count']=(int)$g['record_count'];$g['amount_minor']=(int)$g['amount_minor'];}unset($g);
+    $matching=0;
+    foreach($groups as $group){
+        if(($state==='all'||$group['record_state']===$state)&&($currency==='all'||$group['currency']===$currency))$matching+=$group['record_count'];
+    }
     $where=$dates;$params=$dateParams;
     if($state!=='all'){$where[]='record_state=:state';$params['state']=$state;}
     if($currency!=='all'){$where[]='currency=:currency';$params['currency']=$currency;}
@@ -57,6 +61,6 @@ function dmo_finance_report(PDO $db,string $state,string $currency,?int $before,
     $more=count($rows)>25;if($more)array_pop($rows);
     foreach($rows as &$row)foreach(['id','order_id','request_id','amount_minor'] as $key)$row[$key]=(int)$row[$key];unset($row);
     return ['ok'=>true,'readonly'=>true,'scope'=>'local_records_only','as_of'=>gmdate('c'),
-        'date_basis'=>'record_created_utc','date_from'=>$from,'date_to'=>$to,'summary'=>$groups,'records'=>$rows,
+        'date_basis'=>'record_created_utc','date_from'=>$from,'date_to'=>$to,'matching_count'=>$matching,'summary'=>$groups,'records'=>$rows,
         'next_before'=>$more?$rows[count($rows)-1]['id']:null];
 }

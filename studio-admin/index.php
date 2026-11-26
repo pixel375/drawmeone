@@ -20,7 +20,7 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
 <meta name="theme-color" content="#151317">
 <title>Artist's Desk · Draw Me One</title>
 <link rel="stylesheet" href="./panel.css?v=53">
-<script defer src="./panel.js?v=96"></script>
+<script defer src="./panel.js?v=97"></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to dashboard</a>
@@ -317,7 +317,7 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
 
     <section data-panel="finance" class="content-panel" hidden>
       <div class="section-intro"><h2>Payment records</h2><p>Local reconciliation evidence only. No provider balances, accounting profit, fees, taxes or automatic payment verification. Amounts are never combined across currencies.</p></div>
-      <p class="small">Recorded evidence by current state, for all dates or the selected creation-date range (UTC). Refunded, held, pending, rejected and inconsistent amounts are separate from reconciled records. Totals are not a bank statement.</p>
+      <p class="small">Recorded evidence by current state, for all dates or the selected creation-date range (UTC). Refunded, held, pending, rejected and inconsistent amounts are separate from reconciled records. Totals are not a bank statement. Older pages are live reads at separate times; refresh before using records for reconciliation.</p>
       <div id="finance-summary" class="launch-checks"></div>
       <div class="request-list-filters">
         <label for="finance-state">Record state<select id="finance-state"><option value="all">All records</option><option value="pending">Awaiting verification</option><option value="reconciled">Reconciled</option><option value="held">On hold</option><option value="refunded">Full refund recorded</option><option value="rejected">Rejected evidence</option><option value="review">Needs review</option></select></label>

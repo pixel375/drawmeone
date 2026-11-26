@@ -773,7 +773,7 @@ try {
     [$code,,$print]=qa_http('/commission-summary.php?ref='.$referenceA,$tokenA);
     qa_positive($code===200&&str_contains($print,'Recorded as reconciled')&&!str_contains($print,'CI-ONLY-TRANSACTION'),'print_summary_local_reconciled_state_no_reference');
     [$code,$none]=qa_http('/api/admin/finance.php?state=reconciled&currency=USD',$tokenAdmin,'__Host-dmo_admin');
-    qa_positive($code===200&&$none['records']===[],'finance_currency_filter');
+    qa_positive($code===200&&$none['records']===[]&&$none['matching_count']===0,'finance_currency_filter');
     $recordDate=substr($finance['records'][0]['created_at'],0,10);
     [$code,$dated]=qa_http('/api/admin/finance.php?from='.$recordDate.'&to='.$recordDate,$tokenAdmin,'__Host-dmo_admin');
     qa_positive($code===200&&count($dated['records'])===1&&$dated['date_basis']==='record_created_utc'&&$dated['date_from']===$recordDate,'finance_inclusive_utc_date_range');
@@ -784,7 +784,7 @@ try {
     [$code]=qa_http('/api/admin/finance.php?from=2026-11-25&to=2026-11-24',$tokenAdmin,'__Host-dmo_admin');
     qa_positive($code===422,'finance_reversed_range_denied');
     [$code,$none]=qa_http('/api/admin/finance.php?before='.$finance['records'][0]['id'],$tokenAdmin,'__Host-dmo_admin');
-    qa_positive($code===200&&$none['records']===[],'finance_cursor');
+    qa_positive($code===200&&$none['records']===[]&&$none['matching_count']>=1,'finance_cursor');
     [$code]=qa_http('/api/admin/finance.php?state=invalid',$tokenAdmin,'__Host-dmo_admin');
     qa_positive($code===422,'finance_invalid_filter_denied');
     [$code]=qa_http('/api/admin/request-actions.php',$tokenAdmin,'__Host-dmo_admin',$confirm,$csrfAdmin);

@@ -1,1 +1,1 @@
-Session XXI: verify finance date reporting, customer history and queue totals, privacy draft recovery; read-only.
+Session XXI final: verify finance report dates/scope, customer directory, queue totals and privacy draft safeguards; read-only.
