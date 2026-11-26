@@ -538,10 +538,12 @@
     const request=body.request||{},stage=request.workflow_stage||request.status;
     const quotes=Array.isArray(body.quotes)?body.quotes:[],orders=Array.isArray(body.orders)?body.orders:[],order=orders[0];
     const accepted=quotes.find(q=>q.status==="accepted"),live=quotes.find(q=>q.status==="sent"&&!q.is_expired&&q.can_respond===true);
-    const review=(body.artwork_reviews||[]).find(r=>r.order_id===order?.id)?.latest;
-    const delivery=(body.deliveries||[]).some(d=>d.order_id===order?.id&&Number.isSafeInteger(d.id)&&d.id>0);
-    const invoice=(body.checkout_links||[]).some(l=>l.order_id===order?.id&&Number.isSafeInteger(l.id)&&l.id>0);
     const closed=closedRequestStatuses.has(stage),held=order?.payment_status==="on_hold"||stage==="payment_on_hold",refunded=order?.payment_status==="refunded"||stage==="payment_refunded";
+    const paid=order?.payment_status==="paid"&&!held&&!refunded;
+    const review=paid&&(Array.isArray(body.artwork_reviews)?body.artwork_reviews:[]).find(r=>r.order_id===order.id)?.latest;
+    const delivery=paid&&order.status==="completed"&&(Array.isArray(body.deliveries)?body.deliveries:[]).some(d=>d.order_id===order.id&&Number.isSafeInteger(d.id)&&d.id>0);
+    const invoice=!closed&&!held&&!refunded&&order?.status==="awaiting_arrangement"&&order.payment_status==="unverified"&&(Array.isArray(body.checkout_links)?body.checkout_links:[]).some(l=>l.order_id===order.id&&Number.isSafeInteger(l.id)&&l.id>0);
+    const proofPending=review?.status==="pending"&&order?.status==="in_progress"&&Number.isSafeInteger(review.id)&&review.id>0;
     const actions=$("detail-next-actions"),milestones=$("detail-milestones");actions.replaceChildren();milestones.replaceChildren();
     let next="Your request is with the artist for review.";
     const jump=(label,id)=>{const button=renderText("button",label,"text-button");button.type="button";button.addEventListener("click",()=>{const target=$(id);if(target&&!target.hidden){target.tabIndex=-1;target.focus({preventScroll:true});target.scrollIntoView({behavior:"instant",block:"start"});}});actions.append(button);};
@@ -551,7 +553,7 @@
     else if(closed||order?.status==="cancelled")next=stage==="completed"||order?.status==="completed"?"This commission is recorded as completed. A downloadable file is not currently available here.":"This request or order is closed. You can review the history.";
     else if(order){
       if(order.payment_status!=="paid"){next=invoice?"An external invoice is available. Do not pay again if you have already paid; the artist verifies receipt separately.":"Payment arrangements or verification are still pending.";jump("View order and payment details","detail-order-section");}
-      else if(review?.status==="pending"){next="A watermarked artwork proof is awaiting your review.";jump("Review artwork proof","detail-order-section");}
+      else if(proofPending){next="A watermarked artwork proof is awaiting your review.";jump("Review artwork proof","detail-order-section");}
       else if(review?.status==="revision_requested")next="Your revision feedback is with the artist.";
       else if(order.status==="ready_for_delivery")next="The artist has marked the artwork ready for delivery. A download will appear after release.";
       else next="The order is recorded as paid; the artist will update production progress here.";
@@ -559,8 +561,9 @@
     else if(live){next="A quote is available for your decision.";jump("Review quote","detail-quote-section");}
     else if(stage==="clarification_needed"){next="The artist has requested clarification. Review your conversation.";if(body.can_reply===true)jump("Go to private reply","detail-reply-form");}
     else if(quotes.some(q=>q.status==="sent"&&q.is_expired))next="The latest offer has expired. Contact the artist for an updated quote.";
+    else if(stage==="quote_declined"||stage==="quote_inactive"||stage==="quote_expired")next="There is no current offer to accept. Contact the artist if you want to discuss a new quote.";
     $("detail-next-step").textContent=next;
-    const entries=[["Request","Received"],["Quote",accepted?"Accepted":live?"Awaiting decision":quotes.length?"Historical offer(s)":"Not issued"],["Order",order?readableRequestStatus(order.status):"Not confirmed"],["Payment",!order?"No order":held?"Under review":refunded?"Refund recorded":order.payment_status==="paid"?"Verified by artist":"Not verified"],["Artwork review",review?({pending:"Awaiting review",approved:"Approved",revision_requested:"Revision requested"}[review.status]||"Recorded"):"No proof available"],["Final artwork",held||refunded?"Access paused":delivery?"Download available":"Not currently available"]];
+    const entries=[["Request","Received"],["Quote",accepted?"Accepted":live?"Awaiting decision":quotes.length?"Historical offer(s)":"Not issued"],["Order",order?readableRequestStatus(order.status):"Not confirmed"],["Payment",!order?"No order":held?"Under review":refunded?"Refund recorded":order.payment_status==="paid"?"Verified by artist":"Not verified"],["Artwork review",held||refunded?"Access paused":review?(proofPending?"Awaiting review":({approved:"Approved",revision_requested:"Revision requested"}[review.status]||"Recorded")):"No proof available"],["Final artwork",held||refunded?"Access paused":delivery?"Download available":"Not currently available"]];
     for(const [label,value] of entries){const row=document.createElement("div");row.append(renderText("dt",label),renderText("dd",value));milestones.append(row);}
   }
   function renderCustomerOrders(orders,deliveries=[],reviews=[],checkoutLinks=[]) {
@@ -601,7 +604,7 @@
           const link=renderText("a","Open external invoice","text-button");link.href="./api/checkout.php?id="+invoice.id;link.target="_blank";link.rel="noopener noreferrer";card.append(link);
         }else card.append(renderText("p","Payment has not been verified. Please use the agreed contact method with the artist; no hosted invoice is available.","small"));
       }
-      const review=reviews.find(r=>r.order_id===order.id);
+      const review=order.payment_status==="paid"&&order.status!=="cancelled"?reviews.find(r=>r.order_id===order.id):null;
       if(review?.latest){
         const latest=review.latest;
         const box=document.createElement("section");box.className="customer-proof";
@@ -609,7 +612,7 @@
           renderText("p","Included revisions used: "+review.revisions_used+" / "+review.revision_allowance,"small"),
           renderText("p",latest.status==="pending"?"Please review the proof.":latest.status==="approved"?"You approved this proof.":"Revision requested.","small"));
         if(latest.feedback)box.append(renderText("p",latest.feedback,"small"));
-        if(latest.status==="pending"&&Number.isSafeInteger(latest.id)&&latest.id>0){
+        if(latest.status==="pending"&&order.status==="in_progress"&&Number.isSafeInteger(latest.id)&&latest.id>0){
           const img=document.createElement("img");img.src="./api/artwork-review.php?id="+latest.id;img.alt="Watermarked artwork proof";img.loading="lazy";
           box.append(img,renderText("p","This is a reduced watermarked proof, not your final download.","small"));
           const approve=renderText("button","Approve proof","text-button");approve.type="button";
@@ -627,7 +630,7 @@
         }
         card.append(box);
       }
-      for(const delivery of deliveries.filter(d=>d.order_id===order.id)){
+      for(const delivery of (order.payment_status==="paid"&&order.status==="completed"?deliveries.filter(d=>d.order_id===order.id):[])){
         if(!Number.isSafeInteger(delivery.id)||delivery.id<1)continue;
         card.append(renderText("p","Your finished artwork is available ("+delivery.width+" × "+delivery.height+", WebP).","small"));
         const link=renderText("a","Download finished artwork","text-button");

@@ -641,12 +641,57 @@ async function verifyOrderHistoryStage(browser) {
     await page.locator('#my-request-list button[aria-label$="'+A+'"]').click();
     await page.locator("#detail-orders").waitFor({state:"visible"});
     assert.match(await page.locator("#detail-orders").innerText(),/Agreed delivery date: 2027-01-15/);
-    assert.match(await page.locator("#detail-orders").innerText(),/unverified/);
+    assert.match(await page.locator("#detail-orders").innerText(),/Payment status: Not verified/);
+    assert.match(await page.locator("#detail-next-step").innerText(),/An external invoice is available/);
     const invoice=page.getByRole("link",{name:"Open external invoice"});
     assert.equal(await invoice.getAttribute("href"),"./api/checkout.php?id=72");
     assert.equal(await invoice.getAttribute("rel"),"noopener noreferrer");
     await checkOverflow(page,"customer order history");
     assert.deepEqual(test.posts,[]);
+  }finally{await page.close();}
+}
+
+async function verifyProgressMilestones(browser){
+  const page=await browser.newPage({viewport:{width:320,height:844},reducedMotion:"reduce"});
+  const mock=await installMocks(page,{signedIn:true,open:false});
+  const order={id:91,status:"in_progress",payment_status:"paid",total_minor:3000,currency:"CAD"};
+  const proof={order_id:91,revisions_used:0,revision_allowance:1,latest:{id:92,round:1,status:"pending"}};
+  const delivery={id:93,order_id:91,width:800,height:600};
+  const baseDetail={...detail(A),quotes:[],orders:[],artwork_reviews:[],deliveries:[],checkout_links:[]};
+  let current=baseDetail;
+  await page.route("**/api/request.php?*",route=>answer(route,current));
+  const cases=[
+    [{quotes:[{...detail(A).quotes[0],status:"accepted",can_respond:false}]},/accepted.*confirm the order/,null],
+    [{quotes:detail(A).quotes},/quote is available/,"Review quote"],
+    [{orders:[order],artwork_reviews:[proof]},/proof is awaiting your review/,"Review artwork proof"],
+    [{orders:[order],artwork_reviews:[{...proof,latest:{...proof.latest,status:"revision_requested"}}]},/revision feedback/,null],
+    [{orders:[{...order,status:"ready_for_delivery"}]},/ready for delivery/,null],
+    [{orders:[{...order,status:"completed"}],request:{...baseDetail.request,status:"completed"},deliveries:[delivery]},/available to download/,"Go to finished artwork"],
+    [{orders:[{...order,status:"completed",payment_status:"on_hold"}],deliveries:[delivery],artwork_reviews:[proof]},/Payment is under review/,null],
+    [{orders:[{...order,status:"completed",payment_status:"refunded"}],deliveries:[delivery],artwork_reviews:[proof]},/refund has been recorded/,null],
+    [{orders:[{...order,status:"cancelled",payment_status:"unverified"}],deliveries:[delivery],artwork_reviews:[proof]},/closed/,null],
+    [{request:{...baseDetail.request,workflow_stage:"quote_declined"}},/no current offer/,null],
+  ];
+  try{
+    await page.goto(base+"/commission.html",{waitUntil:"domcontentloaded"});
+    for(const [i,[overrides,expected,action]] of cases.entries()){
+      current={...baseDetail,...overrides};
+      if(i===0)await page.locator('#my-request-list button[aria-label$="'+A+'"]').click();
+      else await page.locator("#detail-refresh").click();
+      await page.locator("#detail-content").waitFor({state:"visible"});
+      assert.match(await page.locator("#detail-next-step").innerText(),expected);
+      assert.equal(await page.locator("#detail-milestones dt").count(),6);
+      const actions=page.locator("#detail-next-actions button");
+      assert.equal(await actions.count(),action?1:0);
+      if(action)assert.equal(await actions.first().innerText(),action);
+      if(i>=6&&i<=8){
+        assert.equal(await page.getByRole("link",{name:"Download finished artwork"}).count(),0);
+        assert.equal(await page.getByRole("button",{name:"Approve proof"}).count(),0);
+      }
+    }
+    await checkOverflow(page,"customer milestone states");
+    assert.deepEqual(mock.posts,[]);
+    console.log("PASS: customer milestone state matrix and stale proof/download suppression");
   }finally{await page.close();}
 }
 
@@ -740,6 +785,7 @@ async function openWithoutLogin(browser) {
     await verifyEntireCustomerHistory(browser);
     await verifyFullCustomerThread(browser);
     await verifyOrderHistoryStage(browser);
+    await verifyProgressMilestones(browser);
     await verifyRequestWithdrawal(browser);
     await verifyCustomerAttention(browser);
     await verifyPublicServiceFailureIsolation(browser);
