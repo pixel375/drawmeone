@@ -16,5 +16,8 @@
 # Dynamically expose published artwork URLs to search engines.
 <IfModule mod_rewrite.c>
   RewriteEngine On
+  # Retire obsolete mock forms and public setup pages; real workspaces retain their own gates.
+  RewriteRule ^(?:admin-preview\.html|backend-status\.(?:html|php))$ /studio-admin/index.php [R=302,END,NE,QSD]
+  RewriteRule ^commission-preview\.html$ /commission.html [R=302,END,NE,QSD]
   RewriteRule ^sitemap\.xml$ sitemap.php [END]
 </IfModule>

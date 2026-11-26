@@ -122,3 +122,7 @@ These labels contain no passwords, account names, internal paths, user records o
 
 
 The server-rendered `/backend-status.php` endpoint is preferred for setup diagnostics because it returns readable HTML even when the database health API uses HTTP 503. It shows only a sanitized status code.
+
+## November 26 launch cleanup (supersedes the initial public setup instructions above)
+
+The obsolete static admin/commission demos and backend setup pages now redirect to the real gated workspaces. Original prototypes remain available in Git history, not as public forms. `/api/health.php` returns generic readiness only: `database_connected` or `service_unavailable`; it no longer exposes setup stages or a misleading `writes_enabled` field. Use authorized Hostinger SSH diagnostics and the protected Artist's Desk for configuration investigation. No launch switches changed.

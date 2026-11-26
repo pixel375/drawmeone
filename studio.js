@@ -39,6 +39,7 @@
       const url = "./assets/branding/" + logo + "-" + color + ".svg?v=8";
       if (img.getAttribute("src") !== url) img.src = url;
     });
+    if(!previewEnabled)return;
     document.querySelectorAll("[data-logo-preview]").forEach(img => {
       const slug = img.dataset.logoPreview;
       if (!allowed.logo.includes(slug)) return;

@@ -318,19 +318,30 @@ async function checkCompleteImageViewer(browser){
       await page.route("**/api/site-settings.php*",route=>reply(route,{ok:true,presentation:"published",published:true,version:1,settings:{site_style:"studio",color_theme:"noir",gallery_layout:"rows",default_mode:"dark",logo:"original"}}));
       const artwork=(id,width,height)=>({src:"api/artwork.php?id="+id+"&v=display",thumb:"api/artwork.php?id="+id+"&v=thumb",width,height,alt:"Synthetic drawing "+id});
       await page.route("**/api/portfolio.php*",route=>reply(route,{ok:true,works:[artwork(1,300,1500),artwork(2,1500,300)]}));
+      // Generate actual raster fixtures so the intrinsic dimensions do not
+      // depend on the browser's SVG image-document sizing behavior.
+      const pngs=await page.evaluate(()=>[[300,1500],[1500,300]].map(([w,h])=>{
+        const canvas=document.createElement("canvas");canvas.width=w;canvas.height=h;
+        const ctx=canvas.getContext("2d");ctx.fillStyle="#777";ctx.fillRect(0,0,w,h);
+        return canvas.toDataURL("image/png").split(",")[1];
+      }));
       await page.route("**/api/artwork.php?*",route=>{
         const id=new URL(route.request().url()).searchParams.get("id");
-        const [w,h]=id==="1"?[300,1500]:[1500,300];
-        return route.fulfill({status:200,contentType:"image/svg+xml",body:'<svg xmlns="http://www.w3.org/2000/svg" width="'+w+'" height="'+h+'"><rect width="'+w+'" height="'+h+'" fill="gray"/></svg>'});
+        return route.fulfill({status:200,contentType:"image/png",headers:{"Cache-Control":"no-store"},body:Buffer.from(pngs[id==="1"?0:1],"base64")});
       });
       await page.goto(base+"/index.html",{waitUntil:"domcontentloaded"});
       const tiles=page.locator("#portfolio-gallery .art-tile");
       await tiles.first().click();
       for(const [id,w,h] of [[1,300,1500],[2,1500,300]]){
-        await page.waitForFunction(([w,h])=>{
-          const image=document.querySelector("#lightbox-image");
-          return image?.complete&&image.naturalWidth===w&&image.naturalHeight===h&&document.querySelector("#lightbox-image-status")?.textContent==="";
-        },[w,h]);
+        try{
+          await page.waitForFunction(([w,h])=>{
+            const image=document.querySelector("#lightbox-image");
+            return image?.complete&&image.naturalWidth===w&&image.naturalHeight===h&&document.querySelector("#lightbox-image-status")?.textContent==="";
+          },[w,h],{timeout:15000});
+        }catch(error){
+          console.error("COMPLETE_VIEWER_STATE",JSON.stringify({viewport,id,state:await page.locator("#lightbox-image").evaluate(img=>({src:img.getAttribute("src"),currentSrc:img.currentSrc,complete:img.complete,width:img.naturalWidth,height:img.naturalHeight,status:document.querySelector("#lightbox-image-status")?.textContent}))}));
+          throw error;
+        }
         const geometry=await page.evaluate(()=>{
           const rect=el=>{const b=el.getBoundingClientRect();return {left:b.left,top:b.top,right:b.right,bottom:b.bottom,width:b.width,height:b.height};};
           const image=document.querySelector("#lightbox-image");

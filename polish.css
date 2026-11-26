@@ -334,3 +334,20 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-off
 .concept-page .concept-email-actions a:focus-visible{outline:3px solid #f0a68e;outline-offset:4px}
 @media(max-width:480px){.concept-page .concept-email-actions{flex-direction:column;align-items:stretch}.concept-page .concept-email-actions a{width:100%}}
 @media(prefers-reduced-motion:reduce){.concept-page .concept-email-actions a{transition:none}.concept-page .concept-email-actions a:hover{transform:none}}
+
+/* Keep all viewer rows explicitly assigned when feedback is visible. */
+.portfolio-lightbox .lightbox-inner{grid-template-rows:minmax(44px,auto) minmax(0,1fr) auto minmax(48px,auto)}
+.portfolio-lightbox .lightbox-close{grid-row:1}
+.portfolio-lightbox .lightbox-stage{grid-row:2}
+.portfolio-lightbox .lightbox-image-feedback{grid-row:3}
+.portfolio-lightbox .lightbox-bottom{grid-row:4}
+@media(max-height:450px){.portfolio-lightbox .lightbox-inner{grid-template-rows:minmax(34px,auto) minmax(0,1fr) auto minmax(36px,auto)}}
+/* Studio: keep the entire main navigation reachable on narrow screens. */
+@media(max-width:560px){
+  :root[data-site="studio"] .site-header{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-rows:auto auto;height:auto;padding:10px 0 5px;gap:2px 12px}
+  :root[data-site="studio"] .site-header .wordmark{grid-area:1/1;min-width:0}
+  :root[data-site="studio"] .site-header .header-actions{grid-area:1/2;justify-self:end}
+  :root[data-site="studio"] .site-header .mode-shortcut{width:44px;height:44px}
+  :root[data-site="studio"] .site-header .nav-links{grid-area:2/1/3/3;justify-content:space-between;gap:3px;min-width:0;flex-wrap:wrap}
+  :root[data-site="studio"] .site-header .nav-links a{display:inline-flex;align-items:center;min-height:44px;font-size:12px;padding:4px 2px;white-space:nowrap}
+}
