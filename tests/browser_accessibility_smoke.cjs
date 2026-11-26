@@ -98,12 +98,13 @@ async function home(browser,site,width,mode="dark") {
     }
   } finally{await context.close();}
 }
-async function closedPage(browser,url,width) {
+async function closedPage(browser,url,width,mode="dark") {
   const context=await browser.newContext({
-    viewport:{width,height:900},reducedMotion:"reduce"
+    viewport:{width,height:900},reducedMotion:"reduce",colorScheme:mode
   });
   const page=await context.newPage();
   try {
+    await context.addInitScript(mode=>localStorage.setItem("dmo-visitor-mode",mode),mode);
     await mocks(page);
     await page.goto(base+url,{waitUntil:"domcontentloaded"});
     // Wait for the appropriate gated state, not the transient startup view.
@@ -113,7 +114,7 @@ async function closedPage(browser,url,width) {
       document.querySelector("#service-state")?.textContent?.includes("not open"));
     else await page.waitForFunction(()=>
       document.querySelector("#reset-state")?.textContent?.includes("closed"));
-    await checkAxe(page,url+"-"+width);
+    await checkAxe(page,url+"-"+width+"-"+mode);
     if(width===390&&(url.includes("account")||url.includes("password-reset"))){
       await page.keyboard.press("Tab");
       const label=await page.evaluate(()=>document.activeElement?.textContent?.trim());
@@ -301,6 +302,8 @@ async function authenticatedCustomer(browser,width) {
     for(const file of ["/commission.html","/account.html","/password-reset.html"]){
       await closedPage(browser,file,390);
       await closedPage(browser,file,1440);
+      await closedPage(browser,file,390,"light");
+      await closedPage(browser,file,1440,"light");
     }
     for(const width of [320,1440]){
       await authenticatedAdmin(browser,width);

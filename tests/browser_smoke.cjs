@@ -533,6 +533,17 @@ async function checkPublicTheme(browser){
     assert.equal(await page.locator("html").getAttribute("data-public-mode"),"light");
     await page.getByRole("button",{name:"Switch to dark mode"}).click();
     assert.equal(await page.evaluate(()=>localStorage.getItem("dmo-visitor-mode")),"dark");
+    for(const url of ["/commission.html","/account.html","/password-reset.html"]){
+      await page.goto(base+url);
+      await page.getByRole("button",{name:"Switch to light mode"}).click();
+      assert.equal(await page.locator("html").getAttribute("data-public-mode"),"light");
+      assert.equal(await page.evaluate(()=>getComputedStyle(document.documentElement).colorScheme),"light");
+      await page.reload();
+      await page.getByRole("button",{name:"Switch to dark mode"}).click();
+      assert.equal(await page.evaluate(()=>getComputedStyle(document.documentElement).colorScheme),"dark");
+      assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth+2),true);
+    }
+    await page.goto(base+"/portfolio.php");
     await page.getByRole("navigation",{name:"Filter published drawings"}).getByRole("link",{name:"Portrait",exact:true}).click();
     await page.waitForURL("**/portfolio.php?view=portrait");
     assert.equal(await page.getByRole("link",{name:"Portrait",exact:true}).getAttribute("aria-current"),"page");
