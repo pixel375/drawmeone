@@ -17,6 +17,7 @@ try {
         dmo_json(200, [
             'ok' => true,
             'catalog' => dmo_packages_list($db),
+            'inventory' => dmo_packages_inventory($db),
             'write_enabled' => dmo_packages_writes_enabled(),
             'publish_enabled' => dmo_packages_publish_enabled(),
             'currency_note' => 'CAD and USD are supported; rates must be artist approved.',
@@ -46,6 +47,9 @@ try {
     $fields='id,slug,name,description,currency,estimate_min_minor,estimate_max_minor,sort_order,is_active'.($kind==='tier'?',features_json':'');
     $db->beginTransaction();
     try {
+        // Serialize catalog mutations before any offer or mapping lock, so parallel
+        // drafts/publications cannot exceed the bounded catalog inventory.
+        if($db->query("SELECT id FROM dmo_users WHERE role='admin' ORDER BY id LIMIT 1 FOR UPDATE")->fetchColumn()===false)throw new RuntimeException('Catalog lock unavailable.');
         if($action==='set_compatibility'){
             $id=dmo_package_id($input['id']??null,false);
             $mode=$input['mode']??null;$allowed=$input['allowed_addon_ids']??null;
@@ -98,6 +102,10 @@ try {
                 [, $compatibility]=dmo_package_compatibility_locked($db,$id);
                 dmo_package_check_compatibility($db,$compatibility,$input['expected_compatibility_revision']??null);
             }
+            if($active&&!(bool)$current['is_active']){
+                $count=(int)$db->query('SELECT COUNT(*) FROM '.$table.' WHERE is_active=1')->fetchColumn();
+                if($count>=dmo_catalog_public_limit($kind==='tier')){$db->rollBack();dmo_package_fail('published_catalog_limit');}
+            }
             if ($active && !dmo_catalog_offer_valid($current)) {
                 $db->rollBack();
                 dmo_json(422, ['ok' => false, 'error' => 'complete_price_and_description_first']);
@@ -119,6 +127,7 @@ try {
         $item = dmo_package_normalize($raw, $kind === 'tier');
         $id = $item['id'];
         $exists = false;
+        if($id===null&&(int)$db->query('SELECT COUNT(*) FROM '.$table)->fetchColumn()>=DMO_PACKAGE_INVENTORY_LIMIT){$db->rollBack();dmo_package_fail('catalog_inventory_limit');}
         if ($id !== null) {
             $select = $db->prepare(
                 'SELECT '.$fields.' FROM ' . $table . ' WHERE id = :id FOR UPDATE'

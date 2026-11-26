@@ -2,6 +2,11 @@
 declare(strict_types=1);
 require_once __DIR__.'/requests.php';
 
+function dmo_catalog_public_limit(bool $tier): int
+{
+    return $tier?50:100;
+}
+
 function dmo_catalog_approved(): bool
 {
     return dmo_config('DMO_PRICING_APPROVED')==='1';
@@ -22,9 +27,11 @@ function dmo_catalog_public(PDO $db): array
     if(!dmo_catalog_approved())return ['tiers'=>[],'addons'=>[]];
     $offers=[];
     foreach(['tiers'=>'dmo_commission_tiers','addons'=>'dmo_addons'] as $kind=>$table){
-        $isTier=$kind==='tiers';$limit=$isTier?50:100;
+        $isTier=$kind==='tiers';$limit=dmo_catalog_public_limit($isTier);
         $fields='id,slug,name,description,currency,estimate_min_minor,estimate_max_minor'.($isTier?',features_json':'');
-        $rows=$db->query("SELECT ".$fields." FROM ".$table." WHERE is_active=1 ORDER BY sort_order,id LIMIT ".$limit)->fetchAll(PDO::FETCH_ASSOC);
+        $rows=$db->query("SELECT ".$fields." FROM ".$table." WHERE is_active=1 ORDER BY sort_order,id LIMIT ".($limit+1))->fetchAll(PDO::FETCH_ASSOC);
+        // A legacy oversized catalog is an explicit availability failure, never a silently incomplete list.
+        if(count($rows)>$limit)throw new RuntimeException("Published catalog exceeds supported capacity.");
         $offers[$kind]=[];
         foreach($rows as $row){
             if(!dmo_catalog_offer_valid($row))continue;

@@ -20,7 +20,7 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
 <meta name="theme-color" content="#151317">
 <title>Artist's Desk · Draw Me One</title>
 <link rel="stylesheet" href="./panel.css?v=55">
-<script defer src="./panel.js?v=106"></script>
+<script defer src="./panel.js?v=107"></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to dashboard</a>
@@ -397,6 +397,7 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
         <h2>Services & commission pricing</h2>
         <p>Edit packages and optional extras. These are artist-managed estimates; an exact quote is still sent after reviewing each request.</p>
       </div>
+      <p id="package-inventory" class="small" role="status"></p>
       <div class="package-workspace">
         <aside class="package-sidebar">
           <label for="package-search">Find a package or extra</label><input id="package-search" type="search" maxlength="120" autocomplete="off">

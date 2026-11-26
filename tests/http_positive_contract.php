@@ -1075,6 +1075,8 @@ try {
     qa_positive($code===403,'catalog_requires_csrf');
     [$code,$new]=qa_http('/api/admin/packages.php',$tokenAdmin,'__Host-dmo_admin',['action'=>'save_tier','item'=>$item],$csrfAdmin);
     qa_positive($code===200,'catalog_new_draft');
+    [$code,$inventory]=qa_http('/api/admin/packages.php',$tokenAdmin,'__Host-dmo_admin');
+    qa_positive($code===200&&$inventory['inventory']['tiers']['total']===count($inventory['catalog']['tiers'])&&$inventory['inventory']['tiers']['published_limit']===50&&$inventory['inventory']['addons']['total_limit']===100,'catalog_inventory_limits_visible_to_artist');
     $item['id']=$new['id'];
     [$code,$catalog]=qa_http('/api/catalog.php');
     qa_positive($code===200&&!in_array($item['id'],array_column($catalog['tiers'],'id'),true),'catalog_draft_private');
@@ -1161,7 +1163,23 @@ try {
     [$code,$catalog]=qa_http('/api/catalog.php');
     qa_positive($code===200&&array_key_exists('available_addon_ids',$catalog['tiers'][0])&&$catalog['tiers'][0]['available_addon_ids']===null,'catalog_unrestricted_public_null');
     [$code,,$serviceHtml]=qa_http('/services.php');
-    qa_positive($code===200&&str_contains($serviceHtml,'<li>CI Extra · CAD 2.00 – 3.00</li>'),'services_unrestricted_tier_lists_public_extras');
+    qa_positive($code===200&&str_contains($serviceHtml,'<li>CI Extra · CAD 2.00 – 3.00</li>')&&str_contains($serviceHtml,'Optional published extras (not included in this estimate)'),'services_unrestricted_tier_lists_public_extras');
+    // Disposable DB only: fill both bounded inventories and verify no silent overflow.
+    $fill=$db->prepare("INSERT INTO dmo_commission_tiers (slug,name,description,currency,estimate_min_minor,estimate_max_minor,features_json,sort_order,is_active) VALUES (:slug,'Synthetic capacity fixture','Synthetic fixture','CAD',100,200,'[]',0,:active)");
+    try{
+        $existing=(int)$db->query('SELECT COUNT(*) FROM dmo_commission_tiers')->fetchColumn();
+        $published=(int)$db->query('SELECT COUNT(*) FROM dmo_commission_tiers WHERE is_active=1')->fetchColumn();
+        for($i=0;$i<100-$existing;$i++)$fill->execute(['slug'=>'ci-capacity-'.$i,'active'=>$i<50-$published?1:0]);
+        [$code,$full]=qa_http('/api/admin/packages.php',$tokenAdmin,'__Host-dmo_admin');
+        qa_positive($code===200&&$full['inventory']['tiers']['total']===100&&$full['inventory']['tiers']['published']===50,'catalog_full_inventory_reported');
+        [$code,$err]=qa_http('/api/admin/packages.php',$tokenAdmin,'__Host-dmo_admin',['action'=>'save_tier','item'=>array_replace($item,['id'=>null,'slug'=>'ci-over-limit'])],$csrfAdmin);
+        qa_positive($code===422&&$err['error']==='catalog_inventory_limit','catalog_creation_at_limit_rejected');
+        $candidate=array_values(array_filter($full['catalog']['tiers'],fn($r)=>str_starts_with($r['slug'],'ci-capacity-')&&!$r['is_active']))[0];
+        [$code,$err]=qa_http('/api/admin/packages.php',$tokenAdmin,'__Host-dmo_admin',['action'=>'set_active','kind'=>'tier','id'=>$candidate['id'],'active'=>true,'expected_revision'=>$candidate['revision'],'expected_compatibility_revision'=>$candidate['compatibility']['revision']],$csrfAdmin);
+        qa_positive($code===422&&$err['error']==='published_catalog_limit','catalog_publication_at_limit_rejected');
+        [$code,$fullPublic]=qa_http('/api/catalog.php');
+        qa_positive($code===200&&count($fullPublic['tiers'])===50,'catalog_public_limit_no_silent_truncation');
+    }finally{$db->exec("DELETE FROM dmo_commission_tiers WHERE slug LIKE 'ci-capacity-%'");}
     [$code,$report]=qa_http('/api/admin/overview.php',$tokenAdmin,'__Host-dmo_admin');
     $evidence=$report['launch_evidence']??null;
     qa_positive($code===200&&$report['configuration_review']['mode']==='review_only'&&$report['configuration_review']['authorizes_launch']===false,'configuration_review_report_not_authorization');

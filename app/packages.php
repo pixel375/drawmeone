@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 require_once __DIR__ . '/admin.php';
+require_once __DIR__ . '/catalog.php';
 
 /**
  * All package and add-on changes are controlled by the artist.
@@ -117,6 +118,18 @@ function dmo_package_normalize(array $input, bool $isTier): array
         'sort_order' => $sort,
         'features' => $features,
     ];
+}
+
+const DMO_PACKAGE_INVENTORY_LIMIT=100;
+
+function dmo_packages_inventory(PDO $db): array
+{
+    $out=[];
+    foreach(['tiers'=>'dmo_commission_tiers','addons'=>'dmo_addons'] as $kind=>$table){
+        $row=$db->query('SELECT COUNT(*) AS total, COALESCE(SUM(is_active=1),0) AS published FROM '.$table)->fetch(PDO::FETCH_ASSOC);
+        $out[$kind]=['total'=>(int)$row['total'],'published'=>(int)$row['published'],'total_limit'=>DMO_PACKAGE_INVENTORY_LIMIT,'published_limit'=>dmo_catalog_public_limit($kind==='tiers')];
+    }
+    return $out;
 }
 
 function dmo_packages_list(PDO $db): array

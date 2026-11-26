@@ -1229,7 +1229,7 @@ async function verifyPackageCompatibility(browser){
     await simulateBackend(page,posts);
     await page.route("**/api/admin/packages.php*",async route=>{
       const respond=(status,data)=>route.fulfill({status,contentType:"application/json",body:JSON.stringify(data)});
-      if(route.request().method()==="GET")return respond(200,{ok:true,write_enabled:true,publish_enabled:false,catalog:{tiers:[{...tier,compatibility:{mode,allowed_addon_ids:allowed,editable:true,revision}}],addons:extras}});
+      if(route.request().method()==="GET")return respond(200,{ok:true,write_enabled:true,publish_enabled:false,inventory:{tiers:{total:1,published:0,total_limit:100,published_limit:50},addons:{total:100,published:1,total_limit:100,published_limit:100}},catalog:{tiers:[{...tier,compatibility:{mode,allowed_addon_ids:allowed,editable:true,revision}}],addons:extras}});
       assert.deepEqual(route.request().postDataJSON(),{action:"set_compatibility",kind:"tier",id:10,mode:"selected",allowed_addon_ids:[11],expected_revision:tier.revision,expected_compatibility_revision:revision});
       mode="selected";allowed=[11];revision="c".repeat(64);
       return respond(200,{ok:true,id:10});
@@ -1238,6 +1238,8 @@ async function verifyPackageCompatibility(browser){
     await page.locator("#workspace").waitFor({state:"visible"});
     await page.locator('[data-view="packages"]').click();
     await page.locator("#package-tier-list .package-list-item").first().click();
+    assert.match(await page.locator("#package-inventory").textContent(),/Extras: 100 \/ 100 saved/);
+    assert.equal(await page.locator("#package-new-addon").isDisabled(),true);
     await page.locator("#package-name").fill("Unsaved name");
     assert.equal(await page.locator("#package-unsaved").isVisible(),true);
     await page.locator("#package-filter").selectOption("public");

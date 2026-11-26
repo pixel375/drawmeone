@@ -22,7 +22,7 @@ function dmo_service_offer(array $item,bool $choose=false,?array $extras=null): 
     if($extras!==null){
         $allowed=$item['available_addon_ids']??null;
         $compatible=array_values(array_filter($extras,static fn(array $extra):bool=>$allowed===null||in_array($extra['id'],$allowed,true)));
-        echo '<div class="offer-compatibility"><strong>Available published extras</strong>';
+        echo '<div class="offer-compatibility"><strong>Optional published extras (not included in this estimate)</strong>';
         if(!$compatible)echo '<p class="muted">No published extras available for this package.</p>';
         else{
             echo '<ul>';
@@ -61,12 +61,13 @@ dmo_info_head('Commission services','Explore published drawing services and lear
 <?php endif; ?>
 </section>
 <?php if(!$failed&&$catalog['addons']): ?>
-<section class="section" aria-labelledby="extras"><h2 id="extras">Optional extras</h2><p class="muted">Available extras depend on the selected drawing package and artist review.</p><div class="cards"><?php foreach($catalog['addons'] as $item)dmo_service_offer($item); ?></div></section>
+<section class="section" aria-labelledby="extras"><h2 id="extras">Optional extras</h2><p class="muted">Extras are optional and priced separately from package estimates. Availability depends on the selected package and artist review. Different currencies are never added together as one estimate.</p><div class="cards"><?php foreach($catalog['addons'] as $item)dmo_service_offer($item); ?></div></section>
 <?php endif; ?>
 <section class="section" aria-labelledby="process"><h2 id="process">How it works</h2><div class="cards"><article class="offer"><h3>1. Share your idea</h3><p>Send a private description when intake is open. The artist reviews your request.</p></article><article class="offer"><h3>2. Agree on a quote</h3><p>Review the proposed scope, price, currency and timing. Acceptance is separate from order confirmation.</p></article><article class="offer"><h3>3. Confirm the order</h3><p>Any payment and delivery arrangements follow the agreed quote. Keep track of progress in your commission workspace.</p></article></div></section>
 <section class="section" aria-labelledby="faq"><h2 id="faq">Frequently asked questions</h2>
 <details><summary>Is a request a confirmed order?</summary><p>No. A request is sent for review; the artist must separately agree on a quote and confirm the order.</p></details>
 <details><summary>Are the listed prices final?</summary><p>No. Published package prices are estimates. The exact amount, currency and scope are agreed in the quote.</p></details>
+<details><summary>Are optional extras included in package estimates?</summary><p>No. Review the included features and separately listed extras. The artist confirms the final scope and any extra costs in the quote. Estimates in different currencies are not combined.</p></details>
 <details><summary>Can I ask for a drawing that is not listed?</summary><p>Yes, when requests are open, select a custom idea and describe what you would like. The artist reviews the scope, available extras and price individually.</p></details>
 <details><summary>Can I request a specific deadline?</summary><p>You can indicate a preferred date in a request. The date is not guaranteed until separately agreed.</p></details>
 <details><summary>Can I send reference images?</summary><p>The private workspace supports reference uploads when the service is enabled. Reference images are not published in the gallery.</p></details>

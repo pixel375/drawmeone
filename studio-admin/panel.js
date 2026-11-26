@@ -2529,6 +2529,12 @@
   // always receives exact integer minor units; never use floating arithmetic.
   let packageCatalog = { tiers: [], addons: [] };
   let packageSelected = { kind: "tier", id: null };
+  let packageInventory=null;
+  function packageCapacity(kind){return packageInventory?.[kind==='tier'?'tiers':'addons'];}
+  function packageAtLimit(kind,published=false){const c=packageCapacity(kind);return !!c&&(published?c.published>=c.published_limit:c.total>=c.total_limit);}
+  function packageInventoryText(){
+    $('package-inventory').textContent=packageInventory?['tier','addon'].map(kind=>{const c=packageCapacity(kind);return (kind==='tier'?'Packages: ':'Extras: ')+c.total+' / '+c.total_limit+' saved, '+c.published+' / '+c.published_limit+' published'+(c.total>c.total_limit?' (list incomplete; contact support)':'');}).join(' · '):'Inventory limits unavailable until the catalog is loaded.';
+  }
   let packageWrite = false;
   let packagePublish = false;
   let packageBusy = false;
@@ -2540,13 +2546,16 @@
   function packageControls(){
     const row=packageRows(packageSelected.kind).find(r=>r.id===packageSelected.id),dirty=packageDirty(),locked=packageBusy||packageLoading||!packageWrite||(row?.is_active===true&&!packagePublish);
     for(const id of packageFieldIds)$(id).disabled=locked||dirty.compat;
-    $('package-save').disabled=locked||dirty.compat;
-    $('package-visibility').disabled=packageBusy||packageLoading||!packagePublish||!row||dirty.fields||dirty.compat||(packageSelected.kind==='tier'&&!row.is_active&&row.compatibility?.editable!==true);
+    $('package-save').disabled=locked||dirty.compat||(!row&&packageAtLimit(packageSelected.kind));
+    $('package-new-tier').disabled=packageBusy||packageLoading||!packageWrite||packageAtLimit('tier');
+    $('package-new-addon').disabled=packageBusy||packageLoading||!packageWrite||packageAtLimit('addon');
+    packageInventoryText();
+    $('package-visibility').disabled=packageBusy||packageLoading||!packagePublish||!row||dirty.fields||dirty.compat||(!row.is_active&&packageAtLimit(packageSelected.kind,true))||(packageSelected.kind==='tier'&&!row.is_active&&row.compatibility?.editable!==true);
     $('package-refresh').disabled=packageBusy||packageLoading;
     $('package-unsaved').hidden=!dirty.fields&&!dirty.compat;
     $('package-unsaved').textContent=dirty.fields?'Unsaved package changes. Save before publishing or editing extras.':'Unsaved extra availability. Save before publishing or editing package details.';
     $('package-revert').disabled=packageBusy||packageLoading||!packageHasChanges();
-    $('package-duplicate').disabled=packageBusy||packageLoading||!packageWrite||!row||packageHasChanges();
+    $('package-duplicate').disabled=packageBusy||packageLoading||!packageWrite||!row||packageHasChanges()||packageAtLimit(packageSelected.kind);
     packageCompatibilityControls();renderPackagePreview();
   }
 
@@ -2686,7 +2695,7 @@
 
   async function packagesLoad() {
     const generation=++packageGeneration;
-    packageWrite=false;packagePublish=false;packageLoading=true;packageLoaded=false;packageControls();
+    packageWrite=false;packagePublish=false;packageInventory=null;packageLoading=true;packageLoaded=false;packageControls();
     packageShow("Loading existing commission tiers and add-ons…");
     try{
       const { response, data } = await get("packages.php");
@@ -2694,7 +2703,9 @@
       if(response.status===401){sessionExpired();return false;}
       if(!response.ok||!data.ok||!Array.isArray(data.catalog?.tiers)||!Array.isArray(data.catalog?.addons))throw Error("unavailable");
       packageWrite=data.write_enabled===true;packagePublish=data.publish_enabled===true;
-      packageCatalog=data.catalog;packageLoaded=true;
+      packageCatalog=data.catalog;packageInventory=null;
+      if(data.inventory&&['tiers','addons'].every(k=>['total','published','total_limit','published_limit'].every(field=>Number.isSafeInteger(data.inventory[k]?.[field])&&data.inventory[k][field]>=0)))packageInventory=data.inventory;
+      packageLoaded=true;
       if(!packageRows(packageSelected.kind).some(row=>row.id===packageSelected.id))packageSelected.id=null;
       packageLoading=false;
       if(!packageBusy)packageSelect(packageSelected.kind,packageSelected.id,true);
@@ -2721,6 +2732,8 @@
     $("package-preview-extras").textContent=packageSelected.kind!=="tier"?"":!record?"New tier: review extra availability after saving.":extras.length?"Published extras selected: "+extras.map(x=>x.name).join(", "):"No published extras selected.";
     const issues=packageTextIssues(name,description,features);
     if(!description)issues.push("description");
+    if(!record&&packageAtLimit(packageSelected.kind))issues.push("saved inventory limit reached");
+    if(!record?.is_active&&packageAtLimit(packageSelected.kind,true))issues.push("published limit reached (unpublish an existing offer first)");
     if(!/^[a-z0-9][a-z0-9-]{1,79}$/.test(slug)||packageRows(packageSelected.kind).some(row=>row.id!==packageSelected.id&&row.slug===slug))issues.push("valid unique slug");
     if(!validPrice)issues.push("valid estimates");
     const bytes=value=>new TextEncoder().encode(value).length;
@@ -2792,7 +2805,7 @@
   $("package-compatibility-options").addEventListener("change",packageControls);
   $("package-form").addEventListener("submit", async event => {
     event.preventDefault();
-    if (!packageWrite || packageBusy || packageLoading || packageDirty().compat) return;
+    if (!packageWrite || packageBusy || packageLoading || packageDirty().compat || (packageSelected.id===null&&packageAtLimit(packageSelected.kind))) return;
     const item = packagePayload();
     if (!item) return;
     const current = packageRows(packageSelected.kind)
@@ -2832,6 +2845,7 @@
       .find(x => x.id === packageSelected.id);
     if (!row) return;
     const active = !row.is_active;
+    if(active&&packageAtLimit(packageSelected.kind,true))return;
     const name = row.name || row.slug;
     if (!window.confirm(active
       ? "Publish " + name + " to the public catalog? Confirm its prices are approved."
