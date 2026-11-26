@@ -444,8 +444,18 @@ async function verifyInterruptedArtworkUpload(browser){
     assert.deepEqual(uploaded,["first","second","second","third"],"ambiguous upload is retried with its original operation key");
     assert.match(keys[1]||"",/^[0-9a-f-]{36}$/);assert.equal(keys[1],keys[2]);assert.notEqual(keys[0],keys[1]);
     assert.equal(await page.locator("#artwork-upload-resume").isVisible(),false);
-    assert.match(await page.locator("#artwork-upload-message").innerText(),/1 identical skipped/);
-    console.log("PASS: interrupted bulk artwork upload recovers original operation and untouched files");
+    assert.match(await page.locator("#artwork-upload-message").innerText(),/2 saved or recovered · 1 identical skipped/);
+    assert.equal(await page.locator("#artwork-upload-results li").count(),4);
+    await page.route("**/api/admin/artwork-upload.php*",route=>route.fulfill({status:429,contentType:"application/json",body:JSON.stringify({ok:false,error:"too_many_uploads"})}));
+    await page.locator("#artwork-files").setInputFiles(["pause.png","later.png"].map(name=>({name,mimeType:"image/png",buffer:Buffer.from("synthetic CI pause")})));
+    await page.locator("#artwork-upload").click();
+    await page.waitForFunction(()=>document.querySelector("#artwork-upload-message")?.textContent.includes("0 unconfirmed · 2 remaining"));
+    assert.match(await page.locator("#artwork-upload-results").innerText(),/File retained/);
+    page.once("dialog",d=>d.dismiss());await page.locator("#artwork-upload-discard").click();
+    assert.equal(await page.locator("#artwork-upload-resume").isVisible(),true);
+    page.once("dialog",d=>d.accept());await page.locator("#artwork-upload-discard").click();
+    assert.equal(await page.locator("#artwork-upload-resume").isVisible(),false);
+    console.log("PASS: interrupted bulk artwork upload recovers original operation and untouched files; paused selection retained and explicitly discardable");
   }finally{await page.close();}
 }
 async function verifyRequestIsolation(browser) {

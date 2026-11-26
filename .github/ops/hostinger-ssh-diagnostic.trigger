@@ -1,1 +1,1 @@
-Session XIX: verify public search, atomic metadata saves and viewer retry after correcting disposable search fixture; read-only.
+Session XIX final: verify public portfolio search, atomic metadata save, viewer recovery and retained bulk upload selection; read-only.

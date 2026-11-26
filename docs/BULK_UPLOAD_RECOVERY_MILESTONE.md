@@ -1,3 +1,6 @@
 # Bulk artwork upload recovery
 
 Uploads remain sequential and private. Artist may stop after the current file. Progress distinguishes saved, definitively rejected, ambiguous and untouched files. A failed connection or non-JSON gateway response stops further uploads; the uncertain file is excluded from resume to avoid duplicates. The explicit database busy response preserves the current file for later resume because no insert was attempted. Resume files are retained only in the current browser session, and selecting a new batch replaces them. A refresh after interruption is required before continuing. Synthetic browser tests exercise a gateway failure and resume of only the remaining file. No original artwork, production records or activation gates changed.
+
+
+Session XIX: The artwork uploader retains the current file on explicit rate-limit, permission, capacity, disabled-service and concurrent-upload responses, in addition to uncertain responses. Resume preserves the original operation and duplicate preference. Batch totals and attempt history persist across resume; repeated attempts are deliberately shown with the same file number. Remaining files can be explicitly discarded without deleting saved art. A new selection resets the report. All selections and filenames remain in the current browser session only.
