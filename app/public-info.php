@@ -15,12 +15,12 @@ function dmo_info_escape(string $value): string
 {
     return htmlspecialchars($value,ENT_QUOTES|ENT_SUBSTITUTE,'UTF-8');
 }
-function dmo_info_head(string $title,string $description): void
+function dmo_info_head(string $title,string $description,string $current=''): void
 {
     $title=dmo_info_escape($title);$description=dmo_info_escape($description);
-    echo '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,follow"><meta name="description" content="'.$description.'"><title>'.$title.' | Draw Me One</title><link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="/public-info.css?v=3"><meta name="theme-color" content="#151318"><script src="./public-theme.js?v=2"></script></head><body><a class="skip" href="#main">Skip to content</a><header><a href="/" aria-label="Draw Me One homepage">drawmeone<span>.</span></a><nav aria-label="Main navigation"><a href="/portfolio.php">Portfolio</a><a href="/services.php">Services</a><a href="/commission.html">My commissions</a><a href="/account.html">Account</a><button type="button" class="public-theme-toggle" data-public-theme hidden>Light mode</button></nav></header><main id="main" tabindex="-1">';
+    echo '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,follow"><meta name="description" content="'.$description.'"><title>'.$title.' | Draw Me One</title><link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="/public-info.css?v=4"><meta name="theme-color" content="#151318"><script src="./public-theme.js?v=2"></script></head><body><a class="skip" href="#main">Skip to content</a><header><a href="/" aria-label="Draw Me One homepage">drawmeone<span>.</span></a><nav aria-label="Main navigation"><a href="/portfolio.php">Portfolio</a><a href="/services.php"'.($current==='services'?' aria-current="page"':'').'>Services</a><a href="/commission.html">My commissions</a><a href="/account.html">Account</a><button type="button" class="public-theme-toggle" data-public-theme hidden>Light mode</button></nav></header><main id="main" tabindex="-1">';
 }
-function dmo_info_footer(): void
+function dmo_info_footer(string $current=''): void
 {
-    echo '</main><footer><a href="/">Draw Me One</a><nav aria-label="Footer links"><a href="/policy.php">Terms &amp; privacy</a><a href="mailto:support@drawmeone.com">Email the studio</a></nav></footer></body></html>';
+    echo '</main><footer><a href="/">Draw Me One</a><nav aria-label="Footer links"><a href="/policy.php"'.($current==='policy'?' aria-current="page"':'').'>Terms &amp; privacy</a><a href="mailto:support@drawmeone.com">Email the studio</a></nav></footer></body></html>';
 }

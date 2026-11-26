@@ -1,3 +1,5 @@
 # Public navigation and policy link follow-up
 
 Homepage Studio and the three development-only alternatives link to services, current policies and customer account. The Studio process section also links to services. Portfolio, artwork, commission and account pages include relevant public information links. New customer acknowledgement and historical receipt links use server-rendered policy.php, preserving the exact version and SHA-256; existing policy.html remains available for old links. The commission UI explicitly explains revoked catalog approval. Browser QA includes no-JavaScript public service information, expandable FAQ and a rejected policy reference at 320px. No feature flags changed.
+
+Session XXII: consistent public portfolio/services/commissions/account navigation on directory and drawing pages, current-page semantics on services, portfolio and policies, improved link hit areas. No JavaScript required for core navigation. Browser fixture verifies 320px public navigation, no overflow and current-page semantics. No indexing or public-content gates changed.

@@ -1,1 +1,1 @@
-Session XXII: verify artist inbox search, owned history totals, commission package selection clarity; read-only.
+Session XXII final: verify private inbox search, owned history totals, package clarity and public navigation; read-only.

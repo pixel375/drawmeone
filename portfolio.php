@@ -66,11 +66,12 @@ main{padding:38px 0 56px}h1{font:normal clamp(32px,5vw,58px)/1.15 Georgia,serif;
 .portfolio-views{gap:8px;margin:22px 0}.portfolio-views a{display:inline-flex;align-items:center;min-height:44px;padding:8px 14px;border:1px solid var(--line);border-radius:8px;text-decoration:none}.portfolio-views a[aria-current="page"]{border-color:var(--accent);color:var(--accent);font-weight:700}.pages{align-items:center;justify-content:space-between;margin-top:30px}.pages a{padding:10px 15px;border:1px solid var(--line);border-radius:6px}footer{border-top:1px solid var(--line);border-bottom:0;color:var(--muted)}
 .portfolio-search{margin:22px 0}.portfolio-search label{display:block;font-weight:700;margin-bottom:7px}.portfolio-search>div{display:flex;flex-wrap:wrap;gap:8px;align-items:center}.portfolio-search input[type=search]{flex:1 1 200px;min-width:0;max-width:100%;min-height:44px;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 12px}.portfolio-search button{min-height:44px;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 14px;cursor:pointer}.portfolio-search input:focus-visible,.portfolio-search button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}.portfolio-search .intro{font-size:12px;margin:8px 0}
 @media(max-width:500px){.works{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}}
+header nav a[aria-current="page"]{font-weight:750;text-decoration-thickness:2px}header nav a{padding-block:8px}
 </style>
 </head>
 <body>
 <a class="skip" href="#main">Skip to drawings</a>
-<header><a href="/" aria-label="Draw Me One homepage">drawmeone.</a><nav aria-label="Main navigation"><a href="/#portfolio">Home gallery</a><a href="/services.php">Services</a><a href="/commission.html">Commissions</a><button type="button" class="public-theme-toggle" data-public-theme hidden>Light mode</button></nav></header>
+<header><a href="/" aria-label="Draw Me One homepage">drawmeone.</a><nav aria-label="Main navigation"><a href="/portfolio.php" aria-current="page">Portfolio</a><a href="/services.php">Services</a><a href="/commission.html">Commissions</a><a href="/account.html">Account</a><button type="button" class="public-theme-toggle" data-public-theme hidden>Light mode</button></nav></header>
 <main id="main" tabindex="-1">
 <h1>Published drawings</h1>
 <p class="intro">Original artwork shared by the artist. Select a drawing to view it individually.</p>

@@ -16,4 +16,4 @@ dmo_info_head('Customer policies','Read the published commission terms and priva
 <section class="section" aria-labelledby="terms"><h2 id="terms">Commission terms</h2><div class="policy-body"><?= dmo_info_escape($doc['terms']) ?></div></section>
 <section class="section" aria-labelledby="privacy"><h2 id="privacy">Privacy policy</h2><div class="policy-body"><?= dmo_info_escape($doc['privacy']) ?></div></section>
 <?php endif; ?>
-<?php dmo_info_footer(); ?>
+<?php dmo_info_footer('policy'); ?>

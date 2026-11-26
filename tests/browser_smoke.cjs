@@ -421,14 +421,21 @@ async function checkPublicInformation(browser){
     const response=await page.goto(base+"/services.php");
     assert([200,503].includes(response.status()),"service page renders even when local DB absent");
     assert.equal(await page.getByRole("heading",{name:"Commission services",exact:true}).isVisible(),true);
+    assert.equal(await page.getByRole("navigation",{name:"Main navigation"}).getByRole("link",{name:"Services",exact:true}).getAttribute("aria-current"),"page");
     assert.equal(await page.getByRole("heading",{name:"Frequently asked questions"}).isVisible(),true);
     const faq=page.locator("details").first();
     await faq.locator("summary").click();
     assert.equal(await faq.evaluate(el=>el.open),true);
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth+2),true);
+    await page.goto(base+"/portfolio.php");
+    const nav=page.getByRole("navigation",{name:"Main navigation"});
+    assert.equal(await nav.getByRole("link",{name:"Portfolio",exact:true}).getAttribute("aria-current"),"page");
+    assert.equal(await nav.getByRole("link",{name:"Account",exact:true}).isVisible(),true);
+    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth+2),true);
     const policy=await page.goto(base+"/policy.php?version=invalid&sha256="+ "0".repeat(64));
     assert.equal(policy.status(),404);
     assert.equal(await page.getByRole("heading",{name:"Approved policies unavailable"}).isVisible(),true);
+    assert.equal(await page.getByRole("navigation",{name:"Footer links"}).getByRole("link",{name:"Terms & privacy"}).getAttribute("aria-current"),"page");
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth+2),true);
     console.log("PASS: no-JavaScript public information and invalid policy, 320px");
   }finally{await context.close();}

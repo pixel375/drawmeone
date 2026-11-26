@@ -158,13 +158,14 @@ figcaption{color:var(--muted);font-size:12px;text-align:left;margin-top:18px;ove
 footer{padding:24px 0 45px;border-top:1px solid var(--line);font-size:12px;color:var(--muted);flex-wrap:wrap}
 .skip{position:absolute;left:12px;top:-100px;padding:12px;background:var(--bg);z-index:3}.skip:focus{top:12px}.artwork-share{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:20px 0}.artwork-share button{min-height:44px;padding:8px 14px;font:inherit;color:var(--ink);border:1px solid var(--line);background:var(--card);border-radius:8px;cursor:pointer}.artwork-share button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}.artwork-share button[hidden]{display:none}.artwork-share p{margin:0;color:var(--muted)}.artwork-share details{flex-basis:100%;overflow-wrap:anywhere}.artwork-share summary{cursor:pointer;padding:8px 0}.artwork-share summary:focus-visible{outline:2px solid var(--accent);outline-offset:3px}.artwork-nav{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:22px 0 0}.artwork-nav a,.artwork-nav span{min-height:44px;display:flex;align-items:center;justify-content:center;text-align:center;padding:10px;border:1px solid var(--line);border-radius:8px;overflow-wrap:anywhere}.artwork-nav span{border-color:transparent;color:var(--muted)}
 @media(max-width:600px){header{min-height:65px;flex-wrap:wrap;padding-block:12px}.wordmark{font-size:21px}nav{gap:13px}figure{padding:12px}.artwork-nav{gap:6px}.artwork-nav a,.artwork-nav span{font-size:11px;padding:6px}}
+header nav a{padding-block:8px}
 </style>
 </head>
 <body>
 <a class="skip" href="#main">Skip to drawing</a>
 <header>
   <a class="wordmark" href="/" aria-label="Draw Me One homepage">drawmeone<span>.</span></a>
-  <nav aria-label="Main navigation"><a href="/portfolio.php">All drawings</a><a href="/commission.html">Commissions</a><button type="button" class="public-theme-toggle" data-public-theme hidden>Light mode</button></nav>
+  <nav aria-label="Main navigation"><a href="/portfolio.php">Portfolio</a><a href="/services.php">Services</a><a href="/commission.html">Commissions</a><a href="/account.html">Account</a><button type="button" class="public-theme-toggle" data-public-theme hidden>Light mode</button></nav>
 </header>
 <main id="main" tabindex="-1">
   <span class="eyebrow">FROM THE ARTIST'S PORTFOLIO</span>

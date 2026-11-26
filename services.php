@@ -22,7 +22,7 @@ function dmo_service_offer(array $item,bool $choose=false): void
     if($choose)echo '<p class="actions"><a href="/commission.html?package='.dmo_info_escape(rawurlencode($item['slug'])).'">Choose this package</a></p>';
     echo '</article>';
 }
-dmo_info_head('Commission services','Explore published drawing services and learn how custom commissions work.');
+dmo_info_head('Commission services','Explore published drawing services and learn how custom commissions work.','services');
 ?>
 <p class="eyebrow">Original art, made for you</p>
 <h1>Commission services</h1>
