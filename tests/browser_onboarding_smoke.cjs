@@ -290,22 +290,82 @@ async function privacySelfService(browser){
     assert.equal(await page.locator("#privacy-withdraw").isVisible(),false);
     await page.locator("#privacy-history summary").click();
     await waitText(page,"#privacy-history-list","withdrawn");
-    await page.route("**/api/auth/privacy.php",route=>route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({ok:true,enabled:true,case:{case_id:17,version:18,kind:"deletion",status:"withdrawn"},history:{cases:[{case_id:17,version:18,kind:"deletion",status:"withdrawn"}],next_before:18}})}));
+    // Distinct current-refresh and older-page outcomes: never wait on a stale
+    // "Request status unavailable" message shared by both failure paths.
+    const latest={case_id:17,version:18,kind:"deletion",status:"withdrawn"};
+    const older={case_id:12,version:12,kind:"access",status:"resolved"};
+    const exactPrivacy="**/api/auth/privacy.php";
+    const olderPrivacy="**/api/auth/privacy.php?before=*";
+    let currentMode="ready",olderMode="failure",currentGets=0,olderGets=0,uncertainPosts=0;
+    await page.route(exactPrivacy,route=>{
+      if(route.request().method()==="POST"){
+        uncertainPosts++;
+        assert.equal(route.request().postDataJSON().note,"Keep this unsent correction.");
+        return route.fulfill({status:503,body:"Unavailable"});
+      }
+      currentGets++;
+      return currentMode==="failure"?route.fulfill({status:503,body:"Unavailable"}):
+        reply(route,{ok:true,enabled:true,case:latest,history:{cases:[latest],next_before:18}});
+    });
+    await page.route(olderPrivacy,route=>{
+      olderGets++;
+      assert.equal(new URL(route.request().url()).searchParams.get("before"),"18");
+      return olderMode==="failure"?route.fulfill({status:503,body:"Unavailable"}):
+        reply(route,{ok:true,enabled:true,case:latest,history:{cases:[latest,older],next_before:18}});
+    });
     await page.locator("#privacy-history-refresh").click();
     await page.locator("#privacy-history-more").waitFor({state:"visible"});
-    await page.route("**/api/auth/privacy.php?before=*",route=>route.fulfill({status:503,body:"Unavailable"}));
+    assert.equal(currentGets,1);
     await page.locator("#privacy-history-more").click();
     await waitText(page,"#privacy-history-status","Previously loaded history retained");
+    assert.equal(olderGets,1);
     assert.equal(await page.locator("#privacy-history-list article").count(),1);
     assert.equal(await page.locator("#privacy-history-more").isVisible(),true);
     assert.equal(await page.locator("#privacy-submit").isDisabled(),true);
-    await page.route("**/api/auth/privacy.php",route=>route.fulfill({status:503,body:"Unavailable"}));
+    // Retry the same cursor: deduplicate overlap and reject a non-decreasing cursor.
+    olderMode="ready";
+    await page.locator("#privacy-history-more").click();
+    await waitText(page,"#privacy-history-status","2 case(s) loaded.");
+    assert.equal(olderGets,2);
+    assert.equal(await page.locator("#privacy-history-list article").count(),2);
+    assert.equal(await page.locator("#privacy-history-more").isVisible(),false);
+    assert.equal(await page.locator("#privacy-submit").isEnabled(),true);
     await page.locator("#privacy-history-refresh").click();
-    await waitText(page,"#privacy-case","Request status unavailable");
+    await page.locator("#privacy-history-more").waitFor({state:"visible"});
+    assert.equal(currentGets,2);
+    olderMode="failure";
+    await page.locator("#privacy-history-more").click();
+    await waitText(page,"#privacy-history-status","Previously loaded history retained");
+    currentMode="failure";
+    await page.locator("#privacy-history-refresh").click();
+    // Wait for the new history-specific message, not the pre-existing case error.
+    await waitText(page,"#privacy-history-status","Case history unavailable. Refresh to retry.");
+    assert.equal(currentGets,3);
     await page.locator("#privacy-action").selectOption("deletion");
     assert.equal(await page.locator("#privacy-submit").isEnabled(),false);
     assert.equal(await page.locator("#privacy-history-list article").count(),0);
     assert.equal(await page.locator("#privacy-withdraw").isVisible(),false);
+    assert.equal(await page.locator("#privacy-history-more").isVisible(),false);
+    // Recovery must require a successful fresh read. An uncertain mutation must
+    // preserve the note, clear the password, and require another fresh read.
+    currentMode="ready";
+    await page.locator("#privacy-history-refresh").click();
+    await waitText(page,"#privacy-history-status","1 case(s) loaded.");
+    assert.equal(currentGets,4);
+    await page.locator("#privacy-action").selectOption("correction");
+    await page.locator("#privacy-note").fill("Keep this unsent correction.");
+    await page.locator("#privacy-password").fill("ci-current-password");
+    page.once("dialog",dialog=>dialog.accept());
+    await page.locator("#privacy-submit").click();
+    await waitText(page,"#privacy-notice","Outcome uncertain");
+    assert.equal(uncertainPosts,1);
+    assert.equal(await page.locator("#privacy-note").inputValue(),"Keep this unsent correction.");
+    assert.equal(await page.locator("#privacy-password").inputValue(),"");
+    assert.equal(await page.locator("#privacy-submit").isDisabled(),true);
+    await page.locator("#privacy-history-refresh").click();
+    await page.waitForFunction(()=>!document.querySelector("#privacy-submit").disabled);
+    assert.equal(currentGets,5);
+    assert.equal(await page.locator("#privacy-note").inputValue(),"Keep this unsent correction.");
     assert.equal(m.writes.filter(x=>x.endpoint==="privacy.php").length,3);
     await overflow(page);
     console.log("PASS: private JSON export, deletion request and withdrawal UI");
