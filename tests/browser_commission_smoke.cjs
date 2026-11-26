@@ -213,7 +213,7 @@ async function quoteDecisionGuards(browser) {
     await page.waitForFunction(()=>
       document.querySelector("#detail-quote-feedback")?.textContent
         ?.includes("Could not record decision"));
-    assert.equal(await accept.isEnabled(),true,"failed quote response restores Accept");
+    assert.equal(await accept.isDisabled(),true,"uncertain quote response requires a fresh acknowledgement");
     assert.equal(await decline.isEnabled(),true,"failed quote response restores Decline");
     assert.equal(test.posts.length,1,"one mocked quote decision intercepted");
     assert.equal(test.posts[0].endpoint,"/api/quote-response.php");
@@ -225,7 +225,7 @@ async function quoteDecisionGuards(browser) {
     await page.locator("#detail-content").waitFor({state:"visible"});
     assert.equal(await page.locator('[data-quote-action="accept"]').isDisabled(),true,
       "reopened quote requires fresh acknowledgement");
-    console.log("PASS: acknowledgement required, failed quote response restores controls");
+    console.log("PASS: uncertain quote response refreshes details and requires a fresh acknowledgement");
   } finally {await page.close();}
 }
 async function quoteSuccessWithoutPayment(browser) {
@@ -271,6 +271,41 @@ async function quoteSuccessWithoutPayment(browser) {
       /No order or payment has been created/);
     console.log("PASS: confirmed quote acceptance updates display without payment or new order");
   } finally {await page.close();}
+}
+async function quoteLostResponseRecovery(browser){
+  const page=await browser.newPage({viewport:{width:390,height:844}});
+  await installMocks(page,{signedIn:true,open:false});
+  let committed=false,posts=0,reads=0,failRead=false;
+  await page.route("**/api/request.php*",route=>{
+    reads++;
+    if(failRead)return answer(route,{ok:false,error:"synthetic_unavailable"},503);
+    const result=detail(A);
+    if(committed){result.quotes[0].status="accepted";result.quotes[0].can_respond=false;result.orders=[];}
+    return answer(route,result);
+  });
+  await page.route("**/api/quote-response.php",route=>{
+    posts++;committed=true;failRead=true;
+    return route.abort("failed");
+  });
+  try{
+    await page.goto(base+"/commission.html",{waitUntil:"domcontentloaded"});
+    await page.locator('#my-request-list button[aria-label$="'+A+'"]').click();
+    await page.locator("#detail-content").waitFor({state:"visible"});
+    await page.locator(".customer-quote-confirm input").check();
+    page.once("dialog",d=>d.accept());
+    await page.locator('[data-quote-action="accept"]').click();
+    await page.waitForFunction(()=>document.querySelector("#detail-load-status")?.textContent?.includes("may already have been recorded"));
+    assert.equal(await page.locator("#detail-content").isVisible(),false);
+    assert.equal(await page.locator('[data-quote-action="accept"]').count(),0);
+    assert.equal(posts,1);
+    failRead=false;
+    await page.locator("#detail-refresh").click();
+    await page.waitForFunction(()=>document.querySelector(".customer-quote-status")?.textContent==="Accepted");
+    assert.equal(await page.locator('[data-quote-action="accept"]').count(),0);
+    assert.equal(posts,1,"recovery never resends quote decision");
+    assert(reads>=3);
+    console.log("PASS: committed quote with lost response and failed read recovers without duplicate POST");
+  }finally{await page.close();}
 }
 async function readonlyQuoteStatuses(browser) {
   const page=await browser.newPage({viewport:{width:390,height:844}});
@@ -824,6 +859,7 @@ async function openWithoutLogin(browser) {
     await openWithoutLogin(browser);
     await quoteDecisionGuards(browser);
     await quoteSuccessWithoutPayment(browser);
+    await quoteLostResponseRecovery(browser);
     await readonlyQuoteStatuses(browser);
     await detailRaceAndRecovery(browser);
     await customerDraftAndSessionIsolation(browser);

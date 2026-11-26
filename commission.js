@@ -484,6 +484,19 @@
     }
   }
 
+  async function refreshAfterQuoteUncertainty(ref, message) {
+    if(leavingSession||state.selectedRef!==ref)return;
+    // Read only; never resend a commercial decision after a lost response.
+    // Rendering fresh detail also discards the previous acknowledgement.
+    await openDetail(ref);
+    if(leavingSession||state.selectedRef!==ref)return;
+    if($("detail-content").hidden){
+      $("detail-load-status").textContent=message+" Details could not be refreshed. Use Refresh details before making another decision.";
+    }else{
+      $("detail-quote-feedback").textContent=message+" Review the refreshed quote status before deciding again.";
+    }
+  }
+
   async function respondToQuote(ref, quoteId, policyVersion, decision, checkbox) {
     if (detailMutationBusy() || state.selectedRef !== ref || !state.csrf ||
         !Number.isSafeInteger(quoteId) || quoteId < 1) return;
@@ -512,10 +525,11 @@
       const body = await response.json();
       if (state.selectedRef !== ref) return;
       if (!response.ok || !body.ok) {
-        $("detail-quote-feedback").textContent =
-          response.status === 409
-            ? "This quote is no longer available for a decision. Refresh the request."
-            : "Could not record decision (" + (body.error || response.status) + ").";
+        if(response.status===409||response.status>=500){
+          await refreshAfterQuoteUncertainty(ref,response.status===409?"This quote changed or is no longer available for a decision.":"Could not record decision with certainty.");
+        }else{
+          $("detail-quote-feedback").textContent="Could not record decision ("+(body.error||response.status)+").";
+        }
         return;
       }
       // Do not navigate back to this request if the customer selected
@@ -523,16 +537,17 @@
       if (state.selectedRef !== ref) return;
       await openDetail(ref);
       await loadMyRequests();
-      if (state.selectedRef !== ref || $("detail-content").hidden) return;
+      if(state.selectedRef!==ref||leavingSession)return;
+      if($("detail-content").hidden){
+        $("detail-load-status").textContent="The server recorded your quote decision, but details could not be refreshed. Use Refresh details to review the latest status.";
+        return;
+      }
       $("detail-quote-feedback").textContent =
         decision === "accept"
           ? "Your agreement to the quote was recorded. No order or payment has been created."
           : "You declined this quote. Contact the artist if you'd like a revised offer.";
     } catch (_) {
-      if (state.selectedRef === ref) {
-        $("detail-quote-feedback").textContent =
-          "Connection interrupted. Refresh the quote status before trying again.";
-      }
+      await refreshAfterQuoteUncertainty(ref,"Connection interrupted; your decision may already have been recorded.");
     } finally {
       state.quoteBusy = false;
       syncReferenceResume();

@@ -928,16 +928,18 @@
       }, csrf);
       if (response.status === 401) return sessionExpired();
       if (!response.ok || !data.ok) {
-        requestText("request-detail-status",
-          "Quote not released (" + (data.error || response.status) + ").");
+        if(response.status===409||response.status>=500){
+          await openRequest(requestId);
+          if(!leavingSession&&selectedRequestId===requestId)requestText("request-detail-status","Quote release not confirmed. Review the refreshed status before retrying.");
+        }else requestText("request-detail-status","Quote not released ("+(data.error||response.status)+").");
         return;
       }
       await openRequest(requestId);
       requestText("request-detail-status",
         "Quote v" + data.version + " is visible in the customer's private account. No email or payment.");
     } catch (_) {
-      requestText("request-detail-status",
-        "Could not verify quote release. Refresh the request before trying again.");
+      await openRequest(requestId);
+      if(!leavingSession&&selectedRequestId===requestId)requestText("request-detail-status","Could not verify quote release. Review the latest request status; if unavailable, refresh before retrying.");
     } finally {
       requestBusy = false;
       updateRequestButtons();
@@ -1052,8 +1054,10 @@
       },csrf);
       if (response.status === 401) return sessionExpired();
       if (!response.ok || !data.ok) {
-        requestText("request-detail-status",
-          "Order not confirmed (" + (data.error || response.status) + ").");
+        if(response.status===409||response.status>=500){
+          await openRequest(requestId);
+          if(!leavingSession&&selectedRequestId===requestId)requestText("request-detail-status","Order confirmation not verified. Review the latest request status before retrying.");
+        }else requestText("request-detail-status","Order not confirmed ("+(data.error||response.status)+").");
         return;
       }
       await openRequest(requestId);
@@ -1061,8 +1065,8 @@
         "Order #" + data.order_id +
         " confirmed as awaiting arrangements. Payment remains unverified.");
     } catch (_) {
-      requestText("request-detail-status",
-        "Connection interrupted. Refresh the request before attempting confirmation again.");
+      await openRequest(requestId);
+      if(!leavingSession&&selectedRequestId===requestId)requestText("request-detail-status","Connection interrupted. Review the latest request status; if unavailable, refresh before attempting confirmation again.");
     } finally {
       requestBusy = false;
       updateRequestButtons();
