@@ -767,13 +767,15 @@ async function verifyRequestWithdrawal(browser){
 async function verifyCustomerAttention(browser){
   const page=await browser.newPage({viewport:{width:320,height:844}});
   const mock=await installMocks(page,{signedIn:true,open:false});
-  await page.route("**/api/requests.php?*",route=>answer(route,{ok:true,requests:[requests[1]],attention:{quotes:[A],proofs:[],deliveries:[],invoices:[],clarifications:[A],artist_replies:[A]}}));
+  await page.route("**/api/requests.php?*",route=>answer(route,{ok:true,requests:[requests[1]],attention:{expiring_quotes:[A],quotes:[A],proofs:[],deliveries:[],invoices:[],clarifications:[A],artist_replies:[A]}}));
   try{
     await page.goto(base+"/commission.html",{waitUntil:"domcontentloaded"});
     await page.locator("#customer-attention").waitFor({state:"visible"});
     assert.equal(await page.locator("#my-request-list button").count(),1);
     assert.equal(await page.locator("#customer-attention-items article").count(),1);
     await page.getByText("Clarification requested",{exact:true}).waitFor();
+    await page.getByText("Quote expires within 72 hours",{exact:true}).waitFor();
+    assert.match(await page.locator("#customer-attention-count").innerText(),/1 with actions or review available/);
     await page.getByText("Recent artist reply",{exact:true}).waitFor();
     await page.locator("#request-history-sort").selectOption("deadline");
     await page.getByRole("button",{name:"View commission updates for "+A}).click();

@@ -368,27 +368,29 @@
     const root=$("customer-attention"),list=$("customer-attention-items");
     list.replaceChildren();root.hidden=true;
     if(!attention||typeof attention!=="object"||leavingSession)return;
-    const labels={clarifications:"Clarification requested",quotes:"Review quote",proofs:"Review artwork proof",invoices:"Review payment arrangements",artist_replies:"Recent artist reply",deliveries:"View finished artwork"};
+    const labels={expiring_quotes:"Quote expires within 72 hours",quotes:"Review quote",clarifications:"Clarification requested",proofs:"Review artwork proof",invoices:"Review payment arrangements",artist_replies:"Recent artist reply",deliveries:"View finished artwork"};
+    const actionable=new Set(["expiring_quotes","quotes","clarifications","proofs","invoices"]);
     const grouped=new Map();
     for(const [key,label] of Object.entries(labels)){
       const refs=Array.isArray(attention[key])?attention[key].filter(ref=>typeof ref==="string"&&/^DMO-[0-9a-f]{20}$/.test(ref)).slice(0,10):[];
       for(const ref of new Set(refs)){
-        if(!grouped.has(ref))grouped.set(ref,[]);
-        grouped.get(ref).push(label);
+        if(!grouped.has(ref))grouped.set(ref,{updates:[],action:false});
+        const group=grouped.get(ref);group.updates.push(label);group.action=group.action||actionable.has(key);
       }
     }
-    for(const [ref,updates] of grouped){
+    for(const [ref,group] of grouped){
       const card=document.createElement("article"),description=document.createElement("div");
-      description.append(renderText("strong",ref));
+      description.append(renderText("strong",ref),renderText("small",group.action?"Action or review available":"Recent update"));
       const items=document.createElement("ul");items.className="customer-attention-labels";
-      for(const update of updates)items.append(renderText("li",update));
+      for(const update of group.updates)items.append(renderText("li",update));
       description.append(items);
       const button=renderText("button","View details","text-button");button.type="button";
       button.setAttribute("aria-label","View commission updates for "+ref);
       button.addEventListener("click",()=>openDetail(ref));
       card.append(description,button);list.append(card);
     }
-    $("customer-attention-count").textContent=grouped.size+" commission"+(grouped.size===1?"":"s")+" with recent updates or available actions.";
+    const actions=[...grouped.values()].filter(group=>group.action).length;
+    $("customer-attention-count").textContent=grouped.size+" commission"+(grouped.size===1?"":"s")+" with recent updates or available actions. "+actions+" with actions or review available. Up to 10 per update type; not an unread count.";
     root.hidden=list.childElementCount===0;
   }
 

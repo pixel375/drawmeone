@@ -1,1 +1,1 @@
-Session XXIII final: verify stable exact release, quote expiry, unpaid arrangements, privacy age follow-up; read-only.
+Session XXIV: intake draft recovery, dashboard shortcuts, customer attention urgency; exact-release read-only verification.

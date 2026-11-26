@@ -8,7 +8,7 @@ require_once __DIR__.'/checkout.php';
  * or internal record identifiers. Detail endpoints remain authoritative. */
 function dmo_customer_attention(PDO $db,int $customer): array
 {
-    $result=['quotes'=>[],'proofs'=>[],'deliveries'=>[],'invoices'=>[],'clarifications'=>[],'artist_replies'=>[]];
+    $result=['expiring_quotes'=>[],'quotes'=>[],'proofs'=>[],'deliveries'=>[],'invoices'=>[],'clarifications'=>[],'artist_replies'=>[]];
     $q=$db->prepare("SELECT public_ref FROM dmo_commission_requests WHERE customer_id=:customer AND status='clarification_needed' ORDER BY updated_at DESC,id DESC LIMIT 10");
     $q->execute(['customer'=>$customer]);$result['clarifications']=$q->fetchAll(PDO::FETCH_COLUMN);
     // This is a recent-reply shortcut, not an unread or response-required flag.
@@ -22,7 +22,9 @@ function dmo_customer_attention(PDO $db,int $customer): array
         ORDER BY m.id DESC LIMIT 10");
     $q->execute(['customer'=>$customer]);$result['artist_replies']=$q->fetchAll(PDO::FETCH_COLUMN);
     if(dmo_quote_response_enabled()){
-        $q=$db->prepare("SELECT r.id,r.public_ref,r.policy_version FROM dmo_commission_requests r
+        $q=$db->prepare("SELECT r.id,r.public_ref,r.policy_version,
+          CASE WHEN q.validity_ends_at<=DATE_ADD(UTC_TIMESTAMP(),INTERVAL 3 DAY) THEN 1 ELSE 0 END AS expiring
+          FROM dmo_commission_requests r
           JOIN dmo_quotes q ON q.request_id=r.id WHERE r.customer_id=:customer
           AND r.status IN ('submitted','clarification_needed') AND q.status='sent'
           AND q.sent_at IS NOT NULL AND q.validity_ends_at>UTC_TIMESTAMP()
@@ -31,8 +33,10 @@ function dmo_customer_attention(PDO $db,int $customer): array
           ORDER BY q.validity_ends_at ASC,q.id DESC LIMIT 100");
         $q->execute(['customer'=>$customer]);
         foreach($q->fetchAll(PDO::FETCH_ASSOC) as $row){
-            if(dmo_policy_request_eligible($db,(int)$row['id'],(string)$row['policy_version']))
+            if(dmo_policy_request_eligible($db,(int)$row['id'],(string)$row['policy_version'])&&!in_array($row['public_ref'],$result['quotes'],true)){
                 $result['quotes'][]=$row['public_ref'];
+                if((int)$row['expiring']===1)$result['expiring_quotes'][]=$row['public_ref'];
+            }
             if(count($result['quotes'])>=10)break;
         }
     }

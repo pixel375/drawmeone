@@ -430,6 +430,9 @@ try {
     qa_positive($code===200&&$expiring['matching_count']===1&&$expiring['requests'][0]['id']===$requestA&&is_string($expiring['requests'][0]['quote_expires_at']),'artist_expiring_live_quote_queue');
     [$code,$customerExpiry]=qa_http('/api/requests.php?q='.urlencode($referenceA),$tokenA);
     qa_positive($code===200&&$customerExpiry['requests'][0]['quote_expires_at']===$expiring['requests'][0]['quote_expires_at']&&!isset($customerExpiry['requests'][0]['visible_quote_valid_until']),'customer_sees_released_offer_expiry');
+    qa_positive(in_array($referenceA,$customerExpiry['attention']['expiring_quotes'],true),'customer_attention_expiring_quote');
+    [$code,$otherExpiry]=qa_http('/api/requests.php',$tokenB);
+    qa_positive($code===200&&!in_array($referenceA,$otherExpiry['attention']['expiring_quotes'],true),'customer_expiring_quote_cross_account_denied');
     [$code,$expiryCounts]=qa_http('/api/admin/overview.php',$tokenAdmin,'__Host-dmo_admin');
     qa_positive($code===200&&$expiryCounts['counts']['quote_expiring']===1,'artist_expiring_quote_count');
     $db->prepare('UPDATE dmo_quotes SET validity_ends_at=DATE_SUB(UTC_TIMESTAMP(),INTERVAL 1 DAY) WHERE id=:id')->execute(['id'=>$oldQuote]);
@@ -437,7 +440,7 @@ try {
     qa_positive($code===200 && $expired['request']['workflow_stage']==='quote_expired' &&
         $expired['quotes'][0]['can_respond']===false,'expired_offer_not_actionable');
     [$code,$history]=qa_http('/api/requests.php',$tokenA);
-    qa_positive($code===200&&!in_array($referenceA,$history['attention']['quotes'],true),'customer_attention_excludes_expired_quote');
+    qa_positive($code===200&&!in_array($referenceA,$history['attention']['quotes'],true)&&!in_array($referenceA,$history['attention']['expiring_quotes'],true),'customer_attention_excludes_expired_quote');
     [$code,$follow]=qa_http('/api/admin/requests.php?filter=quote_followup',$tokenAdmin,'__Host-dmo_admin');
     qa_positive($code===200 && count($follow['requests'])===1 &&
         $follow['requests'][0]['workflow_stage']==='quote_expired','expired_offer_in_followup_queue');
