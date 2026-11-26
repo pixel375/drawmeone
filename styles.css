@@ -378,3 +378,9 @@ h1 em,h2 em{font-style:normal;color:var(--accent)}
 .footer,.at-footer,.ed-footer,.sg-footer{flex-wrap:wrap}
 .public-footer-links{display:flex;flex-wrap:wrap;gap:12px;flex-basis:100%;min-width:0}
 .public-footer-links a,.at-footer .public-footer-links a,.ed-footer .public-footer-links a,.sg-footer .public-footer-links a{font-size:12px;letter-spacing:normal;font-weight:600;text-decoration:underline;text-underline-offset:3px;padding:4px 0;border:0}
+
+/* Keep the count available and focusable after the final load-more button disappears. */
+.gallery-progress{font-size:12px;line-height:1.6;color:var(--muted);text-align:center;margin:12px 0 4px;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.gallery-progress[hidden]{display:none}.gallery-progress:focus-visible,.portfolio-empty:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.portfolio-error p{margin:0 0 12px}.portfolio-error .gallery-more-button{min-height:44px;max-width:100%;white-space:normal}
+.portfolio-error .gallery-more-button:disabled{cursor:wait;opacity:.7}

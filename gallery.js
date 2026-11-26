@@ -5,6 +5,7 @@
   const notice = document.getElementById("gallery-demo-notice");
   const empty = document.getElementById("portfolio-empty");
   const error = document.getElementById("portfolio-error");
+  const retry = document.getElementById("portfolio-retry");
   const more = document.getElementById("gallery-more");
   const moreButton = document.getElementById("gallery-more-button");
   const remaining = document.getElementById("gallery-remaining");
@@ -13,7 +14,7 @@
   const big = document.getElementById("lightbox-image");
   const count = document.getElementById("lightbox-counter");
   const pageLink = document.getElementById("lightbox-detail-link");
-  if (![gallery,notice,empty,error,more,moreButton,remaining,progress,dialog,big,count,pageLink].every(Boolean)) return;
+  if (![gallery,notice,empty,error,retry,more,moreButton,remaining,progress,dialog,big,count,pageLink].every(Boolean)) return;
 
   const realImage = /^(?:assets\/portfolio\/[a-z0-9][a-z0-9/_-]*\.(?:avif|webp|png|jpe?g)|api\/artwork\.php\?id=[1-9][0-9]{0,17}&v=display)$/i;
   const hostedImage = /^api\/artwork\.php\?id=[1-9][0-9]{0,17}&v=display$/;
@@ -21,7 +22,7 @@
   const demoImage = /^assets\/demo\/art-[0-9]{2}\.svg$/;
   const fallback = "./assets/demo/placeholder.svg";
   const unavailable="./assets/artwork-unavailable.svg";
-  let hostedHasMore=false;
+  let hostedHasMore=false,loading=false;
   let entries=[],isDemo=false,visible=0,renderedCount=0,expanded=false,activeIndex=0,lastFocused=null,startX=null;
   const isScroll=()=>root.dataset.layout === "rows";
   const step=()=>isScroll()?24:window.matchMedia("(max-width:620px)").matches?8:12;
@@ -76,13 +77,14 @@
   });
   const stage=dialog.querySelector(".lightbox-stage");
   stage.addEventListener("touchstart",event=>{
-    if(event.touches.length===1)startX=event.touches[0].clientX;
+    startX=event.touches.length===1?event.touches[0].clientX:null;
   },{passive:true});
   stage.addEventListener("touchend",event=>{
-    if(startX==null||event.changedTouches.length!==1)return;
+    if(startX==null||event.changedTouches.length!==1){startX=null;return;}
     const d=event.changedTouches[0].clientX-startX;startX=null;
     if(Math.abs(d)>65)showAt(activeIndex+(d<0?1:-1));
   },{passive:true});
+  stage.addEventListener("touchcancel",()=>{startX=null;},{passive:true});
   safeguard(big);
 
   function syncShowcase(){
@@ -144,13 +146,14 @@
     more.hidden=moreRemain<=0;
     remaining.textContent=moreRemain>0?"+ "+Math.min(step(),moreRemain):"";
     moreButton.setAttribute("aria-label","Load "+Math.min(step(),moreRemain)+" more images");
+    progress.hidden=false;
     progress.textContent="Showing "+total+" of "+entries.length+" images"+(hostedHasMore?" in this selection":"");
     document.getElementById("portfolio-directory-note").hidden=!hostedHasMore;
   }
   moreButton.addEventListener("click",()=>{
     expanded=true;visible=Math.min(entries.length,visible+step());render();
     // Only move focus when all items have loaded and the button disappears.
-    if(more.hidden){progress.tabIndex=-1;progress.focus({preventScroll:true});}
+    if(more.hidden)progress.focus({preventScroll:true});
   });
   document.addEventListener("dmo:layout-change",()=>{
     // Going back to a grid returns to the compact default.
@@ -202,16 +205,33 @@
     notice.hidden=!isDemo;empty.hidden=entries.length>0;
     document.getElementById("portfolio-directory-note").hidden=!hostedHasMore;
     syncShowcase();
-    if(!entries.length)return;
+    if(!entries.length){progress.hidden=true;return;}
     visible=step();render();
   }
-  function startLoad(){load().catch(issue=>{
-    console.warn("Draw Me One gallery:",issue);
-    entries=[];isDemo=false;syncShowcase();root.dataset.galleryState="error";
-    notice.hidden=true;empty.hidden=true;error.hidden=false;
-  });}
+  async function startLoad(retrying=false){
+    if(loading)return;
+    loading=true;hostedHasMore=false;retry.disabled=true;
+    error.hidden=true;empty.hidden=true;more.hidden=true;
+    gallery.setAttribute("aria-busy","true");
+    progress.hidden=false;progress.textContent="Loading gallery…";
+    try{
+      await load();
+      if(retrying)(entries.length?progress:empty).focus({preventScroll:true});
+    }catch(issue){
+      console.warn("Draw Me One gallery:",issue);
+      entries=[];isDemo=false;visible=0;renderedCount=0;expanded=false;
+      gallery.replaceChildren();gallery.classList.remove("is-loaded");
+      syncShowcase();root.dataset.galleryState="error";
+      notice.hidden=true;empty.hidden=true;error.hidden=false;progress.hidden=true;
+      document.getElementById("portfolio-directory-note").hidden=true;
+    }finally{
+      loading=false;retry.disabled=false;gallery.removeAttribute("aria-busy");
+      if(retrying&&!error.hidden)retry.focus({preventScroll:true});
+    }
+  }
+  retry.addEventListener("click",()=>startLoad(true));
   // A restored public document must not indefinitely retain old publication state.
   window.addEventListener("pageshow",event=>{if(event.persisted&&root.dataset.presentation==="public")location.reload();});
   if(root.dataset.presentation)startLoad();
-  else document.addEventListener("dmo:presentation-ready",startLoad,{once:true});
+  else document.addEventListener("dmo:presentation-ready",()=>startLoad(),{once:true});
 })();

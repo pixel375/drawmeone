@@ -1,1 +1,1 @@
-Session XVIII final: verify retry protection, conversation capacity, artist navigation and transient order/payment form safeguards; read-only.
+Session XVIII: verify private workflow safeguards, artist commission navigation and gallery retry/focus improvements; read-only.

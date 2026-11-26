@@ -347,9 +347,13 @@ async function checkPublishedPresentation(browser){
     assert.equal(await page.locator("#portfolio-gallery .art-tile").count(),0);
     assert.equal(await page.locator(".hero-visual").isVisible(),false);
     assert.deepEqual(demoRequests,[]);
+    await page.locator("#portfolio-retry").click();
+    await page.locator("#portfolio-error").waitFor({state:"visible"});
+    await page.waitForFunction(()=>document.activeElement.id==="portfolio-retry");
     await page.route("**/api/portfolio.php*",route=>route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({ok:true,works:[]})}));
-    await page.reload({waitUntil:"domcontentloaded"});
+    await page.locator("#portfolio-retry").click();
     await page.locator("#portfolio-empty").waitFor({state:"visible"});
+    assert.equal(await page.evaluate(()=>document.activeElement.id),"portfolio-empty");
     assert.equal(await page.locator("#portfolio-error").isVisible(),false);
     assert.equal(await page.locator(".hero-visual").isVisible(),false);
     assert.deepEqual(demoRequests,[]);
@@ -372,6 +376,9 @@ async function checkPublishedPresentation(browser){
     await page.locator("#gallery-more-button").click();
     assert.equal(await page.locator("#portfolio-gallery .art-tile").count(),65);
     assert.equal(await page.locator("#gallery-more-button").isVisible(),false);
+    assert.equal(await page.locator("#gallery-progress").isVisible(),true);
+    assert.match(await page.locator("#gallery-progress").innerText(),/Showing 65 of 65/);
+    assert.equal(await page.evaluate(()=>document.activeElement.id),"gallery-progress");
     assert.deepEqual(demoRequests,[]);
     await page.route("**/api/portfolio.php*",route=>route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({ok:true,has_more:true,works:[{src:"api/artwork.php?id=1&v=display",thumb:"api/artwork.php?id=1&v=thumb",alt:"Synthetic drawing",width:320,height:240}]})}));
     await page.route("**/api/artwork.php?*",route=>route.fulfill({status:404,body:"unavailable"}));

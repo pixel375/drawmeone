@@ -14,3 +14,6 @@ No feature gates or deployment credentials changed. Initial CI and Hostinger ver
 ## Regression results
 
 The published-portfolio regression passed on Chromium, Firefox and WebKit in [Chromium run 45491298783](https://github.com/pixel375/drawmeone/actions/runs/45491298783) and [compatibility run 45491298800](https://github.com/pixel375/drawmeone/actions/runs/45491298800). The latter overall run failed separately in the 320px Artist Desk artwork panel; this does not invalidate the passed public gallery suite. Database integration and source quality also passed. Production deployment verification remains pending.
+
+
+Session XVIII: The homepage gallery now exposes a retry control after failed manifests, bounded to one fetch sequence at a time. It still fails closed in public mode and never requests design sample manifests there. Loading/empty/error/success states are announced; the visible count remains available after the last load-more button disappears, with keyboard focus transferred to that count. Failed retries restore button focus and successful retries focus the result. Multi-touch/cancelled swipes clear their pending gesture. Browser contracts cover failed retry, recovered empty result, and final gallery count. No publication settings changed.
