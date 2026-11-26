@@ -24,3 +24,5 @@ footer{border-top:1px solid var(--line);border-bottom:0;color:var(--muted);font-
 .public-theme-toggle{font:inherit;color:var(--ink);background:transparent;border:1px solid var(--line);border-radius:6px;min-height:44px;padding:8px 12px;cursor:pointer}.public-theme-toggle:focus-visible{outline:2px solid var(--accent);outline-offset:3px}.public-theme-toggle[hidden]{display:none}
 
 header nav a,footer nav a{padding-block:8px}nav a[aria-current="page"]{font-weight:750;text-decoration-thickness:2px}@media print{.public-theme-toggle{display:none}}
+
+.policy-fingerprint,.policy-print-reference{font-size:13px;color:var(--muted);overflow-wrap:anywhere}.policy-fingerprint code{font-size:inherit}.policy-print-reference{display:none}@media print{.policy-print-reference{display:block}.policy-fingerprint,.policy-print-reference,.policy-print-reference a,.eyebrow{color:#222}main>nav{display:none}.policy-body{font-size:11pt;line-height:1.5;orphans:3;widows:3}.section{border-color:#bbb}}

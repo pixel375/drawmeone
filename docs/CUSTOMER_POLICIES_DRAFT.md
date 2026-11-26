@@ -124,3 +124,7 @@ record the version acknowledged at submission.
 
 This text is a draft for discussion, not legal advice and not a substitute for
 reviewing laws that apply to actual customers and business operations.
+
+## November 26 — implementation alignment and decision worksheet
+
+See [owner policy decision worksheet](OWNER_POLICY_DECISIONS.md). The current product separates quote acceptance, artist order confirmation, payment verification and delivery. Do not present quote acceptance or a provider redirect as completed payment. No deposit, partial refund or automated provider verification workflow is active. Optional visitor appearance preferences use local storage; fonts on the homepage may be fetched from Google Fonts, and actual CAPTCHA/mail/payment processing must be reviewed before approval. The approved public policy page now includes the exact version, UTC effective date, document SHA-256 and permanent URL in printed copies. This is an identity and integrity reference, not proof of legal review or customer consent.

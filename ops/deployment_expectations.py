@@ -87,7 +87,7 @@ DEPLOYMENT_FILES = [
     "gallery.js", "concepts.js", "studio.js", "styles.css", "api/portfolio.php", "api/artwork.php", "app/artwork.php",
     ".htaccess", "polish.css", "branding.css", "favicon.svg", "api/health.php",
     "backend-status.php", "backend-status.html", "admin-preview.html", "commission-preview.html", "app/design.php", "api/admin/design.php", "api/site-settings.php",
-    "customer-theme.css", "public-theme.js", "password-reset.html",
+    "customer-theme.css", "public-theme.js", "password-reset.html", "app/policies.php", "api/policy.php",
 ]
 
 def deployment_files(root):

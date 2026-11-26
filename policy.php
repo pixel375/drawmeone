@@ -11,8 +11,11 @@ dmo_info_head('Customer policies','Read the published commission terms and priva
 <?php if($doc===null): ?>
 <div class="notice"><h2>Approved policies unavailable</h2><p>The requested approved policy version is not available. Draft documents are not published here.</p><p><a href="/policy.php">Check the current policies</a> or <a href="mailto:support@drawmeone.com">email the studio</a>.</p></div>
 <?php else: ?>
+<?php $permanent='/policy.php?'.http_build_query(['version'=>$doc['version'],'sha256'=>$doc['sha256']]); ?>
 <p class="policy-meta">Version <?= dmo_info_escape($doc['version']) ?> · Effective <?= dmo_info_escape($doc['effective_date']) ?> (UTC date)</p>
-<nav aria-label="Policy sections"><a href="#terms">Commission terms</a><a href="#privacy">Privacy policy</a><a href="/policy.php?<?= dmo_info_escape(http_build_query(['version'=>$doc['version'],'sha256'=>$doc['sha256']])) ?>">Permanent version link</a></nav>
+<p class="policy-fingerprint">Document SHA-256: <code><?= dmo_info_escape($doc['sha256']) ?></code></p>
+<p class="policy-print-reference">Permanent document URL: <a href="<?= dmo_info_escape($permanent) ?>"><?= dmo_info_escape('https://drawmeone.com'.$permanent) ?></a></p>
+<nav aria-label="Policy sections"><a href="#terms">Commission terms</a><a href="#privacy">Privacy policy</a><a href="<?= dmo_info_escape($permanent) ?>">Permanent version link</a></nav>
 <section class="section" aria-labelledby="terms"><h2 id="terms">Commission terms</h2><div class="policy-body"><?= dmo_info_escape($doc['terms']) ?></div></section>
 <section class="section" aria-labelledby="privacy"><h2 id="privacy">Privacy policy</h2><div class="policy-body"><?= dmo_info_escape($doc['privacy']) ?></div></section>
 <?php endif; ?>

@@ -164,9 +164,12 @@ try {
     [$code,$archived]=qa_http('/api/policy.php?version=qa-policy-v0&sha256='.$oldPin);
     qa_positive($code===200&&$archived['policy']['version']==='qa-policy-v0','explicitly_pinned_historical_policy_readable');
     [$code,,$policyHtml]=qa_http('/policy.php?version=qa-policy-v0&sha256='.$oldPin);
-    qa_positive($code===200&&str_contains($policyHtml,htmlspecialchars($archived['policy']['terms'],ENT_QUOTES|ENT_SUBSTITUTE,'UTF-8'))&&str_contains($policyHtml,'Permanent version link'),'policy_html_exact_archived_text');
+    qa_positive($code===200&&str_contains($policyHtml,htmlspecialchars($archived['policy']['terms'],ENT_QUOTES|ENT_SUBSTITUTE,'UTF-8'))&&str_contains($policyHtml,'Permanent version link')&&str_contains($policyHtml,'Document SHA-256:')&&str_contains($policyHtml,'https://drawmeone.com/policy.php?version=qa-policy-v0&amp;sha256='.$oldPin),'policy_html_exact_archived_text');
     [$code,,$policyHtml]=qa_http('/policy.php?version=qa-policy-v0&sha256='.str_repeat('0',64));
     qa_positive($code===404&&!str_contains($policyHtml,htmlspecialchars($archived['policy']['terms'],ENT_QUOTES|ENT_SUBSTITUTE,'UTF-8')),'policy_html_wrong_pin_denied');
+    qa_positive(!str_contains($policyHtml,'Document SHA-256:'),'unavailable_policy_has_no_print_fingerprint');
+    [$code]=qa_http('/api/policy.php?version[]=qa-policy-v0&sha256='.$oldPin);
+    qa_positive($code===404,'policy_array_version_rejected');
     [$code,$currentPolicy]=qa_http('/api/policy.php');
     [$htmlCode,,$policyHtml]=qa_http('/policy.php');
     qa_positive($code===200&&$htmlCode===200&&str_contains($policyHtml,htmlspecialchars($currentPolicy['policy']['privacy'],ENT_QUOTES|ENT_SUBSTITUTE,'UTF-8')),'policy_html_current_matches_api');
