@@ -17,6 +17,7 @@ if (PHP_SAPI !== 'cli' ||
 require_once dirname(__DIR__) . '/app/artwork.php';
 require_once dirname(__DIR__) . '/app/references.php';
 require_once dirname(__DIR__).'/app/integrity.php';
+require_once dirname(__DIR__).'/app/policies.php';
 
 function drill_assert(bool $condition, string $name): void
 {
@@ -174,6 +175,9 @@ try {
     $requestId=(int)$db->lastInsertId();
     // An agreement receipt survives SQL restore, but continuation still
     // requires the separately retained immutable policy file and digest pin.
+    // Policy flags are confined to this guarded disposable PHP process.
+    putenv('DMO_PRIVACY_PUBLISHED=1');
+    putenv('DMO_REQUEST_TERMS_APPROVED=1');
     $oldPin=hash_file('sha256',__DIR__.'/fixtures/policies/qa-policy-v0.json');
     $db->prepare("INSERT INTO dmo_audit_log (actor_id,action,entity_type,entity_id,details_json) VALUES (:actor,'request.submitted','commission_request',:request,:details)")->execute(['actor'=>$userId,'request'=>$requestId,'details'=>json_encode(['policy_version'=>'qa-policy-v0','policy_sha256'=>$oldPin],JSON_THROW_ON_ERROR)]);
     drill_assert(dmo_policy_request_eligible($db,$requestId,'qa-policy-v0'),'source_historical_policy_receipt_valid');
