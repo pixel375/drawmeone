@@ -7,7 +7,7 @@ header('Cache-Control: no-store');
 // Search-engine-readable detail pages are created ONLY for art that the
 // artist has explicitly published. Drafts and demo art never get pages.
 $idText = $_GET['id'] ?? null;
-$view=$_GET['view']??'all';$fromPage=$_GET['from_page']??'1';
+$view=$_GET['view']??'all';$fromPage=$_GET['from_page']??'1';$search=dmo_gallery_search($_GET['q']??'')??'';
 if(!is_string($view)||!isset(dmo_gallery_views()[$view]))$view='all';
 $fromPage=is_string($fromPage)&&preg_match('/^[1-9][0-9]{0,3}$/D',$fromPage)&&(int)$fromPage<=1000?(int)$fromPage:1;
 if (!is_string($idText) || !preg_match('/^[1-9][0-9]{0,17}$/D', $idText) ||
@@ -38,7 +38,22 @@ try {
     // published records with both expected variants may become neighbours.
     // A stale filter must not hide a still-published drawing.
     if(!dmo_gallery_matches($view,$work)){$view='all';$fromPage=1;}
-    $condition=dmo_gallery_condition($view);
+    if($search!==''){
+        $match=$db->prepare("SELECT 1 FROM dmo_portfolio_artworks a WHERE a.id=:id AND a.visibility='published'".dmo_gallery_search_condition($search));
+        $match->execute(['id'=>(int)$work['id'],'search'=>$search]);
+        if($match->fetchColumn()===false)$search='';
+    }
+    $condition=dmo_gallery_condition($view).dmo_gallery_search_condition($search);
+    $selection=" FROM dmo_portfolio_artworks a
+            JOIN dmo_artwork_files t ON t.artwork_id=a.id AND t.variant='thumb'
+            JOIN dmo_artwork_files d ON d.artwork_id=a.id AND d.variant='display'
+            WHERE a.visibility='published' $condition";
+    $context=$search===''?[]:['search'=>$search];
+    $rankParams=$context+['featured'=>(int)$work['is_featured'],'sort'=>-(int)$work['sort_order'],'id'=>(int)$work['id']];
+    $rank=$db->prepare("SELECT COUNT(*)".$selection." AND (a.is_featured,-a.sort_order,a.id) > (:featured,:sort,:id)");
+    $rank->execute($rankParams);$position=(int)$rank->fetchColumn()+1;
+    $totalQuery=$db->prepare('SELECT COUNT(*)'.$selection);$totalQuery->execute($context);$total=(int)$totalQuery->fetchColumn();
+    $fromPage=max(1,min(1000,(int)ceil($position/24)));
     $neighbours=['previous'=>null,'next'=>null];
     foreach(['previous'=>['>','ASC','DESC'],'next'=>['<','DESC','ASC']] as $direction=>[$op,$featureOrder,$sortOrder]){
         $q=$db->prepare("SELECT a.id FROM dmo_portfolio_artworks a
@@ -46,7 +61,7 @@ try {
             JOIN dmo_artwork_files d ON d.artwork_id=a.id AND d.variant='display'
             WHERE a.visibility='published' $condition AND (a.is_featured,-a.sort_order,a.id) $op (:featured,:sort,:id)
             ORDER BY a.is_featured $featureOrder,a.sort_order $sortOrder,a.id $featureOrder LIMIT 1");
-        $q->execute(['featured'=>(int)$work['is_featured'],'sort'=>-(int)$work['sort_order'],'id'=>(int)$work['id']]);
+        $q->execute($rankParams);
         $adjacent=$q->fetchColumn();
         if($adjacent!==false)$neighbours[$direction]=(int)$adjacent;
     }
@@ -162,10 +177,11 @@ footer{padding:24px 0 45px;border-top:1px solid var(--line);font-size:12px;color
     <figcaption><?= dmo_artwork_page_escape($label) ?></figcaption>
   </figure>
   <div class="artwork-share" aria-label="Share this drawing"><button type="button" data-share-artwork hidden>Share drawing</button><button type="button" data-copy-artwork hidden>Copy drawing link</button><p data-share-status role="status" aria-live="polite"></p><details><summary>Permanent drawing link</summary><a href="<?= dmo_artwork_page_escape($canonical) ?>"><?= dmo_artwork_page_escape($canonical) ?></a></details></div>
+  <p class="intro">Drawing <?= $position ?> of <?= max($position,$total) ?><?= $search!==''?' matching your search':'' ?></p>
   <nav class="artwork-nav" aria-label="Browse published drawings">
-    <?php if($neighbours['previous']!==null): ?><a rel="prev" href="<?= dmo_artwork_page_escape(dmo_gallery_detail_url($neighbours['previous'],$view)) ?>">Previous drawing</a><?php else: ?><span>First drawing</span><?php endif; ?>
-    <a href="<?= dmo_artwork_page_escape(dmo_directory_url($view,$fromPage)) ?>"><?= $view==='all'?'All drawings':'Back to '.dmo_artwork_page_escape(strtolower(dmo_gallery_views()[$view])) ?></a>
-    <?php if($neighbours['next']!==null): ?><a rel="next" href="<?= dmo_artwork_page_escape(dmo_gallery_detail_url($neighbours['next'],$view)) ?>">Next drawing</a><?php else: ?><span>Last drawing</span><?php endif; ?>
+    <?php if($neighbours['previous']!==null): ?><a rel="prev" href="<?= dmo_artwork_page_escape(dmo_gallery_detail_url($neighbours['previous'],$view,max(1,min(1000,(int)ceil(($position-1)/24))),$search)) ?>">Previous drawing</a><?php else: ?><span>First drawing</span><?php endif; ?>
+    <a href="<?= dmo_artwork_page_escape(dmo_directory_url($view,$fromPage,$search)) ?>"><?= $search!==''?'Back to search':($view==='all'?'All drawings':'Back to '.dmo_artwork_page_escape(strtolower(dmo_gallery_views()[$view]))) ?></a>
+    <?php if($neighbours['next']!==null): ?><a rel="next" href="<?= dmo_artwork_page_escape(dmo_gallery_detail_url($neighbours['next'],$view,max(1,min(1000,(int)ceil(($position+1)/24))),$search)) ?>">Next drawing</a><?php else: ?><span>Last drawing</span><?php endif; ?>
   </nav>
 </main>
 <footer><a href="/#portfolio">← Back to the gallery</a><a href="/services.php">Commission services</a><span>Draw Me One · Original artwork</span></footer>

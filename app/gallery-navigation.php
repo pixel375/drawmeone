@@ -7,7 +7,16 @@ function dmo_gallery_matches(string $view,array $work): bool{
     $w=(int)$work['pixel_width'];$h=(int)$work['pixel_height'];
     return match($view){'featured'=>(bool)$work['is_featured'],'portrait'=>$h>$w,'landscape'=>$w>$h,'square'=>$w===$h,default=>true};
 }
-function dmo_directory_url(string $filter,int $page=1): string{$params=[];if($filter!=='all')$params['view']=$filter;if($page>1)$params['page']=$page;return '/portfolio.php'.($params?'?'.http_build_query($params):'');}
-function dmo_gallery_detail_url(int $id,string $view='all',int $page=1): string{
-    return '/artwork.php?'.http_build_query(['id'=>$id]+($view!=='all'?['view'=>$view]:[])+($page>1?['from_page'=>$page]:[]));
+/** Optional literal search of published accessibility descriptions. */
+function dmo_gallery_search(mixed $raw): ?string {
+    if(!is_string($raw)||strlen($raw)>240||preg_match('//u',$raw)!==1||preg_match('/[\x00-\x1f\x7f]/',$raw))return null;
+    return trim($raw);
+}
+function dmo_gallery_search_condition(string $search): string{return $search===''?'':' AND LOCATE(:search,COALESCE(a.alt_text,\'\'))>0';}
+function dmo_directory_url(string $filter,int $page=1,string $search=''): string{
+    $params=[];if($filter!=='all')$params['view']=$filter;if($search!=='')$params['q']=$search;if($page>1)$params['page']=$page;
+    return '/portfolio.php'.($params?'?'.http_build_query($params):'');
+}
+function dmo_gallery_detail_url(int $id,string $view='all',int $page=1,string $search=''): string{
+    return '/artwork.php?'.http_build_query(['id'=>$id]+($view!=='all'?['view'=>$view]:[])+($search!==''?['q'=>$search]:[])+($page>1?['from_page'=>$page]:[]));
 }
