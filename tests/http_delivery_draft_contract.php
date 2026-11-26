@@ -295,6 +295,17 @@ try {
     ref_assert($code===409,'other_customer_cannot_request_revision');
     [$code]=ref_http('/api/artwork-review.php',$cookieA,$decision);
     ref_assert($code===403,'review_requires_csrf');
+    $proofKey=$db->query('SELECT storage_key FROM dmo_delivery_drafts WHERE id='.(int)$proofId)->fetchColumn();
+    $proofPath=dmo_delivery_file($proofKey);$proofBytes=file_get_contents($proofPath);
+    file_put_contents($proofPath,'damaged synthetic proof');
+    try{
+        [$code]=ref_http('/api/artwork-review.php?id='.$reviewId,$cookieA);
+        ref_assert($code===404,'corrupt_proof_cannot_be_viewed');
+        [$code,$broken]=ref_http('/api/request.php?ref='.$refA,$cookieA);
+        ref_assert($code===200&&$broken['artwork_reviews'][0]['can_respond']===false,'corrupt_proof_actions_hidden');
+        [$code,$failure]=ref_http('/api/artwork-review.php',$cookieA,$decision,$csrfA);
+        ref_assert($code===409&&$failure['error']==='draft_integrity_failed','corrupt_proof_cannot_consume_revision');
+    }finally{file_put_contents($proofPath,$proofBytes);}
     [$code]=ref_http('/api/artwork-review.php',$cookieA,$decision,$csrfA);
     ref_assert($code===200,'customer_uses_included_revision');
     [$code,$respondedProof]=ref_http('/api/request.php?ref='.$refA,$cookieA);

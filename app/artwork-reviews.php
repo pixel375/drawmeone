@@ -55,8 +55,7 @@ function dmo_review_offer(PDO $db,array $admin,int $requestId,array $input): nev
         $old=$db->prepare('SELECT id FROM dmo_artwork_reviews WHERE order_id=:order AND draft_id=:draft LIMIT 1');
         $old->execute(['order'=>$orderId,'draft'=>$draftId]);
         if(!is_array($draft)||$old->fetchColumn()!==false)throw new DmoFulfillmentConflict('new_draft_required');
-        $file=dmo_delivery_file($draft['storage_key']);
-        if(!is_file($file)||filesize($file)!==(int)$draft['byte_size']||!hash_equals($draft['sha256'],(string)hash_file('sha256',$file)))throw new DmoFulfillmentConflict('draft_integrity_failed');
+        if(!dmo_delivery_draft_intact($draft))throw new DmoFulfillmentConflict('draft_integrity_failed');
         $round=($option['latest']['round']??0)+1;
         if($round>26)throw new DmoFulfillmentConflict('review_limit');
         $db->prepare("INSERT INTO dmo_artwork_reviews (order_id,draft_id,round_number,status) VALUES (:order,:draft,:round,'pending')")
@@ -93,8 +92,9 @@ function dmo_review_respond(PDO $db,array $session,array $input): never {
         $q=$db->prepare('SELECT r.id AS request_id'.dmo_review_owner_query().' AND v.id=:id');$q->execute($args);$request=$q->fetchColumn();
         if($request===false)throw new DmoFulfillmentConflict('review_not_available');
         $lock=$db->prepare('SELECT id FROM dmo_commission_requests WHERE id=:id FOR UPDATE');$lock->execute(['id'=>$request]);
-        $q=$db->prepare('SELECT o.id AS order_id,q.revision_allowance,r.policy_version'.dmo_review_owner_query().' AND v.id=:id FOR UPDATE');$q->execute($args);$row=$q->fetch(PDO::FETCH_ASSOC);
+        $q=$db->prepare('SELECT o.id AS order_id,q.revision_allowance,r.policy_version,d.storage_key,d.sha256,d.byte_size'.dmo_review_owner_query().' AND v.id=:id FOR UPDATE');$q->execute($args);$row=$q->fetch(PDO::FETCH_ASSOC);
         if(!is_array($row)||!dmo_policy_request_eligible($db,(int)$request,$row['policy_version']))throw new DmoFulfillmentConflict('review_not_available');
+        if(!dmo_delivery_draft_intact($row))throw new DmoFulfillmentConflict('draft_integrity_failed');
         if($revise&&dmo_review_used($db,(int)$row['order_id'])>=(int)$row['revision_allowance'])throw new DmoFulfillmentConflict('included_revisions_exhausted');
         $status=$revise?'revision_requested':'approved';
         $db->prepare('UPDATE dmo_artwork_reviews SET status=:status,feedback=:feedback,responded_at=UTC_TIMESTAMP() WHERE id=:id')

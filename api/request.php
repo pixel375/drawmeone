@@ -98,9 +98,10 @@ try {
         unset($review['latest']['draft_id']);
         if ($review['latest']['status'] !== 'pending' ||
             !dmo_policy_request_eligible($db,(int)$request['id'],(string)$request['policy_version'])) continue;
-        $eligible = $db->prepare('SELECT v.id'.dmo_review_owner_query().' AND v.id=:id LIMIT 1');
+        $eligible = $db->prepare('SELECT d.storage_key,d.sha256,d.byte_size'.dmo_review_owner_query().' AND v.id=:id LIMIT 1');
         $eligible->execute(['customer'=>(int)$session['user_id'],'id'=>$review['latest']['id']]);
-        $review['can_respond'] = $eligible->fetchColumn() !== false;
+        $proof=$eligible->fetch(PDO::FETCH_ASSOC);
+        $review['can_respond']=is_array($proof)&&dmo_delivery_draft_intact($proof);
     }
     unset($review);
     $request['policy_sha256']=dmo_policy_receipt($db,(int)$request['id']);
