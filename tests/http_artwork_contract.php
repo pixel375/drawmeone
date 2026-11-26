@@ -343,6 +343,8 @@ try {
     art_assert($status===200&&!str_contains($directory,'/artwork.php?id='.$id),'unpublished_removed_from_directory');
     [$status]=art_http('/api/artwork.php?id='.$id.'&v=display');
     art_assert($status===404,'unpublished_public_file_revoked');
+    [$status]=art_http('/api/artwork.php?id='.$id.'&v=display&retry=123-1');
+    art_assert($status===404,'explicit_image_retry_cannot_bypass_unpublish');
     [$status,,$body,$headers]=art_http('/api/artwork.php?id='.$id.'&v=thumb',
         ifNoneMatch:$etag);
     art_assert($status===404 && $body==='' && str_contains(strtolower($headers),'no-store'),

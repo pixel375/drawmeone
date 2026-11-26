@@ -45,15 +45,19 @@
       if(!isDemo)img.alt="Artwork image currently unavailable";
     });
   }
-  function showAt(i) {
+  let retrySequence=0;
+  function showAt(i,retrying=false) {
     if (!entries.length) return;
     activeIndex=(i+entries.length)%entries.length;
     delete big.dataset.fallback;
     imageRetry.hidden=true;
     imageStatus.textContent="Loading drawing…";
     big.alt=imageAlt(entries[activeIndex]);
-    big.src=entries[activeIndex].src;
-    if(big.complete&&big.naturalWidth>0)imageStatus.textContent="";
+    const src=entries[activeIndex].src;
+    // WebKit may retain a failed image resource when the identical URL is
+    // immediately assigned again. An explicit retry gets a fresh URL only.
+    big.src=retrying?src+(src.includes("?")?"&":"?")+"retry="+Date.now()+"-"+(++retrySequence):src;
+    if(big.complete&&big.naturalWidth>0&&big.currentSrc===big.src)imageStatus.textContent="";
     for(const button of dialog.querySelectorAll("[data-gallery-prev],[data-gallery-next]"))button.disabled=entries.length<=1;
     count.textContent=(activeIndex+1)+" / "+entries.length;
     const match=/^api\/artwork\.php\?id=([1-9][0-9]{0,17})&v=display$/.exec(entries[activeIndex].src);
@@ -80,8 +84,8 @@
   });
   dialog.addEventListener("keydown",(event)=>{
     if(event.key==="Escape"){event.preventDefault();if(dialog.open)dialog.close();return;}
-    if(event.key==="ArrowLeft"){event.preventDefault();showAt(activeIndex-1);}
-    if(event.key==="ArrowRight"){event.preventDefault();showAt(activeIndex+1);}
+    if(event.key==="ArrowLeft"){event.preventDefault();if(entries.length>1)showAt(activeIndex-1);}
+    if(event.key==="ArrowRight"){event.preventDefault();if(entries.length>1)showAt(activeIndex+1);}
   });
   const stage=dialog.querySelector(".lightbox-stage");
   stage.addEventListener("touchstart",event=>{
@@ -90,7 +94,7 @@
   stage.addEventListener("touchend",event=>{
     if(startX==null||event.changedTouches.length!==1){startX=null;return;}
     const d=event.changedTouches[0].clientX-startX;startX=null;
-    if(Math.abs(d)>65)showAt(activeIndex+(d<0?1:-1));
+    if(entries.length>1&&Math.abs(d)>65)showAt(activeIndex+(d<0?1:-1));
   },{passive:true});
   stage.addEventListener("touchcancel",()=>{startX=null;},{passive:true});
   safeguard(big);
@@ -107,7 +111,7 @@
   imageRetry.addEventListener("click",()=>{
     if(!dialog.open||!entries.length)return;
     dialog.querySelector("[data-gallery-close]").focus({preventScroll:true});
-    big.removeAttribute("src");showAt(activeIndex);
+    showAt(activeIndex,true);
   });
 
   function syncShowcase(){

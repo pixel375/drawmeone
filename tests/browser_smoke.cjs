@@ -390,7 +390,11 @@ async function checkPublishedPresentation(browser){
     assert.match(await page.locator("#lightbox-image-status").innerText(),/could not load/);
     assert.equal(await page.getByRole("button",{name:"Next image",exact:true}).isDisabled(),true);
     await page.route("**/api/artwork.php?*",route=>route.fulfill({contentType:"image/svg+xml",body:'<svg xmlns="http://www.w3.org/2000/svg" width="320" height="240"><rect width="320" height="240" fill="gray"/></svg>'}));
+    const freshRequest=page.waitForRequest(request=>new URL(request.url()).searchParams.has("retry"));
     await page.locator("#lightbox-retry").click();
+    const retried=await freshRequest;
+    assert.equal(new URL(retried.url()).searchParams.get("id"),"1");
+    assert.equal(new URL(retried.url()).searchParams.get("v"),"display");
     await page.waitForFunction(()=>document.querySelector("#lightbox-image-status")?.textContent===""&&document.querySelector("#lightbox-image")?.naturalWidth===320);
     assert.equal(await page.locator("#lightbox-retry").isVisible(),false);
     await page.keyboard.press("Escape");

@@ -1,1 +1,1 @@
-Session XIX final: verify public portfolio search, atomic metadata save, viewer recovery and retained bulk upload selection; read-only.
+Session XX: verify WebKit image retry fix and unchanged publication controls; read-only.
