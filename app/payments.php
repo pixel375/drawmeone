@@ -150,7 +150,7 @@ function dmo_payment_exception_apply(PDO $db,array $admin,int $requestId,array $
         $lock=$db->prepare('SELECT id FROM dmo_commission_requests WHERE id=:id FOR UPDATE');
         $lock->execute(['id'=>$requestId]);
         if($lock->fetchColumn()===false)throw new DmoPaymentConflict('request_not_found');
-        $q=$db->prepare("SELECT o.payment_status,o.status,q.currency,q.total_minor,".dmo_order_exception_sql()." AS exception_action
+        $q=$db->prepare("SELECT o.payment_status,o.status,q.id AS quote_id,q.currency,q.total_minor,".dmo_order_exception_sql()." AS exception_action
             FROM dmo_orders o JOIN dmo_quotes q ON q.id=o.accepted_quote_id AND q.request_id=o.request_id
             WHERE o.id=:order AND o.request_id=:request AND q.status='accepted' FOR UPDATE");
         $q->execute(['order'=>$orderId,'request'=>$requestId]);$row=$q->fetch(PDO::FETCH_ASSOC);
@@ -161,10 +161,14 @@ function dmo_payment_exception_apply(PDO $db,array $admin,int $requestId,array $
             throw new DmoPaymentConflict('payment_exception_state_changed');
         $p=$db->prepare("SELECT id FROM dmo_payments WHERE order_id=:order AND status='verified'
             AND verified_by IS NOT NULL AND verified_at IS NOT NULL AND currency=:currency AND amount_minor=:amount
-            AND provider_reference LIKE 'manual-hmac-v1:%' LIMIT 1 FOR UPDATE");
+            AND provider_reference REGEXP '^manual-hmac-v1:[0-9a-f]{64}$' LIMIT 1 FOR UPDATE");
         $p->execute(['order'=>$orderId,'currency'=>$row['currency'],'amount'=>(int)$row['total_minor']]);
         $payment=$p->fetchColumn();
         if($payment===false)throw new DmoPaymentConflict('original_payment_evidence_required');
+        if($decision==='restore'){
+            $count=$db->prepare("SELECT COUNT(*) FROM dmo_payments WHERE order_id=:id AND status IN ('pending_verification','verified')");$count->execute(['id'=>$orderId]);
+            if((int)$count->fetchColumn()!==1||!dmo_quote_total_matches($db,(int)$row['quote_id'],(int)$row['total_minor']))throw new DmoPaymentConflict('payment_integrity_review_required');
+        }
         $action=match($decision){'hold'=>'payment.access_held','restore'=>'payment.access_restored','refund'=>'payment.full_refund_recorded'};
         // Preserve the original receipt record; access state is a separate, audited decision.
         $db->prepare('UPDATE dmo_orders SET payment_status=:status WHERE id=:id')

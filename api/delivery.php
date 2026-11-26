@@ -14,11 +14,9 @@ try{
     $q->execute(['customer'=>(int)$customer['user_id'],'id'=>$id]);
     $row=$q->fetch(PDO::FETCH_ASSOC);
     if(!is_array($row))dmo_json(404,['ok'=>false,'error'=>'delivery_not_found']);
-    $path=dmo_delivery_file($row['storage_key']);
-    if(!is_file($path)||!is_readable($path)||filesize($path)!==(int)$row['byte_size']||
-        (int)$row['byte_size']!==(int)$row['draft_bytes']||
-        !hash_equals($row['sha256'],(string)hash_file('sha256',$path)))
+    if((int)$row['byte_size']!==(int)$row['draft_bytes']||!dmo_delivery_draft_intact($row))
         dmo_json(404,['ok'=>false,'error'=>'delivery_not_found']);
+    $path=dmo_delivery_file($row['storage_key']);
     header('Content-Type: image/webp');
     header('X-Robots-Tag: noindex, nofollow');
     header('Content-Length: '.filesize($path));

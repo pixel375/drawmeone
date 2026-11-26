@@ -12,3 +12,7 @@ An additional integrated disposable journey now creates a fresh request through 
 
 
 Customer redirects now authenticate the stored canonical ciphertext and HMAC fingerprint with the same routine used by the CLI integrity scan, then additionally validate the current provider host/path. Corrupt or mismatched invoice records fail closed. No provider calls or production payments.
+
+## November 26 — payment and fulfillment consistency
+
+See [payment operations and provider decision guide](PAYMENT_OPERATIONS_GUIDE.md) for deferred provider selection and manual verification, exceptions and pilot evidence. Payment evidence and protected delivery now require coherent itemized accepted quotes and a single non-rejected payment evidence record. Customer invoice metadata and redirects authenticate ciphertext and refuse multiple unclosed invoices. Staged proof decisions revalidate the bytes and private permissions. Actual external settlement remains unverified by DrawMeOne; no provider was chosen or contacted.

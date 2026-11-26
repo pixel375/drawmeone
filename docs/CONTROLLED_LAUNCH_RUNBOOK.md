@@ -46,3 +46,5 @@ Image-processing readiness now checks the PHP functions used for accepted image 
 
 
 Session XX: A failed or in-progress readiness refresh clears previously displayed launch, integrity and retention cards, disables stale intake edits, and marks the information unverified instead of showing previous results as current. The configuration-only browser export now emits valid JSON (actual trailing newline); automated browser coverage parses the downloaded report and verifies its explicit non-authorization flag. Readiness language distinguishes configured checks from owner approval.
+
+For the payment decision worksheet, operator reconciliation sequence, failure/closure/hold/refund handling and pilot evidence, see [PAYMENT_OPERATIONS_GUIDE.md](PAYMENT_OPERATIONS_GUIDE.md). Do not use a local synthetic run as merchant or settlement evidence.

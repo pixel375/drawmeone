@@ -376,6 +376,13 @@ try {
     ref_assert($code===200,'settled_payment_restores_access');
     [$code]=ref_http('/api/delivery.php?id='.$delivery,$cookieA);
     ref_assert($code===200,'restored_customer_download');
+    $finalKey=$db->query('SELECT storage_key FROM dmo_delivery_drafts WHERE id='.(int)$finalId)->fetchColumn();
+    $finalPath=dmo_delivery_file($finalKey);
+    chmod(dirname($finalPath),0755);
+    try{
+        [$code]=ref_http('/api/delivery.php?id='.$delivery,$cookieA);
+        ref_assert($code===404,'download_denied_for_exposed_private_directory');
+    }finally{chmod(dirname($finalPath),0700);}
     $db->prepare('UPDATE dmo_quotes SET total_minor=total_minor+1 WHERE id=:id')->execute(['id'=>$quote]);
     try{
         [$code]=ref_http('/api/delivery.php?id='.$delivery,$cookieA);
@@ -448,6 +455,15 @@ try {
     [$code]=ref_http('/api/admin/request-actions.php',$artistCookie,$advanceJourney,$artistCsrf);
     ref_assert($code===409,'journey_unpaid_cannot_start');
     $evidence=['action'=>'record_payment_evidence','request_id'=>$journey,'order_id'=>$journeyOrder,'method'=>'bank_transfer','reference'=>'CI-JOURNEY-TRANSACTION-5000','currency'=>'CAD','amount_minor'=>5000];
+    $failedEvidence=array_replace($evidence,['reference'=>'CI-JOURNEY-FAILED-TRANSACTION']);
+    [$code,$failed]=ref_http('/api/admin/request-actions.php',$artistCookie,$failedEvidence,$artistCsrf);
+    ref_assert($code===201,'journey_failed_attempt_recorded_as_pending_only');
+    [$code,$rejected]=ref_http('/api/admin/request-actions.php',$artistCookie,['action'=>'reject_payment_evidence','request_id'=>$journey,'order_id'=>$journeyOrder,'payment_id'=>$failed['payment_id'],'confirm_rejection'=>true],$artistCsrf);
+    ref_assert($code===200&&$rejected['status']==='rejected'&&$rejected['payment_status']==='unverified','journey_failed_evidence_rejected_without_payment');
+    [$code]=ref_http('/api/checkout.php?id='.$journeyLink,$cookieB);
+    ref_assert($code===404,'rejected_evidence_does_not_reactivate_invoice');
+    [$code]=ref_http('/api/admin/request-actions.php',$artistCookie,$failedEvidence,$artistCsrf);
+    ref_assert($code===409,'rejected_transaction_reference_cannot_be_reused');
     [$code,$pending]=ref_http('/api/admin/request-actions.php',$artistCookie,$evidence,$artistCsrf);
     ref_assert($code===201&&$pending['status']==='pending_verification','journey_artist_records_pending_evidence');
     [$code]=ref_http('/api/checkout.php?id='.$journeyLink,$cookieB);
