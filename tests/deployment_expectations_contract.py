@@ -11,7 +11,7 @@ from deployment_expectations import deployment_files, DEPLOYMENT_FILES
 
 rows = dict(deployment_files(ROOT))
 assert len(rows) == len(DEPLOYMENT_FILES) == len(set(DEPLOYMENT_FILES))
-for required in ("app/cli-config-review.php", "api/admin/messages.php", "api/requests.php", "portfolio.php", "services.php", "public-info.css", "account.js", "api/auth/privacy.php", "app/packages.php", "api/admin/packages.php"):
+for required in ("app/cli-config-review.php", "api/admin/messages.php", "api/requests.php", "portfolio.php", "services.php", "public-info.css", "account.js", "api/auth/privacy.php", "app/packages.php", "api/admin/packages.php", "gallery.js", "concepts.js", "studio.js", "styles.css", "api/portfolio.php", "api/artwork.php", "app/artwork.php"):
     assert rows[required] == hashlib.sha256((ROOT / required).read_bytes()).hexdigest()
 output = subprocess.check_output([sys.executable, str(ROOT / "ops/deployment_expectations.py")], text=True)
 manifest = output.split("expected_files=(\n", 1)[1].split("\n)", 1)[0].splitlines()

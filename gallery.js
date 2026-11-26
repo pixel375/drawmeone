@@ -122,7 +122,8 @@
     document.documentElement.dataset.hasArtwork=String(!isDemo && entries.length>0);
     root.dataset.galleryState=entries.length?(isDemo?"demo":"artwork"):"empty";
     document.querySelectorAll("[data-showcase-image]").forEach(img=>{
-      if(!img.dataset.defaultSrc) img.dataset.defaultSrc=img.getAttribute("src") || "";
+      // Preview artwork is inert in HTML, including while settings/manifest are loading.
+      if(!img.dataset.defaultSrc) img.dataset.defaultSrc=img.dataset.previewSrc || "";
       if(!img.dataset.safeguarded){safeguard(img);img.dataset.safeguarded="true";}
       delete img.dataset.fallback;
       if(!img.dataset.defaultAlt) img.dataset.defaultAlt=img.getAttribute("alt") || "";
@@ -132,7 +133,8 @@
         img.alt=imageAlt(work);
         img.src=work.src;
       }else if(root.dataset.presentation==="preview"){
-        img.src=img.dataset.defaultSrc;
+        if(img.dataset.defaultSrc)img.src=img.dataset.defaultSrc;
+        else img.removeAttribute("src");
         img.alt=img.dataset.defaultAlt;
       }else{
         img.removeAttribute("src");img.alt="";

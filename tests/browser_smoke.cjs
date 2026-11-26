@@ -88,6 +88,8 @@ async function checkPage(browser, site, viewport) {
       name + " initial gallery count");
     assert.equal(await page.locator("#gallery-demo-notice").isVisible(), true,
       name + " sample artwork is identified");
+    assert.equal(await page.locator("#gallery-progress").isVisible(),true,name+" gallery progress follows active layout");
+    await page.waitForFunction(()=>[...document.querySelectorAll("[data-showcase-image]")].some(img=>img.getAttribute("src")?.startsWith("./assets/demo/")));
     const mailto = page.locator('#contact a[href^="mailto:support@drawmeone.com"]').first();
     assert.equal(await mailto.count(), 1, name + " studio contact link exists");
     assert.equal(await mailto.isVisible(), true, name + " studio contact link visible");
@@ -104,6 +106,7 @@ async function checkPage(browser, site, viewport) {
         await page.locator('[data-site-choice="' + next + '"]').click();
         assert.equal(await page.locator("html").getAttribute("data-site"), next);
         assert.equal(await page.locator("#portfolio-gallery").count(), 1);
+        assert.equal(await page.locator("#gallery-progress").isVisible(),true,"gallery progress remains visible after layout switch");
         assert.equal(await page.locator('#contact a[href^="mailto:"]').count(), 1);
       }
       await page.locator('[data-design-choice="ember"]').click();
@@ -310,6 +313,8 @@ async function checkPublishedPresentation(browser){
   const page=await context.newPage();
   const settings={site_style:"studio",color_theme:"ember",gallery_layout:"rows",default_mode:"light",logo:"01-minimal-pencil"};
   let payload={ok:true,presentation:"published",published:true,version:3,settings},http=200;
+  const sampleAssets=[];
+  page.on("request",request=>{if(new URL(request.url()).pathname.startsWith("/assets/demo/"))sampleAssets.push(request.url());});
   try{
     await context.addInitScript(()=>{localStorage.setItem("dmo-preview-settings",JSON.stringify({site:"cinema",design:"aurora",layout:"mosaic",mode:"dark",logo:"original"}));});
     await mockPublicBackend(page);
@@ -408,7 +413,8 @@ async function checkPublishedPresentation(browser){
     await page.keyboard.press("Escape");
     await page.waitForFunction(()=>document.activeElement.classList.contains("art-tile"));
     assert.deepEqual(demoRequests,[]);
-    console.log("PASS: published design, separate visitor mode, stale preview isolation and safe fallback/retry");
+    assert.deepEqual(sampleAssets,[],"public mode must not even request preview artwork, including before settings resolve");
+    console.log("PASS: published design, separate visitor mode, stale preview isolation, zero demo asset requests and safe fallback/retry");
   }finally{await context.close();}
 }
 

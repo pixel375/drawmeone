@@ -17,7 +17,7 @@
   const feed=document.createElement("div");
   feed.className="shared-gallery-feed";
   for(const selector of [
-    "#gallery-demo-notice","#portfolio-gallery","#portfolio-empty","#portfolio-error","#gallery-more","#portfolio-directory-note",".portfolio-directory-link"
+    "#gallery-demo-notice","#portfolio-gallery","#portfolio-empty","#portfolio-error","#gallery-more","#gallery-progress","#portfolio-directory-note",".portfolio-directory-link"
   ]) {
     const node=studioGallery.querySelector(selector);
     if(!node) return;
@@ -25,7 +25,7 @@
   }
   studioGallery.insertBefore(feed,endMark);
   let active=null;
-  const image=(id,extra="")=>'<img data-showcase-image="'+(Number(id)-1)+'" src="./assets/demo/art-'+id+'.svg" alt="Temporary design illustration" '+extra+'>';
+  const image=(id,extra="")=>'<img data-showcase-image="'+(Number(id)-1)+'" data-preview-src="./assets/demo/art-'+id+'.svg" alt="Temporary design illustration" '+extra+'>';
   const navigation=(className)=>`
     <nav class="${className}" aria-label="Main navigation">
       <a href="#portfolio">Work</a><a href="#process">The approach</a><a href="#contact">Enquiries</a>
