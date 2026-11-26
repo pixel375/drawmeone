@@ -232,6 +232,16 @@ jobs:
             echo "imagick_available=" . (extension_loaded("imagick") ? "yes" : "no") . "\n";
             echo "upload_limit=" . ini_get("upload_max_filesize") . "\n";
             echo "post_limit=" . ini_get("post_max_size") . "\n";
+            echo "cli_memory_limit=" . ini_get("memory_limit") . "\n";
+            echo "cli_max_execution_seconds=" . (int)ini_get("max_execution_time") . "\n";
+            echo "cli_max_input_seconds=" . (int)ini_get("max_input_time") . "\n";
+            $free=@disk_free_space(__DIR__);$total=@disk_total_space(__DIR__);
+            if(is_float($free)&&is_float($total)&&$total>0){
+                echo "filesystem_free_percent=" . (int)floor(100*$free/$total) . "\n";
+                echo "filesystem_free_gib=" . (int)floor($free/1073741824) . "\n";
+            }else echo "filesystem_capacity=unavailable\n";
+            echo "hosting_account_quota=not_measured\n";
+            echo "web_worker_limits=not_measured_by_cli\n";
             echo "mail_transport=" .
               (in_array(dmo_mail_transport(), ["smtp","php"], true) ?
                  dmo_mail_transport() : "not_configured") . "\n";
@@ -636,6 +646,7 @@ jobs:
           echo "cancellation_controls=deployed"
           echo "checkout_links=deployed"
           php "$site/app/cli-retention.php" report
+          php "$site/app/cli-retention.php" preview 100
           integrity_output=$(php "$site/app/cli-integrity.php" check) || { printf '%s\n' "$integrity_output"; exit 1; }
           printf '%s\n' "$integrity_output"
           [[ "$integrity_output" == *"integrity_portfolio_missing_variants=0"* && "$integrity_output" == *"integrity_portfolio_invalid_metadata=0"* ]] || { echo "portfolio_integrity_scan=missing_or_failed"; exit 1; }

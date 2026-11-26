@@ -12,6 +12,7 @@ $bad=dmo_config_review_flags(['DMO_CHECKOUT_LINKS_ENABLED'=>'1','DMO_AUTH_ENABLE
 config_assert(in_array('invalid_boolean:DMO_AUTH_ENABLED',$bad['issues'],true)&&in_array('dependency:DMO_CHECKOUT_LINKS_ENABLED:DMO_MANUAL_PAYMENT_ENABLED',$bad['issues'],true)&&in_array('checkout_host_or_path_unavailable',$bad['issues'],true),'invalid_and_missing_dependencies_detected');
 config_assert(!str_contains(json_encode($bad,JSON_THROW_ON_ERROR),'synthetic secret'),'raw_config_never_reported');
 config_assert(dmo_config_review_duplicate_flags(['DMO_AUTH_ENABLED=0','DMO_AUTH_ENABLED=1','DB_PASS=secret','DB_PASS=other','# DMO_MAIL_ENABLED=1','DMO_MAIL_ENABLED=0'])===['DMO_AUTH_ENABLED'],'duplicate_known_flags_only');
+config_assert(dmo_config_review_duplicate_flags(['DMO_APP_KEY=synthetic-first','DMO_APP_KEY=synthetic-second','DB_PASS=synthetic-first','DB_PASS=synthetic-second','UNREVIEWED_VALUE=first','UNREVIEWED_VALUE=second'],true)===['DMO_APP_KEY','DB_PASS'],'duplicate_critical_names_only_no_values');
 $all=array_fill_keys(dmo_config_review_gate_names(),'1');
 $ready=dmo_config_review_flags($all,['auth_ready'=>true,'admin_ready'=>true,'mail_ready'=>true,'policy_ready'=>true,'checkout_ready'=>true]);
 config_assert($ready['issue_count']===0&&$ready['authorizes_launch']===false,'complete_configuration_still_not_approval');

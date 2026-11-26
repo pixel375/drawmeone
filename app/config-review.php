@@ -79,9 +79,11 @@ function dmo_config_review_flags(array $values,array $runtime): array
     if($on('CHECKOUT_LINKS_ENABLED')&&!($runtime['checkout_ready']??false))$issues[]='checkout_host_or_path_unavailable';
     return ['mode'=>'review_only','enabled_gate_count'=>$enabled,'known_gate_count'=>count(dmo_config_review_gate_names()),'issues'=>$issues,'issue_count'=>count($issues),'authorizes_launch'=>false];
 }
-function dmo_config_review_duplicate_flags(array $lines): array
+function dmo_config_review_duplicate_flags(array $lines,bool $includeCritical=false): array
 {
-    $known=array_fill_keys(dmo_config_review_gate_names(),true);$seen=[];$duplicates=[];
+    $names=dmo_config_review_gate_names();
+    if($includeCritical)$names=array_merge($names,['DB_HOST','DB_NAME','DB_USER','DB_PASS','DMO_APP_KEY','DMO_TURNSTILE_SITE_KEY','DMO_TURNSTILE_SECRET','DMO_REQUEST_POLICY_VERSION','DMO_REQUEST_POLICY_SHA256','DMO_HISTORICAL_POLICY_PINS','DMO_CHECKOUT_HOST','DMO_CHECKOUT_PATH_PREFIX','DMO_MAIL_TRANSPORT','DMO_MAIL_FROM','DMO_SMTP_HOST','DMO_SMTP_PORT','DMO_SMTP_USER','DMO_SMTP_PASSWORD']);
+    $known=array_fill_keys($names,true);$seen=[];$duplicates=[];
     foreach($lines as $line){
         if(!is_string($line)||!preg_match('/^([A-Z][A-Z0-9_]*)\\s*=/D',trim($line),$match)||!isset($known[$match[1]]))continue;
         $key=$match[1];if(isset($seen[$key]))$duplicates[$key]=true;$seen[$key]=true;
@@ -107,7 +109,7 @@ function dmo_config_review(): array
         if($mode===false||($mode&0077)!==0)$report['issues'][]='private_configuration_permissions_review';
         $lines=@file($path,FILE_IGNORE_NEW_LINES);
         if($lines===false)$report['issues'][]='private_configuration_read_failed';
-        else foreach(dmo_config_review_duplicate_flags($lines) as $key)$report['issues'][]='duplicate_boolean:'.$key;
+        else foreach(dmo_config_review_duplicate_flags($lines,true) as $key)$report['issues'][]=(in_array($key,dmo_config_review_gate_names(),true)?'duplicate_boolean:':'duplicate_critical_setting:').$key;
     }
     $report['issue_count']=count($report['issues']);
     return $report;
