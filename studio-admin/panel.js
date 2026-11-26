@@ -1857,6 +1857,11 @@
     }
     return true;
   }
+  $("artwork-review-edits").addEventListener("click",()=>{
+    if(artworkBusy||artworkLoading||!artworkDrafts.size)return;
+    $("artwork-filter").value="unsaved";$("artwork-orientation").value="all";$("artwork-search").value="";
+    artworkPage=1;renderArtwork();$("artwork-filter").focus();
+  });
   $("artwork-discard-edits").addEventListener("click",()=>{
     if(artworkBusy||artworkLoading||!artworkDrafts.size)return;
     if(!window.confirm("Discard all unsaved artwork descriptions and sort orders?"))return;
@@ -1912,7 +1917,13 @@
     $("artwork-select-all").indeterminate=checked.length>0&&checked.length<selectable;
     $("artwork-selection-count").textContent=checked.length+" selected on this page";
     $("artwork-unsaved").hidden=artworkDrafts.size===0;
-    $("artwork-unsaved-count").textContent=artworkDrafts.size+" unsaved artwork field(s). Save individual edits or up to 60 together. Unsaved edits are not published.";
+    const editedIds=new Set([...artworkDrafts.keys()].map(key=>Number(key.split(":")[0])));
+    $("artwork-unsaved-count").textContent=artworkDrafts.size+" unsaved artwork field(s) on "+editedIds.size+" drawing(s). Save individual edits or up to 60 together. Unsaved edits are not published.";
+    $("artwork-review-edits").disabled=artworkBusy||artworkLoading||!editedIds.size;
+    for(const button of $("artwork-list").querySelectorAll("[data-artwork-discard]")){
+      button.hidden=!editedIds.has(Number(button.dataset.artworkDiscard));
+      button.disabled=artworkBusy||artworkLoading;
+    }
     $("artwork-save-edits").disabled=!canWrite||artworkDrafts.size===0||artworkDrafts.size>60;
     $("artwork-discard-edits").disabled=artworkBusy||artworkLoading;
     $("artwork-upload").disabled = !canWrite;
@@ -1952,7 +1963,7 @@
     const bytes=w=>Number.isSafeInteger(w.display_bytes)&&Number.isSafeInteger(w.thumb_bytes)?w.display_bytes+w.thumb_bytes:-1;
     const query=$("artwork-search").value.trim().toLocaleLowerCase();
     const matching=artworkRecords.filter(work=>(filter==="all"||
-      (filter==="featured"?work.featured===true:filter==="missing_alt"?!String(work.alt||"").trim():work.visibility===filter))&&
+      (filter==="featured"?work.featured===true:filter==="missing_alt"?!String(work.alt||"").trim():filter==="unsaved"?["sort_order","alt"].some(field=>artworkDrafts.has(artworkDraftKey(work.id,field))):work.visibility===filter))&&
       (orientation==="all"||shape(work)===orientation)&&(!query||String(work.id)===query.replace(/^#/,"")||String(work.alt||"").toLocaleLowerCase().includes(query)));
     const mode=$("artwork-sort-mode").value;
     if(mode==="gallery")matching.sort((a,b)=>Number(b.featured)-Number(a.featured)||a.sort_order-b.sort_order||b.id-a.id);
@@ -1986,6 +1997,10 @@
       preview.loading = "lazy";
       preview.decoding = "async";
       preview.alt = "Private preview of uploaded drawing " + work.id;
+      preview.addEventListener("error",()=>{
+        preview.alt="Preview unavailable for drawing "+work.id+"; use the full-image link to retry.";
+        preview.src="../assets/artwork-unavailable.svg";
+      },{once:true});
       const body = document.createElement("div");
       body.className = "artwork-card-info";
       const title = document.createElement("strong");
@@ -2071,9 +2086,18 @@
       const saveAlt=textNode("button","Save description","quiet");saveAlt.type="button";
       saveAlt.addEventListener("click",()=>{if(artworkDraftCanSave(work,"alt"))updateArtwork(work.id,"set_alt",{alt:alt.value.trim(),expected:work.alt||""});});
       accessibility.append(summary,alt,saveAlt);
+      const discardDrawing=textNode("button","Discard this drawing’s unsaved edits","quiet");discardDrawing.type="button";
+      discardDrawing.dataset.artworkDiscard=String(work.id);
+      discardDrawing.addEventListener("click",()=>{
+        if(artworkBusy||artworkLoading||!["sort_order","alt"].some(field=>artworkDrafts.has(artworkDraftKey(work.id,field))))return;
+        if(!window.confirm("Discard unsaved metadata edits for drawing #"+work.id+" only? Saved values and publication stay unchanged."))return;
+        for(const field of ["sort_order","alt"])artworkDrafts.delete(artworkDraftKey(work.id,field));
+        renderArtwork();artworkState("Unsaved edits discarded for drawing #"+work.id+".");
+      });
       if(work.visibility==="published"){
         const link=textNode("a","View public drawing","small");link.href="../artwork.php?id="+work.id;link.target="_blank";link.rel="noopener noreferrer";body.append(title,state,dimensions,inspect,link,pick,actions,order,accessibility);
       }else body.append(title,state,dimensions,inspect,pick,actions,order,accessibility);
+      body.append(discardDrawing);
       card.append(preview,body);
       target.append(card);
     }

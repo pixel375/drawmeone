@@ -5,3 +5,5 @@ Unsaved sort order and optional accessibility descriptions are retained in memor
 Browser regression exercises a rejected save, successful retry and discarding another pending field. No real artwork is used.
 
 Session XIX adds an explicitly confirmed atomic save of up to 60 optional metadata fields. The server locks artworks in ID order, checks each expected field, and applies no partial changes on conflict. Already-applied values are no-ops; the UI reconciles them after refreshing an interrupted save. No publication or file action is included. Individual edits remain supported.
+
+Session XXIV: review only drawings with unsaved metadata, including edits hidden by other filters, and discard all unsaved fields for one drawing independently of other drafts. Discard is local and does not modify the database. Failed private thumbnails use the local unavailable-image placeholder while preserving the protected full-image link. No artwork is uploaded or published by this change.

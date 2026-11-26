@@ -429,8 +429,13 @@ async function verifyArtworkDrafts(browser){
     assert.equal(sort,19);
     assert.equal(await desc.inputValue(),"Synthetic drawing description");
     assert.equal(await page.locator("#artwork-unsaved").isVisible(),true);
+    await page.locator("#artwork-review-edits").click();
+    assert.equal(await page.locator("#artwork-filter").inputValue(),"unsaved");
+    assert.equal(await page.locator(".artwork-library-card").count(),1);
     page.once("dialog",d=>d.accept());
-    await page.locator("#artwork-discard-edits").click();
+    await card.locator("[data-artwork-discard]").click();
+    assert.equal(await page.locator(".artwork-library-card").count(),0);
+    await page.locator("#artwork-filter").selectOption("all");
     assert.equal(await desc.inputValue(),"");
     assert.equal(await page.locator("#artwork-unsaved").isVisible(),false);
     assert.equal(writes,2);

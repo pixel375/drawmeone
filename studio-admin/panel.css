@@ -366,3 +366,5 @@ footer{padding:28px 0 70px;border-top:1px solid var(--line);color:var(--muted);f
 @media(max-width:600px){.request-milestones{grid-template-columns:repeat(2,minmax(0,1fr))}.request-detail-actions{justify-content:flex-start}}
 
 .private-reference-card{display:grid;gap:5px;align-content:start;min-width:0}.private-reference-card small{color:var(--muted);overflow-wrap:anywhere}.private-reference-card a .small{padding:8px;text-align:center;overflow-wrap:anywhere}
+
+.artwork-card-info [data-artwork-discard]{white-space:normal;overflow-wrap:anywhere}.artwork-card-info [data-artwork-discard][hidden]{display:none}
