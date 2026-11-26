@@ -43,3 +43,6 @@ Run the read-only `php app/cli-config-review.php check` (or `json`) and inspect 
 ## Runtime and public-opening checklist
 
 Image-processing readiness now checks the PHP functions used for accepted image formats, optimization, MIME inspection and orientation transforms. EXIF support is reported as an optional capability; its absence does not block JPEG upload. This is only a capability check, not proof of successful storage or upload. Public opening configuration now includes core account, pricing, intake, quote, order, fulfillment, privacy and configuration-review prerequisites instead of only portfolio/policy/backup checks. Optional features and payment-provider choice remain subject to operator review. No readiness report authorizes launch. Production CLI diagnostics on 2026-11-25 confirmed EXIF support and matched deployed asset digests in run 45692721176.
+
+
+Session XX: A failed or in-progress readiness refresh clears previously displayed launch, integrity and retention cards, disables stale intake edits, and marks the information unverified instead of showing previous results as current. The configuration-only browser export now emits valid JSON (actual trailing newline); automated browser coverage parses the downloaded report and verifies its explicit non-authorization flag. Readiness language distinguishes configured checks from owner approval.

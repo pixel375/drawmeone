@@ -185,12 +185,12 @@
     }
     if(!clean.stages.length){status.textContent="Configuration report unavailable.";return;}
     launchEvidence=clean;
-    status.textContent="Configuration only · "+clean.generated_at+" · no launch authorization";
+    status.textContent=clean.stages.filter(stage=>stage.configuration_ready).length+" of "+clean.stages.length+" stages configured · "+clean.generated_at+" · configuration only, no launch authorization";
     button.disabled=false;
   }
   $("launch-evidence-export").addEventListener("click",()=>{
     if(!launchEvidence||leavingSession)return;
-    const url=URL.createObjectURL(new Blob([JSON.stringify(launchEvidence,null,2)+"\\n"],{type:"application/json"}));
+    const url=URL.createObjectURL(new Blob([JSON.stringify(launchEvidence,null,2)+"\n"],{type:"application/json"}));
     const link=document.createElement("a");link.href=url;link.download="drawmeone-launch-configuration.json";document.body.append(link);link.click();link.remove();
     setTimeout(()=>URL.revokeObjectURL(url),1000);
   });
@@ -212,9 +212,20 @@
     $("overview-counter-status").textContent=hide?hidden+" empty counters hidden. Unknown counts remain visible.":"All counters shown. Counts can overlap.";
   }
   $("overview-hide-empty").addEventListener("change",applyOverviewFilter);
+  function resetOverviewReadiness(message){
+    renderLaunchEvidence(null);renderConfigurationReview(null);
+    for(const name of ["launch","integrity","retention"]){
+      $(name+"-checks").replaceChildren();
+      $(name+"-status").textContent=message;
+    }
+    if(!intakeBusy){
+      intakeVersion=null;$("intake-form").hidden=true;$("intake-save").disabled=true;
+      $("intake-status").textContent="Current intake state not verified. Refresh readiness.";
+    }
+  }
   async function overview() {
     const generation=++overviewGeneration;
-    renderLaunchEvidence(null);renderConfigurationReview(null);
+    resetOverviewReadiness("Refreshing current configuration…");
     for(const card of document.querySelectorAll(".overview-group .stats article")){
       card.dataset.count="unknown";card.querySelector("strong").textContent="—";
     }
@@ -222,10 +233,11 @@
     $("overview-counter-status").textContent="Refreshing live counts…";
     let response,data;
     try{({response,data}=await get("overview.php"));}
-    catch(_){if(generation===overviewGeneration&&!leavingSession){$("overview-counter-status").textContent="Live counts unavailable. Refresh readiness to retry.";showError("Unable to load live studio counts.");}return;}
+    catch(_){if(generation===overviewGeneration&&!leavingSession){resetOverviewReadiness("Live readiness unavailable. Refresh to retry.");$("overview-counter-status").textContent="Live counts unavailable. Refresh readiness to retry.";showError("Unable to load live studio counts.");}return;}
     if(generation!==overviewGeneration||leavingSession)return;
     if (response.status === 401) return sessionExpired();
     if (!response.ok || !data.ok) {
+      resetOverviewReadiness("Live readiness unavailable. Refresh to retry.");
       $("overview-counter-status").textContent="Live counts unavailable. Refresh readiness to retry.";
       return showError("Unable to load live studio counts.");
     }
@@ -304,8 +316,8 @@
       const chip = document.createElement("span");
       chip.className = "launch-check-status";
       chip.dataset.state = status;
-      chip.textContent = status === "ready" ? "Ready" :
-        status === "planned" ? "Planned" : "Not enabled";
+      chip.textContent = status === "ready" ? "Configured" :
+        status === "planned" ? "Planned" : "Needs attention";
       top.append(name,chip);
       const detail = document.createElement("p");
       detail.className = "small";
@@ -315,7 +327,7 @@
     }
     $("launch-status").textContent = checks.length
       ? totals.ready + " of " + checks.length +
-        " checks ready · " + totals.blocked + " not enabled · " +
+        " checks configured · " + totals.blocked + " need attention · " +
         totals.planned + " pending implementation"
       : "No readiness information is currently available.";
   }

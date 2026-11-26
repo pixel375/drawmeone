@@ -1,1 +1,1 @@
-Session XX: verify WebKit image retry fix and unchanged publication controls; read-only.
+Session XX: verify WebKit retry, private reference capacity and readiness export/reset; read-only.

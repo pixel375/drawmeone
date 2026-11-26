@@ -130,6 +130,11 @@ async function verifyArtistDesk(browser, width) {
     await page.locator("#overview-hide-empty").check();await page.locator("#launch-refresh").click();
     await page.waitForFunction(()=>document.querySelector("#overview-counter-status")?.textContent.includes("Live counts unavailable"));
     assert.equal(await page.locator("#stat-orders").innerText(),"—");assert.equal(await page.locator("#stat-orders").isVisible(),true);
+    assert.equal(await page.locator("#launch-checks .launch-check").count(),0);
+    assert.equal(await page.locator("#integrity-checks .launch-check").count(),0);
+    assert.equal(await page.locator("#retention-checks .launch-check").count(),0);
+    assert.match(await page.locator("#launch-status").innerText(),/unavailable/);
+    assert.equal(await page.locator("#launch-evidence-export").isDisabled(),true);
     await page.unroute("**/api/admin/overview.php*");
     await page.locator("#overview-hide-empty").uncheck();await page.locator("#launch-refresh").click();
     await page.waitForFunction(()=>document.querySelector("#stat-orders")?.textContent==="0");
@@ -140,6 +145,16 @@ async function verifyArtistDesk(browser, width) {
     assert.match(await page.locator("#launch-evidence-status").innerText(),/no launch authorization/);
     assert.match(await page.locator("#launch-evidence-stages").innerText(),/Independent recovery test/);
     assert.equal(await page.locator("#launch-evidence-export").isEnabled(),true);
+    if((await page.viewportSize()).width>=1200){
+      const event=page.waitForEvent("download");
+      await page.locator("#launch-evidence-export").click();
+      const download=await event;
+      assert.equal(download.suggestedFilename(),"drawmeone-launch-configuration.json");
+      const report=JSON.parse(fs.readFileSync(await download.path(),"utf8"));
+      assert.equal(report.authorizes_launch,false);
+      assert.equal(report.scope,"configuration_only");
+      assert.equal(report.stages[0].external_evidence_required[0],"Independent recovery test");
+    }
     await evidence.locator("summary").click();
     const config=page.locator(".integrity-details").filter({hasText:"Private configuration review (read-only)"});
     await config.locator("summary").click();
