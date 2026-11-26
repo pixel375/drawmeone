@@ -53,7 +53,7 @@ function dmo_notification_target(PDO $db,int $requestId,string $kind,int $eventI
         !dmo_policy_request_eligible($db,$requestId,(string)$row['policy_version']) ||
         filter_var($row['email'],FILTER_VALIDATE_EMAIL)===false) return null;
     if ($kind==='quote') {
-        $event=$db->prepare("SELECT q.id FROM dmo_quotes q WHERE q.request_id=:id AND q.id=:event " .
+        $event=$db->prepare("SELECT q.total_minor FROM dmo_quotes q WHERE q.request_id=:id AND q.id=:event " .
             "AND q.status='sent' AND q.sent_at IS NOT NULL AND q.validity_ends_at>UTC_TIMESTAMP() " .
             "AND NOT EXISTS (SELECT 1 FROM dmo_orders o WHERE o.request_id=q.request_id) " .
             "AND NOT EXISTS (SELECT 1 FROM dmo_quotes a WHERE a.request_id=q.request_id AND a.status='accepted')");
@@ -75,7 +75,9 @@ function dmo_notification_target(PDO $db,int $requestId,string $kind,int $eventI
     $args=['id'=>$requestId,'event'=>$eventId];
     if(in_array($kind,['proof','delivery'],true))$args['customer']=(int)$row['customer_id'];
     $event->execute($args);
-    return $event->fetchColumn()===false ? null : $row;
+    $value=$event->fetchColumn();
+    if($value===false||($kind==='quote'&&!dmo_quote_total_matches($db,$eventId,(int)$value)))return null;
+    return $row;
 }
 
 function dmo_notification_options(PDO $db,array $detail): array

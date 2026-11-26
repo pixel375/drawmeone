@@ -22,7 +22,7 @@ function dmo_customer_attention(PDO $db,int $customer): array
         ORDER BY m.id DESC LIMIT 10");
     $q->execute(['customer'=>$customer]);$result['artist_replies']=$q->fetchAll(PDO::FETCH_COLUMN);
     if(dmo_quote_response_enabled()){
-        $q=$db->prepare("SELECT r.id,r.public_ref,r.policy_version,
+        $q=$db->prepare("SELECT r.id,r.public_ref,r.policy_version,q.id AS quote_id,q.total_minor,
           CASE WHEN q.validity_ends_at<=DATE_ADD(UTC_TIMESTAMP(),INTERVAL 3 DAY) THEN 1 ELSE 0 END AS expiring
           FROM dmo_commission_requests r
           JOIN dmo_quotes q ON q.request_id=r.id WHERE r.customer_id=:customer
@@ -33,7 +33,7 @@ function dmo_customer_attention(PDO $db,int $customer): array
           ORDER BY q.validity_ends_at ASC,q.id DESC LIMIT 100");
         $q->execute(['customer'=>$customer]);
         foreach($q->fetchAll(PDO::FETCH_ASSOC) as $row){
-            if(dmo_policy_request_eligible($db,(int)$row['id'],(string)$row['policy_version'])&&!in_array($row['public_ref'],$result['quotes'],true)){
+            if(dmo_policy_request_eligible($db,(int)$row['id'],(string)$row['policy_version'])&&dmo_quote_total_matches($db,(int)$row['quote_id'],(int)$row['total_minor'])&&!in_array($row['public_ref'],$result['quotes'],true)){
                 $result['quotes'][]=$row['public_ref'];
                 if((int)$row['expiring']===1)$result['expiring_quotes'][]=$row['public_ref'];
             }

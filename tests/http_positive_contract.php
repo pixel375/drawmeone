@@ -494,6 +494,8 @@ try {
     $db->prepare('UPDATE dmo_quotes SET total_minor=total_minor+1 WHERE id=:id')->execute(['id'=>$quoteId]);
     [$code,$invalidOffer]=qa_http('/api/request.php?ref='.$referenceA,$tokenA);
     qa_positive($code===200&&$invalidOffer['quotes'][0]['can_respond']===false,'inconsistent_quote_not_actionable_in_customer_detail');
+    [$code,$invalidAttention]=qa_http('/api/requests.php',$tokenA);
+    qa_positive($code===200&&!in_array($referenceA,$invalidAttention['attention']['quotes'],true),'inconsistent_quote_excluded_from_action_shortcuts');
     [$code,$invalid]=qa_http('/api/quote-response.php',$tokenA,'__Host-dmo_session',['ref'=>$referenceA,'quote_id'=>$quoteId,'decision'=>'accept','policy_version'=>'qa-policy-v0','acknowledge_quote'=>true],$csrfA);
     qa_positive($code===409&&$invalid['error']==='quote_total_inconsistent','quote_acceptance_rejects_inconsistent_itemization');
     $db->prepare('UPDATE dmo_quotes SET total_minor=total_minor-1 WHERE id=:id')->execute(['id'=>$quoteId]);
