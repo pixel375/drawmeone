@@ -533,8 +533,16 @@
     }catch(_){$("request-list-status").textContent="Calendar export unavailable. Apply a date range of at most one year, with no more than 500 orders.";}finally{agendaExportBusy=false;syncAgendaExport();}
   });
 
-  let messagePage=1, messageGeneration=0;
+  let messagePage=1, messageGeneration=0,messageQuery="";
+  function messageSearchApplied(){return $("message-list-query").value.trim()===messageQuery;}
+  function invalidateMessageSearch(){
+    if(messageSearchApplied())return;
+    ++messageGeneration;$("message-list").replaceChildren();
+    $("message-list-previous").disabled=$("message-list-next").disabled=true;
+    $("message-list-status").textContent="Search changed. Apply search to load matching messages.";
+  }
   async function messages() {
+    if(!messageSearchApplied()){invalidateMessageSearch();return;}
     const generation=++messageGeneration;
     const list=$("message-list"), status=$("message-list-status");
     const previous=$("message-list-previous"),next=$("message-list-next");
@@ -542,14 +550,14 @@
     status.textContent="Loading messages…";
     list.replaceChildren();
     try {
-      const query=new URLSearchParams({page:String(messagePage),filter:$("message-list-filter").value});
+      const query=new URLSearchParams({page:String(messagePage),filter:$("message-list-filter").value,q:messageQuery});
       const {response,data}=await get("messages.php?"+query);
       if(generation!==messageGeneration)return;
       if(response.status===401)return sessionExpired();
       if(!response.ok||!data.ok||!Array.isArray(data.messages))throw Error("unavailable");
       previous.disabled=messagePage===1;
       next.disabled=data.has_more!==true;
-      status.textContent="Page "+messagePage+" · "+data.messages.length+($("message-list-filter").value==="reply_due"?" conversation(s) awaiting reply":" message(s)");
+      status.textContent="Page "+messagePage+" · "+data.messages.length+($("message-list-filter").value==="reply_due"?" conversation(s) awaiting reply":" message(s)")+(Number.isSafeInteger(data.matching_count)?" · "+data.matching_count+" matching overall":"");
       if(!data.messages.length){empty(list,"No messages match this view.");return;}
     for (const row of data.messages) {
       record(list,
@@ -579,6 +587,11 @@
     }
   }
   $("message-list-filter").addEventListener("change",()=>{messagePage=1;messages();});
+  $("message-list-query").addEventListener("input",invalidateMessageSearch);
+  function applyMessageSearch(){messageQuery=$("message-list-query").value.trim();messagePage=1;messages();}
+  $("message-list-search").addEventListener("click",applyMessageSearch);
+  $("message-list-query").addEventListener("keydown",event=>{if(event.key==="Enter"){event.preventDefault();applyMessageSearch();}});
+  $("message-list-clear").addEventListener("click",()=>{$("message-list-query").value="";applyMessageSearch();});
   $("message-list-refresh").addEventListener("click",()=>messages());
   $("message-list-previous").addEventListener("click",()=>{if(messagePage>1){messagePage--;messages();}});
   $("message-list-next").addEventListener("click",()=>{messagePage++;messages();});
@@ -2983,7 +2996,7 @@
     ++artworkGeneration;
     artworkRecords=[];artworkDrafts.clear();artworkPendingFiles=[];artworkUploadTotals=null;$("artwork-upload-results").replaceChildren();artworkWriteEnabled=false;$("artwork-list").replaceChildren();
     renderLaunchEvidence(null);renderConfigurationReview(null);clearAdminSecurity();
-    closeRequestDetail(true);privacyDrafts.clear();syncPrivacyDrafts();clearPrivacyQueue();clearFinance();clearCustomers();setRequestCustomer();$("customer-query").value="";
+    closeRequestDetail(true);++messageGeneration;messagePage=1;messageQuery="";$("message-list-query").value="";$("message-list").replaceChildren();privacyDrafts.clear();syncPrivacyDrafts();clearPrivacyQueue();clearFinance();clearCustomers();setRequestCustomer();$("customer-query").value="";
     $("workspace").hidden = true;
     const url = new URL(location.href);
     url.search = "";

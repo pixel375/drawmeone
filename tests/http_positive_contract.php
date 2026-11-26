@@ -724,7 +724,13 @@ try {
     [$code,$messages]=qa_http('/api/admin/messages.php?filter=customer&page=2',$tokenAdmin,'__Host-dmo_admin');
     qa_positive($code===200 && count($messages['messages'])===6 && $messages['has_more']===false &&
         count(array_filter($messages['messages'],fn($m)=>$m['sender_role']!=='customer'))===0,'artist_customer_messages_second_page');
-    [$code]=qa_http('/api/admin/messages.php?filter=internal',$tokenA,'__Host-dmo_admin');
+    [$code,$messages]=qa_http('/api/admin/messages.php?filter=internal&q='.urlencode($referenceA),$tokenAdmin,'__Host-dmo_admin');
+    qa_positive($code===200&&$messages['matching_count']>=50&&count($messages['messages'])===50&&count(array_filter($messages['messages'],fn($m)=>$m['request_ref']!==$referenceA||(int)$m['is_internal']!==1))===0,'artist_inbox_reference_search_respects_internal_filter');
+    [$code,$messages]=qa_http('/api/admin/messages.php?q=unlikely-no-match-928374',$tokenAdmin,'__Host-dmo_admin');
+    qa_positive($code===200&&$messages['matching_count']===0&&$messages['messages']===[],'artist_inbox_no_match');
+    [$code]=qa_http('/api/admin/messages.php?q%5B%5D=bad',$tokenAdmin,'__Host-dmo_admin');
+    qa_positive($code===422,'artist_inbox_rejects_array_search');
+    [$code]=qa_http('/api/admin/messages.php?filter=internal&q='.urlencode($referenceA),$tokenA,'__Host-dmo_admin');
     qa_positive(in_array($code,[401,403],true),'customer_cannot_read_artist_inbox');
 
     qa_positive((int)$db->query('SELECT COUNT(*) FROM dmo_payments')->fetchColumn()===0,

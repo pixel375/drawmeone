@@ -205,6 +205,14 @@ async function verifyArtistDesk(browser, width) {
         await page.locator("#request-list .empty-state").waitFor();
       } else if(name==="messages"){
         await page.locator("#message-list .empty-state").waitFor();
+        await page.locator("#message-list-query").fill("synthetic");
+        assert.equal(await page.locator("#message-list .empty-state").count(),0);
+        assert.match(await page.locator("#message-list-status").innerText(),/Search changed/);
+        const messageSearch=page.waitForRequest(req=>req.url().includes("q=synthetic"));
+        await page.locator("#message-list-query").press("Enter");await messageSearch;
+        await page.locator("#message-list .empty-state").waitFor();
+        await page.locator("#message-list-clear").click();
+        await page.locator("#message-list .empty-state").waitFor();
       } else if(name==="customers"){
         await page.locator("#customer-directory-list article").first().waitFor();
         assert.match(await page.locator("#customer-directory-list").innerText(),/Synthetic Customer/);
