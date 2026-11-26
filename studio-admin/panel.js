@@ -102,11 +102,21 @@
     }
   });
   let privacyCursor=null,privacyQueueBusy=false,privacyQueueGeneration=0;
+  const privacyDrafts=new Map();
+  function syncPrivacyDrafts(){
+    $("privacy-unsaved").hidden=privacyDrafts.size===0;
+    $("privacy-unsaved-count").textContent=privacyDrafts.size+" unsent privacy decision(s) retained in this page. Review the current case and confirm again before saving.";
+    $("privacy-discard-drafts").disabled=privacyQueueBusy;
+  }
+  $("privacy-discard-drafts").addEventListener("click",()=>{
+    if(privacyQueueBusy||!privacyDrafts.size||!window.confirm("Discard all unsent privacy replies and outcome selections? No recorded cases change."))return;
+    privacyDrafts.clear();syncPrivacyDrafts();loadPrivacyQueue(false);
+  });
   function clearPrivacyQueue(){
     ++privacyQueueGeneration;privacyCursor=null;$("privacy-queue").replaceChildren();$("privacy-queue-status").textContent="";$("privacy-queue-next").hidden=true;
   }
   function privacyQueueCard(item){
-    const card=document.createElement("article");card.className="notification-card";
+    const card=document.createElement("article");card.className="notification-card";card.dataset.privacyVersion=String(item.version);
     card.append(textNode("strong","Case #"+item.case_id+" · "+item.kind+" · "+item.status.replaceAll("_"," ")),
       textNode("p",item.display_name+" · "+item.email,"small"),textNode("p",item.note||"No additional details.","small"));
     if(item.reply)card.append(textNode("p","Last reply: "+item.reply,"small"));
@@ -120,27 +130,42 @@
     const ack=document.createElement("label");ack.className="order-date-ack";const check=document.createElement("input");check.type="checkbox";check.required=true;
     ack.append(check,textNode("span","I confirm this records only the actual review or outcome, not an automatic deletion or correction."));
     const submit=textNode("button","Save privacy decision","quiet");submit.type="submit";form.append(decision,replyLabel,ack,submit);
+    const key=String(item.case_id),initial=select.value;
+    const draft=privacyDrafts.get(key);
+    if(draft&&draft.version===item.version){select.value=draft.status;reply.value=draft.reply;}
+    else if(draft){
+      // Never submit a reply drafted against an older case version.
+      card.append(textNode("p","This case changed. An older unsent reply is retained below for review only; discard it before drafting a new decision.","small"),textNode("p",draft.reply||"(No reply text)","small"));
+      for(const field of form.querySelectorAll("select,textarea,input,button"))field.disabled=true;
+    }
+    function remember(){
+      if(select.value===initial&&!reply.value.trim())privacyDrafts.delete(key);
+      else privacyDrafts.set(key,{version:item.version,status:select.value,reply:reply.value});
+      syncPrivacyDrafts();
+    }
+    select.addEventListener("change",remember);reply.addEventListener("input",remember);
     form.addEventListener("submit",async event=>{
       event.preventDefault();if(privacyQueueBusy||!csrf||!check.checked)return;
       if(select.value!=="in_review"&&reply.value.trim().length<10){$("privacy-queue-status").textContent="Provide a clear explanation of the outcome.";return;}
       if(!window.confirm("Record this customer-visible privacy decision? No data is modified."))return;
-      privacyQueueBusy=true;const gen=privacyQueueGeneration;
+      remember();privacyQueueBusy=true;syncPrivacyDrafts();const gen=privacyQueueGeneration;
+      $("privacy-queue-refresh").disabled=$("privacy-queue-next").disabled=$("privacy-queue-view").disabled=true;
       for(const field of form.querySelectorAll("input,select,textarea,button"))field.disabled=true;
       try{
         const {response,data}=await post("privacy.php",{customer_id:item.customer_id,expected_version:item.version,status:select.value,reply:reply.value.trim(),confirm_record:true},csrf);
         if(gen!==privacyQueueGeneration||leavingSession)return;
         if(response.status===401)return sessionExpired();
         if(!response.ok||!data.ok){clearPrivacyQueue();$("privacy-queue-status").textContent="Decision not confirmed. Refresh the queue before retrying.";return;}
-        privacyQueueBusy=false;await loadPrivacyQueue(false);
+        privacyDrafts.delete(key);syncPrivacyDrafts();privacyQueueBusy=false;await loadPrivacyQueue(false);
       }catch(_){if(gen===privacyQueueGeneration){clearPrivacyQueue();$("privacy-queue-status").textContent="Outcome uncertain. Refresh the queue before retrying.";}}
-      finally{privacyQueueBusy=false;for(const field of form.querySelectorAll("input,select,textarea,button"))field.disabled=false;}
+      finally{privacyQueueBusy=false;syncPrivacyDrafts();$("privacy-queue-refresh").disabled=$("privacy-queue-next").disabled=$("privacy-queue-view").disabled=false;check.checked=false;for(const field of form.querySelectorAll("input,select,textarea,button"))field.disabled=false;}
     });
     card.append(form);return card;
   }
   async function loadPrivacyQueue(older=false){
     if(privacyQueueBusy||!csrf||(older&&privacyCursor===null))return;
     if(!older)clearPrivacyQueue();
-    const gen=++privacyQueueGeneration;privacyQueueBusy=true;
+    const gen=++privacyQueueGeneration;privacyQueueBusy=true;syncPrivacyDrafts();
     $("privacy-queue-refresh").disabled=$("privacy-queue-next").disabled=$("privacy-queue-view").disabled=true;
     try{
       const view=$("privacy-queue-view").value;
@@ -149,12 +174,19 @@
       if(response.status===401)return sessionExpired();
       if(!response.ok||!data.ok||!Array.isArray(data.cases))throw Error("privacy_queue");
       if(!older)$("privacy-queue").replaceChildren();
-      for(const item of data.cases)$("privacy-queue").append(privacyQueueCard(item));
-      privacyCursor=Number.isSafeInteger(data.next_before)?data.next_before:null;
+      for(const item of data.cases){
+        if([...$("privacy-queue").children].some(card=>card.dataset.privacyVersion===String(item.version)))continue;
+        $("privacy-queue").append(privacyQueueCard(item));
+      }
+      const previous=privacyCursor;
+      privacyCursor=Number.isSafeInteger(data.next_before)&&data.next_before>0&&(!older||data.next_before<previous)?data.next_before:null;
       $("privacy-queue-next").hidden=privacyCursor===null;
       $("privacy-queue-status").textContent=$("privacy-queue").children.length+" "+view+" request(s) loaded.";
-    }catch(_){if(gen===privacyQueueGeneration){clearPrivacyQueue();$("privacy-queue-status").textContent="Privacy queue unavailable. Refresh to retry.";}}
-    finally{privacyQueueBusy=false;$("privacy-queue-refresh").disabled=$("privacy-queue-next").disabled=$("privacy-queue-view").disabled=false;}
+    }catch(_){if(gen===privacyQueueGeneration){
+      if(!older)clearPrivacyQueue();
+      $("privacy-queue-status").textContent=older?"Older cases unavailable. Loaded cases and unsent drafts retained; retry.":"Privacy queue unavailable. Unsent drafts retained; refresh to retry.";
+    }}
+    finally{privacyQueueBusy=false;syncPrivacyDrafts();$("privacy-queue-refresh").disabled=$("privacy-queue-next").disabled=$("privacy-queue-view").disabled=false;}
   }
   $("privacy-queue-view").addEventListener("change",()=>{if(!privacyQueueBusy){clearPrivacyQueue();loadPrivacyQueue(false);}});
   $("privacy-queue-refresh").addEventListener("click",()=>loadPrivacyQueue(false));
@@ -2940,7 +2972,7 @@
     ++artworkGeneration;
     artworkRecords=[];artworkDrafts.clear();artworkPendingFiles=[];artworkUploadTotals=null;$("artwork-upload-results").replaceChildren();artworkWriteEnabled=false;$("artwork-list").replaceChildren();
     renderLaunchEvidence(null);renderConfigurationReview(null);clearAdminSecurity();
-    closeRequestDetail(true);clearPrivacyQueue();clearFinance();clearCustomers();setRequestCustomer();$("customer-query").value="";
+    closeRequestDetail(true);privacyDrafts.clear();syncPrivacyDrafts();clearPrivacyQueue();clearFinance();clearCustomers();setRequestCustomer();$("customer-query").value="";
     $("workspace").hidden = true;
     const url = new URL(location.href);
     url.search = "";

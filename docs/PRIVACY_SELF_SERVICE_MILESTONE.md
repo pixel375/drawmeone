@@ -9,3 +9,5 @@ Case history now groups immutable audit events by original case ID and returns t
 
 
 Customer privacy case actions require a successfully loaded current case state; unavailable history clears stale records and locks submission/withdrawal until refresh. Export remains an independently authorized action. Uncertain artist decisions invalidate the old queue. Corrected browser selector for the nested history disclosure and added failure-state tests.
+
+Session XXI: unsent artist privacy decision text and outcome selection survive queue refreshes only in the active page, keyed by case/version. Acknowledgements never survive refresh. A changed version blocks the old draft from submission; the artist must discard it before entering a new decision. Sign-out clears all drafts. Failed older pagination preserves loaded cases. No automatic privacy action or new data retention policy.

@@ -1027,6 +1027,16 @@ async function verifyPrivacyQueue(browser){
     await page.locator("#privacy-queue-refresh").click();
     await page.locator("#privacy-queue form").waitFor();
     const form=page.locator("#privacy-queue form");
+    await form.locator("textarea").fill("Unsent synthetic reply");
+    await form.locator("input[type=checkbox]").check();
+    await page.locator("#privacy-queue-refresh").click();
+    await form.waitFor();
+    assert.equal(await form.locator("textarea").inputValue(),"Unsent synthetic reply");
+    assert.equal(await form.locator("input[type=checkbox]").isChecked(),false);
+    assert.equal(await page.locator("#privacy-unsaved").isVisible(),true);
+    page.once("dialog",d=>d.accept());await page.locator("#privacy-discard-drafts").click();
+    await form.waitFor();
+    assert.equal(await form.locator("textarea").inputValue(),"");
     await form.locator("textarea").fill("Review started.");
     await form.getByRole("checkbox").check();
     page.once("dialog",dialog=>dialog.accept());

@@ -20,7 +20,7 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
 <meta name="theme-color" content="#151317">
 <title>Artist's Desk · Draw Me One</title>
 <link rel="stylesheet" href="./panel.css?v=53">
-<script defer src="./panel.js?v=95"></script>
+<script defer src="./panel.js?v=96"></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to dashboard</a>
@@ -117,6 +117,7 @@ header("Content-Security-Policy: default-src 'none'; base-uri 'none'; form-actio
         <label for="privacy-queue-view">Show <select id="privacy-queue-view"><option value="open">Open requests</option><option value="closed">Resolved, declined and withdrawn</option></select></label>
         <button type="button" class="quiet" id="privacy-queue-refresh">Load privacy requests</button>
         <p id="privacy-queue-status" class="small" role="status"></p>
+        <div id="privacy-unsaved" hidden><p class="small" id="privacy-unsaved-count" role="status"></p><button type="button" class="quiet" id="privacy-discard-drafts">Discard unsent privacy replies</button></div>
         <div id="privacy-queue" class="record-list"></div>
         <button type="button" class="quiet" id="privacy-queue-next" hidden>Load older requests</button>
       </section>
