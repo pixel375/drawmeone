@@ -853,6 +853,8 @@ async function verifyQuoteFollowup(browser) {
   try{
     await page.goto(base+"/studio-admin/index.php",{waitUntil:"domcontentloaded"});
     await page.locator("#workspace").waitFor({state:"visible"});
+    assert.equal(await page.locator('[data-request-queue="quote_expiring"]').count(),1);
+    assert.equal(await page.locator('[data-request-queue="awaiting_evidence"]').count(),1);
     await page.locator('[data-request-queue="quote_followup"]').click();
     await page.locator("#request-list .request-open").first().click();
     await page.locator("#request-quotes button[data-quote-withdraw]").waitFor();

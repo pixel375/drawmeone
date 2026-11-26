@@ -287,6 +287,8 @@
       "stat-messages": data.counts?.messages_last_seven_days,
       "stat-reply-due":data.counts?.reply_due,
       "stat-accepted":data.counts?.accepted,
+      "stat-quote-expiring":data.counts?.quote_expiring,
+      "stat-awaiting-evidence":data.counts?.awaiting_evidence,
       "stat-overdue":data.counts?.overdue,
       "stat-upcoming":data.counts?.upcoming,
       "stat-revision-due":data.counts?.revision_due,

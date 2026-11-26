@@ -28,6 +28,8 @@ function dmo_artist_queue_conditions(PDO $db): array
     $conditions=[
         'reply_due'=>dmo_artist_reply_due_sql(),
         'accepted'=>"o.id IS NULL AND vq.status='accepted' AND r.status IN ('submitted','clarification_needed')",
+        'quote_expiring'=>"o.id IS NULL AND vq.status='sent' AND r.status IN ('submitted','clarification_needed') AND vq.validity_ends_at>UTC_TIMESTAMP() AND vq.validity_ends_at<=DATE_ADD(UTC_TIMESTAMP(),INTERVAL 3 DAY)",
+        'awaiting_evidence'=>$open." AND o.status='awaiting_arrangement' AND o.payment_status='unverified' AND COALESCE(".dmo_order_exception_sql().",'') NOT IN ('payment.access_held','payment.full_refund_recorded') AND NOT EXISTS(SELECT 1 FROM dmo_payments p WHERE p.order_id=o.id AND p.status IN ('pending_verification','verified'))",
         'overdue'=>$active." AND o.agreed_deadline IS NOT NULL AND DATE(o.agreed_deadline)<UTC_DATE()",
         'upcoming'=>$active." AND o.agreed_deadline IS NOT NULL AND DATE(o.agreed_deadline) BETWEEN UTC_DATE() AND DATE_ADD(UTC_DATE(),INTERVAL 7 DAY)",
         'revision_due'=>'1=0','proof_waiting'=>'1=0',

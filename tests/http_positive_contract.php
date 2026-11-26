@@ -423,6 +423,11 @@ try {
     $db->prepare("DELETE FROM dmo_messages WHERE id IN (:a,:b,:c)")->execute(['a'=>$messageId,'b'=>$internalId,'c'=>$replyId]);
     $db->prepare("UPDATE dmo_commission_requests SET preferred_contact='onsite' WHERE id=:id")->execute(['id'=>$requestA]);
     $oldQuote=$quoteId;
+    $db->prepare('UPDATE dmo_quotes SET validity_ends_at=DATE_ADD(UTC_TIMESTAMP(),INTERVAL 2 DAY) WHERE id=:id')->execute(['id'=>$oldQuote]);
+    [$code,$expiring]=qa_http('/api/admin/requests.php?filter=quote_expiring',$tokenAdmin,'__Host-dmo_admin');
+    qa_positive($code===200&&$expiring['matching_count']===1&&$expiring['requests'][0]['id']===$requestA,'artist_expiring_live_quote_queue');
+    [$code,$expiryCounts]=qa_http('/api/admin/overview.php',$tokenAdmin,'__Host-dmo_admin');
+    qa_positive($code===200&&$expiryCounts['counts']['quote_expiring']===1,'artist_expiring_quote_count');
     $db->prepare('UPDATE dmo_quotes SET validity_ends_at=DATE_SUB(UTC_TIMESTAMP(),INTERVAL 1 DAY) WHERE id=:id')->execute(['id'=>$oldQuote]);
     [$code,$expired]=qa_http('/api/request.php?ref='.urlencode($referenceA),$tokenA);
     qa_positive($code===200 && $expired['request']['workflow_stage']==='quote_expired' &&
@@ -432,6 +437,8 @@ try {
     [$code,$follow]=qa_http('/api/admin/requests.php?filter=quote_followup',$tokenAdmin,'__Host-dmo_admin');
     qa_positive($code===200 && count($follow['requests'])===1 &&
         $follow['requests'][0]['workflow_stage']==='quote_expired','expired_offer_in_followup_queue');
+    [$code,$expiring]=qa_http('/api/admin/requests.php?filter=quote_expiring',$tokenAdmin,'__Host-dmo_admin');
+    qa_positive($code===200&&$expiring['matching_count']===0,'expired_quote_not_in_expiring_queue');
     $withdraw=['action'=>'withdraw_quote','request_id'=>$requestA,'quote_id'=>$oldQuote,'confirm_withdrawal'=>true];
     [$code]=qa_http('/api/admin/request-actions.php',$tokenAdmin,'__Host-dmo_admin',array_replace($withdraw,['confirm_withdrawal'=>false]),$csrfAdmin);
     qa_positive($code===422,'withdraw_requires_confirmation');
@@ -735,6 +742,8 @@ try {
 
     qa_positive((int)$db->query('SELECT COUNT(*) FROM dmo_payments')->fetchColumn()===0,
         'full_positive_lifecycle_never_creates_payment');
+    [$code,$awaiting]=qa_http('/api/admin/requests.php?filter=awaiting_evidence',$tokenAdmin,'__Host-dmo_admin');
+    qa_positive($code===200&&$awaiting['matching_count']===1&&$awaiting['requests'][0]['id']===$requestA,'unpaid_arrangement_needs_evidence');
     $evidence=['action'=>'record_payment_evidence','request_id'=>$requestA,'order_id'=>$orderId,'method'=>'bank_transfer','reference'=>'CI-ONLY-TRANSACTION-123','currency'=>'CAD','amount_minor'=>3000];
     [$code]=qa_http('/api/admin/request-actions.php',$tokenA,'__Host-dmo_admin',$evidence,$csrfA);
     qa_positive(in_array($code,[401,403],true),'customer_cannot_record_payment');
@@ -753,6 +762,8 @@ try {
     qa_positive($suspended['status']==='suspended'&&$suspended['url_ciphertext']==='','suspended_invoice_cannot_resurface');
     [$code]=qa_http('/api/admin/request-actions.php',$tokenAdmin,'__Host-dmo_admin',$evidence,$csrfAdmin);
     qa_positive($code===409,'duplicate_evidence_denied');
+    [$code,$awaiting]=qa_http('/api/admin/requests.php?filter=awaiting_evidence',$tokenAdmin,'__Host-dmo_admin');
+    qa_positive($code===200&&$awaiting['matching_count']===0,'pending_evidence_leaves_awaiting_queue');
     [$code,$queue]=qa_http('/api/admin/requests.php?filter=payment_review',$tokenAdmin,'__Host-dmo_admin');
     qa_positive($code===200 && count($queue['requests'])===1,'payment_review_queue');
     $confirm=array_replace($evidence,['action'=>'verify_payment_evidence','payment_id'=>$pending['payment_id'],'confirm_received'=>true]);

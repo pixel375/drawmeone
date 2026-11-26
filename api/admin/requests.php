@@ -15,7 +15,7 @@ try {
     if (!is_string($search) || strlen($search) > 160 ||
         preg_match('/[\x00-\x1f\x7f]/', $search) ||
         !is_string($pageText) || !preg_match('/^[1-9][0-9]{0,3}$/D', $pageText) ||
-        !is_string($filter) || !in_array($filter, ['all','review','other','orders','quote_waiting','accepted','due','quote_followup','payment_review','payment_hold','checkout_followup','reply_due','overdue','upcoming','revision_due','proof_waiting','needs_schedule','paid_to_start','ready_to_deliver','scheduled','requested_dates'], true)) {
+        !is_string($filter) || !in_array($filter, ['all','review','other','orders','quote_waiting','quote_expiring','awaiting_evidence','accepted','due','quote_followup','payment_review','payment_hold','checkout_followup','reply_due','overdue','upcoming','revision_due','proof_waiting','needs_schedule','paid_to_start','ready_to_deliver','scheduled','requested_dates'], true)) {
         dmo_json(422, ['ok'=>false,'error'=>'invalid_request_list_filter']);
     }
     $customer=$_GET['customer_id']??null;
@@ -61,6 +61,8 @@ try {
         'LEFT JOIN dmo_commission_tiers t ON t.id = r.tier_id ' . dmo_requests_stage_joins();
     $conditions = $where === [] ? '' : 'WHERE ' . implode(' AND ', $where) . ' ';
     $sort = in_array($filter,['due','overdue','upcoming'],true) ? 'o.agreed_deadline ASC, r.id ASC' : 'r.submitted_at DESC, r.id DESC';
+    if($filter==='quote_expiring')$sort='vq.validity_ends_at ASC,r.id ASC';
+    if($filter==='awaiting_evidence')$sort='o.agreed_deadline IS NULL ASC,o.agreed_deadline ASC,r.submitted_at ASC,r.id ASC';
     if($filter==='reply_due')$sort="(SELECT MAX(m.id) FROM dmo_messages m JOIN dmo_conversations c ON c.id=m.conversation_id WHERE c.request_id=r.id AND m.is_internal=0) ASC,r.id ASC";
     if(in_array($filter,['needs_schedule','paid_to_start','ready_to_deliver','revision_due'],true))$sort='o.agreed_deadline IS NULL ASC,o.agreed_deadline ASC,r.submitted_at ASC,r.id ASC';
     if(in_array($filter,['scheduled','requested_dates'],true))$sort=$dateColumn.' ASC,r.id ASC';
