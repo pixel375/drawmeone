@@ -47,15 +47,35 @@ localBytes=$(stat -c '%s' "$LOCAL_ENCRYPTED_SNAPSHOT")
 [[ "$localBytes" =~ ^[0-9]+$ ]] && (( localBytes > 256 )) ||
   { echo "offsite_snapshot_too_small"; exit 1; }
 
-destination="${OFFSITE_RCLONE_DEST%/}/${OFFSITE_OBJECT_NAME}"
-rclone --config "$OFFSITE_RCLONE_CONFIG_PATH" --quiet copyto \
-  --immutable --retries 3 --low-level-retries 3 \
-  "$LOCAL_ENCRYPTED_SNAPSHOT" "$destination" 2>/dev/null ||
-  { echo "offsite_immutable_upload_failed"; exit 1; }
+remoteDir="${OFFSITE_RCLONE_DEST%/}"
+destination="$remoteDir/$OFFSITE_OBJECT_NAME"
 localDigest=$(sha256sum "$LOCAL_ENCRYPTED_SNAPSHOT" | cut -d ' ' -f 1)
-remoteDigest=$(rclone --config "$OFFSITE_RCLONE_CONFIG_PATH" --quiet \
-  cat --retries 3 "$destination" 2>/dev/null | sha256sum | cut -d ' ' -f 1) ||
-  { echo "offsite_remote_readback_failed"; exit 1; }
+remote_digest() {
+  rclone --config "$OFFSITE_RCLONE_CONFIG_PATH" --quiet \
+    cat --retries 3 "$destination" 2>/dev/null | sha256sum | cut -d ' ' -f 1
+}
+# Check existing bytes before copy. An immutable option alone can be affected
+# by backend comparison/mtime semantics; never write an already listed name.
+# This is not a provider-side atomic create-if-absent guarantee.
+rclone --config "$OFFSITE_RCLONE_CONFIG_PATH" --quiet mkdir "$remoteDir" 2>/dev/null ||
+  { echo "offsite_destination_unavailable"; exit 1; }
+existing=$(rclone --config "$OFFSITE_RCLONE_CONFIG_PATH" --quiet lsf \
+  --files-only --max-depth 1 --include "/$OFFSITE_OBJECT_NAME" "$remoteDir" 2>/dev/null) ||
+  { echo "offsite_remote_inventory_failed"; exit 1; }
+if [[ "$existing" == "$OFFSITE_OBJECT_NAME" ]]; then
+  remoteDigest=$(remote_digest) || { echo "offsite_remote_readback_failed"; exit 1; }
+  [[ "$localDigest" == "$remoteDigest" ]] ||
+    { echo "offsite_existing_object_mismatch"; exit 1; }
+elif [[ -z "$existing" ]]; then
+  rclone --config "$OFFSITE_RCLONE_CONFIG_PATH" --quiet copyto \
+    --immutable --checksum --retries 3 --low-level-retries 3 \
+    "$LOCAL_ENCRYPTED_SNAPSHOT" "$destination" 2>/dev/null ||
+    { echo "offsite_immutable_upload_failed"; exit 1; }
+else
+  echo "offsite_remote_inventory_unexpected"
+  exit 1
+fi
+remoteDigest=$(remote_digest) || { echo "offsite_remote_readback_failed"; exit 1; }
 [[ "$localDigest" == "$remoteDigest" ]] ||
   { echo "offsite_verification_failed"; exit 1; }
 echo "offsite_encrypted_snapshot_upload=verified"
