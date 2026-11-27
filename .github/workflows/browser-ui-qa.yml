@@ -67,3 +67,23 @@ jobs:
             test-results/accessibility-report.json
           if-no-files-found: ignore
           retention-days: 7
+
+  live-sign-in:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pinned browser
+        run: |
+          npm install --no-audit --no-fund --no-package-lock --no-save playwright@1.56.1
+          npx playwright install --with-deps chromium
+      - name: Inspect actual production signed-out page (no credentials or submission)
+        run: node tests/browser_live_signin.cjs
+      - name: Retain public sign-in screenshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dmo-live-signed-out
+          path: test-results/live-signin.png
+          if-no-files-found: ignore
+          retention-days: 3

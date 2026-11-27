@@ -2,10 +2,65 @@
 (()=>{
 const $=id=>document.getElementById(id);let csrf="",widget=null,version=0,settings=null,art=[],writable=false,busy=false,artLoading=false,token="",settingsBusy=false,requestsReady=false,requestCursor=null,requestLoading=false;const selected=new Set();
 function notice(text,error=false){$("notice").textContent=text;$("notice").classList.toggle("error",error);}
-async function api(name,body=null){const headers={"Accept":"application/json"};let method="GET";if(body!==null){method="POST";if(csrf)headers["X-DMO-CSRF"]=csrf;if(!(body instanceof FormData)){headers["Content-Type"]="application/json";body=JSON.stringify(body);}}const r=await fetch("/api/admin/"+name.split("?")[0]+".php"+(name.includes("?")?"?"+name.split("?")[1]:""),{method,headers,body,cache:"no-store",credentials:"same-origin",signal:AbortSignal.timeout(body instanceof FormData?60000:15000)});let data;try{data=await r.json();}catch{throw Error("service_unavailable");}if(!r.ok||data.ok!==true){if(r.status===401&&csrf){csrf="";location.reload();}throw Error(data.error||"service_unavailable");}return data;}
-async function captcha(key){if(!key)throw Error("verification_unavailable");if(!window.turnstile)await new Promise((resolve,reject)=>{const script=document.createElement("script");script.src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";script.onload=resolve;script.onerror=reject;document.head.append(script);});await new Promise(resolve=>window.turnstile.ready(resolve));widget=window.turnstile.render("#captcha",{sitekey:key,action:"admin_login",callback:t=>{token=t;$("login-submit").disabled=false;},"expired-callback":()=>{token="";$("login-submit").disabled=true;},"error-callback":()=>{token="";$("login-submit").disabled=true;$("login-status").textContent="Verification unavailable. Please reload.";}});}
-async function start(){try{const status=await api("status");if(!status.admin_available)throw Error("closed");const me=await api("me");if(me.authenticated===true&&typeof me.csrf_token==="string"){csrf=me.csrf_token;$("login-area").hidden=true;$("workspace").hidden=false;$("welcome").textContent="Welcome"+(me.admin?.display_name?", "+me.admin.display_name:"")+".";await Promise.allSettled([loadArt(),loadSettings(),loadRequests()]);return;}$("login-status").textContent="Sign in to manage your artwork.";$("login-form").hidden=false;await captcha(status.turnstile_site_key);}catch{$("login-status").textContent="Artist sign-in is temporarily unavailable. Please try again.";}}
-$("login-form").addEventListener("submit",async e=>{e.preventDefault();if(!token)return;$("login-submit").disabled=true;try{await api("login",{email:$("email").value,password:$("password").value,turnstile_token:token});location.reload();}catch{$("login-status").textContent="Unable to sign in. Check your details and try again.";$("password").value="";token="";if(widget!==null)window.turnstile.reset(widget);}});
+async function api(name,body=null){
+    const headers={"Accept":"application/json"};let method="GET";
+    if(body!==null){method="POST";if(csrf)headers["X-DMO-CSRF"]=csrf;if(!(body instanceof FormData)){headers["Content-Type"]="application/json";body=JSON.stringify(body);}}
+    const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),body instanceof FormData?60000:15000);
+    try{
+        const r=await fetch("/api/admin/"+name.split("?")[0]+".php"+(name.includes("?")?"?"+name.split("?")[1]:""),{method,headers,body,cache:"no-store",credentials:"same-origin",signal:controller.signal});
+        let data;try{data=await r.json();}catch{throw Error("invalid_response_"+r.status);}
+        if(!r.ok||data.ok!==true){if(r.status===401&&csrf){csrf="";location.reload();}throw Error(data.error||"http_"+r.status);}
+        return data;
+    }finally{clearTimeout(timer);}
+}
+let signingIn=false;
+function loginMessage(text,retry=false){$("login-status").textContent=text;$("login-retry").hidden=!retry;}
+function verificationFailed(){token="";$("login-submit").disabled=true;loginMessage("Security verification could not load. Check that this browser allows Cloudflare Turnstile, then retry.",true);}
+async function captcha(key){
+    if(typeof key!=="string"||!key.trim())throw Error("verification_unavailable");
+    if(!window.turnstile?.render)await new Promise((resolve,reject)=>{
+        const script=document.createElement("script"),timer=setTimeout(()=>{script.remove();reject(Error("verification_timeout"));},15000);
+        script.src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
+        script.onload=()=>{clearTimeout(timer);resolve();};script.onerror=()=>{clearTimeout(timer);reject(Error("verification_load_failed"));};document.head.append(script);
+    });
+    if(typeof window.turnstile?.render!=="function")throw Error("verification_unavailable");
+    await new Promise((resolve,reject)=>{
+        const timer=setTimeout(()=>reject(Error("verification_timeout")),15000);
+        const render=()=>{clearTimeout(timer);try{
+            widget=window.turnstile.render("#captcha",{sitekey:key,action:"admin_login",callback:t=>{token=t;$("login-submit").disabled=signingIn;if(!signingIn)loginMessage("Sign in to manage your artwork.");},"expired-callback":()=>{token="";$("login-submit").disabled=true;loginMessage("Security verification expired. Complete it again or retry.",true);},"error-callback":verificationFailed,"timeout-callback":verificationFailed});resolve();
+        }catch(error){reject(error);}};
+        if(typeof window.turnstile.ready==="function")window.turnstile.ready(render);else render();
+    });
+}
+async function start(){
+    let stage="availability";
+    try{
+        const status=await api("status");if(status.admin_available!==true)throw Error("admin_disabled");
+        stage="session";
+        const me=await api("me");
+        if(me.authenticated===true&&typeof me.csrf_token==="string"&&me.csrf_token){
+            csrf=me.csrf_token;$("login-area").hidden=true;$("workspace").hidden=false;$("welcome").textContent="Welcome"+(me.admin?.display_name?", "+me.admin.display_name:"")+".";
+            await Promise.allSettled([loadArt(),loadSettings(),loadRequests()]);return;
+        }
+        if(me.authenticated!==false)throw Error("invalid_session_response");
+        stage="verification";$("login-form").hidden=false;loginMessage("Loading security verification…");await captcha(status.turnstile_site_key);
+    }catch(error){
+        if(stage==="verification"){verificationFailed();return;}
+        const message=stage==="availability"?(error.message==="admin_disabled"?"Artist sign-in is disabled on the server.":"Could not reach the artist sign-in service."):"Could not check your sign-in session.";
+        loginMessage(message+" Please retry. ("+(stage==="availability"?"DMO-A01":"DMO-A02")+")",true);
+    }
+}
+$("login-retry").addEventListener("click",()=>location.reload());
+$("login-form").addEventListener("submit",async e=>{
+    e.preventDefault();if(!token||signingIn)return;signingIn=true;$("login-submit").disabled=true;loginMessage("Signing in…");
+    try{await api("login",{email:$("email").value,password:$("password").value,turnstile_token:token});location.reload();}
+    catch(error){
+        signingIn=false;
+        const messages={invalid_credentials:"Email or password was not accepted.",verification_failed:"Security verification was not accepted. Please try again.",too_many_attempts:"Too many sign-in attempts. Wait 15 minutes before retrying.",forbidden:"Open https://drawmeone.com/studio-admin/index.php directly in your browser.",admin_service_unavailable:"The sign-in server is temporarily unavailable."};
+        $("password").value="";token="";if(widget!==null)try{window.turnstile.reset(widget);}catch{verificationFailed();return;}
+        loginMessage(messages[error.message]||"Sign-in could not be confirmed. Please try again.",true);
+    }
+});
 $("logout").addEventListener("click",async()=>{try{await api("logout",{});location.reload();}catch{notice("Sign-out could not be confirmed. Please try again.",true);}});
 document.querySelectorAll("[data-view]").forEach(b=>b.addEventListener("click",()=>{document.querySelectorAll("[data-view]").forEach(x=>x===b?x.setAttribute("aria-current","page"):x.removeAttribute("aria-current"));document.querySelectorAll("[data-panel]").forEach(p=>p.hidden=p.dataset.panel!==b.dataset.view);notice("");}));
 function button(text,fn,disabled=false){const b=document.createElement("button");b.type="button";b.textContent=text;b.disabled=disabled;b.addEventListener("click",fn);return b;}

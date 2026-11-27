@@ -24,7 +24,7 @@ The portfolio is already live; commissions remain closed. All 14 independent imp
 - Approve scheduling and independent failure monitoring only after successful recovery. Local backup readiness and synthetic restore tests are not independent custody evidence.
 
 ## 5. Controlled mail and accessibility pilot (OWNER-05)
-- Explicitly authorize one fixed SMTP diagnostic to the recorded verified admin, then confirm actual inbox receipt. The existing SMTP workflow sends one message; SMTP acceptance alone is not proof of receipt.
+- Email testing is deferred at the owner's request. When resumed, explicitly authorize one fixed SMTP diagnostic to the recorded verified admin, then confirm actual inbox receipt. The existing SMTP workflow sends one message; SMTP acceptance alone is not proof of receipt.
 - Separately authorize a controlled end-to-end guest enquiry pilot, including any temporary public-intake exposure. Do not open public intake just to run the test without explicit approval; agree on a safe pilot method first. Confirm real CAPTCHA, private inbox persistence, notice delivery and email reply. Close intake again unless the final opening has been approved.
 - Review real devices and manual keyboard/assistive-technology behavior. Automated axe checks found no violations in nine tested states but are not a full accessibility certification. Use only approved test details, no real payment.
 

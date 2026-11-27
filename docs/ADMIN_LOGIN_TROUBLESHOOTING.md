@@ -69,3 +69,7 @@ Do not copy the PHP error log wholesale, any `.env` contents, session cookies or
 ChatGPT can manage the repository through the connected GitHub integration. A dedicated GitHub Actions job could SSH into Hostinger **after the repository owner securely configures a private deploy key in GitHub Actions Secrets and installs its public key in Hostinger's authorized_keys**. A public key by itself cannot authenticate a remote SSH session.
 
 This conversation currently has repository tooling but no direct interactive SSH shell or connected Hostinger remote-exec tool. Do not paste any SSH private key into chat or commit it. Prefer a separate, narrowly scoped deploy key and manually triggered, read-only diagnostic workflow. Set the host key from an independently verified fingerprint.
+
+## V2 signed-out startup (November 27)
+
+If the login page never becomes usable, the updated panel distinguishes DMO-A01 (availability API), DMO-A02 (session API) and security verification loading failures. Use Retry sign-in once; do not reset credentials for a startup failure. The production browser smoke loads the actual public page without credentials and checks the widget mounts; it never submits a login. Hostinger checks status and anonymous session JSON and publicly served asset hashes. A mounted widget does not prove the owner's challenge or password succeeds. No email test is required to sign in.

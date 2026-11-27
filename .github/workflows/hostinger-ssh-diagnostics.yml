@@ -25,6 +25,11 @@ on:
       - public-theme.js
       - .htaccess
       - studio-admin/**
+      - api/admin/status.php
+      - api/admin/me.php
+      - api/admin/login.php
+      - app/admin.php
+      - app/auth.php
 
 permissions:
   contents: read
@@ -124,7 +129,16 @@ jobs:
           echo "v2_secondary_pages=pass"
           curl -fsS --max-time 15 https://drawmeone.com/api/studio.php | php -r '$d=json_decode(stream_get_contents(STDIN),true);if(($d["ok"]??false)!==true||($d["settings"]["accepting"]??null)!==false)exit(1);echo "v2_commissions=closed\n";'
           curl -fsS --max-time 15 https://drawmeone.com/api/portfolio.php | php -r '$d=json_decode(stream_get_contents(STDIN),true);if(($d["ok"]??false)!==true||!is_array($d["works"]??null))exit(1);echo "v2_published_art_count=".count($d["works"])."\n";'
-          curl -fsS --max-time 15 https://drawmeone.com/api/admin/status.php | php -r '$d=json_decode(stream_get_contents(STDIN),true);if(($d["admin_available"]??false)!==true)exit(1);echo "v2_admin=available\n";'
+          curl -fsS --max-time 15 https://drawmeone.com/api/admin/status.php | php -r '$d=json_decode(stream_get_contents(STDIN),true);if(($d["admin_available"]??false)!==true||!is_string($d["turnstile_site_key"]??null)||trim($d["turnstile_site_key"])==="")exit(1);echo "v2_admin=available\n";'
+          curl -fsS --max-time 15 -H "Cache-Control: no-cache" https://drawmeone.com/api/admin/me.php | php -r '$d=json_decode(stream_get_contents(STDIN),true);if(($d["ok"]??false)!==true||($d["authenticated"]??null)!==false)exit(1);echo "v2_admin_signed_out_session=pass\n";'
+          # Compare versioned assets fetched over public HTTPS, not just disk copies.
+          for entry in "studio-admin/panel.js?v=206" "styles.css?v=205" "studio.js?v=205"; do
+            file="${entry%%\?*}"
+            actual=$(curl -fsS --max-time 15 -H "Cache-Control: no-cache" "https://drawmeone.com/$entry" | sha256sum | cut -d" " -f1)
+            expected=$(sha256sum "$site/$file" | cut -d" " -f1)
+            [[ "$actual" == "$expected" ]] || { echo "public_asset_mismatch=$file"; exit 1; }
+          done
+          echo "v2_public_asset_hashes=pass"
           for path in api/auth/signup.php api/requests.php api/checkout.php api/admin/finance.php api/admin/quote-send.php assets/demo/art-01.svg data/demo-portfolio.json app/cli-admin.php; do
             code=$(curl -sS --max-time 12 -o /dev/null -w '%{http_code}' "https://drawmeone.com/$path")
             [[ "$code" == "403" || "$code" == "404" ]] || { echo "legacy_route_not_closed=$path:$code"; exit 1; }
