@@ -7,7 +7,30 @@ try{const stored=localStorage.getItem("dmo-visitor-mode");theme(stored==="light"
 $("theme").addEventListener("click",()=>{const mode=root.dataset.publicMode==="dark"?"light":"dark";theme(mode);try{localStorage.setItem("dmo-visitor-mode",mode);}catch{}});
 async function get(url){const response=await fetch(url,{cache:"no-store",signal:AbortSignal.timeout(10000)});if(!response.ok)throw Error("unavailable");const data=await response.json();if(data.ok!==true)throw Error("unavailable");return data;}
 function setText(id,value){if(typeof value==="string"&&value.trim())$(id).textContent=value;}
-get("/api/studio.php").then(({settings:s})=>{if(!s)return;setText("hero-title",s.title);setText("hero-intro",s.intro);for(const [id,key] of [["price","price"],["payment-methods","payments"]]){if(typeof s[key]==="string"&&s[key].trim()){setText(id,s[key]);$(id).hidden=false;}}for(const [key,label,host] of [["instagram","Instagram","www.instagram.com"],["tiktok","TikTok","www.tiktok.com"]]){try{const u=new URL(s[key]);if(u.protocol!=="https:"||u.hostname!==host||u.username||u.password||u.port)continue;const a=document.createElement("a");a.href=u.href;a.textContent=label;a.rel="noopener noreferrer";$("socials").append(a);}catch{}}}).catch(()=>{});
+get("/api/studio.php").then(({settings:s,turnstile_site_key:key})=>{if(!s)return;if(s.accepting===true&&typeof key==="string"&&key)setupRequest(key);setText("hero-title",s.title);setText("hero-intro",s.intro);for(const [id,key] of [["price","price"],["payment-methods","payments"]]){if(typeof s[key]==="string"&&s[key].trim()){setText(id,s[key]);$(id).hidden=false;}}for(const [key,label,host] of [["instagram","Instagram","www.instagram.com"],["tiktok","TikTok","www.tiktok.com"]]){try{const u=new URL(s[key]);if(u.protocol!=="https:"||u.hostname!==host||u.username||u.password||u.port)continue;const a=document.createElement("a");a.href=u.href;a.textContent=label;a.rel="noopener noreferrer";$("socials").append(a);}catch{}}}).catch(()=>{});
+let requestWidget=null,requestToken="",requestBusy=false,requestKey="",lastPayload="";
+function setupRequest(key){
+    $("availability").textContent="I'm accepting commissions!";
+    $("contact-copy").textContent="Tell me about your character or idea and we'll work out the details together.";
+    $("request-form").hidden=false;
+    const script=document.createElement("script");script.src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
+    script.onload=()=>window.turnstile.ready(()=>{requestWidget=window.turnstile.render("#request-captcha",{sitekey:key,action:"guest_request",callback:t=>{requestToken=t;$("request-submit").disabled=requestBusy;},"expired-callback":()=>{requestToken="";$("request-submit").disabled=true;},"error-callback":()=>{requestToken="";$("request-submit").disabled=true;$("request-status").textContent="Verification unavailable. You can still email me.";}});});
+    script.onerror=()=>{$("request-status").textContent="Verification unavailable. You can still email me.";};document.head.append(script);
+}
+$("request-form").addEventListener("submit",async e=>{
+    e.preventDefault();if(requestBusy||!requestToken)return;
+    const fields={name:$("request-name").value,email:$("request-email").value,brief:$("request-brief").value,budget:$("request-budget").value},serialized=JSON.stringify(fields);
+    if(serialized!==lastPayload||!requestKey){requestKey=crypto.randomUUID();lastPayload=serialized;}
+    requestBusy=true;$("request-submit").disabled=true;$("request-status").textContent="Sending your request…";
+    try{
+        const response=await fetch("/api/guest-request.php",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({...fields,operation_key:requestKey,turnstile_token:requestToken}),cache:"no-store",signal:AbortSignal.timeout(25000)});
+        const d=await response.json();
+        if(!response.ok||d.received!==true){if(d.error==="commissions_closed"){$("availability").textContent="Commissions are currently closed.";$("request-status").textContent="Commissions have closed. Please email me if you have a question.";requestToken="";return;}throw Error(d.error||"unavailable");}
+        $("request-status").textContent="Thanks! Your request has been received. I'll reply by email.";
+        $("request-form").reset();requestKey="";lastPayload="";
+    }catch{$("request-status").textContent="We couldn't confirm your request. Your text is still here; verify again to retry, or email me.";}
+    finally{requestBusy=false;requestToken="";$("request-submit").disabled=true;if(requestWidget!==null)window.turnstile.reset(requestWidget);}
+});
 function valid(w){return w&&typeof w.src==="string"&&/^api\/artwork\.php\?id=[1-9][0-9]{0,17}&v=display$/.test(w.src)&&w.thumb===w.src.replace(/&v=display$/,"&v=thumb")&&Number.isSafeInteger(w.width)&&w.width>0&&Number.isSafeInteger(w.height)&&w.height>0;}
 function label(w){return typeof w.alt==="string"&&w.alt.trim()?w.alt:"Original drawing by Draw Me One";}
 function render(){const end=Math.min(shown+18,works.length),frag=document.createDocumentFragment();for(let i=shown;i<end;i++){const w=works[i],b=document.createElement("button"),img=document.createElement("img");b.type="button";b.className="tile";b.setAttribute("aria-label","View drawing: "+label(w));img.alt=label(w);img.width=w.width;img.height=w.height;img.loading=i<4?"eager":"lazy";img.decoding="async";img.addEventListener("error",()=>{img.hidden=true;b.textContent="Drawing unavailable";},{once:true});img.src="/"+w.thumb;b.append(img);b.addEventListener("click",()=>open(i,b));frag.append(b);}$("gallery").append(frag);shown=end;$("more").hidden=shown>=works.length;$("gallery-status").hidden=works.length>0;$("all-art").hidden=!works.length;}
