@@ -50,7 +50,7 @@ function dmo_directory_escape(string $value): string{return htmlspecialchars($va
 <title>Published drawings | Draw Me One</title>
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="canonical" href="https://drawmeone.com<?= dmo_directory_escape(dmo_directory_url($filter,$page,$search)) ?>">
-<link rel="stylesheet" href="/styles.css?v=204">
+<link rel="stylesheet" href="/styles.css?v=205">
 </head>
 <body class="secondary">
 <a class="skip" href="#main">Skip to drawings</a>

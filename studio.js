@@ -23,7 +23,7 @@ $("request-form").addEventListener("submit",async e=>{
     e.preventDefault();if(requestBusy||requestClosed||!requestToken)return;
     const fields={name:$("request-name").value,email:$("request-email").value,brief:$("request-brief").value,budget:$("request-budget").value},serialized=JSON.stringify(fields);
     if(serialized!==lastPayload||!requestKey){requestKey=crypto.randomUUID();lastPayload=serialized;}
-    requestBusy=true;$("request-submit").disabled=true;$("request-status").textContent="Sending your request…";
+    requestBusy=true;for(const id of ["request-name","request-email","request-brief","request-budget"])$(id).readOnly=true;$("request-submit").disabled=true;$("request-status").textContent="Sending your request…";
     try{
         const response=await fetch("/api/guest-request.php",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({...fields,operation_key:requestKey,turnstile_token:requestToken}),cache:"no-store",signal:AbortSignal.timeout(25000)});
         const d=await response.json();
@@ -31,13 +31,13 @@ $("request-form").addEventListener("submit",async e=>{
         $("request-status").textContent="Thanks! Your request has been received. I'll reply by email.";
         $("request-form").reset();requestKey="";lastPayload="";
     }catch{$("request-status").textContent="We couldn't confirm your request. Your text is still here; verify again to retry, or email me.";}
-    finally{requestBusy=false;requestToken="";$("request-submit").disabled=true;if(requestWidget!==null&&!requestClosed)window.turnstile.reset(requestWidget);}
+    finally{requestBusy=false;for(const id of ["request-name","request-email","request-brief","request-budget"])$(id).readOnly=false;requestToken="";$("request-submit").disabled=true;if(requestWidget!==null&&!requestClosed)window.turnstile.reset(requestWidget);}
 });
 function valid(w){return w&&typeof w.src==="string"&&/^api\/artwork\.php\?id=[1-9][0-9]{0,17}&v=display$/.test(w.src)&&w.thumb===w.src.replace(/&v=display$/,"&v=thumb")&&Number.isSafeInteger(w.width)&&w.width>0&&Number.isSafeInteger(w.height)&&w.height>0;}
 function label(w){return typeof w.alt==="string"&&w.alt.trim()?w.alt:"Original drawing by Draw Me One";}
 function render(){const end=Math.min(shown+18,works.length),frag=document.createDocumentFragment();for(let i=shown;i<end;i++){const w=works[i],b=document.createElement("button"),img=document.createElement("img");b.type="button";b.className="tile";b.setAttribute("aria-label","View drawing: "+label(w));img.alt=label(w);img.width=w.width;img.height=w.height;img.loading=i<4?"eager":"lazy";img.decoding="async";img.addEventListener("error",()=>{img.hidden=true;b.textContent="Drawing unavailable";},{once:true});img.src="/"+w.thumb;b.append(img);b.addEventListener("click",()=>open(i,b));frag.append(b);}$("gallery").append(frag);shown=end;$("more").hidden=shown>=works.length;$("gallery-status").hidden=works.length>0;$("all-art").hidden=!works.length;}
 async function load(){const status=$("gallery-status");status.hidden=false;status.textContent="Loading artwork…";$("gallery").setAttribute("aria-busy","true");try{const data=await get("/api/portfolio.php");if(!Array.isArray(data.works)||data.works.length>500)throw Error("invalid");works=[...new Map(data.works.filter(valid).map(w=>[w.src,w])).values()];shown=0;$("gallery").replaceChildren();status.textContent="New drawings will appear here soon. Thanks for visiting!";render();}catch{status.textContent="The gallery is temporarily unavailable. ";const retry=document.createElement("button");retry.type="button";retry.textContent="Try again";retry.addEventListener("click",load,{once:true});status.append(retry);}finally{$("gallery").removeAttribute("aria-busy");}}
-$("more").addEventListener("click",()=>{const before=shown;render();if($("more").hidden)$("gallery").children[before]?.focus();});
+$("more").addEventListener("click",()=>{const before=shown;render();$("gallery").children[before]?.focus({preventScroll:false});});
 const dialog=$("viewer");
 function show(i){if(!works.length)return;active=(i+works.length)%works.length;const w=works[active],id=++revision,img=document.createElement("img"),old=$("large-art");img.id="large-art";img.alt=label(w);img.addEventListener("error",()=>{if(id===revision){img.hidden=true;$("viewer-error").hidden=false;}},{once:true});old.replaceWith(img);$("viewer-error").hidden=true;img.src="/"+w.src;$("counter").textContent=(active+1)+" / "+works.length;$("detail").href="/artwork.php?id="+new URLSearchParams(w.src.split("?")[1]).get("id");$("prev").disabled=$("next").disabled=works.length<2;}
 function open(i,b){returnFocus=b;dialog.showModal();show(i);$("close-viewer").focus();}

@@ -8,7 +8,7 @@ header('X-Frame-Options: DENY');
 header('Referrer-Policy: strict-origin-when-cross-origin');
 ?><!doctype html>
 <html lang="en" data-public-mode="dark">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,follow"><title>Privacy · Draw Me One</title><link rel="icon" href="/favicon.svg"><link rel="stylesheet" href="/styles.css?v=204"><script defer src="/public-theme.js?v=3"></script></head>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,follow"><title>Privacy · Draw Me One</title><link rel="icon" href="/favicon.svg"><link rel="stylesheet" href="/styles.css?v=205"><script defer src="/public-theme.js?v=3"></script></head>
 <body class="secondary"><a class="skip" href="#main">Skip to content</a><header class="masthead"><a class="wordmark" href="/" aria-label="Draw Me One homepage">drawmeone<span>.</span></a><nav aria-label="Main navigation"><a href="/#portfolio">Gallery</a><a href="/#contact">Contact</a><button type="button" data-public-theme hidden>Light mode</button></nav></header>
 <main id="main" tabindex="-1"><article class="privacy-copy"><h1>Privacy</h1><p>You can browse the gallery without creating an account.</p>
 <h2>Browsing the gallery</h2><p>A theme preference may be stored in your browser. Hosting and security services may process technical information needed to serve and protect the website.</p>
