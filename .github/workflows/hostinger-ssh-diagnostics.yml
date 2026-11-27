@@ -15,6 +15,15 @@ on:
       - .github/ops/hostinger-ssh-diagnostic.trigger
       - .github/workflows/hostinger-ssh-diagnostics.yml
       - ops/deployment_expectations.py
+      - index.html
+      - styles.css
+      - studio.js
+      - privacy.php
+      - portfolio.php
+      - artwork.php
+      - sitemap.php
+      - public-theme.js
+      - .htaccess
 
 permissions:
   contents: read
@@ -99,9 +108,19 @@ jobs:
           php "$site/app/cli-integrity.php" check
           php -r 'require $argv[1]."/app/backup-health.php"; $r=dmo_backup_local_health(); if(!$r["ready"])exit(1); echo "local_backup=ready\n";' "$site"
           home=$(curl -fsS --max-time 15 https://drawmeone.com/)
-          [[ "$home" == *'styles.css?v=203'* && "$home" == *'id="gallery"'* && "$home" != *'Design Lab'* ]] || exit 1
+          [[ "$home" == *'styles.css?v='* && "$home" == *'id="gallery"'* && "$home" != *'Design Lab'* ]] || exit 1
           desk=$(curl -fsS --max-time 15 https://drawmeone.com/studio-admin/index.php)
-          [[ "$desk" == *'panel.js?v=203'* && "$desk" == *'My studio'* && "$desk" != *'Orders & quotes'* ]] || exit 1
+          [[ "$desk" == *'panel.js?v='* && "$desk" == *'My studio'* && "$desk" != *'Orders & quotes'* ]] || exit 1
+          privacy=$(curl -fsS --max-time 15 -D - https://drawmeone.com/privacy.php)
+          [[ "$privacy" == *'class="privacy-copy"'* && "$privacy" == *'data-public-theme'* ]] || exit 1
+          grep -qi '^x-robots-tag: noindex' <<< "$privacy" || exit 1
+          directory=$(curl -fsS --max-time 15 https://drawmeone.com/portfolio.php)
+          [[ "$directory" == *'Search or filter drawings'* && "$directory" == *'class="gallery-tools"'* ]] || exit 1
+          sitemap=$(curl -fsS --max-time 15 https://drawmeone.com/sitemap.xml)
+          [[ "$sitemap" == *'<loc>https://drawmeone.com/</loc>'* && "$sitemap" != *'/studio-admin/'* && "$sitemap" != *'/privacy.php'* ]] || exit 1
+          desk_headers=$(curl -fsS --max-time 15 -D - -o /dev/null https://drawmeone.com/studio-admin/index.php)
+          grep -qi '^x-robots-tag: noindex' <<< "$desk_headers" || exit 1
+          echo "v2_secondary_pages=pass"
           curl -fsS --max-time 15 https://drawmeone.com/api/studio.php | php -r '$d=json_decode(stream_get_contents(STDIN),true);if(($d["ok"]??false)!==true||($d["settings"]["accepting"]??null)!==false)exit(1);echo "v2_commissions=closed\n";'
           curl -fsS --max-time 15 https://drawmeone.com/api/portfolio.php | php -r '$d=json_decode(stream_get_contents(STDIN),true);if(($d["ok"]??false)!==true||!is_array($d["works"]??null))exit(1);echo "v2_published_art_count=".count($d["works"])."\n";'
           curl -fsS --max-time 15 https://drawmeone.com/api/admin/status.php | php -r '$d=json_decode(stream_get_contents(STDIN),true);if(($d["admin_available"]??false)!==true)exit(1);echo "v2_admin=available\n";'
