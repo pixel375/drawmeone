@@ -55,3 +55,44 @@ body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;line-height:1.6}
 .request-trap{position:absolute;left:-10000px;top:auto;width:1px;height:1px;overflow:hidden}.request-form #request-retry{justify-self:start}
 
 [data-theme=midnight],[data-theme=paper]{color-scheme:dark}[data-theme=midnight][data-public-mode=light],[data-theme=paper][data-public-mode=light]{color-scheme:light}
+
+/* Independent page layouts. Shared markup, no duplicate forms or artwork.
+ * DOM order stays intro -> gallery -> contact, including keyboard navigation. */
+:root[data-layout=gallery]{--width:1280px}
+:root[data-layout=gallery] .home .hero{margin:20px 0 30px;padding:30px clamp(18px,4vw,48px);border-radius:14px;background:var(--panel)}
+:root[data-layout=gallery] .home .hero h1{font-size:clamp(32px,4vw,54px)}
+:root[data-layout=gallery] .home .hero p:not(.eyebrow){margin:10px 0 16px}
+:root[data-layout=gallery] .home .hero .eyebrow{display:none}
+:root[data-layout=gallery] .home .gallery,:root[data-layout=gallery] .secondary .works{grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+:root[data-layout=gallery] .home .tile,:root[data-layout=gallery] .secondary .works a{aspect-ratio:1;border-radius:10px}
+:root[data-layout=gallery] .home .contact{border-radius:14px}
+:root[data-layout=sidebar]{--width:1280px}
+:root[data-layout=sidebar] .home .hero{background:var(--panel);padding:26px;align-self:start;margin:0;border-radius:18px}
+:root[data-layout=sidebar] .home .hero h1{font-size:clamp(32px,4vw,48px)}
+:root[data-layout=sidebar] .home .hero p:not(.eyebrow){margin:14px 0 20px}
+:root[data-layout=sidebar] .home main{padding-top:26px}
+:root[data-layout=sidebar] .home .gallery-section{padding-top:0;min-width:0}
+:root[data-layout=sidebar] .home .contact{margin-top:0}
+:root[data-layout=editorial]{--width:940px}
+:root[data-layout=editorial] .home .hero{background:transparent;border:0;border-radius:0;text-align:center;padding:clamp(36px,7vw,84px) 10px;margin:0 auto 12px}
+:root[data-layout=editorial] .home .hero h1{max-width:720px;margin:auto}
+:root[data-layout=editorial] .home .hero p:not(.eyebrow){margin:18px auto 22px}
+:root[data-layout=editorial] .home .gallery,:root[data-layout=editorial] .secondary .works{grid-template-columns:repeat(2,minmax(0,1fr));gap:22px}
+:root[data-layout=editorial] .home .tile,:root[data-layout=editorial] .secondary .works a{aspect-ratio:4/5;border-radius:8px}
+:root[data-layout=editorial] .home .contact{background:transparent;border-width:1px 0 0;border-radius:0}
+@media(min-width:960px){
+  :root[data-layout=sidebar] .home main{display:grid;grid-template-columns:minmax(230px,300px) minmax(0,1fr);gap:30px;align-items:start}
+  :root[data-layout=sidebar] .home .contact{grid-column:1/-1}
+}
+@media(max-width:959px){
+  :root[data-layout=sidebar] .home .hero{margin-bottom:26px}
+  :root[data-layout=gallery] .home .gallery,:root[data-layout=gallery] .secondary .works{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+@media(max-width:640px){
+  :root[data-layout=gallery] .home .hero{margin:14px 0 22px;padding:20px 16px}
+  :root[data-layout=gallery] .home .gallery,:root[data-layout=gallery] .secondary .works{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  :root[data-layout=sidebar] .home main{padding-top:16px}
+  :root[data-layout=sidebar] .home .hero{padding:22px 18px}
+  :root[data-layout=editorial] .home .gallery,:root[data-layout=editorial] .secondary .works{grid-template-columns:1fr;gap:14px}
+  :root[data-layout=editorial] .home .hero{padding:36px 6px 24px}
+}

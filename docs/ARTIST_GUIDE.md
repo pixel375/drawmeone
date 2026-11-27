@@ -38,3 +38,5 @@ For the remaining launch checks, see the [V2 owner launch checklist](V2_OWNER_LA
 - My website: choose Blurple, Midnight or Studio, preview dark/light appearance, then save. Turn on Discord only with a genuine invite URL; the contact area shows one link.
 - Artwork: More options > Delete drawing removes the drawing from the live library after confirmation. Prior encrypted backups may contain it until rotation; keep original files yourself.
 - Requests: CAPTCHA is on by default. Visitors can retry verification or use direct contact. You may explicitly turn CAPTCHA off; tighter rate limits and a hidden spam trap remain, but bot protection is reduced. Email testing is deferred.
+
+- Page layout: choose Showcase, Gallery wall, Artist profile or Editorial independently of the color theme. The small preview shows the combination before saving. Layouts adapt to phones; visitors keep their own light/dark choice. The artwork and commission settings do not change.

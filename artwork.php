@@ -124,7 +124,7 @@ header('Referrer-Policy: strict-origin-when-cross-origin');
 <link rel="canonical" href="<?= dmo_artwork_page_escape($canonical) ?>">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <meta name="theme-color" content="#141318">
-<script src="/public-theme.js?v=4"></script>
+<script src="/public-theme.js?v=5"></script>
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Draw Me One">
 <meta property="og:title" content="<?= dmo_artwork_page_escape($title) ?>">
@@ -136,7 +136,7 @@ header('Referrer-Policy: strict-origin-when-cross-origin');
 <meta property="og:image:alt" content="<?= dmo_artwork_page_escape($label) ?>">
 <meta name="twitter:card" content="summary_large_image">
 <script type="application/ld+json"><?= $schema ?></script>
-<link rel="stylesheet" href="/styles.css?v=210">
+<link rel="stylesheet" href="/styles.css?v=211">
 </head>
 <body class="secondary">
 <a class="skip" href="#main">Skip to drawing</a>

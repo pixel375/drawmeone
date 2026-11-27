@@ -122,7 +122,7 @@ jobs:
           home=$(curl -fsS --max-time 15 https://drawmeone.com/)
           [[ "$home" == *'styles.css?v='* && "$home" == *'id="gallery"'* && "$home" != *'Design Lab'* ]] || exit 1
           desk=$(curl -fsS --max-time 15 https://drawmeone.com/studio-admin/index.php)
-          [[ "$desk" == *'panel.js?v='* && "$desk" == *'My studio'* && "$desk" != *'Orders & quotes'* ]] || exit 1
+          [[ "$desk" == *'panel.js?v='* && "$desk" == *'My studio'* && "$desk" == *'id="layout-choice"'* && "$desk" != *'Orders & quotes'* ]] || exit 1
           privacy=$(curl -fsS --max-time 15 -D - https://drawmeone.com/privacy.php)
           [[ "$privacy" == *'class="privacy-copy"'* && "$privacy" == *'data-public-theme'* ]] || exit 1
           grep -qi '^x-robots-tag: noindex' <<< "$privacy" || exit 1
@@ -133,13 +133,13 @@ jobs:
           desk_headers=$(curl -fsS --max-time 15 -D - -o /dev/null https://drawmeone.com/studio-admin/index.php)
           grep -qi '^x-robots-tag: noindex' <<< "$desk_headers" || exit 1
           echo "v2_secondary_pages=pass"
-          availability=$(curl -fsS --max-time 15 https://drawmeone.com/api/studio.php | php -r '$d=json_decode(stream_get_contents(STDIN),true);if(($d["ok"]??false)!==true||!is_bool($d["settings"]["accepting"]??null))exit(1);echo $d["settings"]["accepting"]?"open":"closed";')
+          availability=$(curl -fsS --max-time 15 https://drawmeone.com/api/studio.php | php -r '$d=json_decode(stream_get_contents(STDIN),true);if(($d["ok"]??false)!==true||!is_bool($d["settings"]["accepting"]??null)||!in_array($d["settings"]["layout"]??null,["showcase","gallery","sidebar","editorial"],true))exit(1);echo $d["settings"]["accepting"]?"open":"closed";')
           echo "v2_commissions=$availability"
           curl -fsS --max-time 15 https://drawmeone.com/api/portfolio.php | php -r '$d=json_decode(stream_get_contents(STDIN),true);if(($d["ok"]??false)!==true||!is_array($d["works"]??null))exit(1);echo "v2_published_art_count=".count($d["works"])."\n";'
           curl -fsS --max-time 15 https://drawmeone.com/api/admin/status.php | php -r '$d=json_decode(stream_get_contents(STDIN),true);if(($d["admin_available"]??false)!==true||($d["captcha_required"]??null)!==false||($d["turnstile_site_key"]??null)!==null)exit(1);echo "v2_admin=available_password_only\n";'
           curl -fsS --max-time 15 -H "Cache-Control: no-cache" https://drawmeone.com/api/admin/me.php | php -r '$d=json_decode(stream_get_contents(STDIN),true);if(($d["ok"]??false)!==true||($d["authenticated"]??null)!==false)exit(1);echo "v2_admin_signed_out_session=pass\n";'
           # Compare versioned assets fetched over public HTTPS, not just disk copies.
-          for entry in "studio-admin/panel.js?v=209" "styles.css?v=210" "studio.js?v=210"; do
+          for entry in "studio-admin/panel.js?v=211" "styles.css?v=211" "studio.js?v=211" "studio-admin/panel.css?v=211" "public-theme.js?v=5"; do
             file="${entry%%\?*}"
             actual=$(curl -fsS --max-time 15 -H "Cache-Control: no-cache" "https://drawmeone.com/$entry" | sha256sum | cut -d" " -f1)
             expected=$(sha256sum "$site/$file" | cut -d" " -f1)

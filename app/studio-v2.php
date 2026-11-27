@@ -6,7 +6,7 @@ require_once __DIR__.'/admin.php';
  * Stored as versioned non-secret configuration in the existing backed-up audit table.
  * No personal customer data or payment credentials belong here. */
 function dmo_studio_defaults(): array {
-    return ['title'=>'A little art, just for you.','intro'=>'Fan art, original characters and custom drawings. Thanks for stopping by!','price'=>'','payments'=>'','instagram'=>'','tiktok'=>'','default_mode'=>'dark','theme'=>'blurple','discord_enabled'=>false,'discord_url'=>'','guest_captcha'=>true,'accepting'=>false];
+    return ['title'=>'A little art, just for you.','intro'=>'Fan art, original characters and custom drawings. Thanks for stopping by!','price'=>'','payments'=>'','instagram'=>'','tiktok'=>'','default_mode'=>'dark','theme'=>'blurple','layout'=>'showcase','discord_enabled'=>false,'discord_url'=>'','guest_captcha'=>true,'accepting'=>false];
 }
 function dmo_studio_normalize(mixed $raw): ?array {
     if(!is_array($raw)||array_is_list($raw)||array_diff(array_keys($raw),array_keys(dmo_studio_defaults()))!==[])return null;
@@ -33,6 +33,8 @@ function dmo_studio_normalize(mixed $raw): ?array {
     if($out['discord_enabled']&&$out['discord_url']==='')return null;
     if(array_key_exists('theme',$raw)&&!in_array($raw['theme'],['blurple','midnight','paper'],true))return null;
     $out['theme']=$raw['theme']??'blurple';
+    if(array_key_exists('layout',$raw)&&!in_array($raw['layout'],['showcase','gallery','sidebar','editorial'],true))return null;
+    $out['layout']=$raw['layout']??'showcase';
     if(array_key_exists('guest_captcha',$raw)&&!is_bool($raw['guest_captcha']))return null;
     $out['guest_captcha']=$raw['guest_captcha']??true;
     if(isset($raw['default_mode'])&&!in_array($raw['default_mode'],['dark','light'],true))return null;

@@ -179,7 +179,7 @@ try {
     [$status,$studio]=art_http('/api/admin/studio.php',$token);
     art_assert($status===200&&$studio['version']===0,'v2_admin_settings_default');
     $prefs=$studio['settings'];$prefs['intro']='Synthetic <b>plain text</b>';
-    $prefs['price']='From $25 CAD';$prefs['payments']='PayPal';$prefs['theme']='midnight';$prefs['discord_enabled']=true;$prefs['discord_url']='https://discord.gg/CIInvite';
+    $prefs['price']='From $25 CAD';$prefs['payments']='PayPal';$prefs['theme']='midnight';$prefs['layout']='sidebar';$prefs['discord_enabled']=true;$prefs['discord_url']='https://discord.gg/CIInvite';
     [$status]=art_http('/api/admin/studio.php',$token,null,['version'=>0,'settings'=>$prefs]);
     art_assert($status===403,'v2_settings_require_csrf');
     [$status,$savedStudio]=art_http('/api/admin/studio.php',$token,$csrf,['version'=>0,'settings'=>$prefs]);
@@ -188,6 +188,16 @@ try {
     art_assert($status===200&&$publicStudio['settings']===$prefs&&!isset($publicStudio['version']),'v2_public_settings_only');
     [$status]=art_http('/api/admin/studio.php',$token,$csrf,['version'=>0,'settings'=>$prefs]);
     art_assert($status===409,'v2_stale_settings_denied');
+    $badLayout=$prefs;$badLayout['layout']='unknown';
+    [$status]=art_http('/api/admin/studio.php',$token,$csrf,['version'=>$savedStudio['version'],'settings'=>$badLayout]);
+    art_assert($status===422,'v2_layout_allowlist');
+    require_once dirname(__DIR__).'/app/studio-v2.php';
+    $oldSettings=$prefs;unset($oldSettings['layout']);
+    art_assert(dmo_studio_normalize($oldSettings)['layout']==='showcase','v2_old_settings_layout_fallback');
+    foreach(['showcase','gallery','sidebar','editorial'] as $layout){
+        $candidate=$prefs;$candidate['layout']=$layout;
+        art_assert(dmo_studio_normalize($candidate)['layout']===$layout,'v2_layout_valid_'.$layout);
+    }
     [$status,$closed]=art_http('/api/guest-request.php',null,null,['name'=>'CI only']);
     art_assert($status===503&&($closed['error']??null)==='commissions_closed','v2_guest_closed_before_captcha');
     [$status]=art_http('/api/admin/guest-requests.php');
