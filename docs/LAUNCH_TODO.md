@@ -80,3 +80,5 @@ Independent implementation was complete (14/14) before the reported production l
 
 ### 2026-11-27 — V2 pass 07, owner feedback
 - Prior password login: all five suites passed, real live password form ready, owner can sign in. Email tests deferred. New owner feedback: modern theme alternatives, optional Discord, enquiry send state and artwork deletion. Added fresh Blurple/Midnight/Studio themes and Discord invite toggle; no fake art or link. Diagnostics observe owner-set intake without submitting when open. Other refinements pending.
+
+- Added public CAPTCHA retry and explicit admin switch (default on, reduced spam protection when off). Tightened CAPTCHA-free limits and added honeypot; policy rechecked under lock. No owner setting changed or live submission made.

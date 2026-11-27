@@ -4,12 +4,15 @@ require_once dirname(__DIR__).'/app/guest-requests.php';
 $input=dmo_auth_json_request();
 try{
     $db=dmo_database();
-    if(!dmo_guest_ready($db)||dmo_studio_load($db)['settings']['accepting']!==true)dmo_json(503,['ok'=>false,'error'=>'commissions_closed']);
+    $settings=dmo_studio_load($db)['settings'];
+    if(!dmo_guest_policy_ready($db,$settings)||!$settings['accepting'])dmo_json(503,['ok'=>false,'error'=>'commissions_closed']);
     $p=dmo_guest_payload($input);$token=$input['turnstile_token']??null;
-    if($p===null||!is_string($token)||strlen($token)<10||strlen($token)>2048)dmo_json(422,['ok'=>false,'error'=>'invalid_request']);
-    if(!dmo_auth_rate_limit($db,'guest-ip','',8,15)||!dmo_auth_rate_limit($db,'guest-email',$p['email'],3,60)||!dmo_auth_rate_limit($db,'guest-global','studio',40,60))dmo_json(429,['ok'=>false,'error'=>'too_many_requests']);
-    if(!dmo_auth_verify_turnstile($token,'guest_request'))dmo_json(422,['ok'=>false,'error'=>'verification_failed']);
-    $result=dmo_guest_store($db,$p);
+    if($p===null||($settings['guest_captcha']&&(!is_string($token)||strlen($token)<10||strlen($token)>2048)))dmo_json(422,['ok'=>false,'error'=>'invalid_request']);
+    if(!dmo_auth_rate_limit($db,'guest-ip','',$settings['guest_captcha']?8:3,15)||!dmo_auth_rate_limit($db,'guest-email',$p['email'],3,60)||!dmo_auth_rate_limit($db,'guest-global','studio',$settings['guest_captcha']?40:15,60))dmo_json(429,['ok'=>false,'error'=>'too_many_requests']);
+    $verified=false;
+    if($settings['guest_captcha']){if(!dmo_auth_verify_turnstile($token,'guest_request'))dmo_json(422,['ok'=>false,'error'=>'verification_failed']);$verified=true;}
+    $result=dmo_guest_store($db,$p,$verified);
+    if($result['result']==='challenge_required')dmo_json(409,['ok'=>false,'error'=>'verification_required']);
     if($result['result']==='closed')dmo_json(503,['ok'=>false,'error'=>'commissions_closed']);
     if($result['result']==='conflict')dmo_json(409,['ok'=>false,'error'=>'request_changed']);
     if($result['result']==='duplicate')dmo_json(200,['ok'=>true,'received'=>true]);

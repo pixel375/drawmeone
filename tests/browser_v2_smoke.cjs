@@ -13,12 +13,12 @@ await page.route("**/api/admin/guest-requests.php*",r=>reply(r,{ok:true,requests
     await page.route("https://challenges.cloudflare.com/**",r=>r.fulfill({contentType:"application/javascript",body:'window.turnstile={ready:fn=>fn(),render:(selector,opts)=>{window.ciTurnstile=opts;opts.callback("synthetic-ci-token");return 1;},reset:()=>window.ciTurnstile.callback("synthetic-ci-token")};'}));
     const posts=[];
     await page.route("**/api/guest-request.php",r=>{posts.push(r.request().postDataJSON());return posts.length===1?r.fulfill({status:503,contentType:"application/json",body:JSON.stringify({ok:false,error:"request_unavailable"})}):reply(r,{ok:true,received:true});});
-    await page.goto(base+"/index.html");await page.locator("#request-form").waitFor({state:"visible"});await page.waitForFunction(()=>!document.querySelector("#request-submit").disabled);await audit(page,"guest-enquiry");
+    await page.goto(base+"/index.html");await page.locator("#request-form").waitFor({state:"visible"});await page.waitForFunction(()=>window.ciTurnstile!==undefined);await audit(page,"guest-enquiry");
     await page.locator("#request-name").fill("CI Guest");await page.locator("#request-email").fill("guest@example.invalid");await page.locator("#request-brief").fill("A synthetic drawing idea");
     await page.locator("#request-submit").click();await page.waitForFunction(()=>document.querySelector("#request-status").textContent.includes("couldn't confirm"));
     assert.equal(await page.locator("#request-brief").inputValue(),"A synthetic drawing idea");
     await page.locator("#request-submit").click();await page.waitForFunction(()=>document.querySelector("#request-status").textContent.includes("has been received"));
-    assert.equal(posts.length,2);assert.equal(posts[0].operation_key,posts[1].operation_key);assert.equal(await page.locator("#request-brief").inputValue(),"");
+    assert.equal(posts.length,2);assert.equal(posts[0].operation_key,posts[1].operation_key);assert.equal(await page.locator("#request-brief").inputValue(),"");await page.route("**/api/studio.php",r=>reply(r,{ok:true,settings:{...settings,accepting:true,guest_captcha:false,discord_enabled:true,discord_url:"https://discord.gg/Example",theme:"midnight"},turnstile_site_key:null}));await page.goto(base+"/index.html");await page.locator("#request-form").waitFor({state:"visible"});assert.equal(await page.locator("#request-submit").isEnabled(),true);assert.equal(await page.locator("#request-captcha").isHidden(),true);assert.equal(await page.getByRole("link",{name:"Discord",exact:true}).getAttribute("href"),"https://discord.gg/Example");assert.equal(await page.locator("html").getAttribute("data-theme"),"midnight");await audit(page,"midnight-guest-no-captcha");
     console.log("V2_GUEST_BROWSER_PASS");
 }
 await page.close();console.log("V2_UI_PASS width="+width);}}finally{await browser.close();}})().catch(e=>{console.error(e);process.exitCode=1;});

@@ -4,7 +4,8 @@ require_once __DIR__.'/studio-v2.php';
 
 /** Only guest request fields; never store captcha, raw IP, user agent, or card data. */
 function dmo_guest_payload(mixed $raw): ?array {
-    if(!is_array($raw)||array_is_list($raw)||array_diff(array_keys($raw),['name','email','brief','budget','operation_key','turnstile_token'])!==[])return null;
+    if(!is_array($raw)||array_is_list($raw)||array_diff(array_keys($raw),['name','email','brief','budget','operation_key','turnstile_token','website'])!==[])return null;
+    if(array_key_exists('website',$raw)&&$raw['website']!=='')return null;
     $out=[];
     foreach(['name'=>[1,100],'email'=>[4,254],'brief'=>[5,3000],'budget'=>[0,120]] as $key=>[$min,$max]){
         $v=$raw[$key]??($key==='budget'?'':null);
@@ -22,11 +23,13 @@ function dmo_guest_payload(mixed $raw): ?array {
     return $out;
 }
 /** Used only after successful challenge and rate limits. Same lock as availability changes. */
-function dmo_guest_store(PDO $db,array $p): array {
+function dmo_guest_store(PDO $db,array $p,bool $challengeVerified=true): array {
     $db->beginTransaction();
     try{
         dmo_studio_lock($db);
-        if(!dmo_guest_ready($db)||dmo_studio_load($db)['settings']['accepting']!==true){$db->rollBack();return ['result'=>'closed'];}
+        $settings=dmo_studio_load($db)['settings'];
+        if(!dmo_guest_policy_ready($db,$settings)||!$settings['accepting']){$db->rollBack();return ['result'=>'closed'];}
+        if($settings['guest_captcha']&&!$challengeVerified){$db->rollBack();return ['result'=>'challenge_required'];}
         $q=$db->prepare('SELECT id,payload_digest FROM dmo_guest_requests WHERE operation_hash=:operation_hash LIMIT 1');
         $q->execute(['operation_hash'=>$p['operation_hash']]);$existing=$q->fetch();
         if(is_array($existing)){

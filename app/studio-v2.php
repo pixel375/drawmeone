@@ -6,7 +6,7 @@ require_once __DIR__.'/admin.php';
  * Stored as versioned non-secret configuration in the existing backed-up audit table.
  * No personal customer data or payment credentials belong here. */
 function dmo_studio_defaults(): array {
-    return ['title'=>'A little art, just for you.','intro'=>'Fan art, original characters and custom drawings. Thanks for stopping by!','price'=>'','payments'=>'','instagram'=>'','tiktok'=>'','default_mode'=>'dark','theme'=>'blurple','discord_enabled'=>false,'discord_url'=>'','accepting'=>false];
+    return ['title'=>'A little art, just for you.','intro'=>'Fan art, original characters and custom drawings. Thanks for stopping by!','price'=>'','payments'=>'','instagram'=>'','tiktok'=>'','default_mode'=>'dark','theme'=>'blurple','discord_enabled'=>false,'discord_url'=>'','guest_captcha'=>true,'accepting'=>false];
 }
 function dmo_studio_normalize(mixed $raw): ?array {
     if(!is_array($raw)||array_is_list($raw)||array_diff(array_keys($raw),array_keys(dmo_studio_defaults()))!==[])return null;
@@ -33,6 +33,8 @@ function dmo_studio_normalize(mixed $raw): ?array {
     if($out['discord_enabled']&&$out['discord_url']==='')return null;
     if(array_key_exists('theme',$raw)&&!in_array($raw['theme'],['blurple','midnight','paper'],true))return null;
     $out['theme']=$raw['theme']??'blurple';
+    if(array_key_exists('guest_captcha',$raw)&&!is_bool($raw['guest_captcha']))return null;
+    $out['guest_captcha']=$raw['guest_captcha']??true;
     if(isset($raw['default_mode'])&&!in_array($raw['default_mode'],['dark','light'],true))return null;
     $out['default_mode']=$raw['default_mode']??'dark';
     if(array_key_exists('accepting',$raw)&&!is_bool($raw['accepting']))return null;
@@ -49,7 +51,10 @@ function dmo_studio_load(PDO $db): array {
 
 /** One server-side availability control; missing schema/security fails closed. */
 function dmo_guest_ready(PDO $db): bool {
-    return strlen(dmo_config('DMO_APP_KEY'))>=32&&dmo_config('DMO_TURNSTILE_SITE_KEY')!==''&&dmo_config('DMO_TURNSTILE_SECRET')!==''&&extension_loaded('curl')&&dmo_guest_schema_ready($db);
+    return dmo_guest_policy_ready($db,dmo_studio_load($db)['settings']);
+}
+function dmo_guest_policy_ready(PDO $db,array $settings): bool {
+    return strlen(dmo_config('DMO_APP_KEY'))>=32&&dmo_guest_schema_ready($db)&&(!$settings['guest_captcha']||(dmo_config('DMO_TURNSTILE_SITE_KEY')!==''&&dmo_config('DMO_TURNSTILE_SECRET')!==''&&extension_loaded('curl')));
 }
 function dmo_guest_schema_ready(PDO $db): bool {
     try {

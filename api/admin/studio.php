@@ -12,7 +12,7 @@ try{
     dmo_studio_lock($db);
     $current=dmo_studio_load($db);
     if($current['version']!==$input['version']){$db->rollBack();dmo_json(409,['ok'=>false,'error'=>'settings_changed']);}
-    $ready=dmo_guest_ready($db);
+    $ready=dmo_guest_policy_ready($db,$settings);
     if($settings['accepting']&&!$ready){$db->rollBack();dmo_json(503,['ok'=>false,'error'=>'requests_unavailable']);}
     if($current['settings']===$settings){$db->commit();dmo_json(200,['ok'=>true,'requests_ready'=>$ready]+$current);}
     $db->prepare("INSERT INTO dmo_audit_log (actor_id,action,entity_type,entity_id,details_json) VALUES (:actor,'studio.v2.settings','user',:entity,:details)")->execute(['actor'=>$admin['user_id'],'entity'=>$admin['user_id'],'details'=>json_encode($settings,JSON_THROW_ON_ERROR)]);

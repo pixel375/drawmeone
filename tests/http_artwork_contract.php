@@ -202,6 +202,7 @@ try {
     art_assert($status===422,'v2_guest_rejects_short_captcha_without_network');
     require_once dirname(__DIR__).'/app/guest-requests.php';
     $payload=dmo_guest_payload($input);art_assert(is_array($payload),'v2_guest_payload_valid');
+    art_assert(dmo_guest_store($db,$payload,false)['result']==='challenge_required','v2_guest_cannot_bypass_enabled_captcha');
     $stored=dmo_guest_store($db,$payload);
     art_assert($stored['result']==='created','v2_guest_persistence_after_challenge_boundary');
     art_assert(dmo_guest_store($db,$payload)['result']==='duplicate','v2_guest_idempotent_replay');
