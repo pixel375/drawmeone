@@ -1,220 +1,31 @@
 <!doctype html>
-<html lang="en" data-site="studio" data-design="noir" data-mode="dark" data-layout="masonry" data-logo="original">
+<html lang="en" data-public-mode="dark">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#0c0c10">
-  <meta name="description" content="Draw Me One is a personal portfolio for expressive character art, hand-drawn illustrations and future custom drawing commissions.">
-  <meta name="robots" content="noindex,follow">
-  <meta property="og:type" content="website">
-  <meta property="og:title" content="Draw Me One — Custom Art, Your Way">
-  <meta property="og:description" content="An independent art portfolio for original drawings and custom commission enquiries.">
-  <meta property="og:url" content="https://drawmeone.com/">
-  <link rel="canonical" href="https://drawmeone.com/">
-  <link rel="icon" type="image/svg+xml" href="./favicon.svg">
-  <title>Draw Me One | Modern Drawing Commission Studio</title>
-  <script>
-    // Only the visitor's explicit light/dark choice is trusted before the
-    // server chooses the published or development-preview presentation.
-    try {
-      const mode=localStorage.getItem("dmo-visitor-mode");
-      if (mode==="dark"||mode==="light") document.documentElement.dataset.mode=mode;
-    } catch (_) {}
-  </script>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&amp;family=Inter+Tight:wght@400;500;600;700;800;900&amp;family=Manrope:wght@400;500;600;700;800&amp;family=Playfair+Display:ital,wght@0,500;0,600;1,500;1,600&amp;family=Space+Grotesk:wght@400;500;600;700&amp;display=swap">
-  <link rel="stylesheet" href="./styles.css?v=16">
-  <link rel="stylesheet" href="./concepts.css?v=10">
-  <link rel="stylesheet" href="./polish.css?v=14">
-  <link rel="stylesheet" href="./branding.css?v=10">
-  <script defer src="./concepts.js?v=15"></script>
-  <script defer src="./studio.js?v=16"></script>
-  <script defer src="./gallery.js?v=25"></script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#19161b">
+<meta name="description" content="Draw Me One — a personal gallery of original drawings, fan art and character artwork.">
+<meta name="robots" content="index,follow">
+<meta property="og:title" content="Draw Me One — A little art, just for you">
+<meta property="og:description" content="Original drawings, fan art and characters by an independent artist.">
+<meta property="og:url" content="https://drawmeone.com/">
+<meta property="og:type" content="website">
+<link rel="canonical" href="https://drawmeone.com/">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<title>Draw Me One — Personal art &amp; drawings</title>
+<link rel="stylesheet" href="/styles.css?v=200">
+<script defer src="/studio.js?v=200"></script>
 </head>
 <body>
-  <a class="skip-link" href="#portfolio">Skip to portfolio</a>
-  <div class="page-progress" id="page-progress" aria-hidden="true"></div>
-  <div class="site-shell">
-    <header class="site-header" id="top">
-      <a class="wordmark" href="#top" aria-label="Draw Me One home">drawmeone<span>.</span></a>
-      <nav class="nav-links" aria-label="Main navigation">
-        <a href="#portfolio">Portfolio</a>
-        <a href="#process">The process</a>
-        <a href="#contact">Contact</a>
-        <a href="./commission.html">Commissions</a>
-      </nav>
-      <div class="header-actions">
-        <span class="header-state"><span class="live-dot" aria-hidden="true"></span> <span data-intake-label>Requests not open</span></span>
-        <button class="mode-shortcut" id="header-mode" type="button" aria-label="Switch to light mode" title="Toggle light and dark appearance"><span aria-hidden="true" id="header-mode-icon">☀</span></button>
-      </div>
-    </header>
-
-    <main>
-      <section class="hero" aria-labelledby="hero-heading">
-        <div class="hero-copy">
-          <p class="eyebrow"><span class="eyebrow-line"></span> DRAWN BY HAND, WITH PERSONALITY</p>
-          <h1 id="hero-heading"><span data-studio-copy="hero_title">A little art.</span><br><em data-studio-copy="hero_emphasis">A lot of heart.</em></h1>
-          <p class="hero-description" data-studio-copy="hero_intro">Character portraits, original creations, and the joy of drawing by hand. A personal art portfolio for original drawings and custom commission enquiries.</p>
-          <div class="hero-buttons">
-            <a href="#portfolio" class="primary-button"><span data-studio-copy="portfolio_cta">Explore the drawings</span> <span aria-hidden="true">↗</span></a>
-            <a href="#process" class="text-button">How it works <span aria-hidden="true">↗</span></a>
-          </div>
-          <p class="hero-footnote">Independent art studio <span aria-hidden="true">✳</span> <span data-intake-label>Requests not open</span></p>
-        </div>
-        <div class="hero-visual" aria-label="Featured artwork display">
-          <div class="hero-halo" aria-hidden="true"></div>
-          <div class="hero-photo hero-photo-primary">
-            <img data-preview-src="./assets/demo/art-01.svg" data-showcase-image="0" alt="" fetchpriority="high" decoding="async">
-          </div>
-          <div class="hero-photo hero-photo-secondary">
-            <img data-preview-src="./assets/demo/art-04.svg" data-showcase-image="1" alt="" decoding="async">
-          </div>
-          <span class="hero-corner hero-corner-top" aria-hidden="true">✴</span>
-          <span class="hero-corner hero-corner-bottom" aria-hidden="true">↗</span>
-          <span class="hero-demo-note" data-demo-caption>TEMPORARY DESIGN SAMPLES</span>
-        </div>
-        <span class="hero-side-label" aria-hidden="true">A LITTLE BIT OF MAGIC, MADE FOR YOU</span>
-      </section>
-
-      <section class="portfolio-section" id="portfolio" tabindex="-1" aria-labelledby="portfolio-title">
-        <div class="section-topline"><span>01 / SELECTED WORK</span><span class="portfolio-year">THE PORTFOLIO</span></div>
-        <div class="portfolio-intro">
-          <h2 id="portfolio-title">Every piece<br><em>has a story.</em></h2>
-          <p>Explore the work. Find your inspiration. An evolving space for original drawings, ideas, and the details worth keeping.</p>
-        </div>
-        <div id="gallery-demo-notice" class="gallery-demo-notice" role="status" hidden>
-          <span class="notice-icon" aria-hidden="true">✳</span>
-          <span><strong>Design preview</strong> — these are locally hosted design samples, not drawings by the artist. They'll disappear when real artwork is uploaded.</span>
-        </div>
-        <noscript><p>Browse <a href="./portfolio.php">the artist’s published drawings</a> without JavaScript.</p></noscript>
-        <div id="portfolio-gallery" class="portfolio-gallery" aria-label="Gallery images"></div>
-        <div class="gallery-more" id="gallery-more" hidden>
-          <button type="button" class="gallery-more-button" id="gallery-more-button" aria-controls="portfolio-gallery">Load more images <span id="gallery-remaining" aria-hidden="true">↓</span></button>
-        </div>
-        <p id="gallery-progress" class="gallery-progress" role="status" aria-live="polite" tabindex="-1" hidden></p>
-        <div id="portfolio-empty" class="portfolio-empty" role="status" tabindex="-1" hidden>Original drawings will appear here soon.</div>
-        <div id="portfolio-error" class="portfolio-error" hidden><p role="status">Gallery images are unavailable at the moment.</p><button type="button" id="portfolio-retry" class="gallery-more-button">Retry gallery</button></div>
-        <p id="portfolio-directory-note" class="small" role="status" hidden>The homepage shows a selection of published drawings. Browse the full portfolio for more.</p>
-        <p class="portfolio-directory-link"><a class="text-button" href="./portfolio.php">Browse published drawings <span aria-hidden="true">↗</span></a></p>
-        <div class="gallery-endmark"><span aria-hidden="true">✳</span> MORE TO COME</div>
-      </section>
-
-      <section class="experience-section" id="process" aria-labelledby="process-title">
-        <div class="section-topline"><span>02 / THE EXPERIENCE</span><span>PERSONAL, FROM START TO FINISH</span></div>
-        <div class="experience-inner">
-          <div class="experience-lead">
-            <p class="eyebrow"><span class="eyebrow-line"></span> CUSTOM COMMISSIONS</p>
-            <h2 id="process-title">A drawing<br>that's <em>yours.</em></h2>
-            <p>Custom artwork is personal. The request process is designed to make it simple to share your idea and work out the details directly with the artist.</p>
-            <p><a class="text-button" href="./services.php">Explore services &amp; pricing <span aria-hidden="true">↗</span></a></p>
-          </div>
-          <div class="experience-steps">
-            <article class="step"><span class="step-number">01</span><div><h3>Tell the story.</h3><p>Send an idea, describe the feeling, and include any reference photos you'd like.</p></div><span class="step-arrow" aria-hidden="true">↗</span></article>
-            <article class="step"><span class="step-number">02</span><div><h3>Make it yours.</h3><p>Discuss the scope, price, and timeline before anything is confirmed.</p></div><span class="step-arrow" aria-hidden="true">↗</span></article>
-            <article class="step"><span class="step-number">03</span><div><h3>Watch it come to life.</h3><p>After the quote and payment arrangements are confirmed, your custom drawing takes shape.</p></div><span class="step-arrow" aria-hidden="true">↗</span></article>
-          </div>
-        </div>
-      </section>
-
-      <section class="contact-section" id="contact" aria-labelledby="contact-title">
-        <div class="contact-deco" aria-hidden="true">✳</div>
-        <p class="eyebrow">GET IN TOUCH</p>
-        <h2 id="contact-title"><span data-studio-copy="contact_title">Have a question?</span><br><em data-studio-copy="contact_emphasis">Say hello.</em></h2>
-        <p data-intake-description>New commission requests are not open. General studio questions are welcome by email.</p>
-        <span class="contact-status" id="commission-status" data-intake-label>COMMISSION REQUESTS ARE NOT OPEN YET</span>
-        <div class="contact-actions">
-          <a href="mailto:support@drawmeone.com?subject=Draw%20Me%20One%20inquiry" class="primary-button">Email the studio <span aria-hidden="true">↗</span></a>
-          <a href="./commission.html" class="text-button"><span data-intake-cta>Commission information</span> <span aria-hidden="true">↗</span></a>
-        </div>
-      </section>
-    </main>
-    <footer class="footer">
-      <a class="wordmark" href="#top">drawmeone<span>.</span></a>
-      <span>Made for the love of making things.</span>
-      <span>Artist-led creative commissions</span>
-      <nav class="public-footer-links" aria-label="Footer links"><a href="./services.php">Services &amp; pricing</a><a href="./policy.php">Terms &amp; privacy</a><a href="./account.html">My account</a></nav>
-    </footer>
-  </div>
-
-  <aside class="design-lab" id="design-lab" hidden aria-label="Live design preview controls">
-    <div class="lab-titlebar">
-      <div class="lab-title"><span class="lab-indicator"></span><strong>DESIGN LAB</strong><span class="lab-beta">LIVE PREVIEW</span></div>
-      <button type="button" id="lab-collapse" class="lab-collapse" aria-expanded="true" aria-controls="lab-controls">Minimize <span aria-hidden="true">⌄</span></button>
-    </div>
-    <div class="lab-controls" id="lab-controls">
-      <div class="lab-group lab-site-group">
-        <span class="lab-label">WEBSITE STYLE <small>changes the entire layout</small></span>
-        <div class="lab-button-group" role="group" aria-label="Whole website layout style">
-          <button type="button" data-site-choice="studio">Studio</button>
-          <button type="button" data-site-choice="archive">Atelier</button>
-          <button type="button" data-site-choice="journal">Edition</button>
-          <button type="button" data-site-choice="cinema">Signature</button>
-        </div>
-      </div>
-      <div class="lab-group lab-theme-group">
-        <span class="lab-label">COLOR THEME</span>
-        <div class="lab-button-group" role="group" aria-label="Color design theme">
-          <button type="button" data-design-choice="noir">Noir</button>
-          <button type="button" data-design-choice="canvas">Ocean</button>
-          <button type="button" data-design-choice="editorial">Paper</button>
-          <button type="button" data-design-choice="aurora">Aurora</button>
-          <button type="button" data-design-choice="ember">Ember</button>
-        </div>
-      </div>
-      <div class="lab-group lab-layout-group">
-        <span class="lab-label">GALLERY</span>
-        <div class="lab-button-group" role="group" aria-label="Gallery layout">
-          <button type="button" data-layout-choice="masonry">Masonry</button>
-          <button type="button" data-layout-choice="mosaic">Mosaic</button>
-          <button type="button" data-layout-choice="rows">Scroll</button>
-        </div>
-      </div>
-      <div class="lab-group lab-mode-group">
-        <span class="lab-label">MODE</span>
-        <div class="lab-button-group" role="group" aria-label="Color mode">
-          <button type="button" data-mode-choice="dark" aria-label="Dark mode">☾</button>
-          <button type="button" data-mode-choice="light" aria-label="Light mode">☀</button>
-        </div>
-      </div>
-      <div class="lab-group lab-logo-group">
-        <span class="lab-label">BRAND LOGO <small>automatically switches between white and black</small></span>
-        <div class="lab-logo-options" role="group" aria-label="Brand logo options">
-          <button type="button" class="lab-logo-option lab-logo-original" data-logo-choice="original" title="Original wordmark"><strong aria-hidden="true">drawmeone.</strong><span>Original</span></button>
-          <button type="button" class="lab-logo-option" data-logo-choice="01-minimal-pencil" title="Minimal pencil"><img data-logo-preview="01-minimal-pencil" alt="" loading="lazy" decoding="async"><span>Minimal pencil</span></button>
-          <button type="button" class="lab-logo-option" data-logo-choice="02-signature" title="Signature"><img data-logo-preview="02-signature" alt="" loading="lazy" decoding="async"><span>Signature</span></button>
-          <button type="button" class="lab-logo-option" data-logo-choice="03-dmo-monogram" title="DMO monogram"><img data-logo-preview="03-dmo-monogram" alt="" loading="lazy" decoding="async"><span>DMO monogram</span></button>
-          <button type="button" class="lab-logo-option" data-logo-choice="04-portrait-seal" title="Portrait seal"><img data-logo-preview="04-portrait-seal" alt="" loading="lazy" decoding="async"><span>Portrait seal</span></button>
-          <button type="button" class="lab-logo-option" data-logo-choice="05-editorial" title="Editorial"><img data-logo-preview="05-editorial" alt="" loading="lazy" decoding="async"><span>Editorial</span></button>
-          <button type="button" class="lab-logo-option" data-logo-choice="06-brushstroke" title="Brushstroke"><img data-logo-preview="06-brushstroke" alt="" loading="lazy" decoding="async"><span>Brushstroke</span></button>
-          <button type="button" class="lab-logo-option" data-logo-choice="07-portrait" title="Portrait"><img data-logo-preview="07-portrait" alt="" loading="lazy" decoding="async"><span>Portrait</span></button>
-          <button type="button" class="lab-logo-option" data-logo-choice="08-paintbrush-badge" title="Brush badge"><img data-logo-preview="08-paintbrush-badge" alt="" loading="lazy" decoding="async"><span>Brush badge</span></button>
-          <button type="button" class="lab-logo-option" data-logo-choice="09-pen-lettering" title="Pen lettering"><img data-logo-preview="09-pen-lettering" alt="" loading="lazy" decoding="async"><span>Pen lettering</span></button>
-          <button type="button" class="lab-logo-option" data-logo-choice="10-creative-palette" title="Creative palette"><img data-logo-preview="10-creative-palette" alt="" loading="lazy" decoding="async"><span>Creative palette</span></button>
-        </div>
-      </div>
-    </div>
-    <p class="lab-site-description" id="lab-site-description" aria-live="polite">Studio — the original landing-page layout.</p>
-    <div class="lab-prototype-links" aria-label="Studio workspace links">
-      <span>STUDIO WORKSPACES</span>
-      <a href="./commission.html">Commission workspace <span aria-hidden="true">↗</span></a>
-      <a href="./studio-admin/index.php">Artist's Desk <span aria-hidden="true">↗</span></a>
-      <a href="./account.html">Customer account <span aria-hidden="true">↗</span></a>
-    </div>
-  </aside>
-
-  <dialog class="portfolio-lightbox" id="portfolio-lightbox" aria-label="Artwork viewer">
-    <div class="lightbox-inner">
-      <button type="button" class="lightbox-close" data-gallery-close aria-label="Close viewer">×</button>
-      <div class="lightbox-stage"><img id="lightbox-image" alt="" decoding="async"></div>
-      <div class="lightbox-image-feedback"><p id="lightbox-image-status" role="status"></p><button type="button" id="lightbox-retry" hidden>Retry image</button></div>
-      <div class="lightbox-bottom">
-        <button type="button" data-gallery-prev aria-label="Previous image">←</button>
-        <span id="lightbox-counter" aria-live="polite"></span>
-        <a id="lightbox-detail-link" class="lightbox-detail-link" href="#" hidden>View drawing page</a>
-        <button type="button" data-gallery-next aria-label="Next image">→</button>
-      </div>
-    </div>
-  </dialog>
+<a class="skip" href="#main">Skip to content</a>
+<header class="masthead"><a class="wordmark" href="/" aria-label="Draw Me One homepage">drawmeone<span>.</span></a><nav aria-label="Main navigation"><a href="#portfolio">Gallery</a><a href="#contact">Contact</a><button type="button" id="theme" class="theme" aria-label="Switch to light mode">☀</button></nav></header>
+<main id="main" tabindex="-1">
+<section class="hero"><div class="eyebrow">A LITTLE CORNER OF THE INTERNET FOR ART</div><h1 id="hero-title">A little art,<br>just for you.</h1><p id="hero-intro">Fan art, original characters and custom drawings. Thanks for stopping by!</p><a class="primary" href="#portfolio">Explore my artwork</a></section>
+<section id="portfolio" class="gallery-section" aria-labelledby="gallery-title"><div class="section-heading"><div><p class="eyebrow">MADE BY ME</p><h2 id="gallery-title">My artwork</h2></div><a id="all-art" href="/portfolio.php" hidden>See all drawings</a></div>
+<p id="gallery-status" role="status">Loading artwork…</p><div id="gallery" class="gallery" aria-label="Published drawings" aria-busy="true"></div><div class="center"><button type="button" id="more" hidden>See more drawings</button></div></section>
+<section id="contact" class="contact"><p class="eyebrow">SAY HELLO</p><h2>Have something in mind?</h2><p id="availability" class="availability">Commissions are currently closed.</p><p id="contact-copy">Thanks for your interest! Feel free to say hello or check back for commission availability.</p><p id="price" hidden></p><p id="payment-methods" hidden></p><a class="primary" href="mailto:support@drawmeone.com">Email me</a><div id="socials" class="socials"></div></section>
+</main>
+<footer><span>drawmeone. · Original artwork</span><a href="/privacy.php">Privacy</a></footer>
+<dialog id="viewer" aria-label="View drawing"><div class="viewer-top"><span id="counter" aria-live="polite"></span><button type="button" id="close-viewer" aria-label="Close drawing">✕</button></div><div class="viewer-stage"><img id="large-art" alt=""><p id="viewer-error" role="status" hidden>Drawing unavailable. Please try again later.</p></div><div class="viewer-bottom"><button type="button" id="prev" aria-label="Previous drawing">←</button><a id="detail" href="/">Drawing link</a><button type="button" id="next" aria-label="Next drawing">→</button></div></dialog>
 </body>
 </html>

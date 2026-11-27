@@ -166,7 +166,7 @@ header nav a{padding-block:8px}
 <a class="skip" href="#main">Skip to drawing</a>
 <header>
   <a class="wordmark" href="/" aria-label="Draw Me One homepage">drawmeone<span>.</span></a>
-  <nav aria-label="Main navigation"><a href="/portfolio.php">Portfolio</a><a href="/services.php">Services</a><a href="/commission.html">Commissions</a><a href="/account.html">Account</a><button type="button" class="public-theme-toggle" data-public-theme hidden>Light mode</button></nav>
+  <nav aria-label="Main navigation"><a href="/portfolio.php">Portfolio</a><a href="/#contact">Contact</a><button type="button" class="public-theme-toggle" data-public-theme hidden>Light mode</button></nav>
 </header>
 <main id="main" tabindex="-1">
   <span class="eyebrow">FROM THE ARTIST'S PORTFOLIO</span>
@@ -186,6 +186,6 @@ header nav a{padding-block:8px}
     <?php if($neighbours['next']!==null): ?><a rel="next" href="<?= dmo_artwork_page_escape(dmo_gallery_detail_url($neighbours['next'],$view,max(1,min(1000,(int)ceil(($position+1)/24))),$search)) ?>">Next drawing</a><?php else: ?><span>Last drawing</span><?php endif; ?>
   </nav>
 </main>
-<footer><a href="/#portfolio">← Back to the gallery</a><a href="/services.php">Commission services</a><span>Draw Me One · Original artwork</span></footer>
+<footer><a href="/#portfolio">← Back to the gallery</a><a href="/#contact">Contact</a><span>Draw Me One · Original artwork</span></footer>
 </body>
 </html>

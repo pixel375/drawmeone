@@ -62,7 +62,7 @@ jobs:
           curl -fsS --max-time 4 http://127.0.0.1:18868/index.html >/dev/null
           echo "Testing browser engine: $DMO_BROWSER_ENGINE"
           failed=0
-          for script in browser_smoke browser_admin_smoke browser_commission_smoke browser_onboarding_smoke; do
+          for script in browser_v2_smoke; do
             if ! node "tests/$script.cjs"; then
               echo "::error::${DMO_BROWSER_ENGINE}: ${script} failed"
               failed=1

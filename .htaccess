@@ -1,26 +1,19 @@
-# Keep HTML and JSON revalidated so old versions of the live preview do not linger.
+# DrawMeOne V2: real public portfolio, retired V1 pages redirect.
 <IfModule mod_headers.c>
-  # Prelaunch indexing remains closed even for direct static assets and
-  # published artwork. Remove only in an explicitly approved SEO release.
-  Header always merge X-Robots-Tag "noindex"
   <FilesMatch "\.(html|json)$">
     Header set Cache-Control "no-cache, must-revalidate"
   </FilesMatch>
 </IfModule>
-
-# Protect accidentally misplaced configuration and database dumps.
-# Real secrets must still live OUTSIDE public_html.
 <IfModule mod_authz_core.c>
   <FilesMatch "(^\.env($|\.)|^\.git|\.sql(\.gz)?$|\.pem$|\.key$|\.bak$|\.dump$)">
     Require all denied
   </FilesMatch>
 </IfModule>
-
-# Dynamically expose published artwork URLs to search engines.
 <IfModule mod_rewrite.c>
   RewriteEngine On
-  # Retire obsolete mock forms and public setup pages; real workspaces retain their own gates.
   RewriteRule ^(?:admin-preview\.html|backend-status\.(?:html|php))$ /studio-admin/index.php [R=302,END,NE,QSD]
-  RewriteRule ^commission-preview\.html$ /commission.html [R=302,END,NE,QSD]
+  RewriteRule ^(?:commission-preview\.html|commission\.html|account\.html|password-reset\.html|commission-summary\.php|services\.php)$ /#contact [R=302,END,NE,QSD]
+  RewriteRule ^(?:policy\.html|policy\.php)$ /privacy.php [R=302,END,NE,QSD]
+  RewriteRule ^(?:assets/demo/|data/|concepts\.(?:js|css)$|preview\.(?:js|css)$|commission\.(?:js|css)$|account\.js$|password-reset\.js$|policy\.js$) - [F,END]
   RewriteRule ^sitemap\.xml$ sitemap.php [END]
 </IfModule>

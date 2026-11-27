@@ -1,0 +1,6 @@
+<?php
+declare(strict_types=1);
+header('Content-Type: text/html; charset=utf-8');
+header('Cache-Control: no-cache, must-revalidate');
+header('X-Content-Type-Options: nosniff');
+?><!doctype html><html lang="en" data-public-mode="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,follow"><title>Privacy · Draw Me One</title><link rel="stylesheet" href="/styles.css?v=200"><script defer src="/public-theme.js?v=2"></script></head><body><header class="masthead"><a class="wordmark" href="/">drawmeone<span>.</span></a><a href="/">Back to gallery</a></header><main><section class="gallery-section"><h1>Privacy</h1><p>This website displays published artwork. Visitors do not need an account. A theme preference may be stored in your browser. Hosting and security services may process technical information needed to serve and protect the website.</p><p>If you contact the artist by email, your message and address are used to respond to your enquiry. The website does not currently accept commission submissions or collect payment card details.</p><p>For questions about your information, email <a href="mailto:support@drawmeone.com">support@drawmeone.com</a>.</p></section></main><footer>Draw Me One</footer></body></html>

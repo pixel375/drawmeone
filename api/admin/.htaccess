@@ -1,11 +1,10 @@
-# Public URLs limited to reviewed routes; admin data also requires a server-side
-# verified admin-only session, not just knowledge of this directory's URL.
 <IfModule mod_rewrite.c>
   RewriteEngine On
-  RewriteRule ^(?!status\.php$|login\.php$|me\.php$|logout\.php$|overview\.php$|requests\.php$|messages\.php$|finance\.php$|customers\.php$|security\.php$|design\.php$|packages\.php$|request\.php$|request-actions\.php$|quote-send\.php$|order-create\.php$|delivery-draft\.php$|intake\.php$|privacy\.php$|artworks\.php$|artwork-upload\.php$|artwork-preview\.php$|email\.php$).* - [F,END]
+  RewriteRule ^(?!status\.php$|login\.php$|me\.php$|logout\.php$|studio\.php$|artworks\.php$|artwork-upload\.php$|artwork-preview\.php$|security\.php$).* - [F,END]
 </IfModule>
 <IfModule mod_headers.c>
   Header always set Cache-Control "no-store, private"
+  Header always set X-Robots-Tag "noindex, nofollow"
   Header always set X-Content-Type-Options "nosniff"
   Header always set X-Frame-Options "DENY"
 </IfModule>

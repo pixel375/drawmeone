@@ -71,7 +71,7 @@ header nav a[aria-current="page"]{font-weight:750;text-decoration-thickness:2px}
 </head>
 <body>
 <a class="skip" href="#main">Skip to drawings</a>
-<header><a href="/" aria-label="Draw Me One homepage">drawmeone.</a><nav aria-label="Main navigation"><a href="/portfolio.php" aria-current="page">Portfolio</a><a href="/services.php">Services</a><a href="/commission.html">Commissions</a><a href="/account.html">Account</a><button type="button" class="public-theme-toggle" data-public-theme hidden>Light mode</button></nav></header>
+<header><a href="/" aria-label="Draw Me One homepage">drawmeone.</a><nav aria-label="Main navigation"><a href="/portfolio.php" aria-current="page">Portfolio</a><a href="/#contact">Contact</a><button type="button" class="public-theme-toggle" data-public-theme hidden>Light mode</button></nav></header>
 <main id="main" tabindex="-1">
 <h1>Published drawings</h1>
 <p class="intro">Original artwork shared by the artist. Select a drawing to view it individually.</p>

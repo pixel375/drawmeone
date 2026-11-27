@@ -30,5 +30,5 @@ for slug in slugs:
 inspect(ROOT/"favicon.svg")
 html=(ROOT/"index.html").read_text(encoding="utf-8")
 assert not re.search(r'<meta[^>]+property="og:image"[^>]+assets/demo/',html), "No sample social image"
-assert set(re.findall(r'data-logo-preview="([^"]+)"',html))==set(slugs)
+assert "Design Lab" not in html and "assets/demo/" not in html and "drawmeone" in html
 print("BRANDING_CONTRACT=PASS")
