@@ -374,8 +374,11 @@ try {
     art_assert($status===200 && str_contains($html,'https://drawmeone.com/artwork.php?id='.$id) &&
         str_contains($html,'&lt;script&gt;') && !str_contains($html,'<script>alert(') &&
         str_contains($html,'"@type":"ImageObject"') &&
-        str_contains(strtolower($headers),'no-cache')&&str_contains(strtolower($headers),'noindex')&&str_contains($html,'content="noindex,follow"'),'published_detail_safe_html_and_schema');
+        str_contains(strtolower($headers),'no-cache')&&str_contains(strtolower($headers),'x-robots-tag: index, follow')&&str_contains($html,'content="index,follow"'),'published_detail_safe_html_and_schema');
+    [$status,,$variant,$headers]=art_http('/artwork.php?id='.$id.'&view=all');
+    art_assert($status===200&&str_contains(strtolower($headers),'noindex')&&str_contains($variant,'content="noindex,follow"'),'duplicate_artwork_context_noindex');
     [$status,,$directory,$headers]=art_http('/portfolio.php');
+    art_assert($status===200&&str_contains(strtolower($headers),'x-robots-tag: index, follow'),'public_directory_indexable_when_populated');
     art_assert($status===200&&str_contains($directory,'href="/artwork.php?id='.$id.'"')&&str_contains($directory,'&lt;script&gt;')&&!str_contains($directory,'<script>alert(')&&str_contains(strtolower($headers),'no-store'),'directory_public_image_and_escaped_alt');
     [$status]=art_http('/portfolio.php?page=-1');
     art_assert($status===404,'directory_invalid_page_rejected');

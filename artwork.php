@@ -29,7 +29,7 @@ try {
     $query->execute(['id' => (int) $idText]);
     $work = $query->fetch(PDO::FETCH_ASSOC);
     if (!is_array($work) ||
-        !dmo_artwork_variant_valid($work)) {
+        !dmo_artwork_variant_valid($work) || !dmo_artwork_publishable($db, (int)$idText)) {
         http_response_code(404);
         header('X-Robots-Tag: noindex');
         echo 'Drawing not found.';
@@ -105,6 +105,8 @@ $schema = json_encode([
     ],
 ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE |
    JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+$indexable = count($_GET) === 1 && isset($_GET['id']);
+header('X-Robots-Tag: '.($indexable?'index, follow':'noindex, follow'));
 header('Content-Type: text/html; charset=utf-8');
 header('Cache-Control: public, no-cache, must-revalidate');
 header('X-Content-Type-Options: nosniff');
@@ -112,17 +114,17 @@ header('X-Frame-Options: DENY');
 header('Referrer-Policy: strict-origin-when-cross-origin');
 ?>
 <!doctype html>
-<html lang="en">
+<html lang="en" data-public-mode="dark">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="robots" content="noindex,follow">
+<meta name="robots" content="<?= $indexable?'index,follow':'noindex,follow' ?>">
 <meta name="description" content="<?= dmo_artwork_page_escape($description) ?>">
 <title><?= dmo_artwork_page_escape($title) ?></title>
 <link rel="canonical" href="<?= dmo_artwork_page_escape($canonical) ?>">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <meta name="theme-color" content="#141318">
-<script src="./public-theme.js?v=2"></script>
+<script src="/public-theme.js?v=3"></script>
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Draw Me One">
 <meta property="og:title" content="<?= dmo_artwork_page_escape($title) ?>">
@@ -134,51 +136,23 @@ header('Referrer-Policy: strict-origin-when-cross-origin');
 <meta property="og:image:alt" content="<?= dmo_artwork_page_escape($label) ?>">
 <meta name="twitter:card" content="summary_large_image">
 <script type="application/ld+json"><?= $schema ?></script>
-<style>
-:root{color-scheme:dark;--bg:#151318;--card:#211e24;--ink:#faf3ed;--muted:#c6b8bf;--line:#514550;--accent:#edb9ab}
-@media(prefers-color-scheme:light){:root{color-scheme:light;--bg:#faf7f3;--card:#fffdfa;--ink:#242027;--muted:#615662;--line:#d6c9ce;--accent:#783e53}}
-:root[data-public-mode="dark"]{color-scheme:dark;--bg:#151318;--ink:#faf3ed;--muted:#c6b8bf;--line:#514550;--accent:#edb9ab;--card:#211e24}:root[data-public-mode="light"]{color-scheme:light;--bg:#faf7f3;--ink:#242027;--muted:#615662;--line:#d6c9ce;--accent:#783e53;--card:#fffdfa}
-.public-theme-toggle{font:inherit;color:var(--ink);background:transparent;border:1px solid var(--line);border-radius:6px;min-height:44px;padding:8px 12px;cursor:pointer}.public-theme-toggle:focus-visible{outline:2px solid var(--accent);outline-offset:3px}.public-theme-toggle[hidden]{display:none}
-*{box-sizing:border-box}
-body{margin:0;background:radial-gradient(ellipse at 65% -10%,rgba(237,185,171,.1),transparent 65%),var(--bg);color:var(--ink);font:14px/1.65 system-ui,-apple-system,Segoe UI,sans-serif;min-height:100vh}
-a{color:inherit;text-decoration:none}
-a:hover{text-decoration:underline}
-a:focus-visible{outline:2px solid var(--accent);outline-offset:4px}
-header,footer{width:min(1200px,100% - 38px);margin:auto;display:flex;align-items:center;justify-content:space-between;gap:18px}
-header{min-height:78px;border-bottom:1px solid var(--line)}
-.wordmark{font-weight:900;font-size:24px;letter-spacing:-.07em}
-.wordmark span{color:var(--accent)}
-nav{display:flex;flex-wrap:wrap;gap:22px;font-size:12px;font-weight:700;color:var(--muted)}
-main{width:min(1100px,100% - 38px);margin:clamp(25px,5vw,65px) auto}
-.eyebrow{font-size:10px;letter-spacing:.15em;font-weight:900;color:var(--accent)}
-h1{font:normal clamp(29px,5vw,48px)/1.12 Georgia,serif;letter-spacing:-.05em;margin:12px 0}
-.intro{max-width:690px;color:var(--muted)}
-figure{margin:28px 0 0;padding:clamp(12px,2.7vw,27px);background:var(--card);border:1px solid var(--line);border-radius:14px;text-align:center}
-figure img{display:block;max-width:100%;max-height:min(80dvh,1100px);width:auto;height:auto;object-fit:contain;margin:0 auto;border-radius:3px}
-figcaption{color:var(--muted);font-size:12px;text-align:left;margin-top:18px;overflow-wrap:anywhere}
-footer{padding:24px 0 45px;border-top:1px solid var(--line);font-size:12px;color:var(--muted);flex-wrap:wrap}
-.skip{position:absolute;left:12px;top:-100px;padding:12px;background:var(--bg);z-index:3}.skip:focus{top:12px}.artwork-share{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:20px 0}.artwork-share button{min-height:44px;padding:8px 14px;font:inherit;color:var(--ink);border:1px solid var(--line);background:var(--card);border-radius:8px;cursor:pointer}.artwork-share button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}.artwork-share button[hidden]{display:none}.artwork-share p{margin:0;color:var(--muted)}.artwork-share details{flex-basis:100%;overflow-wrap:anywhere}.artwork-share summary{cursor:pointer;padding:8px 0}.artwork-share summary:focus-visible{outline:2px solid var(--accent);outline-offset:3px}.artwork-nav{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:22px 0 0}.artwork-nav a,.artwork-nav span{min-height:44px;display:flex;align-items:center;justify-content:center;text-align:center;padding:10px;border:1px solid var(--line);border-radius:8px;overflow-wrap:anywhere}.artwork-nav span{border-color:transparent;color:var(--muted)}
-@media(max-width:600px){header{min-height:65px;flex-wrap:wrap;padding-block:12px}.wordmark{font-size:21px}nav{gap:13px}figure{padding:12px}.artwork-nav{gap:6px}.artwork-nav a,.artwork-nav span{font-size:11px;padding:6px}}
-header nav a{padding-block:8px}
-</style>
+<link rel="stylesheet" href="/styles.css?v=204">
 </head>
-<body>
+<body class="secondary">
 <a class="skip" href="#main">Skip to drawing</a>
-<header>
+<header class="masthead">
   <a class="wordmark" href="/" aria-label="Draw Me One homepage">drawmeone<span>.</span></a>
-  <nav aria-label="Main navigation"><a href="/portfolio.php">Portfolio</a><a href="/#contact">Contact</a><button type="button" class="public-theme-toggle" data-public-theme hidden>Light mode</button></nav>
+  <nav aria-label="Main navigation"><a href="/#portfolio">Gallery</a><a href="/#contact">Contact</a><button type="button" class="public-theme-toggle" data-public-theme hidden>Light mode</button></nav>
 </header>
 <main id="main" tabindex="-1">
-  <span class="eyebrow">FROM THE ARTIST'S PORTFOLIO</span>
   <h1>Original drawing</h1>
-  <p class="intro">A piece from the Draw Me One portfolio, published by the artist.</p>
   <figure>
     <img src="<?= dmo_artwork_page_escape('/api/artwork.php?id=' . $artworkId . '&v=display') ?>"
          alt="<?= dmo_artwork_page_escape($label) ?>"
          width="<?= $width ?>" height="<?= $height ?>">
     <figcaption><?= dmo_artwork_page_escape($label) ?></figcaption>
   </figure>
-  <div class="artwork-share" aria-label="Share this drawing"><button type="button" data-share-artwork hidden>Share drawing</button><button type="button" data-copy-artwork hidden>Copy drawing link</button><p data-share-status role="status" aria-live="polite"></p><details><summary>Permanent drawing link</summary><a href="<?= dmo_artwork_page_escape($canonical) ?>"><?= dmo_artwork_page_escape($canonical) ?></a></details></div>
+  <div class="artwork-share" aria-label="Share this drawing"><button type="button" data-share-artwork hidden>Share drawing</button><button type="button" data-copy-artwork hidden>Copy drawing link</button><p data-share-status role="status" aria-live="polite"></p><details><summary>Drawing link</summary><a href="<?= dmo_artwork_page_escape($canonical) ?>"><?= dmo_artwork_page_escape($canonical) ?></a></details></div>
   <p class="intro">Drawing <?= $position ?> of <?= max($position,$total) ?><?= $search!==''?' matching your search':'' ?></p>
   <nav class="artwork-nav" aria-label="Browse published drawings">
     <?php if($neighbours['previous']!==null): ?><a rel="prev" href="<?= dmo_artwork_page_escape(dmo_gallery_detail_url($neighbours['previous'],$view,max(1,min(1000,(int)ceil(($position-1)/24))),$search)) ?>">Previous drawing</a><?php else: ?><span>First drawing</span><?php endif; ?>
