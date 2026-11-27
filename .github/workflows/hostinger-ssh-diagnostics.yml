@@ -30,6 +30,12 @@ on:
       - api/admin/login.php
       - app/admin.php
       - app/auth.php
+      - app/studio-v2.php
+      - api/admin/studio.php
+      - api/admin/artworks.php
+      - app/artwork.php
+      - api/guest-request.php
+      - app/guest-requests.php
 
 permissions:
   contents: read
@@ -133,7 +139,7 @@ jobs:
           curl -fsS --max-time 15 https://drawmeone.com/api/admin/status.php | php -r '$d=json_decode(stream_get_contents(STDIN),true);if(($d["admin_available"]??false)!==true||($d["captcha_required"]??null)!==false||($d["turnstile_site_key"]??null)!==null)exit(1);echo "v2_admin=available_password_only\n";'
           curl -fsS --max-time 15 -H "Cache-Control: no-cache" https://drawmeone.com/api/admin/me.php | php -r '$d=json_decode(stream_get_contents(STDIN),true);if(($d["ok"]??false)!==true||($d["authenticated"]??null)!==false)exit(1);echo "v2_admin_signed_out_session=pass\n";'
           # Compare versioned assets fetched over public HTTPS, not just disk copies.
-          for entry in "studio-admin/panel.js?v=208" "styles.css?v=208" "studio.js?v=208"; do
+          for entry in "studio-admin/panel.js?v=209" "styles.css?v=209" "studio.js?v=209"; do
             file="${entry%%\?*}"
             actual=$(curl -fsS --max-time 15 -H "Cache-Control: no-cache" "https://drawmeone.com/$entry" | sha256sum | cut -d" " -f1)
             expected=$(sha256sum "$site/$file" | cut -d" " -f1)

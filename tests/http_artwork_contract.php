@@ -580,6 +580,18 @@ try {
     art_assert($status===200&&!str_contains($featuredDirectory,'href="/artwork.php?id='),'filtered_directory_excludes_unpublished_art');
     [$status]=art_http('/artwork.php?id='.$id2);
     art_assert($status===404,'adjacent_drawing_unpublished_detail_revoked');
+    [$status]=art_http('/api/admin/artworks.php',$token,null,['action'=>'delete','id'=>$id,'expected'=>'draft','confirm'=>true]);
+    art_assert($status===403,'delete_requires_csrf');
+    [$status]=art_http('/api/admin/artworks.php',$token,$csrf,['action'=>'delete','id'=>$id,'expected'=>'published','confirm'=>true]);
+    art_assert($status===409,'delete_rejects_stale_visibility');
+    [$status]=art_http('/api/admin/artworks.php',$token,$csrf,['action'=>'delete','id'=>$id,'expected'=>'draft','confirm'=>false]);
+    art_assert($status===422,'delete_requires_explicit_confirmation');
+    [$status,$deleted]=art_http('/api/admin/artworks.php',$token,$csrf,['action'=>'delete','id'=>$id,'expected'=>'draft','confirm'=>true]);
+    art_assert($status===200&&$deleted['deleted']===true&&$deleted['cleanup_complete']===true,'delete_confirmed_drawing');
+    [$status]=art_http('/api/admin/artwork-preview.php?id='.$id.'&v=display',$token);
+    art_assert($status===404,'deleted_private_preview_revoked');
+    [$status]=art_http('/api/artwork.php?id='.$id.'&v=display');
+    art_assert($status===404,'deleted_public_image_revoked');
     $audit=$db->query(
         "SELECT action FROM dmo_audit_log WHERE entity_type='portfolio_artwork'"
     )->fetchAll(PDO::FETCH_COLUMN);

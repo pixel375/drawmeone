@@ -33,3 +33,8 @@ If something fails, avoid submitting the same action repeatedly; refresh and ver
 - Open commissions only after the owner approves; until then leave the switch off.
 
 For the remaining launch checks, see the [V2 owner launch checklist](V2_OWNER_LAUNCH.md). All six owner decisions remain separate from the completed independent implementation.
+
+## New options
+- My website: choose Blurple, Midnight or Studio, preview dark/light appearance, then save. Turn on Discord only with a genuine invite URL; the contact area shows one link.
+- Artwork: More options > Delete drawing removes the drawing from the live library after confirmation. Prior encrypted backups may contain it until rotation; keep original files yourself.
+- Requests: CAPTCHA is on by default. Visitors can retry verification or use direct contact. You may explicitly turn CAPTCHA off; tighter rate limits and a hidden spam trap remain, but bot protection is reduced. Email testing is deferred.

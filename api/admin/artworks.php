@@ -49,6 +49,7 @@ try {
         dmo_json(503, ['ok' => false, 'error' => 'artwork_editing_disabled']);
     }
     $action = $input['action'] ?? null;
+    if($action==='delete')dmo_artwork_delete($db,(int)$admin['user_id'],$input);
     if($action==='batch_visibility')dmo_artwork_batch_visibility($db,(int)$admin['user_id'],$input);
     if($action==='batch_metadata')dmo_artwork_batch_metadata($db,(int)$admin['user_id'],$input);
     if($action==='batch_featured')dmo_artwork_batch_featured($db,(int)$admin['user_id'],$input);

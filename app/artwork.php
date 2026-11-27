@@ -468,3 +468,39 @@ function dmo_artwork_batch_metadata(PDO $db,int $admin,array $input): never
         dmo_json(200,['ok'=>true,'processed'=>count($edits),'updated'=>count($changes)]);
     }catch(Throwable $e){if($db->inTransaction())$db->rollBack();throw $e;}
 }
+
+/** Revoke the live artwork transactionally, then remove only its validated
+ * unshared private variants. Historic backups are intentionally retained. */
+function dmo_artwork_delete(PDO $db,int $admin,array $input): never
+{
+    if(count($input)!==4||array_diff(array_keys($input),['action','id','expected','confirm'])||($input['confirm']??null)!==true||!in_array($input['expected']??null,['draft','published'],true))
+        dmo_json(422,['ok'=>false,'error'=>'invalid_delete_confirmation']);
+    $id=dmo_artwork_id($input['id']??null);
+    $lock=$db->prepare('SELECT GET_LOCK(:name,3)');$lock->execute(['name'=>dmo_artwork_upload_lock_name($db)]);
+    if((int)$lock->fetchColumn()!==1)dmo_json(409,['ok'=>false,'error'=>'artwork_upload_busy']);
+    $db->beginTransaction();
+    try{
+        $q=$db->prepare('SELECT visibility FROM dmo_portfolio_artworks WHERE id=:id FOR UPDATE');$q->execute(['id'=>$id]);$visibility=$q->fetchColumn();
+        if($visibility===false){$db->rollBack();dmo_json(404,['ok'=>false,'error'=>'artwork_not_found']);}
+        if($visibility!==$input['expected']){$db->rollBack();dmo_json(409,['ok'=>false,'error'=>'artwork_field_changed']);}
+        $q=$db->prepare('SELECT storage_key FROM dmo_artwork_files WHERE artwork_id=:id FOR UPDATE');$q->execute(['id'=>$id]);$keys=$q->fetchAll(PDO::FETCH_COLUMN);
+        $paths=[];
+        foreach($keys as $key){
+            $path=dmo_artwork_storage_file($key);
+            $q=$db->prepare('SELECT COUNT(*) FROM dmo_artwork_files WHERE storage_key=:key AND artwork_id<>:id');$q->execute(['key'=>$key,'id'=>$id]);
+            if((int)$q->fetchColumn()===0)$paths[]=$path;
+        }
+        $db->prepare('DELETE FROM dmo_artwork_files WHERE artwork_id=:id')->execute(['id'=>$id]);
+        $db->prepare('DELETE FROM dmo_portfolio_artworks WHERE id=:id')->execute(['id'=>$id]);
+        dmo_artwork_record_audit($db,$admin,$id,'artwork.deleted');
+        $db->commit();
+    }catch(Throwable $e){if($db->inTransaction())$db->rollBack();throw $e;}
+    $cleanup=true;
+    foreach($paths as $path){
+        if(!file_exists($path)&&!is_link($path))continue;
+        if(!dmo_private_image_path_ok($path,true)||!@unlink($path)){$cleanup=false;continue;}
+        @rmdir(dirname($path));
+    }
+    if(!$cleanup)error_log('[DrawMeOne] artwork deletion private cleanup incomplete');
+    dmo_json(200,['ok'=>true,'id'=>$id,'deleted'=>true,'cleanup_complete'=>$cleanup]);
+}
