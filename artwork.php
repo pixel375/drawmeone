@@ -136,7 +136,7 @@ header('Referrer-Policy: strict-origin-when-cross-origin');
 <meta property="og:image:alt" content="<?= dmo_artwork_page_escape($label) ?>">
 <meta name="twitter:card" content="summary_large_image">
 <script type="application/ld+json"><?= $schema ?></script>
-<link rel="stylesheet" href="/styles.css?v=209">
+<link rel="stylesheet" href="/styles.css?v=210">
 </head>
 <body class="secondary">
 <a class="skip" href="#main">Skip to drawing</a>

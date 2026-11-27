@@ -19,6 +19,14 @@ await page.route("**/api/admin/guest-requests.php*",r=>reply(r,{ok:true,requests
     assert.equal(await page.locator("#request-brief").inputValue(),"A synthetic drawing idea");
     await page.locator("#request-submit").click();await page.waitForFunction(()=>document.querySelector("#request-status").textContent.includes("has been received"));
     assert.equal(posts.length,2);assert.equal(posts[0].operation_key,posts[1].operation_key);assert.equal(await page.locator("#request-brief").inputValue(),"");await page.route("**/api/studio.php",r=>reply(r,{ok:true,settings:{...settings,accepting:true,guest_captcha:false,discord_enabled:true,discord_url:"https://discord.gg/Example",theme:"midnight"},turnstile_site_key:null}));await page.goto(base+"/index.html");await page.locator("#request-form").waitFor({state:"visible"});assert.equal(await page.locator("#request-submit").isEnabled(),true);assert.equal(await page.locator("#request-captcha").isHidden(),true);assert.equal(await page.getByRole("link",{name:"Discord",exact:true}).getAttribute("href"),"https://discord.gg/Example");assert.equal(await page.locator("html").getAttribute("data-theme"),"midnight");await audit(page,"midnight-guest-no-captcha");
+    await page.locator("#request-name").fill("CI Guest");await page.locator("#request-email").fill("guest@example.invalid");await page.locator("#request-brief").fill("Another synthetic drawing idea");
+    await page.locator("#request-submit").click();await page.waitForFunction(()=>document.querySelector("#request-status").textContent.includes("has been received"));
+    assert.equal(posts.length,3);assert.equal("turnstile_token" in posts[2],false);
+    await page.route("**/api/studio.php",r=>reply(r,{ok:true,settings:{...settings,accepting:true,guest_captcha:true,discord_enabled:false,theme:"paper"},turnstile_site_key:"ci-site-key"}));
+    await page.route("https://challenges.cloudflare.com/**",r=>r.abort());await page.goto(base+"/index.html");
+    await page.locator("#request-retry").waitFor({state:"visible"});assert.equal(await page.locator("#request-submit").isEnabled(),true);
+    assert.equal(await page.getByRole("link",{name:"Discord",exact:true}).count(),0);assert.equal(await page.locator("html").getAttribute("data-theme"),"paper");
+    await audit(page,"studio-verification-failed");
     console.log("V2_GUEST_BROWSER_PASS");
 }
 await page.close();console.log("V2_UI_PASS width="+width);}}finally{await browser.close();}})().catch(e=>{console.error(e);process.exitCode=1;});

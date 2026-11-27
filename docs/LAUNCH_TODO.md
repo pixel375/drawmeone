@@ -84,3 +84,5 @@ Independent implementation was complete (14/14) before the reported production l
 - Added public CAPTCHA retry and explicit admin switch (default on, reduced spam protection when off). Tightened CAPTCHA-free limits and added honeypot; policy rechecked under lock. No owner setting changed or live submission made.
 
 - Added confirmed individual artwork deletion; admin session/CSRF, stale visibility guard, database revocation and validated private file cleanup. Historical backups retained; no production art deleted. New release asset version 209. V2-12/owner visual review remain open until verification.
+
+- Added disposable real CAPTCHA-free HTTP enquiry/inbox test with invalid honeypot rejection, browser verification-failure and CAPTCHA-free submission scenarios; preserved success/failure status when widget resets. CSS assets bumped to 210.

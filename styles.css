@@ -53,3 +53,5 @@ body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;line-height:1.6}
 @media(max-width:640px){.masthead{min-height:62px}.hero{margin:18px 0 28px;padding:34px 20px;border-radius:18px}.hero h1{font-size:clamp(34px,9vw,52px)}.contact{border-radius:16px;padding:28px 14px}.gallery-section{padding-bottom:28px}}
 
 .request-trap{position:absolute;left:-10000px;top:auto;width:1px;height:1px;overflow:hidden}.request-form #request-retry{justify-self:start}
+
+[data-theme=midnight],[data-theme=paper]{color-scheme:dark}[data-theme=midnight][data-public-mode=light],[data-theme=paper][data-public-mode=light]{color-scheme:light}
