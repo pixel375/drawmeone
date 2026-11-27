@@ -179,7 +179,7 @@ try {
     [$status,$studio]=art_http('/api/admin/studio.php',$token);
     art_assert($status===200&&$studio['version']===0,'v2_admin_settings_default');
     $prefs=$studio['settings'];$prefs['intro']='Synthetic <b>plain text</b>';
-    $prefs['price']='From $25 CAD';$prefs['payments']='PayPal';
+    $prefs['price']='From $25 CAD';$prefs['payments']='PayPal';$prefs['theme']='midnight';$prefs['discord_enabled']=true;$prefs['discord_url']='https://discord.gg/CIInvite';
     [$status]=art_http('/api/admin/studio.php',$token,null,['version'=>0,'settings'=>$prefs]);
     art_assert($status===403,'v2_settings_require_csrf');
     [$status,$savedStudio]=art_http('/api/admin/studio.php',$token,$csrf,['version'=>0,'settings'=>$prefs]);

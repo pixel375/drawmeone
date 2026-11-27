@@ -6,12 +6,12 @@ require_once __DIR__.'/admin.php';
  * Stored as versioned non-secret configuration in the existing backed-up audit table.
  * No personal customer data or payment credentials belong here. */
 function dmo_studio_defaults(): array {
-    return ['title'=>'A little art, just for you.','intro'=>'Fan art, original characters and custom drawings. Thanks for stopping by!','price'=>'','payments'=>'','instagram'=>'','tiktok'=>'','default_mode'=>'dark','accepting'=>false];
+    return ['title'=>'A little art, just for you.','intro'=>'Fan art, original characters and custom drawings. Thanks for stopping by!','price'=>'','payments'=>'','instagram'=>'','tiktok'=>'','default_mode'=>'dark','theme'=>'blurple','discord_enabled'=>false,'discord_url'=>'','accepting'=>false];
 }
 function dmo_studio_normalize(mixed $raw): ?array {
     if(!is_array($raw)||array_is_list($raw)||array_diff(array_keys($raw),array_keys(dmo_studio_defaults()))!==[])return null;
     $out=dmo_studio_defaults();
-    foreach(['title'=>80,'intro'=>500,'price'=>120,'payments'=>180,'instagram'=>180,'tiktok'=>180] as $key=>$max){
+    foreach(['title'=>80,'intro'=>500,'price'=>120,'payments'=>180,'instagram'=>180,'tiktok'=>180,'discord_url'=>180] as $key=>$max){
         $v=$raw[$key]??$out[$key];
         if(!is_string($v)||strlen($v)>$max||preg_match('//u',$v)!==1)return null;
         if($key==='intro')$v=str_replace(["\r\n","\r"],"\n",$v);
@@ -23,6 +23,16 @@ function dmo_studio_normalize(mixed $raw): ?array {
         if($out[$key]==='')continue;
         $u=parse_url($out[$key]);if(!is_array($u)||($u['scheme']??'')!=='https'||($u['host']??'')!==$host||isset($u['user'],$u['pass'])||isset($u['user'])||isset($u['pass'])||isset($u['port'])||isset($u['query'])||isset($u['fragment'])||!preg_match('~^/@?[A-Za-z0-9_.-]+/?$~D',$u['path']??''))return null;
     }
+    if($out['discord_url']!==''){
+        $u=parse_url($out['discord_url']);
+        if(!is_array($u)||($u['scheme']??'')!=='https'||array_diff(array_keys($u),['scheme','host','path'])!==[]||
+          !(($u['host']??'')==='discord.gg'&&preg_match('~^/[A-Za-z0-9_-]{2,64}/?$~D',$u['path']??'')||($u['host']??'')==='discord.com'&&preg_match('~^/invite/[A-Za-z0-9_-]{2,64}/?$~D',$u['path']??'')))return null;
+    }
+    if(array_key_exists('discord_enabled',$raw)&&!is_bool($raw['discord_enabled']))return null;
+    $out['discord_enabled']=$raw['discord_enabled']??false;
+    if($out['discord_enabled']&&$out['discord_url']==='')return null;
+    if(array_key_exists('theme',$raw)&&!in_array($raw['theme'],['blurple','midnight','paper'],true))return null;
+    $out['theme']=$raw['theme']??'blurple';
     if(isset($raw['default_mode'])&&!in_array($raw['default_mode'],['dark','light'],true))return null;
     $out['default_mode']=$raw['default_mode']??'dark';
     if(array_key_exists('accepting',$raw)&&!is_bool($raw['accepting']))return null;

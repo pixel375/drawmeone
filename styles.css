@@ -36,3 +36,18 @@
 
 /* Keep configurable text and controls usable at narrow widths and large text sizes. */
 .hero h1,.hero p,.contact p,.secondary .intro{overflow-wrap:anywhere}.tile:focus-visible{outline:3px solid var(--accent);outline-offset:3px}.viewer-bottom button,.viewer-top button{min-width:44px}.request-form input,.request-form textarea,.secondary .portfolio-search input{border-color:var(--muted)}.request-form input[readonly],.request-form textarea[readonly]{cursor:wait}.request-form textarea:read-only{cursor:wait}
+
+/* Fresh V2 palettes; each supports dark and light. */
+:root,[data-theme=blurple]{color-scheme:dark;--bg:#16181f;--panel:#22252f;--ink:#f3f4f8;--muted:#b9bdcc;--accent:#a5adff;--button:#1b2040;--line:#424653;--hero:#292d43;--danger:#ffb4ba}
+:root[data-public-mode=light],[data-theme=blurple][data-public-mode=light]{color-scheme:light;--bg:#f4f5fa;--panel:#fff;--ink:#20243b;--muted:#505971;--accent:#414bb5;--button:#fff;--line:#c9cede;--hero:#e8eaff;--danger:#a12636}
+[data-theme=midnight]{--bg:#101820;--panel:#1b2732;--ink:#edf5fa;--muted:#b3c5d4;--accent:#8bd6ff;--button:#102535;--line:#395264;--hero:#1d3345;--danger:#ffb4ba}
+[data-theme=midnight][data-public-mode=light]{color-scheme:light;--bg:#eef4f7;--panel:#fff;--ink:#173348;--muted:#476073;--accent:#075b87;--button:#fff;--line:#bacfda;--hero:#dcebf3;--danger:#a12636}
+[data-theme=paper]{--bg:#13221f;--panel:#20332e;--ink:#f0f7f4;--muted:#b3ccc3;--accent:#91e4bf;--button:#14372a;--line:#3f6256;--hero:#24473b;--danger:#ffb4ba}
+[data-theme=paper][data-public-mode=light]{color-scheme:light;--bg:#f5f8f4;--panel:#fff;--ink:#203c31;--muted:#4d6659;--accent:#17694c;--button:#fff;--line:#c4d5c9;--hero:#e0eee3;--danger:#a12636}
+body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;line-height:1.6}
+.masthead{padding:18px 0;min-height:72px}.wordmark{letter-spacing:-.055em;font-weight:800}nav a:hover{text-decoration:underline}button,.primary{border-radius:10px}.primary{font-weight:700}
+.hero{max-width:none;margin:26px 0 42px;padding:clamp(42px,7vw,90px) clamp(18px,5vw,68px);border:1px solid var(--line);border-radius:24px;text-align:left;background:linear-gradient(125deg,var(--hero),var(--panel))}
+.hero h1,h2,.secondary h1,.request-form h3{font-family:inherit;letter-spacing:-.045em;font-weight:750;line-height:1.12}
+.hero h1{font-size:clamp(38px,6.5vw,74px);max-width:770px}.hero p:not(.eyebrow){margin:20px 0;max-width:600px}.eyebrow{font-size:12px;letter-spacing:.12em}.section-heading{align-items:center}.gallery-section{padding:8px 0 44px}.tile{border:1px solid var(--line);border-radius:14px}
+.contact{background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:40px clamp(14px,4vw,44px);margin-bottom:36px}.contact .primary{margin:0 0 8px}.socials a{border:1px solid var(--line);border-radius:10px;padding:9px 15px;min-height:44px;display:inline-flex;align-items:center;text-decoration:none;font-weight:650}.socials a:hover{border-color:var(--accent)}#gallery-status{border:1px dashed var(--line);border-radius:14px;padding:28px 18px;text-align:center}#request-status:empty{display:none}.request-form{background:var(--bg);margin:20px auto}.request-form .primary{margin:0}
+@media(max-width:640px){.masthead{min-height:62px}.hero{margin:18px 0 28px;padding:34px 20px;border-radius:18px}.hero h1{font-size:clamp(34px,9vw,52px)}.contact{border-radius:16px;padding:28px 14px}.gallery-section{padding-bottom:28px}}

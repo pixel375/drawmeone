@@ -45,12 +45,12 @@ function dmo_directory_escape(string $value): string{return htmlspecialchars($va
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="<?= $indexable?'index,follow':'noindex,follow' ?>">
 <meta name="theme-color" content="#151318">
-<script src="/public-theme.js?v=3"></script>
+<script src="/public-theme.js?v=4"></script>
 <meta name="description" content="Browse original drawings published by the Draw Me One artist.">
 <title>Published drawings | Draw Me One</title>
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="canonical" href="https://drawmeone.com<?= dmo_directory_escape(dmo_directory_url($filter,$page,$search)) ?>">
-<link rel="stylesheet" href="/styles.css?v=205">
+<link rel="stylesheet" href="/styles.css?v=208">
 </head>
 <body class="secondary">
 <a class="skip" href="#main">Skip to drawings</a>

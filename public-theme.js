@@ -6,7 +6,7 @@
   try{saved=localStorage.getItem(key);}catch(_){}
   if(saved==="light"||saved==="dark")root.dataset.publicMode=saved;
   // Match the homepage default without overriding an explicit visitor choice.
-  if(saved!=="light"&&saved!=="dark")fetch("/api/studio.php",{cache:"no-store",signal:AbortSignal.timeout(10000)}).then(r=>r.ok?r.json():null).then(d=>{const mode=d?.settings?.default_mode;if(saved===null&&(mode==="dark"||mode==="light")){root.dataset.publicMode=mode;document.dispatchEvent(new Event("dmo-default-theme"));}}).catch(()=>{});
+  fetch("/api/studio.php",{cache:"no-store",signal:AbortSignal.timeout(10000)}).then(r=>r.ok?r.json():null).then(d=>{const mode=d?.settings?.default_mode;if(["blurple","midnight","paper"].includes(d?.settings?.theme))root.dataset.theme=d.settings.theme;if(saved!=="light"&&saved!=="dark"&&(mode==="dark"||mode==="light")){root.dataset.publicMode=mode;document.dispatchEvent(new Event("dmo-default-theme"));}}).catch(()=>{});
   document.addEventListener("DOMContentLoaded",()=>{
     const button=document.querySelector("[data-public-theme]");
     if(!button)return;
