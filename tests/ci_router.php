@@ -24,6 +24,8 @@ $allowed = [
     '/api/admin/security.php',
     '/api/admin/me.php',
     '/api/studio.php',
+    '/api/guest-request.php',
+    '/api/admin/guest-requests.php',
     '/api/admin/studio.php',
     '/api/site-settings.php',
     '/api/admin/design.php',

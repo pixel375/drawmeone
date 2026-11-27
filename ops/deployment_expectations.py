@@ -8,7 +8,7 @@ DEPLOYMENT_FILES = [
     "portfolio.php","artwork.php","sitemap.php","robots.txt","public-theme.js",
     ".htaccess","api/.htaccess","api/admin/.htaccess","api/auth/.htaccess",
     "studio-admin/index.php","studio-admin/panel.css","studio-admin/panel.js",
-    "app/studio-v2.php","api/studio.php","api/admin/studio.php",
+    "app/studio-v2.php","api/studio.php","api/admin/studio.php","app/guest-requests.php","api/guest-request.php","api/admin/guest-requests.php","app/cli-migrate-guest.php","database/007_guest_requests.sql",
     "api/portfolio.php","api/artwork.php","api/admin/artworks.php","api/admin/artwork-upload.php",
     "api/admin/artwork-preview.php","app/artwork.php","app/admin.php","app/auth.php","app/bootstrap.php",
     "api/admin/login.php","api/admin/status.php","api/admin/me.php","api/admin/logout.php",

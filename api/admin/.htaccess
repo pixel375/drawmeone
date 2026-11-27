@@ -1,6 +1,6 @@
 <IfModule mod_rewrite.c>
   RewriteEngine On
-  RewriteRule ^(?!status\.php$|login\.php$|me\.php$|logout\.php$|studio\.php$|artworks\.php$|artwork-upload\.php$|artwork-preview\.php$|security\.php$).* - [F,END]
+  RewriteRule ^(?!status\.php$|login\.php$|me\.php$|logout\.php$|studio\.php$|guest-requests\.php$|artworks\.php$|artwork-upload\.php$|artwork-preview\.php$|security\.php$).* - [F,END]
 </IfModule>
 <IfModule mod_headers.c>
   Header always set Cache-Control "no-store, private"

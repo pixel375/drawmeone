@@ -21,8 +21,8 @@ function dmo_studio_normalize(mixed $raw): ?array {
         if($out[$key]==='')continue;
         $u=parse_url($out[$key]);if(!is_array($u)||($u['scheme']??'')!=='https'||($u['host']??'')!==$host||isset($u['user'],$u['pass'])||isset($u['user'])||isset($u['pass'])||isset($u['port'])||isset($u['query'])||isset($u['fragment'])||!preg_match('~^/@?[A-Za-z0-9_.-]+/?$~D',$u['path']??''))return null;
     }
-    // Do not open intake until the guest request path has been built and verified.
-    if(array_key_exists('accepting',$raw)&&$raw['accepting']!==false)return null;
+    if(array_key_exists('accepting',$raw)&&!is_bool($raw['accepting']))return null;
+    $out['accepting']=$raw['accepting']??false;
     return $out;
 }
 function dmo_studio_load(PDO $db): array {
@@ -31,4 +31,17 @@ function dmo_studio_load(PDO $db): array {
     $settings=dmo_studio_normalize(json_decode((string)$row['details_json'],true));
     if($settings===null)throw new RuntimeException('Invalid studio settings');
     return ['version'=>(int)$row['id'],'settings'=>$settings];
+}
+
+/** One server-side availability control; missing schema/security fails closed. */
+function dmo_guest_ready(PDO $db): bool {
+    if(strlen(dmo_config('DMO_APP_KEY'))<32||dmo_config('DMO_TURNSTILE_SITE_KEY')===''||dmo_config('DMO_TURNSTILE_SECRET')===''||!extension_loaded('curl'))return false;
+    try {
+        if($db->query("SELECT version FROM dmo_schema_migrations WHERE version='007_guest_requests'")->fetchColumn()!=='007_guest_requests')return false;
+        $db->query("SELECT id,operation_hash,payload_digest,name,email,brief,budget,status,notice_state,created_at FROM dmo_guest_requests LIMIT 0")->closeCursor();
+        return true;
+    }catch(Throwable $e){return false;}
+}
+function dmo_studio_lock(PDO $db): void {
+    if($db->query("SELECT id FROM dmo_users WHERE role='admin' ORDER BY id LIMIT 1 FOR UPDATE")->fetchColumn()===false)throw new RuntimeException('Studio lock unavailable');
 }

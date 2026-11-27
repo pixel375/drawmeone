@@ -1,7 +1,7 @@
 # Active V2 routes only. Legacy customer and commercial APIs are not exposed.
 <IfModule mod_rewrite.c>
   RewriteEngine On
-  RewriteRule ^(?!health\.php$|studio\.php$|portfolio\.php$|artwork\.php$|admin/(?:status|login|me|logout|studio|artworks|artwork-upload|artwork-preview|security)\.php$).* - [F,END]
+  RewriteRule ^(?!health\.php$|studio\.php$|guest-request\.php$|portfolio\.php$|artwork\.php$|admin/(?:status|login|me|logout|studio|guest-requests|artworks|artwork-upload|artwork-preview|security)\.php$).* - [F,END]
 </IfModule>
 <IfModule mod_headers.c>
   Header always set X-Content-Type-Options "nosniff"

@@ -6,7 +6,7 @@ function v2_route_pattern(string $p): string {
     return '~'.$m[1].'~D';
 }
 $root=dirname(__DIR__);$api=v2_route_pattern($root.'/api/.htaccess');$admin=v2_route_pattern($root.'/api/admin/.htaccess');$auth=v2_route_pattern($root.'/api/auth/.htaccess');
-$public=['health.php','studio.php','portfolio.php','artwork.php'];$artist=['status.php','login.php','me.php','logout.php','studio.php','artworks.php','artwork-upload.php','artwork-preview.php','security.php'];
+$public=['health.php','studio.php','guest-request.php','portfolio.php','artwork.php'];$artist=['status.php','login.php','me.php','logout.php','studio.php','guest-requests.php','artworks.php','artwork-upload.php','artwork-preview.php','security.php'];
 foreach(glob($root.'/api/*.php') as $p){$n=basename($p);if((preg_match($api,$n)===0)!==in_array($n,$public,true))throw new RuntimeException('Unexpected public route: '.$n);}
 foreach(glob($root.'/api/admin/*.php') as $p){$n=basename($p);$allowed=in_array($n,$artist,true);if((preg_match($api,'admin/'.$n)===0)!==$allowed||(preg_match($admin,$n)===0)!==$allowed)throw new RuntimeException('Unexpected admin route: '.$n);}
 foreach(glob($root.'/api/auth/*.php') as $p){$n=basename($p);if(preg_match($api,'auth/'.$n)!==1||preg_match($auth,$n)!==1)throw new RuntimeException('Legacy auth exposed');}

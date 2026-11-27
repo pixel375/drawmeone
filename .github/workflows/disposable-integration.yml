@@ -92,6 +92,8 @@ jobs:
           mariadb -h "$DB_HOST" -u "$DB_USER" "$DB_NAME" < database/005_artwork_reviews.sql
           mariadb -h "$DB_HOST" -u "$DB_USER" "$DB_NAME" < database/006_checkout_links.sql
           mariadb -h "$DB_HOST" -u "$DB_USER" "$DB_NAME" < database/006_checkout_links.sql
+          mariadb -h "$DB_HOST" -u "$DB_USER" "$DB_NAME" < database/007_guest_requests.sql
+          mariadb -h "$DB_HOST" -u "$DB_USER" "$DB_NAME" < database/007_guest_requests.sql
           echo "DISPOSABLE_SCHEMA=READY"
       - name: Run ownership, privacy and quote/order persistence contract
         run: php tests/integration_contract.php
