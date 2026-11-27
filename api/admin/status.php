@@ -19,7 +19,8 @@ dmo_json(200, [
         dmo_config('DMO_TURNSTILE_SITE_KEY') !== '' &&
         dmo_config('DMO_TURNSTILE_SECRET') !== '',
     'admin_available' => $enabled,
-    'turnstile_site_key' => $enabled ? dmo_config('DMO_TURNSTILE_SITE_KEY') : null,
+    'captcha_required' => dmo_admin_captcha_required(),
+    'turnstile_site_key' => $enabled && dmo_admin_captcha_required() ? dmo_config('DMO_TURNSTILE_SITE_KEY') : null,
     'mfa_required' => false,
     'commission_writes_enabled' => false,
 ]);

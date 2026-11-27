@@ -3,19 +3,29 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/auth.php';
 
-// Admin access has NO MFA. It requires a strong password, Turnstile,
-// rate limiting, a verified admin role, and a short-lived secure session.
+// Admin access requires a strong password, rate limits, a verified admin
+// role and a short-lived secure session. External CAPTCHA is an optional
+// server-side policy for this private login, not a client-selectable bypass.
 const DMO_ADMIN_COOKIE = '__Host-dmo_admin';
 const DMO_ADMIN_TTL_SECONDS = 12 * 3600;
 const DMO_ADMIN_IDLE_MINUTES = 30;
+
+function dmo_admin_captcha_required(): bool
+{
+    // Default password-only for the private artist account. Unknown values
+    // fail closed; enable CAPTCHA explicitly if the owner restores it.
+    return dmo_config('DMO_ADMIN_REQUIRE_CAPTCHA', '0') !== '0';
+}
 
 function dmo_admin_enabled(): bool
 {
     return dmo_config('DMO_ADMIN_ENABLED') === '1'
         && strlen(dmo_config('DMO_APP_KEY')) >= 32
-        && dmo_config('DMO_TURNSTILE_SITE_KEY') !== ''
-        && dmo_config('DMO_TURNSTILE_SECRET') !== ''
-        && extension_loaded('curl');
+        && (!dmo_admin_captcha_required() || (
+            dmo_config('DMO_TURNSTILE_SITE_KEY') !== ''
+            && dmo_config('DMO_TURNSTILE_SECRET') !== ''
+            && extension_loaded('curl')
+        ));
 }
 
 function dmo_admin_schema_ready(PDO $db): bool

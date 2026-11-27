@@ -73,3 +73,7 @@ This conversation currently has repository tooling but no direct interactive SSH
 ## V2 signed-out startup (November 27)
 
 If the login page never becomes usable, the updated panel distinguishes DMO-A01 (availability API), DMO-A02 (session API) and security verification loading failures. Use Retry sign-in once; do not reset credentials for a startup failure. The production browser smoke loads the actual public page without credentials and checks the widget mounts; it never submits a login. Hostinger checks status and anonymous session JSON and publicly served asset hashes. A mounted widget does not prove the owner's challenge or password succeeds. No email test is required to sign in.
+
+## Current V2 policy — November 27
+
+The live signed-out CAPTCHA failed to mount in a real browser and blocked the owner. Private Artist Desk login now defaults to password-only with existing database-backed IP/account limits, verified active admin role, HTTPS/origin checks and secure sessions. CAPTCHA is optional via private server `DMO_ADMIN_REQUIRE_CAPTCHA=1`; it cannot be bypassed by a client when required. Public guest enquiries still require CAPTCHA. This removes a bot-screening layer on the admin route; use a unique long password. Earlier CAPTCHA-required instructions above are historical or apply when explicitly re-enabled. No SMTP test is needed to log in.

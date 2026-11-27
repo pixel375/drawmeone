@@ -85,6 +85,7 @@ try {
     putenv('DMO_ENV_FILE=' . $env);
     foreach ([
         'DMO_ADMIN_ENABLED' => '1',
+        'DMO_ADMIN_REQUIRE_CAPTCHA' => '0',
         'DMO_AUTH_ENABLED' => '0',
         'DMO_REGISTRATION_ENABLED' => '0',
         'DMO_ARTWORK_WRITES_ENABLED' => '1',
@@ -149,6 +150,26 @@ try {
         usleep(100000);
     }
     art_assert($ready,'local_portfolio_server_ready');
+    // Real password login without a third-party challenge, disposable only.
+    [$status,$loginPolicy]=art_http('/api/admin/status.php');
+    art_assert($status===200&&$loginPolicy['admin_available']===true&&$loginPolicy['captcha_required']===false&&$loginPolicy['turnstile_site_key']===null,'artist_password_only_policy');
+    $login=['email'=>'artwork-ci@example.invalid','password'=>'CI-generated-admin-only-password!'];
+    [$status]=art_http('/api/admin/login.php',null,null,$login,null,'https://not-the-studio.invalid');
+    art_assert($status===403,'artist_login_rejects_wrong_origin');
+    [$status,$wrong]=art_http('/api/admin/login.php',null,null,['email'=>$login['email'],'password'=>'wrong-password']);
+    art_assert($status===401&&$wrong['error']==='invalid_credentials','artist_login_rejects_wrong_password');
+    [$status,$signedIn,,$headers]=art_http('/api/admin/login.php',null,null,$login);
+    art_assert($status===200&&$signedIn['status']==='signed_in','artist_actual_password_login');
+    art_assert(preg_match('/^Set-Cookie: __Host-dmo_admin=([a-f0-9]{64});[^\r\n]+/mi',$headers,$cookie)===1&&stripos($cookie[0],'secure')!==false&&stripos($cookie[0],'HttpOnly')!==false&&stripos($cookie[0],'SameSite=Strict')!==false,'artist_login_secure_cookie');
+    [$status,$me]=art_http('/api/admin/me.php',$cookie[1]);
+    art_assert($status===200&&$me['authenticated']===true&&is_string($me['csrf_token']),'artist_actual_session_authenticated');
+    [$status]=art_http('/api/admin/logout.php',$cookie[1],$me['csrf_token'],['confirm'=>true]);
+    art_assert($status===200,'artist_actual_logout');
+    [$status,$me]=art_http('/api/admin/me.php',$cookie[1]);
+    art_assert($status===200&&$me['authenticated']===false,'artist_actual_logout_revokes_session');
+    for($i=0;$i<3;$i++){[$status]=art_http('/api/admin/login.php',null,null,['email'=>$login['email'],'password'=>'wrong-password']);art_assert($status===401,'artist_rate_limit_attempt_'.$i);}
+    [$status]=art_http('/api/admin/login.php',null,null,$login);
+    art_assert($status===429,'artist_per_account_rate_limit_enforced');
     // V2 uses a separate backed-up settings record; no legacy public settings
     // are overwritten, no customer account required, and intake stays closed.
     [$status,$publicStudio]=art_http('/api/studio.php');

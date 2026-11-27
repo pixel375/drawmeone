@@ -11,9 +11,10 @@ const assert=require("node:assert/strict"),fs=require("node:fs"),{chromium}=requ
   await page.goto("https://drawmeone.com/studio-admin/index.php",{waitUntil:"domcontentloaded",timeout:30000});
   await page.locator("#login-form").waitFor({state:"visible",timeout:20000});
   assert.equal(await page.locator("#workspace").isHidden(),true);
-  // An automated browser need not solve a real challenge. Require the actual widget iframe to mount.
-  await page.locator('#captcha iframe').first().waitFor({state:"attached",timeout:35000});
+  // No credentials or submission: the real password form must be usable.
+  await page.waitForFunction(()=>!document.querySelector("#login-submit").disabled,{},{timeout:20000});
+  assert.equal(await page.locator("#captcha").isHidden(),true);
   assert.equal(await page.locator("#login-retry").isHidden(),true);
-  console.log("V2_LIVE_SIGNED_OUT_WIDGET_MOUNTED");
+  console.log("V2_LIVE_PASSWORD_FORM_READY");
  }finally{await page.screenshot({path:"test-results/live-signin.png",fullPage:true}).catch(()=>{});}
 }finally{await browser.close();}})().catch(e=>{console.error(e.message);process.exitCode=1;});

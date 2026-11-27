@@ -13,7 +13,7 @@ async function api(name,body=null){
         return data;
     }finally{clearTimeout(timer);}
 }
-let signingIn=false;
+let signingIn=false,captchaRequired=true;
 function loginMessage(text,retry=false){$("login-status").textContent=text;$("login-retry").hidden=!retry;}
 function verificationFailed(){token="";$("login-submit").disabled=true;loginMessage("Security verification could not load. Check that this browser allows Cloudflare Turnstile, then retry.",true);}
 async function captcha(key){
@@ -43,7 +43,11 @@ async function start(){
             await Promise.allSettled([loadArt(),loadSettings(),loadRequests()]);return;
         }
         if(me.authenticated!==false)throw Error("invalid_session_response");
-        stage="verification";$("login-form").hidden=false;loginMessage("Loading security verification…");await captcha(status.turnstile_site_key);
+        stage="verification";$("login-form").hidden=false;
+        if(typeof status.captcha_required!=="boolean")throw Error("invalid_security_policy");
+        captchaRequired=status.captcha_required;
+        if(captchaRequired){loginMessage("Loading security verification…");await captcha(status.turnstile_site_key);}
+        else{$("captcha").hidden=true;$("login-submit").disabled=false;loginMessage("Sign in to manage your artwork.");}
     }catch(error){
         if(stage==="verification"){verificationFailed();return;}
         const message=stage==="availability"?(error.message==="admin_disabled"?"Artist sign-in is disabled on the server.":"Could not reach the artist sign-in service."):"Could not check your sign-in session.";
@@ -52,12 +56,14 @@ async function start(){
 }
 $("login-retry").addEventListener("click",()=>location.reload());
 $("login-form").addEventListener("submit",async e=>{
-    e.preventDefault();if(!token||signingIn)return;signingIn=true;$("login-submit").disabled=true;loginMessage("Signing in…");
-    try{await api("login",{email:$("email").value,password:$("password").value,turnstile_token:token});location.reload();}
+    e.preventDefault();if((captchaRequired&&!token)||signingIn)return;signingIn=true;$("login-submit").disabled=true;loginMessage("Signing in…");
+    try{await api("login",{email:$("email").value,password:$("password").value,...(captchaRequired?{turnstile_token:token}:{})});location.reload();}
     catch(error){
         signingIn=false;
         const messages={invalid_credentials:"Email or password was not accepted.",verification_failed:"Security verification was not accepted. Please try again.",too_many_attempts:"Too many sign-in attempts. Wait 15 minutes before retrying.",forbidden:"Open https://drawmeone.com/studio-admin/index.php directly in your browser.",admin_service_unavailable:"The sign-in server is temporarily unavailable."};
-        $("password").value="";token="";if(widget!==null)try{window.turnstile.reset(widget);}catch{verificationFailed();return;}
+        $("password").value="";token="";
+        if(captchaRequired){if(widget!==null)try{window.turnstile.reset(widget);}catch{verificationFailed();return;}}
+        else $("login-submit").disabled=false;
         loginMessage(messages[error.message]||"Sign-in could not be confirmed. Please try again.",true);
     }
 });

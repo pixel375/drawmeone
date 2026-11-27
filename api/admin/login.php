@@ -6,7 +6,8 @@ $input = dmo_auth_json_request();
 
 $email = dmo_auth_email(dmo_auth_field($input, 'email', 254));
 $password = $input['password'] ?? '';
-$captcha = dmo_auth_field($input, 'turnstile_token', 2048);
+$captchaRequired = dmo_admin_captcha_required();
+$captcha = $captchaRequired ? dmo_auth_field($input, 'turnstile_token', 2048) : '';
 if (!is_string($password) || strlen($password) > 128) {
     dmo_json(422, ['ok' => false, 'error' => 'invalid_input']);
 }
@@ -17,7 +18,7 @@ try {
         !dmo_auth_rate_limit($db, 'admin-login-email', $email, 5, 15)) {
         dmo_json(429, ['ok' => false, 'error' => 'too_many_attempts']);
     }
-    if (!dmo_auth_verify_turnstile($captcha, 'admin_login')) {
+    if ($captchaRequired && !dmo_auth_verify_turnstile($captcha, 'admin_login')) {
         dmo_json(422, ['ok' => false, 'error' => 'verification_failed']);
     }
 
