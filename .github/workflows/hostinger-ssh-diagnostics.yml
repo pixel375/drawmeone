@@ -95,13 +95,13 @@ jobs:
           for file in app/studio-v2.php api/studio.php api/admin/studio.php studio-admin/index.php privacy.php app/artwork.php app/admin.php; do
             php -l "$site/$file" >/dev/null
           done
-          php "$site/app/cli-admin.php" check
+          php -r 'require $argv[1]."/app/admin.php"; $db=dmo_database();if(!dmo_admin_enabled()||!dmo_admin_schema_ready($db)||!(int)$db->query("SELECT COUNT(*) FROM dmo_users WHERE role=".chr(39)."admin".chr(39)." AND account_status=".chr(39)."active".chr(39)." AND email_verified_at IS NOT NULL")->fetchColumn())exit(1);echo "v2_admin_bootstrap=ready\n";' "$site"
           php "$site/app/cli-integrity.php" check
           php -r 'require $argv[1]."/app/backup-health.php"; $r=dmo_backup_local_health(); if(!$r["ready"])exit(1); echo "local_backup=ready\n";' "$site"
           home=$(curl -fsS --max-time 15 https://drawmeone.com/)
           [[ "$home" == *'styles.css?v=200'* && "$home" == *'id="gallery"'* && "$home" != *'Design Lab'* ]] || exit 1
           desk=$(curl -fsS --max-time 15 https://drawmeone.com/studio-admin/index.php)
-          [[ "$desk" == *'panel.js?v=200'* && "$desk" == *'My studio'* && "$desk" != *'Orders & quotes'* ]] || exit 1
+          [[ "$desk" == *'panel.js?v=201'* && "$desk" == *'My studio'* && "$desk" != *'Orders & quotes'* ]] || exit 1
           curl -fsS --max-time 15 https://drawmeone.com/api/studio.php | php -r '$d=json_decode(stream_get_contents(STDIN),true);if(($d["ok"]??false)!==true||($d["settings"]["accepting"]??null)!==false)exit(1);echo "v2_commissions=closed\n";'
           curl -fsS --max-time 15 https://drawmeone.com/api/portfolio.php | php -r '$d=json_decode(stream_get_contents(STDIN),true);if(($d["ok"]??false)!==true||!is_array($d["works"]??null))exit(1);echo "v2_published_art_count=".count($d["works"])."\n";'
           curl -fsS --max-time 15 https://drawmeone.com/api/admin/status.php | php -r '$d=json_decode(stream_get_contents(STDIN),true);if(($d["admin_available"]??false)!==true)exit(1);echo "v2_admin=available\n";'

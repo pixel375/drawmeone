@@ -149,6 +149,30 @@ try {
         usleep(100000);
     }
     art_assert($ready,'local_portfolio_server_ready');
+    // V2 uses a separate backed-up settings record; no legacy public settings
+    // are overwritten, no customer account required, and intake stays closed.
+    [$status,$publicStudio]=art_http('/api/studio.php');
+    art_assert($status===200&&($publicStudio['settings']['accepting']??null)===false,'v2_default_closed');
+    [$status]=art_http('/api/admin/studio.php');
+    art_assert($status===401,'v2_artist_settings_require_admin');
+    [$status,$studio]=art_http('/api/admin/studio.php',$token);
+    art_assert($status===200&&$studio['version']===0,'v2_admin_settings_default');
+    $prefs=$studio['settings'];$prefs['intro']='Synthetic <b>plain text</b>';
+    $prefs['price']='From $25 CAD';$prefs['payments']='PayPal';
+    [$status]=art_http('/api/admin/studio.php',$token,null,['version'=>0,'settings'=>$prefs]);
+    art_assert($status===403,'v2_settings_require_csrf');
+    [$status,$savedStudio]=art_http('/api/admin/studio.php',$token,$csrf,['version'=>0,'settings'=>$prefs]);
+    art_assert($status===200&&$savedStudio['version']>0,'v2_settings_saved');
+    [$status,$publicStudio]=art_http('/api/studio.php');
+    art_assert($status===200&&$publicStudio['settings']===$prefs&&!isset($publicStudio['version']),'v2_public_settings_only');
+    [$status]=art_http('/api/admin/studio.php',$token,$csrf,['version'=>0,'settings'=>$prefs]);
+    art_assert($status===409,'v2_stale_settings_denied');
+    $prefs['accepting']=true;
+    [$status]=art_http('/api/admin/studio.php',$token,$csrf,['version'=>$savedStudio['version'],'settings'=>$prefs]);
+    art_assert($status===422,'v2_commissions_cannot_open_during_development');
+    $prefs['accepting']=false;$prefs['instagram']='https://www.instagram.com.evil.invalid/user';
+    [$status]=art_http('/api/admin/studio.php',$token,$csrf,['version'=>$savedStudio['version'],'settings'=>$prefs]);
+    art_assert($status===422,'v2_social_url_allowlist');
     [$status,$manifest] = art_http('/api/portfolio.php');
     art_assert($status===200 && ($manifest['works']??null)===[],
         'public_portfolio_initially_empty');
