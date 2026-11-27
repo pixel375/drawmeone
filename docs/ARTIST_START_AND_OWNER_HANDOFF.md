@@ -1,6 +1,10 @@
 # Artist Desk — starting guide and owner decisions
 
-Preparation document, not launch approval. The canonical [LAUNCH_TODO.md](LAUNCH_TODO.md) remains authoritative. Complete the manual visual review only after the autonomous tasks are verified. Do not send credentials, private drawings or customer data to GitHub issues.
+**Autonomous phase verified complete — 2026-11-26.** All 47 AUTO tasks checked; 21 owner decisions, 24 dependent tasks and 4 optional tasks remain open. The next action is your manual visual review, not public launch. The canonical [LAUNCH_TODO.md](LAUNCH_TODO.md) remains authoritative. Do not send credentials, private drawings or customer data to GitHub issues.
+
+Verified cumulative application release: [33249c6](https://github.com/pixel375/drawmeone/commit/33249c6567e8c50eed565c2af414f65bbc8f77f2), all five workflows passed ([source](https://github.com/pixel375/drawmeone/actions/runs/45911525634), [DB](https://github.com/pixel375/drawmeone/actions/runs/45911525944), [Chromium](https://github.com/pixel375/drawmeone/actions/runs/45911525728), [Firefox/WebKit](https://github.com/pixel375/drawmeone/actions/runs/45911525647), [Hostinger](https://github.com/pixel375/drawmeone/actions/runs/45911525720)); [live indexing guard](https://github.com/pixel375/drawmeone/actions/runs/45911557935) passed. [Latest local encrypted backup](https://github.com/pixel375/drawmeone/actions/runs/45876093653) and [freshness check](https://github.com/pixel375/drawmeone/actions/runs/45909696394) passed; independent offsite recovery remains unconfigured.
+
+Start with visual feedback only. You do not need to make every legal, provider or commercial decision before sending the requested UI/feature changes. Review existing private drafts in Artist Desk; public viewer testing with actual artwork requires approved publication, so do not publish just to complete a visual review. Public gallery empty is expected (zero published drawings). Registration/intake/quote/order gates remain closed. The launch checklist is not permission to open.
 
 ## First visual review (when autonomous work is verified)
 
