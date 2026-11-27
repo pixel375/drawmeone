@@ -31,3 +31,5 @@ If something fails, avoid submitting the same action repeatedly; refresh and ver
 - Confirm what information should be kept and for how long, artwork and reference rights, and the terms agreed privately with customers. The existing Privacy page describes current behavior; it is not a reviewed legal policy.
 - Complete a controlled email/CAPTCHA enquiry pilot with explicit permission and arrange independent encrypted backup storage and key custody. Never use actual payment details in a test.
 - Open commissions only after the owner approves; until then leave the switch off.
+
+For the remaining launch checks, see the [V2 owner launch checklist](V2_OWNER_LAUNCH.md). All six owner decisions remain separate from the completed independent implementation.
