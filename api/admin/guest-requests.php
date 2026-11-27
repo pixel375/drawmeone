@@ -5,7 +5,7 @@ $method=$_SERVER['REQUEST_METHOD']??'GET';
 if(!in_array($method,['GET','POST'],true)){header('Allow: GET, POST');dmo_json(405,['ok'=>false,'error'=>'method_not_allowed']);}
 try{
     $db=dmo_database();$admin=dmo_admin_require_session($db);
-    if(!dmo_guest_ready($db))dmo_json(503,['ok'=>false,'error'=>'requests_unavailable']);
+    if(!dmo_guest_schema_ready($db))dmo_json(503,['ok'=>false,'error'=>'requests_unavailable']);
     if($method==='GET'){
         $view=$_GET['view']??'active';$before=$_GET['before']??null;
         if(!in_array($view,['active','archived'],true)||($before!==null&&(!is_string($before)||!preg_match('/^[1-9][0-9]{0,17}$/D',$before))))dmo_json(422,['ok'=>false,'error'=>'invalid_view']);

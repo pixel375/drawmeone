@@ -191,6 +191,8 @@ try {
     ]);
     $db->prepare("INSERT INTO dmo_users (display_name,email,password_hash,role,account_status,email_verified_at) VALUES ('CI Recovery Artist','recovery-artist@example.invalid',:hash,'admin','active',UTC_TIMESTAMP())")->execute(['hash'=>$userHash]);
     $artistId=(int)$db->lastInsertId();
+    $db->prepare("INSERT INTO dmo_guest_requests (operation_hash,payload_digest,name,email,brief,budget,status,notice_state) VALUES (:op,:digest,'CI guest','restore-guest@example.invalid','Synthetic recovery enquiry','25 CAD','read','failed')")->execute(['op'=>str_repeat('a',64),'digest'=>str_repeat('b',64)]);
+    $guestId=(int)$db->lastInsertId();
     $db->prepare("INSERT INTO dmo_quotes (request_id,version_number,currency,total_minor,scope_description,revision_allowance,status,sent_at,accepted_at) VALUES (:request,1,'CAD',3000,'Synthetic recovery artwork',1,'accepted',UTC_TIMESTAMP(),UTC_TIMESTAMP())")->execute(['request'=>$requestId]);
     $quoteId=(int)$db->lastInsertId();
     $db->prepare("INSERT INTO dmo_orders (request_id,accepted_quote_id,status,payment_status) VALUES (:request,:quote,'awaiting_arrangement','unverified')")->execute(['request'=>$requestId,'quote'=>$quoteId]);
@@ -368,6 +370,10 @@ try {
     drill_assert($restore->query("SELECT version FROM dmo_schema_migrations WHERE version='005_artwork_reviews'")->fetchColumn()==='005_artwork_reviews','restored_schema_includes_artwork_reviews');
     drill_assert((int)$restore->query('SELECT COUNT(*) FROM dmo_artwork_reviews')->fetchColumn()===0,'restored_review_table_available');
     drill_assert($restore->query("SELECT version FROM dmo_schema_migrations WHERE version='006_checkout_links'")->fetchColumn()==='006_checkout_links','restored_checkout_schema_available');
+    drill_assert($restore->query("SELECT version FROM dmo_schema_migrations WHERE version='007_guest_requests'")->fetchColumn()==='007_guest_requests','restored_guest_schema_available');
+    $guest=$restore->prepare('SELECT brief,status,notice_state FROM dmo_guest_requests WHERE id=:id');$guest->execute(['id'=>$guestId]);
+    $guestRow=$guest->fetch(PDO::FETCH_ASSOC);
+    drill_assert(is_array($guestRow)&&$guestRow['brief']==='Synthetic recovery enquiry'&&$guestRow['status']==='read'&&$guestRow['notice_state']==='failed','restored_guest_inbox_record');
     $invoice=$restore->query('SELECT order_id,url_ciphertext,url_fingerprint,provider_host FROM dmo_checkout_links')->fetch(PDO::FETCH_ASSOC);
     drill_assert(is_array($invoice)&&$invoice['url_ciphertext']===$invoiceCipher&&dmo_checkout_authenticated_url($invoice)===$invoiceUrl,'restored_invoice_authenticates_with_original_app_key');
     $scan=dmo_integrity_checkout_crypto($restore);

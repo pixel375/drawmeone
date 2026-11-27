@@ -6,14 +6,16 @@ require_once __DIR__.'/admin.php';
  * Stored as versioned non-secret configuration in the existing backed-up audit table.
  * No personal customer data or payment credentials belong here. */
 function dmo_studio_defaults(): array {
-    return ['title'=>'A little art, just for you.','intro'=>'Fan art, original characters and custom drawings. Thanks for stopping by!','price'=>'','payments'=>'','instagram'=>'','tiktok'=>'','accepting'=>false];
+    return ['title'=>'A little art, just for you.','intro'=>'Fan art, original characters and custom drawings. Thanks for stopping by!','price'=>'','payments'=>'','instagram'=>'','tiktok'=>'','default_mode'=>'dark','accepting'=>false];
 }
 function dmo_studio_normalize(mixed $raw): ?array {
     if(!is_array($raw)||array_is_list($raw)||array_diff(array_keys($raw),array_keys(dmo_studio_defaults()))!==[])return null;
     $out=dmo_studio_defaults();
     foreach(['title'=>80,'intro'=>500,'price'=>120,'payments'=>180,'instagram'=>180,'tiktok'=>180] as $key=>$max){
         $v=$raw[$key]??$out[$key];
-        if(!is_string($v)||strlen($v)>$max||preg_match('//u',$v)!==1||preg_match('/[\x00-\x1f\x7f]/u',$v)!==0)return null;
+        if(!is_string($v)||strlen($v)>$max||preg_match('//u',$v)!==1)return null;
+        if($key==='intro')$v=str_replace(["\r\n","\r"],"\n",$v);
+        if(preg_match($key==='intro'?'/[\x00-\x09\x0b-\x1f\x7f]/u':'/[\x00-\x1f\x7f]/u',$v)!==0)return null;
         $out[$key]=trim($v);
     }
     if($out['title']===''||$out['intro']==='')return null;
@@ -21,6 +23,8 @@ function dmo_studio_normalize(mixed $raw): ?array {
         if($out[$key]==='')continue;
         $u=parse_url($out[$key]);if(!is_array($u)||($u['scheme']??'')!=='https'||($u['host']??'')!==$host||isset($u['user'],$u['pass'])||isset($u['user'])||isset($u['pass'])||isset($u['port'])||isset($u['query'])||isset($u['fragment'])||!preg_match('~^/@?[A-Za-z0-9_.-]+/?$~D',$u['path']??''))return null;
     }
+    if(isset($raw['default_mode'])&&!in_array($raw['default_mode'],['dark','light'],true))return null;
+    $out['default_mode']=$raw['default_mode']??'dark';
     if(array_key_exists('accepting',$raw)&&!is_bool($raw['accepting']))return null;
     $out['accepting']=$raw['accepting']??false;
     return $out;
@@ -35,7 +39,9 @@ function dmo_studio_load(PDO $db): array {
 
 /** One server-side availability control; missing schema/security fails closed. */
 function dmo_guest_ready(PDO $db): bool {
-    if(strlen(dmo_config('DMO_APP_KEY'))<32||dmo_config('DMO_TURNSTILE_SITE_KEY')===''||dmo_config('DMO_TURNSTILE_SECRET')===''||!extension_loaded('curl'))return false;
+    return strlen(dmo_config('DMO_APP_KEY'))>=32&&dmo_config('DMO_TURNSTILE_SITE_KEY')!==''&&dmo_config('DMO_TURNSTILE_SECRET')!==''&&extension_loaded('curl')&&dmo_guest_schema_ready($db);
+}
+function dmo_guest_schema_ready(PDO $db): bool {
     try {
         if($db->query("SELECT version FROM dmo_schema_migrations WHERE version='007_guest_requests'")->fetchColumn()!=='007_guest_requests')return false;
         $db->query("SELECT id,operation_hash,payload_digest,name,email,brief,budget,status,notice_state,created_at FROM dmo_guest_requests LIMIT 0")->closeCursor();

@@ -99,9 +99,9 @@ jobs:
           php "$site/app/cli-integrity.php" check
           php -r 'require $argv[1]."/app/backup-health.php"; $r=dmo_backup_local_health(); if(!$r["ready"])exit(1); echo "local_backup=ready\n";' "$site"
           home=$(curl -fsS --max-time 15 https://drawmeone.com/)
-          [[ "$home" == *'styles.css?v=202'* && "$home" == *'id="gallery"'* && "$home" != *'Design Lab'* ]] || exit 1
+          [[ "$home" == *'styles.css?v=203'* && "$home" == *'id="gallery"'* && "$home" != *'Design Lab'* ]] || exit 1
           desk=$(curl -fsS --max-time 15 https://drawmeone.com/studio-admin/index.php)
-          [[ "$desk" == *'panel.js?v=202'* && "$desk" == *'My studio'* && "$desk" != *'Orders & quotes'* ]] || exit 1
+          [[ "$desk" == *'panel.js?v=203'* && "$desk" == *'My studio'* && "$desk" != *'Orders & quotes'* ]] || exit 1
           curl -fsS --max-time 15 https://drawmeone.com/api/studio.php | php -r '$d=json_decode(stream_get_contents(STDIN),true);if(($d["ok"]??false)!==true||($d["settings"]["accepting"]??null)!==false)exit(1);echo "v2_commissions=closed\n";'
           curl -fsS --max-time 15 https://drawmeone.com/api/portfolio.php | php -r '$d=json_decode(stream_get_contents(STDIN),true);if(($d["ok"]??false)!==true||!is_array($d["works"]??null))exit(1);echo "v2_published_art_count=".count($d["works"])."\n";'
           curl -fsS --max-time 15 https://drawmeone.com/api/admin/status.php | php -r '$d=json_decode(stream_get_contents(STDIN),true);if(($d["admin_available"]??false)!==true)exit(1);echo "v2_admin=available\n";'
